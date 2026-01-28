@@ -372,34 +372,60 @@ export async function applyFileEdits(edits: EditBlock[]): Promise<EditResult[]> 
  */
 export function parseEditBlocks(response: string, validFiles?: string[]): EditBlock[] {
   const blocks: EditBlock[] = [];
+  const seen = new Set<string>();  // Track unique blocks by content
   
-  // Pattern for <<<<<<< SEARCH ... ======= ... >>>>>>> REPLACE
+  // Pattern for <<<<<<< SEARCH ... ======= ... >>>>>>> REPLACE inside code fence
+  // Captures: filename on line before ```, then search, then replace
   const blockPattern = /([^\n]+)\n```[^\n]*\n<<<<<<< SEARCH\n([\s\S]*?)\n=======\n([\s\S]*?)\n>>>>>>> REPLACE\n```/g;
   
-  // Also try without code fence
+  // Also try without code fence (for plain text format)
   const altPattern = /([^\n]+)\n<<<<<<< SEARCH\n([\s\S]*?)\n=======\n([\s\S]*?)\n>>>>>>> REPLACE/g;
   
-  for (const pattern of [blockPattern, altPattern]) {
-    let match;
-    while ((match = pattern.exec(response)) !== null) {
-      let file = match[1].trim();
-      const search = match[2];
-      const replace = match[3];
-      
-      // Clean up filename
-      file = file.replace(/^[#*`]+\s*/, '').replace(/\s*[#*`]+$/, '').trim();
-      file = file.replace(/^(File:\s*|Filename:\s*)/i, '');
-      
-      // Try to match against valid files
-      if (validFiles && validFiles.length > 0) {
-        const exactMatch = validFiles.find(f => f === file || f.endsWith('/' + file));
-        if (exactMatch) {
-          file = exactMatch;
-        }
-      }
-      
-      blocks.push({ file, search, replace });
+  const processMatch = (match: RegExpExecArray): void => {
+    let file = match[1].trim();
+    const search = match[2];
+    const replace = match[3];
+    
+    // Create a unique key for deduplication
+    const key = `${search}|||${replace}`;
+    if (seen.has(key)) {
+      return;  // Skip duplicate
     }
+    seen.add(key);
+    
+    // Clean up filename - strip markdown formatting
+    file = file.replace(/^[#*]+\s*/, '');  // Remove leading # and *
+    file = file.replace(/`/g, '');  // Remove all backticks
+    file = file.replace(/\s*[#*]+$/, '');  // Remove trailing # and *
+    file = file.replace(/^(File:\s*|Filename:\s*)/i, '');
+    file = file.trim();
+    
+    // Skip if filename looks like a language hint (e.g., "typescript", "javascript")
+    const languageHints = ['typescript', 'javascript', 'python', 'java', 'go', 'rust', 'tsx', 'jsx', 'ts', 'js', 'py', 'rb', 'cpp', 'c', 'cs', 'sh', 'bash', 'json', 'yaml', 'yml', 'md', 'html', 'css'];
+    if (languageHints.includes(file.toLowerCase())) {
+      return;  // Skip - this is likely a language hint, not a filename
+    }
+    
+    // Try to match against valid files
+    if (validFiles && validFiles.length > 0) {
+      const exactMatch = validFiles.find(f => f === file || f.endsWith('/' + file));
+      if (exactMatch) {
+        file = exactMatch;
+      }
+    }
+    
+    blocks.push({ file, search, replace });
+  };
+  
+  // First try the fenced pattern (more specific)
+  let match;
+  while ((match = blockPattern.exec(response)) !== null) {
+    processMatch(match);
+  }
+  
+  // Then try the alt pattern for any remaining blocks
+  while ((match = altPattern.exec(response)) !== null) {
+    processMatch(match);
   }
   
   return blocks;

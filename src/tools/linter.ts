@@ -171,7 +171,7 @@ function lintJavaScript(filePath: string, code: string, isTypeScript: boolean): 
       });
       
       if (result.status !== 0) {
-        output = result.stdout + result.stderr;
+        output = (result.stdout || '') + (result.stderr || '');
         errors.push(...parseErrors(output, filePath));
       }
     } else {

@@ -1,6 +1,7 @@
 /**
  * Context Manager - Manages conversation context and file state
  * Based on Aider's coder.py and GeminiCLI's context management
+ * Uses gpt-tokenizer for accurate token counting (with fallback)
  */
 
 import { readFile } from 'fs/promises';
@@ -25,8 +26,55 @@ export interface ContextState {
   tokenEstimate: number;
 }
 
-// Token estimation (rough: ~4 chars per token)
-function estimateTokens(text: string): number {
+// Cached tokenizer (typed as any to handle missing module)
+let tokenEncoder: ((text: string) => number[]) | null = null;
+let tokenizerLoaded = false;
+
+/**
+ * Load tokenizer lazily (handles case where gpt-tokenizer not installed)
+ */
+async function loadTokenizer(): Promise<void> {
+  if (tokenizerLoaded) return;
+  tokenizerLoaded = true;
+  
+  try {
+    const mod = await import('gpt-tokenizer') as any;
+    tokenEncoder = mod.encode;
+  } catch {
+    // gpt-tokenizer not installed, will use fallback
+  }
+}
+
+/**
+ * Count tokens using gpt-tokenizer (accurate for GPT models)
+ * Falls back to rough estimation if not available
+ */
+async function countTokensAsync(text: string): Promise<number> {
+  await loadTokenizer();
+  
+  if (tokenEncoder) {
+    try {
+      return tokenEncoder(text).length;
+    } catch {
+      // Fall through to estimation
+    }
+  }
+  
+  // Fallback: ~4 chars per token (rough but reasonable)
+  return Math.ceil(text.length / 4);
+}
+
+/**
+ * Synchronous token count (uses cached encoder or estimation)
+ */
+function countTokens(text: string): number {
+  if (tokenEncoder) {
+    try {
+      return tokenEncoder(text).length;
+    } catch {
+      // Fall through
+    }
+  }
   return Math.ceil(text.length / 4);
 }
 
@@ -247,25 +295,31 @@ export class ContextManager {
   }
 
   /**
-   * Estimate token count
+   * Estimate token count using accurate tokenizer
    */
   async estimateTokenCount(): Promise<number> {
+    // Ensure tokenizer is loaded
+    await loadTokenizer();
+    
     let total = 0;
     
     // System prompt
     const systemPrompt = await this.buildSystemPrompt();
-    total += estimateTokens(systemPrompt);
+    total += countTokens(systemPrompt);
     
     // File contents
     const fileContents = await this.getFileContents();
     for (const content of fileContents.values()) {
-      total += estimateTokens(content);
+      total += countTokens(content);
     }
     
     // History
     for (const msg of this.history) {
-      total += estimateTokens(msg.content);
+      total += countTokens(msg.content);
     }
+    
+    // Add overhead for message formatting (~4 tokens per message)
+    total += (this.history.length + 2) * 4;
     
     return total;
   }
@@ -326,3 +380,6 @@ export function getContextManager(cwd?: string): ContextManager {
   }
   return globalContext;
 }
+
+// Export token counting utility for use elsewhere
+export { countTokens };

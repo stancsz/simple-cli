@@ -1,6 +1,6 @@
 /**
  * Grep Tool - Search for patterns in files
- * Based on GeminiCLI's grep.ts and ripgrep
+ * Uses ripgrep when available, fast-glob + JS regex as fallback
  */
 
 import { z } from 'zod';
@@ -8,6 +8,22 @@ import { readFile, readdir, stat } from 'fs/promises';
 import { join, relative, extname } from 'path';
 import { spawnSync } from 'child_process';
 import type { Tool } from '../registry.js';
+
+// Cached fast-glob instance (typed as any to handle missing module)
+let fg: any = null;
+let fgLoaded = false;
+
+async function loadFastGlob(): Promise<any> {
+  if (!fgLoaded) {
+    fgLoaded = true;
+    try {
+      fg = (await import('fast-glob')).default;
+    } catch {
+      // fast-glob not installed
+    }
+  }
+  return fg;
+}
 
 // Input schema
 export const inputSchema = z.object({
@@ -46,52 +62,15 @@ const DEFAULT_IGNORE = [
   '.venv',
 ];
 
-// Text file extensions
-const TEXT_EXTENSIONS = new Set([
-  '.txt', '.md', '.json', '.yaml', '.yml', '.toml', '.xml', '.html', '.htm',
-  '.css', '.scss', '.less', '.js', '.jsx', '.ts', '.tsx', '.vue', '.svelte',
-  '.py', '.rb', '.php', '.java', '.c', '.cpp', '.h', '.hpp', '.cs', '.go',
-  '.rs', '.swift', '.kt', '.scala', '.sh', '.bash', '.zsh', '.fish',
-  '.sql', '.graphql', '.prisma', '.env', '.gitignore', '.dockerignore',
-  '.editorconfig', '.eslintrc', '.prettierrc', '.babelrc',
-  '', // Files without extension (like Makefile, Dockerfile)
-]);
-
-// Check if file should be searched
-function shouldSearchFile(filePath: string, glob?: string, includeHidden?: boolean): boolean {
-  const parts = filePath.split('/');
-  
-  // Check for ignored directories
-  for (const part of parts) {
-    if (DEFAULT_IGNORE.includes(part)) {
-      return false;
-    }
-    if (!includeHidden && part.startsWith('.') && part !== '.') {
-      return false;
-    }
-  }
-
-  // Check file extension
-  const ext = extname(filePath).toLowerCase();
-  if (!TEXT_EXTENSIONS.has(ext)) {
-    return false;
-  }
-
-  // Check glob pattern
-  if (glob) {
-    const globRegex = new RegExp(
-      glob
-        .replace(/\./g, '\\.')
-        .replace(/\*/g, '.*')
-        .replace(/\?/g, '.')
-    );
-    if (!globRegex.test(filePath)) {
-      return false;
-    }
-  }
-
-  return true;
-}
+// Text file glob patterns for searching
+const TEXT_FILE_PATTERNS = [
+  '**/*.{txt,md,json,yaml,yml,toml,xml,html,htm}',
+  '**/*.{css,scss,less,js,jsx,ts,tsx,vue,svelte}',
+  '**/*.{py,rb,php,java,c,cpp,h,hpp,cs,go,rs,swift,kt,scala}',
+  '**/*.{sh,bash,zsh,fish,sql,graphql,prisma}',
+  '**/{Makefile,Dockerfile,Containerfile,.gitignore,.dockerignore,.env}',
+  '**/.{editorconfig,eslintrc,prettierrc,babelrc}*',
+];
 
 // Search a single file
 async function searchFile(
@@ -139,8 +118,17 @@ async function searchFile(
   return matches;
 }
 
-// Recursively search directory
-async function searchDirectory(
+// Text file extensions for fallback matching
+const TEXT_EXTENSIONS = new Set([
+  '.txt', '.md', '.json', '.yaml', '.yml', '.toml', '.xml', '.html', '.htm',
+  '.css', '.scss', '.less', '.js', '.jsx', '.ts', '.tsx', '.vue', '.svelte',
+  '.py', '.rb', '.php', '.java', '.c', '.cpp', '.h', '.hpp', '.cs', '.go',
+  '.rs', '.swift', '.kt', '.scala', '.sh', '.bash', '.zsh', '.fish',
+  '.sql', '.graphql', '.prisma', '',
+]);
+
+// Fallback: recursive directory search
+async function searchDirectoryFallback(
   dir: string,
   regex: RegExp,
   options: {
@@ -152,36 +140,30 @@ async function searchDirectory(
   },
   results: GrepMatch[] = []
 ): Promise<GrepMatch[]> {
-  if (results.length >= options.maxResults) {
-    return results;
-  }
+  if (results.length >= options.maxResults) return results;
 
   try {
     const entries = await readdir(dir, { withFileTypes: true });
 
     for (const entry of entries) {
-      if (results.length >= options.maxResults) {
-        break;
-      }
+      if (results.length >= options.maxResults) break;
 
       const fullPath = join(dir, entry.name);
       const relativePath = relative(options.baseDir, fullPath);
 
       if (entry.isDirectory()) {
-        // Check if directory should be ignored
         if (DEFAULT_IGNORE.includes(entry.name)) continue;
         if (!options.includeHidden && entry.name.startsWith('.')) continue;
-
-        await searchDirectory(fullPath, regex, options, results);
+        await searchDirectoryFallback(fullPath, regex, options, results);
       } else if (entry.isFile()) {
-        if (!shouldSearchFile(relativePath, options.glob, options.includeHidden)) {
-          continue;
-        }
+        const ext = extname(entry.name).toLowerCase();
+        if (!TEXT_EXTENSIONS.has(ext)) continue;
+        if (!options.includeHidden && entry.name.startsWith('.')) continue;
 
         const fileMatches = await searchFile(fullPath, regex, options.contextLines);
         for (const match of fileMatches) {
           if (results.length >= options.maxResults) break;
-          match.file = relativePath; // Use relative path
+          match.file = relativePath;
           results.push(match);
         }
       }
@@ -193,13 +175,74 @@ async function searchDirectory(
   return results;
 }
 
+// Search directory using fast-glob for file discovery (with fallback)
+async function searchDirectory(
+  dir: string,
+  regex: RegExp,
+  options: {
+    glob?: string;
+    contextLines: number;
+    maxResults: number;
+    includeHidden: boolean;
+    baseDir: string;
+  }
+): Promise<GrepMatch[]> {
+  const results: GrepMatch[] = [];
+  const fastGlob = await loadFastGlob();
+
+  if (fastGlob) {
+    try {
+      // Build ignore patterns
+      const ignorePatterns = DEFAULT_IGNORE.map(d => `**/${d}/**`);
+
+      // Use user's glob pattern or default to text files
+      const patterns = options.glob ? [options.glob] : TEXT_FILE_PATTERNS;
+
+      // Find files using fast-glob
+      const files = await fastGlob(patterns, {
+        cwd: dir,
+        ignore: ignorePatterns,
+        dot: options.includeHidden,
+        absolute: true,
+        suppressErrors: true,
+      });
+
+      // Search each file
+      for (const fullPath of files) {
+        if (results.length >= options.maxResults) break;
+
+        const fileMatches = await searchFile(fullPath, regex, options.contextLines);
+        for (const match of fileMatches) {
+          if (results.length >= options.maxResults) break;
+          match.file = relative(options.baseDir, fullPath);
+          results.push(match);
+        }
+      }
+      return results;
+    } catch {
+      // Fall through to fallback
+    }
+  }
+
+  // Fallback to recursive directory search
+  return searchDirectoryFallback(dir, regex, options, results);
+}
+
 // Try to use ripgrep if available
 function tryRipgrep(input: GrepInput): GrepMatch[] | null {
   try {
+    // Request one more than maxResults to detect truncation
+    const maxResults = input.maxResults || 100;
     const args = [
       '--json',
-      '--max-count', String(input.maxResults || 100),
+      '--max-count', String(maxResults + 1),
     ];
+
+    // Ignore common directories by default (matching DEFAULT_IGNORE)
+    for (const ignore of DEFAULT_IGNORE) {
+      args.push('-g', `!${ignore}`);
+      args.push('-g', `!${ignore}/**`);
+    }
 
     if (input.ignoreCase) {
       args.push('-i');
@@ -236,13 +279,17 @@ function tryRipgrep(input: GrepInput): GrepMatch[] | null {
       try {
         const json = JSON.parse(line);
         if (json.type === 'match') {
-          matches.push({
-            file: json.data.path.text,
-            line: json.data.line_number,
-            column: json.data.submatches[0]?.start + 1 || 1,
-            text: json.data.lines.text.replace(/\n$/, ''),
-            match: json.data.submatches[0]?.match.text || '',
-          });
+          // Extract all submatches, not just the first one
+          const submatches = json.data.submatches || [];
+          for (const submatch of submatches) {
+            matches.push({
+              file: json.data.path.text,
+              line: json.data.line_number,
+              column: (submatch.start || 0) + 1,
+              text: json.data.lines.text.replace(/\n$/, ''),
+              match: submatch.match?.text || '',
+            });
+          }
         }
       } catch {
         // Skip invalid JSON lines
@@ -274,17 +321,19 @@ export async function execute(input: GrepInput): Promise<{
     includeHidden,
   } = inputSchema.parse(input);
 
-  // Try ripgrep first
-  const rgMatches = tryRipgrep(input);
-  if (rgMatches !== null) {
-    const uniqueFiles = [...new Set(rgMatches.map(m => m.file))];
-    return {
-      pattern,
-      matches: filesOnly ? [] : rgMatches.slice(0, maxResults),
-      files: uniqueFiles,
-      count: rgMatches.length,
-      truncated: rgMatches.length > maxResults,
-    };
+  // Try ripgrep first (but skip if context lines requested - ripgrep parsing doesn't support it)
+  if (!contextLines || contextLines === 0) {
+    const rgMatches = tryRipgrep(input);
+    if (rgMatches !== null && rgMatches.length > 0) {
+      const uniqueFiles = [...new Set(rgMatches.map(m => m.file))];
+      return {
+        pattern,
+        matches: filesOnly ? [] : rgMatches.slice(0, maxResults),
+        files: uniqueFiles,
+        count: rgMatches.length,
+        truncated: rgMatches.length > maxResults,
+      };
+    }
   }
 
   // Fall back to JavaScript implementation

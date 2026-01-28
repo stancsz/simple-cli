@@ -161,6 +161,7 @@ def foo():
         aiComments: comments,
       });
 
+      
       expect(watcher.hasActionableComments()).toBe(true);
     });
 

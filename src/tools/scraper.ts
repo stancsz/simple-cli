@@ -1,6 +1,6 @@
 /**
  * Web Scraper Tool - Fetches and converts web content to markdown
- * Based on Aider's scrape.py
+ * Uses turndown for robust HTML to Markdown conversion (with regex fallback)
  */
 
 import { z } from 'zod';
@@ -16,8 +16,57 @@ export const inputSchema = z.object({
 
 type ScraperInput = z.infer<typeof inputSchema>;
 
-// HTML to Markdown conversion
-function htmlToMarkdown(html: string): string {
+// Cached turndown instance
+let turndownInstance: any = null;
+let turndownLoaded = false;
+
+// Get or create turndown instance (lazy load)
+async function getTurndown(): Promise<any> {
+  if (!turndownLoaded) {
+    turndownLoaded = true;
+    try {
+      const mod = await import('turndown') as any;
+      const TurndownService = mod.default;
+      turndownInstance = new TurndownService({
+        headingStyle: 'atx',
+        hr: '---',
+        bulletListMarker: '-',
+        codeBlockStyle: 'fenced',
+        emDelimiter: '*',
+        strongDelimiter: '**',
+        linkStyle: 'inlined',
+      });
+
+      // Remove script and style elements
+      turndownInstance.remove(['script', 'style', 'noscript', 'iframe', 'svg']);
+
+      // Custom rule for code blocks with language hints
+      turndownInstance.addRule('codeBlock', {
+        filter: (node: Element) => {
+          return (
+            node.nodeName === 'PRE' &&
+            node.firstChild !== null &&
+            node.firstChild.nodeName === 'CODE'
+          );
+        },
+        replacement: (_content: string, node: Element) => {
+          const codeNode = node.firstChild as Element;
+          const className = codeNode.getAttribute?.('class') || '';
+          const langMatch = className.match(/language-(\w+)/);
+          const lang = langMatch ? langMatch[1] : '';
+          const code = codeNode.textContent || '';
+          return `\n\n\`\`\`${lang}\n${code.trim()}\n\`\`\`\n\n`;
+        },
+      });
+    } catch {
+      // turndown not installed, will use fallback
+    }
+  }
+  return turndownInstance;
+}
+
+// Fallback regex-based HTML to Markdown conversion
+function htmlToMarkdownFallback(html: string): string {
   let md = html;
 
   // Remove script and style tags
@@ -95,24 +144,21 @@ function htmlToMarkdown(html: string): string {
   return md;
 }
 
-// Slim down HTML by removing unnecessary elements
+// Slim down HTML by removing unnecessary elements before conversion
 function slimDownHtml(html: string): string {
   let slim = html;
 
   // Remove SVG elements
   slim = slim.replace(/<svg\b[^<]*(?:(?!<\/svg>)<[^<]*)*<\/svg>/gi, '');
 
-  // Remove data: URLs
+  // Remove data: URLs (large embedded content)
   slim = slim.replace(/\s*(?:href|src)=["']data:[^"']*["']/gi, '');
 
-  // Remove style attributes
+  // Remove inline styles
   slim = slim.replace(/\s*style=["'][^"']*["']/gi, '');
 
-  // Remove class attributes
-  slim = slim.replace(/\s*class=["'][^"']*["']/gi, '');
-
-  // Remove id attributes
-  slim = slim.replace(/\s*id=["'][^"']*["']/gi, '');
+  // Remove tracking pixels and tiny images
+  slim = slim.replace(/<img[^>]*(?:width|height)=["']?[01](?:px)?["']?[^>]*>/gi, '');
 
   return slim;
 }
@@ -129,6 +175,21 @@ function looksLikeHtml(content: string): boolean {
     /<a\s+href=/i,
   ];
   return htmlPatterns.some(pattern => pattern.test(content));
+}
+
+// Convert HTML to Markdown using turndown or fallback
+async function htmlToMarkdown(html: string): Promise<string> {
+  const turndown = await getTurndown();
+  
+  if (turndown) {
+    try {
+      return turndown.turndown(html);
+    } catch {
+      // Fall through to regex fallback
+    }
+  }
+  
+  return htmlToMarkdownFallback(html);
 }
 
 // Execute scraping
@@ -150,8 +211,6 @@ export async function execute(input: ScraperInput): Promise<{
         'User-Agent': 'SimpleCLI/0.1.0 (+https://github.com/simple-cli)',
         'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
       },
-      // Note: Node.js fetch doesn't directly support SSL verification toggle
-      // In production, you'd use a custom agent
     });
 
     clearTimeout(timeoutId);
@@ -171,7 +230,10 @@ export async function execute(input: ScraperInput): Promise<{
     // Convert HTML to Markdown if requested
     if (convertToMarkdown && (contentType.includes('text/html') || looksLikeHtml(content))) {
       content = slimDownHtml(content);
-      content = htmlToMarkdown(content);
+      content = await htmlToMarkdown(content);
+      
+      // Clean up excessive whitespace
+      content = content.replace(/\n{3,}/g, '\n\n').trim();
     }
 
     return {

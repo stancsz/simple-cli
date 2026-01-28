@@ -1,10 +1,10 @@
 /**
  * Glob Tool - Find files matching patterns
- * Based on GeminiCLI's glob.ts
+ * Uses fast-glob for reliable glob matching (with fallback)
  */
 
 import { z } from 'zod';
-import { readdir, stat } from 'fs/promises';
+import { readdir } from 'fs/promises';
 import { join, relative, basename } from 'path';
 import type { Tool } from '../registry.js';
 
@@ -21,73 +21,73 @@ type GlobInput = z.infer<typeof inputSchema>;
 
 // Default ignore patterns
 const DEFAULT_IGNORE = [
-  'node_modules',
-  '.git',
-  '.svn',
-  '.hg',
-  'dist',
-  'build',
-  'coverage',
-  '.next',
-  '.nuxt',
-  '__pycache__',
-  '.pytest_cache',
-  'venv',
-  '.venv',
-  'env',
-  '.env',
-  '.idea',
-  '.vscode',
-  '*.pyc',
-  '*.pyo',
-  '.DS_Store',
-  'Thumbs.db',
+  '**/node_modules/**',
+  '**/.git/**',
+  '**/.svn/**',
+  '**/.hg/**',
+  '**/dist/**',
+  '**/build/**',
+  '**/coverage/**',
+  '**/.next/**',
+  '**/.nuxt/**',
+  '**/__pycache__/**',
+  '**/.pytest_cache/**',
+  '**/venv/**',
+  '**/.venv/**',
+  '**/env/**',
+  '**/.env',
+  '**/.idea/**',
+  '**/.vscode/**',
+  '**/*.pyc',
+  '**/*.pyo',
+  '**/.DS_Store',
+  '**/Thumbs.db',
 ];
 
-// Convert glob pattern to regex
-function globToRegex(pattern: string): RegExp {
-  let regex = pattern
-    // Escape special regex characters except * and ?
-    .replace(/[.+^${}()|[\]\\]/g, '\\$&')
-    // ** matches any path (including /)
-    .replace(/\*\*/g, '<<<DOUBLESTAR>>>')
-    // * matches anything except /
-    .replace(/\*/g, '[^/]*')
-    // ? matches single character except /
-    .replace(/\?/g, '[^/]')
-    // Restore **
-    .replace(/<<<DOUBLESTAR>>>/g, '.*');
+// Simple ignore patterns for fallback (directory names)
+const FALLBACK_IGNORE = [
+  'node_modules', '.git', '.svn', '.hg', 'dist', 'build', 'coverage',
+  '.next', '.nuxt', '__pycache__', '.pytest_cache', 'venv', '.venv',
+  'env', '.idea', '.vscode',
+];
 
-  // Handle patterns starting with **/ to match from root
-  if (pattern.startsWith('**/')) {
-    regex = '(?:^|/)' + regex.slice(4);
-  }
+// Cached fast-glob instance (typed as any to handle missing module)
+let fastGlob: any = null;
+let fgLoaded = false;
 
-  return new RegExp(`${regex}$`, 'i');
-}
-
-// Check if path matches any ignore pattern
-function shouldIgnore(path: string, ignorePatterns: string[]): boolean {
-  const name = basename(path);
-  
-  for (const pattern of ignorePatterns) {
-    if (pattern.includes('*')) {
-      const regex = globToRegex(pattern);
-      if (regex.test(path) || regex.test(name)) {
-        return true;
-      }
-    } else {
-      if (path.includes(pattern) || name === pattern) {
-        return true;
-      }
+async function loadFastGlob(): Promise<any> {
+  if (!fgLoaded) {
+    fgLoaded = true;
+    try {
+      fastGlob = (await import('fast-glob')).default;
+    } catch {
+      // fast-glob not installed
     }
   }
-  
-  return false;
+  return fastGlob;
 }
 
-// Recursively find files matching pattern
-async function findFiles(
+// Convert glob pattern to regex (for fallback)
+function globToRegex(pattern: string): RegExp {
+  let prefix = '';
+  let workPattern = pattern;
+  
+  if (pattern.startsWith('**/')) {
+    prefix = '(?:^|.*/)?';
+    workPattern = pattern.slice(3);
+  }
+  
+  let regex = workPattern
+    .replace(/[.+^${}()|[\]\\]/g, '\\$&')
+    .replace(/\*\*/g, '.*')
+    .replace(/\*/g, '[^/]*')
+    .replace(/\?/g, '[^/]');
+
+  return new RegExp(`${prefix}${regex}$`, 'i');
+}
+
+// Fallback: recursive file finder
+async function findFilesFallback(
   dir: string,
   pattern: RegExp,
   options: {
@@ -98,42 +98,33 @@ async function findFiles(
   },
   results: string[] = []
 ): Promise<string[]> {
-  if (results.length >= options.maxResults) {
-    return results;
-  }
+  if (results.length >= options.maxResults) return results;
 
   try {
     const entries = await readdir(dir, { withFileTypes: true });
 
     for (const entry of entries) {
-      if (results.length >= options.maxResults) {
-        break;
-      }
+      if (results.length >= options.maxResults) break;
+
+      // Check ignore
+      if (options.ignorePatterns.includes(entry.name)) continue;
+      if (entry.name.startsWith('.')) continue;
 
       const fullPath = join(dir, entry.name);
       const relativePath = relative(options.baseDir, fullPath);
 
-      // Check ignore patterns
-      if (shouldIgnore(relativePath, options.ignorePatterns)) {
-        continue;
-      }
-
       if (entry.isDirectory()) {
-        // Check if directory matches pattern
         if (options.includeDirectories && pattern.test(relativePath)) {
           results.push(relativePath);
         }
-
-        // Recurse into directory
-        await findFiles(fullPath, pattern, options, results);
+        await findFilesFallback(fullPath, pattern, options, results);
       } else if (entry.isFile()) {
-        // Check if file matches pattern
         if (pattern.test(relativePath)) {
           results.push(relativePath);
         }
       }
     }
-  } catch (error) {
+  } catch {
     // Ignore permission errors
   }
 
@@ -155,13 +146,43 @@ export async function execute(input: GlobInput): Promise<{
     ignore = [],
   } = inputSchema.parse(input);
 
-  const ignorePatterns = [...DEFAULT_IGNORE, ...ignore];
-  const regex = globToRegex(pattern);
+  const fg = await loadFastGlob();
 
-  const matches = await findFiles(cwd, regex, {
-    maxResults: maxResults + 1, // Get one extra to detect truncation
+  if (fg) {
+    // Use fast-glob (preferred)
+    try {
+      const ignorePatterns = [...DEFAULT_IGNORE, ...ignore];
+      const matches = await fg(pattern, {
+        cwd,
+        ignore: ignorePatterns,
+        onlyFiles: !includeDirectories,
+        onlyDirectories: false,
+        dot: false,
+        absolute: false,
+        suppressErrors: true,
+      });
+
+      const sorted = matches.sort();
+      const truncated = sorted.length > maxResults;
+      const finalMatches = sorted.slice(0, maxResults);
+
+      return {
+        pattern,
+        matches: finalMatches,
+        count: finalMatches.length,
+        truncated,
+      };
+    } catch {
+      // Fall through to fallback
+    }
+  }
+
+  // Fallback implementation
+  const regex = globToRegex(pattern);
+  const matches = await findFilesFallback(cwd, regex, {
+    maxResults: maxResults + 1,
     includeDirectories,
-    ignorePatterns,
+    ignorePatterns: FALLBACK_IGNORE,
     baseDir: cwd,
   });
 
