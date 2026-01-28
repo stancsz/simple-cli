@@ -144,7 +144,7 @@ export async function select<T extends string>(options: {
   options: Array<{ value: T; label: string; hint?: string }>;
   initialValue?: T;
 }): Promise<T | symbol> {
-  return p.select(options);
+  return p.select(options as any);
 }
 
 /**
@@ -156,7 +156,7 @@ export async function multiselect<T extends string>(options: {
   initialValues?: T[];
   required?: boolean;
 }): Promise<T[] | symbol> {
-  return p.multiselect(options);
+  return p.multiselect(options as any);
 }
 
 /**
@@ -166,7 +166,7 @@ export async function group<T extends Record<string, unknown>>(
   prompts: Record<keyof T, () => Promise<unknown>>,
   options?: { onCancel?: () => void }
 ): Promise<T> {
-  return p.group(prompts, options) as unknown as Promise<T>;
+  return p.group(prompts as any, options) as unknown as Promise<T>;
 }
 
 /**
