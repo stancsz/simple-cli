@@ -195,8 +195,12 @@ describe('git tool', () => {
   });
 
   describe('helper functions', () => {
-    it('getCurrentBranch should return branch name', () => {
+    it('getCurrentBranch should return branch name', async () => {
       if (!isGitRepo) return;
+
+      // Need at least one commit for branch to exist
+      await writeFile(join(testDir, 'init.txt'), 'init');
+      execSync('git add init.txt && git commit -m "init"', { cwd: testDir, stdio: 'pipe' });
 
       const branch = getCurrentBranch(testDir);
       expect(branch).toBeTruthy();

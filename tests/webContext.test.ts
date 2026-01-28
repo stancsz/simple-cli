@@ -36,16 +36,16 @@ const checkForUrls = (
 
 describe('webContext', () => {
   describe('URL extraction from messages', () => {
-    const mockScrape = vi.fn().mockResolvedValue('Scraped content');
-
     it('should extract HTTP URL', async () => {
+      const mockScrape = vi.fn().mockResolvedValue('Scraped content');
       const message = 'Check http://example.com, it\'s cool';
-      const result = await checkForUrls(message, mockScrape);
+      await checkForUrls(message, mockScrape);
       
       expect(mockScrape).toHaveBeenCalledWith('http://example.com,');
     });
 
     it('should extract HTTPS URL with path', async () => {
+      const mockScrape = vi.fn().mockResolvedValue('Scraped content');
       const message = 'Visit https://www.example.com/page and see stuff';
       const result = await checkForUrls(message, mockScrape);
       
@@ -53,13 +53,15 @@ describe('webContext', () => {
     });
 
     it('should extract URL with port', async () => {
+      const mockScrape = vi.fn().mockResolvedValue('Scraped content');
       const message = 'Look at http://localhost:3000';
-      const result = await checkForUrls(message, mockScrape);
+      await checkForUrls(message, mockScrape);
       
       expect(mockScrape).toHaveBeenCalledWith('http://localhost:3000');
     });
 
     it('should extract URL with query parameters', async () => {
+      const mockScrape = vi.fn().mockResolvedValue('Scraped content');
       const message = 'Go to http://subdomain.example.com:8080/path?query=value, or not';
       const result = await checkForUrls(message, mockScrape);
       
@@ -67,6 +69,7 @@ describe('webContext', () => {
     });
 
     it('should extract URL with fragment', async () => {
+      const mockScrape = vi.fn().mockResolvedValue('Scraped content');
       const message = 'See https://example.com/path#fragment for example';
       const result = await checkForUrls(message, mockScrape);
       
@@ -74,13 +77,15 @@ describe('webContext', () => {
     });
 
     it('should extract IP address URL', async () => {
+      const mockScrape = vi.fn().mockResolvedValue('Scraped content');
       const message = 'Open http://127.0.0.1:8000/api/v1/';
-      const result = await checkForUrls(message, mockScrape);
+      await checkForUrls(message, mockScrape);
       
       expect(mockScrape).toHaveBeenCalledWith('http://127.0.0.1:8000/api/v1/');
     });
 
     it('should extract URL with credentials', async () => {
+      const mockScrape = vi.fn().mockResolvedValue('Scraped content');
       const message = 'Access http://user:password@example.com';
       const result = await checkForUrls(message, mockScrape);
       
@@ -88,13 +93,15 @@ describe('webContext', () => {
     });
 
     it('should handle multiple URLs', async () => {
+      const mockScrape = vi.fn().mockResolvedValue('Scraped content');
       const message = 'Check http://example1.com and https://example2.com/page';
-      const result = await checkForUrls(message, mockScrape);
+      await checkForUrls(message, mockScrape);
       
       expect(mockScrape).toHaveBeenCalledTimes(2);
     });
 
     it('should return original message when no URLs', async () => {
+      const mockScrape = vi.fn().mockResolvedValue('Scraped content');
       const message = 'This text contains no URL';
       const result = await checkForUrls(message, mockScrape);
       
@@ -103,13 +110,13 @@ describe('webContext', () => {
     });
 
     it('should deduplicate repeated URLs', async () => {
-      const mockScrapeSingle = vi.fn().mockResolvedValue('content');
+      const mockScrape = vi.fn().mockResolvedValue('content');
       const message = 'Check https://example.com then https://example.com again';
       
-      await checkForUrls(message, mockScrapeSingle);
+      await checkForUrls(message, mockScrape);
       
       // Should only scrape once due to deduplication
-      expect(mockScrapeSingle).toHaveBeenCalledTimes(1);
+      expect(mockScrape).toHaveBeenCalledTimes(1);
     });
   });
 

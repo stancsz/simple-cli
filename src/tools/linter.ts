@@ -69,34 +69,59 @@ function detectLanguage(filePath: string): string | null {
 function parseErrors(output: string, filePath: string): LintError[] {
   const errors: LintError[] = [];
   const fileName = basename(filePath);
+  const escapedFileName = fileName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const escapedFilePath = filePath.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
   
   // Common patterns for error messages: file:line:col: message
   const patterns = [
     // Python/flake8/eslint style: file.py:10:5: E501 line too long
-    new RegExp(`(?:${fileName}|${filePath}):(\\d+)(?::(\\d+))?:\\s*(.+)`, 'gm'),
+    { regex: new RegExp(`(?:${escapedFileName}|${escapedFilePath}):(\\d+)(?::(\\d+))?:\\s*(.+)`, 'gm'), groups: [1, 2, 3] },
     // TypeScript/tsc style: file.ts(10,5): error TS1234: message
-    new RegExp(`(?:${fileName}|${filePath})\\((\\d+),(\\d+)\\):\\s*(\\w+)\\s+(.+)`, 'gm'),
+    { regex: new RegExp(`(?:${escapedFileName}|${escapedFilePath})\\((\\d+),(\\d+)\\):\\s*(\\w+)\\s+(.+)`, 'gm'), groups: [1, 2, 4] },
+    // Python py_compile style: File "file.py", line 10
+    { regex: /File\s+"[^"]+",\s+line\s+(\d+)/gim, groups: [1] },
     // Generic line number: line 10: message
-    /line\s+(\d+):\s*(.+)/gim,
+    { regex: /line\s+(\d+):\s*(.+)/gim, groups: [1, null, 2] },
   ];
 
-  for (const pattern of patterns) {
+  // Also capture standalone error messages like "SyntaxError: ..."
+  const syntaxErrorMatch = output.match(/(SyntaxError|IndentationError|TabError):\s*(.+)/i);
+  const syntaxErrorMessage = syntaxErrorMatch ? `${syntaxErrorMatch[1]}: ${syntaxErrorMatch[2]}` : null;
+
+  for (const { regex, groups } of patterns) {
     let match;
-    while ((match = pattern.exec(output)) !== null) {
-      const line = parseInt(match[1], 10);
-      const column = match[2] ? parseInt(match[2], 10) : undefined;
-      const message = match[3] || match[4] || '';
+    while ((match = regex.exec(output)) !== null) {
+      const lineIdx = groups[0];
+      const colIdx = groups[1];
+      const msgIdx = groups[2];
       
-      errors.push({
-        line,
-        column,
-        message: message.trim(),
-        severity: /error/i.test(message) ? 'error' : 'warning',
-      });
+      const line = parseInt(match[lineIdx], 10);
+      const column = colIdx && match[colIdx] ? parseInt(match[colIdx], 10) : undefined;
+      let message = msgIdx && match[msgIdx] ? match[msgIdx].trim() : '';
+      
+      // Use syntax error message if we found one and this pattern doesn't have a message
+      if (!message && syntaxErrorMessage) {
+        message = syntaxErrorMessage;
+      }
+      
+      if (line > 0) {
+        errors.push({
+          line,
+          column,
+          message: message || 'Syntax error',
+          severity: 'error',
+        });
+      }
     }
   }
 
-  return errors;
+  // Deduplicate errors by line number
+  const seen = new Set<number>();
+  return errors.filter(e => {
+    if (seen.has(e.line)) return false;
+    seen.add(e.line);
+    return true;
+  });
 }
 
 // Python syntax check using compile

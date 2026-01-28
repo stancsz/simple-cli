@@ -28,7 +28,7 @@ describe('registry', () => {
         expect(typeof tool.description).toBe('string');
         expect(tool.permission).toBeDefined();
         expect(['read', 'write', 'execute']).toContain(tool.permission);
-        expect(tool.schema).toBeDefined();
+        expect(tool.inputSchema).toBeDefined();
         expect(tool.execute).toBeDefined();
         expect(typeof tool.execute).toBe('function');
       }
@@ -120,10 +120,10 @@ describe('registry', () => {
       const readFiles = tools.get('readFiles');
 
       // Valid input
-      expect(() => readFiles!.schema.parse({ paths: ['file.txt'] })).not.toThrow();
+      expect(() => readFiles!.inputSchema.parse({ paths: ['file.txt'] })).not.toThrow();
 
       // Invalid input
-      expect(() => readFiles!.schema.parse({})).toThrow();
+      expect(() => readFiles!.inputSchema.parse({})).toThrow();
     });
 
     it('should validate writeFiles input', async () => {
@@ -131,12 +131,12 @@ describe('registry', () => {
       const writeFiles = tools.get('writeFiles');
 
       // Valid input
-      expect(() => writeFiles!.schema.parse({
+      expect(() => writeFiles!.inputSchema.parse({
         files: [{ path: 'file.txt', content: 'test' }]
       })).not.toThrow();
 
       // Invalid input
-      expect(() => writeFiles!.schema.parse({})).toThrow();
+      expect(() => writeFiles!.inputSchema.parse({})).toThrow();
     });
 
     it('should validate runCommand input', async () => {
@@ -144,10 +144,10 @@ describe('registry', () => {
       const runCommand = tools.get('runCommand');
 
       // Valid input
-      expect(() => runCommand!.schema.parse({ command: 'echo test' })).not.toThrow();
+      expect(() => runCommand!.inputSchema.parse({ command: 'echo test' })).not.toThrow();
 
       // Invalid input
-      expect(() => runCommand!.schema.parse({})).toThrow();
+      expect(() => runCommand!.inputSchema.parse({})).toThrow();
     });
   });
 });

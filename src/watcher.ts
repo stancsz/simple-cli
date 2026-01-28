@@ -27,6 +27,7 @@ const IGNORE_PATTERNS = [
   /\.DS_Store/,
   /\.swp$/,
   /\.swo$/,
+  /\.bak$/,
   /~$/,
   /\.tmp$/,
   /\.log$/,
@@ -165,6 +166,15 @@ export class FileWatcher extends EventEmitter {
     } catch {
       return [];
     }
+  }
+
+  hasActionableComments(): boolean {
+    for (const [_, file] of this.watchedFiles) {
+      if (file.aiComments.some(c => c.action === 'request' || c.action === 'question')) {
+        return true;
+      }
+    }
+    return false;
   }
 
   getActionableCommentsPrompt(): string {

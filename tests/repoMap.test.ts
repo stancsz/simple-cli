@@ -74,12 +74,23 @@ class Person:
     });
 
     it('should return message for empty repository', async () => {
-      // Empty directory with no source files
-      await writeFile(join(testDir, 'readme.txt'), 'not a source file');
+      // Truly empty directory (no files at all)
+      const emptyDir = join(testDir, 'empty');
+      await mkdir(emptyDir, { recursive: true });
+
+      const repoMap = await generateRepoMap(emptyDir);
+
+      expect(repoMap).toContain('No source files');
+    });
+
+    it('should list non-code files without symbols', async () => {
+      // Non-code files are still listed in the map
+      await writeFile(join(testDir, 'readme.txt'), 'documentation');
 
       const repoMap = await generateRepoMap(testDir);
 
-      expect(repoMap).toContain('No source files');
+      // .txt files are listed but have no symbols extracted
+      expect(repoMap).toContain('readme.txt');
     });
   });
 

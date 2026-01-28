@@ -236,6 +236,12 @@ describe('GitManager', () => {
     it('should undo the last commit', async () => {
       if (!isGitAvailable) return;
 
+      // Need at least one commit first (git reset needs a parent)
+      await writeFile(join(testDir, 'initial.txt'), 'initial');
+      await git.add('initial.txt');
+      await git.commit({ message: 'Initial commit' });
+
+      // Now add another commit to undo
       await writeFile(join(testDir, 'undo.txt'), 'content');
       await git.add('undo.txt');
       await git.commit({ message: 'To be undone' });
