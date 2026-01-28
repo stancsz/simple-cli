@@ -263,6 +263,15 @@ Tier 4: Intern (GPT-5 Nano) - Low latency tasks
 Tier 5: Utility (Gemini 2.5 Flash) - Formatting, docs
 ```
 
+### Self-Evolution
+The agent can upgrade itself by writing new tools.
+
+1.  **Dynamic Registry**: `src/registry.ts` scans `src/tools/*.ts` at runtime.
+2.  **Self-Modification**: The agent can use `writeFiles` to create a new tool (e.g., `src/tools/sql.ts`).
+3.  **Instant Upgrade**: On the next run, the new tool is automatically loaded and available in the system prompt.
+
+This allows the agent to permanently expand its capabilities (adding database access, API clients, etc.) without you needing to rebuild the core.
+
 ### MCP Protocol Support
 Connect to 250+ tools via Model Context Protocol:
 
