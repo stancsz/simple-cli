@@ -12,6 +12,9 @@ import { applyEdit, parseEditBlocks, applyFileEdits } from './src/lib/editor.js'
 import { writeFile, readFile, rm, mkdir } from 'fs/promises';
 import { existsSync } from 'fs';
 import { join } from 'path';
+import { TaskQueue } from './src/swarm/task.js';
+import { SwarmCoordinator } from './src/swarm/coordinator.js';
+import type { SwarmTask } from './src/swarm/types.js';
 
 const TEST_DIR = '/workspace/test-workspace';
 const DIVIDER = '═'.repeat(60);
@@ -960,6 +963,89 @@ ${codeToTest}`;
 }
 
 // ============================================
+// ===== SWARM TESTS =====
+
+async function testSwarmTaskQueue(): Promise<void> {
+  const queue = new TaskQueue();
+
+  // Add tasks with dependencies
+  queue.addTasks([
+    { id: 't1', type: 'implement', description: 'Task 1', scope: {}, dependencies: [], priority: 2, timeout: 60000, retries: 1 },
+    { id: 't2', type: 'test', description: 'Task 2', scope: {}, dependencies: ['t1'], priority: 1, timeout: 60000, retries: 1 },
+    { id: 't3', type: 'review', description: 'Task 3', scope: {}, dependencies: [], priority: 3, timeout: 60000, retries: 1 },
+  ]);
+
+  console.log('  Added 3 tasks with dependencies');
+
+  const stats = queue.getStats();
+  if (stats.total !== 3) throw new Error(`Expected 3 tasks, got ${stats.total}`);
+  if (stats.pending !== 3) throw new Error(`Expected 3 pending, got ${stats.pending}`);
+  console.log(`  Stats: ${JSON.stringify(stats)}`);
+
+  // Get next task (should be t1 since t2 depends on it)
+  const first = queue.getNextTask();
+  if (!first) throw new Error('Expected a task');
+  if (first.id !== 't1') throw new Error(`Expected t1 (t2 depends on it), got ${first.id}`);
+  console.log(`  First task: ${first.id} (priority ${first.priority})`);
+
+  // Complete t1
+  queue.completeTask('t1', {
+    task: first,
+    workerId: 'test-worker',
+    result: { success: true, filesChanged: [], duration: 100 }
+  });
+  console.log('  Completed t1');
+
+  // Now t2 should be available (highest priority)
+  const second = queue.getNextTask();
+  if (!second) throw new Error('Expected t2');
+  if (second.id !== 't2') throw new Error(`Expected t2, got ${second.id}`);
+  console.log(`  Second task: ${second.id} (priority ${second.priority})`);
+
+  // Test failure and retry
+  const willRetry = queue.failTask('t2', 'Test error', 2);
+  if (!willRetry) throw new Error('Expected task to be eligible for retry');
+  console.log('  t2 failed, will retry');
+
+  // t2 should be back in pending
+  if (queue.getStats().pending !== 2) throw new Error('Expected 2 pending after retry');
+  console.log('  Task queue correctly handles dependencies and retries');
+}
+
+async function testSwarmCoordinator(): Promise<void> {
+  const coordinator = new SwarmCoordinator({
+    cwd: TEST_DIR,
+    concurrency: 2,
+    yolo: true,
+    timeout: 5000,
+  });
+
+  // Test empty swarm first
+  console.log('  Running empty swarm...');
+  const emptyResult = await coordinator.run();
+  console.log(`  Empty result: ${emptyResult.completed}/${emptyResult.total} in ${emptyResult.duration}ms`);
+  
+  // Verify isRunning is false after completion
+  if (coordinator.isRunning()) throw new Error('Coordinator should not be running after completion');
+
+  // Test adding tasks
+  coordinator.addTasks([
+    { id: 'coord-1', type: 'implement', description: 'Test task 1', scope: {}, dependencies: [], priority: 1, timeout: 1000, retries: 0 },
+    { id: 'coord-2', type: 'test', description: 'Test task 2', scope: {}, dependencies: [], priority: 2, timeout: 1000, retries: 0 },
+  ]);
+
+  const stats = coordinator.getStats();
+  console.log(`  Added ${stats.total} tasks`);
+  if (stats.total !== 2) throw new Error(`Expected 2 tasks, got ${stats.total}`);
+
+  // Test peek without removing
+  const peeked = coordinator.peekTask();
+  if (!peeked) throw new Error('Expected to peek task');
+  console.log(`  Peeked: ${peeked.id}`);
+
+  console.log('  Coordinator lifecycle works correctly');
+}
+
 // MAIN TEST RUNNER
 // ============================================
 async function main(): Promise<void> {
@@ -997,6 +1083,10 @@ async function main(): Promise<void> {
   await runTest('Refactoring Task', testRefactoringTask);
   await runTest('API Design', testAPIDesign);
   await runTest('Test Generation', testTestGeneration);
+
+  // Swarm tests
+  await runTest('Swarm Task Queue', testSwarmTaskQueue);
+  await runTest('Swarm Coordinator', testSwarmCoordinator);
 
   // Cleanup
   await cleanupTestDir();

@@ -44,6 +44,55 @@ simple-cli --yolo --auto-commit --auto-test \
 ```
 
 ### 2. Agent Swarms
+
+Simple-CLI is designed as a **swarm unit**—a lightweight, headless agent that can be spawned by the hundreds to solve problems in parallel.
+
+#### Architecture
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                         ORCHESTRATOR                             │
+│   (Your code: Python, TypeScript, Go, or another Simple-CLI)    │
+└───────────────┬─────────────────────────────────────────────────┘
+                │
+        ┌───────┴───────┐
+        │  Task Queue   │
+        │  (in-memory)  │
+        └───────┬───────┘
+                │
+    ┌───────────┼───────────┬───────────┐
+    ▼           ▼           ▼           ▼
+┌───────┐  ┌───────┐  ┌───────┐  ┌───────┐
+│Worker │  │Worker │  │Worker │  │Worker │
+│  #1   │  │  #2   │  │  #3   │  │  #N   │
+└───┬───┘  └───┬───┘  └───┬───┘  └───┬───┘
+    │          │          │          │
+    └──────────┴──────────┴──────────┘
+                    │
+            ┌───────┴───────┐
+            │   Git Repo    │
+            │ (shared state)│
+            └───────────────┘
+```
+
+#### Core Principles
+
+1. **Git as Coordination Layer**: No database required. Git merge handles concurrent edits.
+2. **Task Granularity**: Tasks should be file-scoped or function-scoped.
+3. **Fail-Forward Design**: Workers are disposable. Atomic commits mean partial work can be cherry-picked.
+
+#### Swarm Mode CLI
+
+- `--swarm`: Activates swarm mode. It has a default completion stop (terminates once tasks are finished).
+- `--swarm --yolo`: Runs the swarm in auto-approval mode.
+
+```bash
+# Start a swarm session
+simple-cli --swarm "refactor all modules"
+```
+
+#### Programmatic Orchestration
+
 ```python
 # Python orchestrator spawning multiple Simple-CLI agents
 import subprocess
@@ -51,7 +100,7 @@ import asyncio
 
 async def run_agent(task: str, workdir: str):
     proc = await asyncio.create_subprocess_exec(
-        'simple-cli', '--yolo', '--moe', task,
+        'simple-cli', '--yolo', '--swarm', task,
         cwd=workdir,
         stdout=asyncio.subprocess.PIPE
     )
@@ -64,6 +113,8 @@ await asyncio.gather(
     run_agent("optimize database queries", "./services/data"),
 )
 ```
+
+For more details on coordination patterns (Fan-Out, Pipeline, Map-Reduce), see the [Full Swarm Specification](./docs/SWARM-DESIGN.md).
 
 ### 3. CI/CD Integration
 ```yaml
@@ -316,12 +367,19 @@ USAGE
 FLAGS
   --yolo           Auto-approve all tool executions
   --moe            Enable Mix of Experts routing
+  --swarm          Enable swarm mode (multi-agent orchestration)
   --auto-commit    Commit changes automatically
   --auto-lint      Lint after changes (default: true)
   --auto-test      Run tests after changes
   --test-cmd=CMD   Test command to run
   --skill=SKILL    Initial skill (code, architect, test, etc.)
   --watch          Watch files for AI comments
+
+SWARM MODE
+  simple-cli --swarm --tasks <file>     Run tasks from JSON file
+  simple-cli --swarm --task "desc"      Run single task
+  simple-cli --swarm --task "desc" --scope "src/**/*.ts"  Task per file
+  simple-cli --swarm --concurrency 4    Set parallel workers
 
 COMMANDS
   simple-cli add <files>     Add files to context

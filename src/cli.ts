@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 /**
  * Simple-CLI - Enhanced agentic coding assistant
- * Integrates: MoE routing, MCP tools, skills, file watching, and commands
+ * Integrates: MoE routing, MCP tools, skills, file watching, swarm, and commands
  */
 
 import 'dotenv/config';
@@ -15,25 +15,55 @@ import { getMCPManager } from './mcp/manager.js';
 import { FileWatcher, createFileWatcher } from './watcher.js';
 import { listSkills, setActiveSkill, getActiveSkill } from './skills.js';
 import { readFileSync, existsSync } from 'fs';
+import { runSwarm, parseSwarmArgs, printSwarmHelp } from './commands/swarm.js';
 
 // CLI flags
 const YOLO_MODE = process.argv.includes('--yolo');
 const MOE_MODE = process.argv.includes('--moe');
 const WATCH_MODE = process.argv.includes('--watch');
+const SWARM_MODE = process.argv.includes('--swarm');
 const DEBUG = process.argv.includes('--debug') || process.env.DEBUG === 'true';
+
+// Handle --swarm mode
+if (SWARM_MODE) {
+  if (process.argv.includes('--help')) {
+    printSwarmHelp();
+    process.exit(0);
+  }
+  const swarmOptions = parseSwarmArgs(process.argv.slice(2));
+  swarmOptions.yolo = swarmOptions.yolo || YOLO_MODE;
+  runSwarm(swarmOptions).catch(err => {
+    console.error('Swarm error:', err);
+    process.exit(1);
+  });
+} else {
+  // Continue with normal CLI
+  startCli();
+}
 
 // Version
 const VERSION = '0.1.0';
 
+// Start the interactive CLI
+function startCli(): void {
+  main().catch(console.error);
+}
+
 // Banner
 function printBanner(): void {
+  const modes = [
+    MOE_MODE ? '[MoE]' : '[Single]',
+    YOLO_MODE ? '[YOLO]' : '[Safe]',
+    WATCH_MODE ? '[Watch]' : '',
+  ].filter(Boolean).join(' ');
+  
   console.log(`
 ╔═══════════════════════════════════════════╗
 ║  Simple-CLI v${VERSION}                        ║
 ║  Agentic coding assistant with MCP/MoE    ║
 ╠═══════════════════════════════════════════╣
-║  Commands: /help for list                 ║
-║  Modes: ${MOE_MODE ? '[MoE]' : '[Single]'} ${YOLO_MODE ? '[YOLO]' : '[Safe]'} ${WATCH_MODE ? '[Watch]' : ''}               ║
+║  Commands: /help, --swarm for swarm mode  ║
+║  Modes: ${modes.padEnd(32)}║
 ╚═══════════════════════════════════════════╝
 `);
 }

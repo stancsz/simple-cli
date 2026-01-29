@@ -73,15 +73,16 @@ function parseErrors(output: string, filePath: string): LintError[] {
   const escapedFilePath = filePath.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
   
   // Common patterns for error messages: file:line:col: message
-  const patterns = [
+  // groups: [lineIndex, columnIndex (or -1), messageIndex (or -1)]
+  const patterns: Array<{ regex: RegExp; groups: [number, number, number] }> = [
     // Python/flake8/eslint style: file.py:10:5: E501 line too long
     { regex: new RegExp(`(?:${escapedFileName}|${escapedFilePath}):(\\d+)(?::(\\d+))?:\\s*(.+)`, 'gm'), groups: [1, 2, 3] },
     // TypeScript/tsc style: file.ts(10,5): error TS1234: message
     { regex: new RegExp(`(?:${escapedFileName}|${escapedFilePath})\\((\\d+),(\\d+)\\):\\s*(\\w+)\\s+(.+)`, 'gm'), groups: [1, 2, 4] },
     // Python py_compile style: File "file.py", line 10
-    { regex: /File\s+"[^"]+",\s+line\s+(\d+)/gim, groups: [1] },
+    { regex: /File\s+"[^"]+",\s+line\s+(\d+)/gim, groups: [1, -1, -1] },
     // Generic line number: line 10: message
-    { regex: /line\s+(\d+):\s*(.+)/gim, groups: [1, null, 2] },
+    { regex: /line\s+(\d+):\s*(.+)/gim, groups: [1, -1, 2] },
   ];
 
   // Also capture standalone error messages like "SyntaxError: ..."
@@ -91,13 +92,11 @@ function parseErrors(output: string, filePath: string): LintError[] {
   for (const { regex, groups } of patterns) {
     let match;
     while ((match = regex.exec(output)) !== null) {
-      const lineIdx = groups[0];
-      const colIdx = groups[1];
-      const msgIdx = groups[2];
+      const [lineIdx, colIdx, msgIdx] = groups;
       
       const line = parseInt(match[lineIdx], 10);
-      const column = colIdx && match[colIdx] ? parseInt(match[colIdx], 10) : undefined;
-      let message = msgIdx && match[msgIdx] ? match[msgIdx].trim() : '';
+      const column = colIdx >= 0 && match[colIdx] ? parseInt(match[colIdx], 10) : undefined;
+      let message = msgIdx >= 0 && match[msgIdx] ? match[msgIdx].trim() : '';
       
       // Use syntax error message if we found one and this pattern doesn't have a message
       if (!message && syntaxErrorMessage) {
