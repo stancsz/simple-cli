@@ -1,4 +1,4 @@
-# simplecli
+# Simple CLI
 
 > Lean, lightweight, and packs a punch.
 
