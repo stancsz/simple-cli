@@ -1,26 +1,11 @@
 {
-  "name": "simplecli",
+  "name": "@stan-chen/simple-cli",
   "version": "0.2.1",
   "description": "A lean, lightweight coding agent. Packs a punch with token efficiency.",
   "type": "module",
   "main": "dist/cli.js",
   "bin": {
-    "simple": "./dist/cli.js"
-  },
-  "oclif": {
-    "bin": "simple",
-    "dirname": "simplecli",
-    "commands": "./dist/commands",
-    "plugins": [],
-    "topicSeparator": " ",
-    "topics": {
-      "mcp": {
-        "description": "MCP server management"
-      },
-      "git": {
-        "description": "Git operations"
-      }
-    }
+    "simple": "dist/cli.js"
   },
   "scripts": {
     "start": "node --loader ts-node/esm src/cli.ts",
@@ -31,9 +16,7 @@
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
     "lint": "eslint src/ tests/",
-    "format": "prettier --write src/ tests/",
-    "postpack": "rm -f oclif.manifest.json",
-    "prepack": "npm run build"
+    "format": "prettier --write src/ tests/"
   },
   "keywords": [
     "cli",
@@ -86,8 +69,8 @@
     "@types/turndown": "^5.0.5"
   },
   "files": [
-    "/bin",
-    "/dist",
-    "/oclif.manifest.json"
+    "dist",
+    "README.md",
+    "logo.jpeg"
   ]
 }

@@ -16,7 +16,7 @@ It’s lightweight but powerful, optimized for **token efficiency**, and support
 
 ```bash
 # 1. Install globally
-npm install -g simplecli
+npm install -g @stan-chen/simple-cli
 
 # 2. Set your API key (any provider)
 export OPENAI_API_KEY="sk-..."
@@ -273,9 +273,9 @@ Aider is the most mature open-source AI coding assistant. It's battle-tested and
 
 ## Installation & Setup
 ```bash
-npm install -g simplecli
+npm install -g @stan-chen/simple-cli
 # or
-npx simplecli
+npx @stan-chen/simple-cli
 ```
 
 ### Configuration
