@@ -30,51 +30,41 @@ interface CommandResult {
 
 // Restricted environment - remove sensitive variables
 const createSafeEnv = (additionalEnv?: Record<string, string>): Record<string, string> => {
-  const safeEnv: Record<string, string> = {
-    PATH: process.env.PATH || '/usr/bin:/bin',
-    HOME: process.env.HOME || '/tmp',
-    TERM: process.env.TERM || 'xterm',
-    LANG: process.env.LANG || 'en_US.UTF-8'
-  };
-  
-  // Add any additional env vars (but not secrets)
+  // Inherit the full host environment to ensure tools like 'gh', 'git', etc.
+  // can access their configuration and credentials.
+  const env = { ...process.env } as Record<string, string>;
+
+  // Add any additional env vars
   if (additionalEnv) {
-    for (const [key, value] of Object.entries(additionalEnv)) {
-      if (!key.toLowerCase().includes('key') && 
-          !key.toLowerCase().includes('secret') &&
-          !key.toLowerCase().includes('token') &&
-          !key.toLowerCase().includes('password')) {
-        safeEnv[key] = value;
-      }
-    }
+    Object.assign(env, additionalEnv);
   }
-  
-  return safeEnv;
+
+  return env;
 };
 
 export const execute = async (args: Record<string, unknown>): Promise<CommandResult> => {
   const parsed = schema.parse(args);
   const timeout = parsed.timeout || 30000;
   const env = createSafeEnv(parsed.env);
-  
+
   return new Promise((resolve) => {
     let stdout = '';
     let stderr = '';
     let timedOut = false;
-    
+
     const child = spawn(parsed.command, {
       shell: true,
       cwd: parsed.cwd || process.cwd(),
       env,
       stdio: ['ignore', 'pipe', 'pipe']
     });
-    
+
     const timer = setTimeout(() => {
       timedOut = true;
       child.kill('SIGTERM');
       setTimeout(() => child.kill('SIGKILL'), 1000);
     }, timeout);
-    
+
     child.stdout?.on('data', (data: Buffer) => {
       stdout += data.toString();
       // Limit output size
@@ -83,14 +73,14 @@ export const execute = async (args: Record<string, unknown>): Promise<CommandRes
         child.kill('SIGTERM');
       }
     });
-    
+
     child.stderr?.on('data', (data: Buffer) => {
       stderr += data.toString();
       if (stderr.length > 50000) {
         stderr = stderr.slice(0, 50000) + '\n... (output truncated)';
       }
     });
-    
+
     child.on('close', (code) => {
       clearTimeout(timer);
       resolve({
@@ -100,7 +90,7 @@ export const execute = async (args: Record<string, unknown>): Promise<CommandRes
         timedOut
       });
     });
-    
+
     child.on('error', (error) => {
       clearTimeout(timer);
       resolve({

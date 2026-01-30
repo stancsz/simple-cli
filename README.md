@@ -132,6 +132,20 @@ For more details on coordination patterns (Fan-Out, Pipeline, Map-Reduce), see t
   "update outdated dependencies and fix any breaking changes"
 ```
 
+### 5. Native Tool Integration
+Simple-CLI inherits your full host environment, allowing it to use any tool installed on your machine. This makes it a first-class citizen for local development workflows.
+
+```bash
+# Leverages your local 'gh' auth and config
+simple-cli --yolo "create a test issue in stancsz/claude-code-litellm"
+
+# Native git operations
+simple-cli --yolo "initialize a new repo and commit the current files"
+
+# Call into standard Unix/Windows tools
+simple-cli --yolo "use powershell to find all large files and delete them"
+```
+
 ---
 
 ## Architecture: Simplicity by Design
@@ -295,6 +309,11 @@ agent.on('close', (code) => console.log(`Agent finished with code ${code}`));
 ---
 
 ## Features
+
+### Native Tool Integration
+- **Full Environment Inheritance** - Inherits `PATH`, `HOME`, and secret tokens (like `GH_TOKEN`) from your shell.
+- **Tool Friendly** - Seamlessly works with `gh`, `git`, `npm`, `powershell`, `curl`, and any other CLI tool.
+- **Zero-Config Auth** - If you're logged into GitHub/AWS/GCP on your machine, the agent is too.
 
 ### Code Editing
 - **Fuzzy matching** - Finds similar code even with minor differences
