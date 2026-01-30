@@ -1,0 +1,292 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Simple-CLI UI</title>
+    <style>
+        :root {
+            --bg: #0f172a;
+            --fg: #f8fafc;
+            --primary: #3b82f6;
+            --secondary: #1e293b;
+            --accent: #10b981;
+            --border: #334155;
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, sans-serif;
+            background: var(--bg);
+            color: var(--fg);
+            margin: 0;
+            display: flex;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        #chat-container {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            max-width: 900px;
+            margin: 0 auto;
+            border-left: 1px solid var(--border);
+            border-right: 1px solid var(--border);
+            background: rgba(15, 23, 42, 0.8);
+            backdrop-filter: blur(10px);
+        }
+
+        #header {
+            padding: 1rem 1.5rem;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        #header h1 {
+            font-size: 1.25rem;
+            margin: 0;
+            background: linear-gradient(135deg, #60a5fa, #10b981);
+            -webkit-background-clip: text;
+            background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        #messages {
+            flex: 1;
+            overflow-y: auto;
+            padding: 1.5rem;
+            display: flex;
+            flex-direction: column;
+            gap: 1.5rem;
+            scroll-behavior: smooth;
+        }
+
+        .message {
+            max-width: 85%;
+            padding: 1rem;
+            border-radius: 0.75rem;
+            line-height: 1.5;
+            position: relative;
+            animation: fadeIn 0.3s ease-out;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .user {
+            align-self: flex-end;
+            background: var(--primary);
+            color: white;
+            border-bottom-right-radius: 0;
+        }
+
+        .assistant {
+            align-self: flex-start;
+            background: var(--secondary);
+            border: 1px solid var(--border);
+            border-bottom-left-radius: 0;
+        }
+
+        .thought {
+            font-style: italic;
+            color: #94a3b8;
+            font-size: 0.875rem;
+            margin-bottom: 0.5rem;
+            padding-bottom: 0.5rem;
+            border-bottom: 1px solid var(--border);
+        }
+
+        #input-container {
+            padding: 1.5rem;
+            border-top: 1px solid var(--border);
+            display: flex;
+            gap: 0.75rem;
+        }
+
+        #user-input {
+            flex: 1;
+            background: var(--secondary);
+            border: 1px solid var(--border);
+            color: var(--fg);
+            padding: 0.75rem 1rem;
+            border-radius: 0.5rem;
+            outline: none;
+            transition: border-color 0.2s;
+        }
+
+        #user-input:focus {
+            border-color: var(--primary);
+        }
+
+        button {
+            background: var(--primary);
+            color: white;
+            border: none;
+            padding: 0.75rem 1.5rem;
+            border-radius: 0.5rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: opacity 0.2s;
+        }
+
+        button:hover {
+            opacity: 0.9;
+        }
+
+        button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        pre {
+            background: #000;
+            padding: 0.75rem;
+            border-radius: 0.5rem;
+            overflow-x: auto;
+            font-size: 0.875rem;
+        }
+
+        code {
+            font-family: 'Fira Code', monospace;
+        }
+
+        .typing {
+            font-size: 0.75rem;
+            color: #94a3b8;
+            margin-top: 0.25rem;
+        }
+    </style>
+</head>
+
+<body>
+    <div id="chat-container">
+        <div id="header">
+            <h1>Simple-CLI <small style="color: #64748b; font-weight: normal; font-size: 0.75rem;">v0.1.0</small></h1>
+            <div id="status" style="font-size: 0.75rem; color: #10b981;">● Online</div>
+        </div>
+        <div id="messages">
+            <div class="message assistant">
+                Hello! I'm your Simple-CLI assistant. How can I help you today?
+            </div>
+        </div>
+        <div id="input-container">
+            <input type="text" id="user-input" placeholder="Ask anything..." autocomplete="off">
+            <button id="send-btn">Send</button>
+        </div>
+    </div>
+
+    <script>
+        const messagesDiv = document.getElementById('messages');
+        const userInput = document.getElementById('user-input');
+        const sendBtn = document.getElementById('send-btn');
+
+        function addMessage(role, content, thought = null) {
+            const msgDiv = document.createElement('div');
+            msgDiv.className = `message ${role}`;
+
+            if (thought) {
+                const thoughtDiv = document.createElement('div');
+                thoughtDiv.className = 'thought';
+                thoughtDiv.textContent = `Thought: ${thought}`;
+                msgDiv.appendChild(thoughtDiv);
+            }
+
+            const textDiv = document.createElement('div');
+            textDiv.innerHTML = formatMarkdown(content);
+            msgDiv.appendChild(textDiv);
+
+            messagesDiv.appendChild(msgDiv);
+            messagesDiv.scrollTop = messagesDiv.scrollHeight;
+        }
+
+        function formatMarkdown(text) {
+            // Very basic markdown formatting for web demo
+            return text
+                .replace(/```([\s\S]*?)```/g, '<pre><code>$1</code></pre>')
+                .replace(/`([^`]+)`/g, '<code>$1</code>')
+                .replace(/\n/g, '<br>');
+        }
+
+        async function sendMessage() {
+            const text = userInput.value.trim();
+            if (!text || sendBtn.disabled) return;
+
+            userInput.value = '';
+            addMessage('user', text);
+
+            sendBtn.disabled = true;
+            userInput.disabled = true;
+
+            try {
+                const response = await fetch('/api/chat', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ message: text })
+                });
+
+                if (!response.ok) throw new Error('Failed to get response');
+
+                const data = await response.json();
+                addMessage('assistant', data.message, data.thought);
+
+                if (data.action && data.action.tool !== 'none') {
+                    addMessage('assistant', `[Action] **${data.action.tool}**\n\`\`\`json\n${JSON.stringify(data.action.args, null, 2)}\n\`\`\``);
+
+                    // Automatically execute tool (YOLO mode for UI demo)
+                    try {
+                        const execResponse = await fetch('/api/execute', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ tool: data.action.tool, args: data.action.args })
+                        });
+
+                        const execData = await execResponse.json();
+                        if (execData.error) {
+                            addMessage('assistant', `Tool Error: ${execData.error}`);
+                        } else {
+                            addMessage('assistant', `[Result]\n\`\`\`\n${execData.result}\n\`\`\``);
+
+                            // Ask LLM to follow up based on result
+                            const followUpText = `The tool ${data.action.tool} returned a result. Please process it.`;
+                            // Re-trigger sendMessage with the result context (optionally)
+                            // For this demo, let's just let the user send the next prompt or auto-trigger
+                        }
+                    } catch (err) {
+                        addMessage('assistant', `Execution Error: ${err.message}`);
+                    }
+                }
+            } catch (error) {
+                addMessage('assistant', `Error: ${error.message}`);
+            } finally {
+                sendBtn.disabled = false;
+                userInput.disabled = false;
+                userInput.focus();
+            }
+        }
+
+        sendBtn.addEventListener('click', sendMessage);
+        userInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') sendMessage();
+        });
+
+        userInput.focus();
+    </script>
+</body>
+
+</html>

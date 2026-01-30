@@ -5,11 +5,12 @@
  */
 
 import { readFile } from 'fs/promises';
-import { existsSync } from 'fs';
+import { existsSync, readdirSync, readFileSync } from 'fs';
 import { join, relative, resolve, dirname } from 'path';
 import { generateRepoMap } from './repoMap.js';
 import { getActiveSkill, type Skill } from './skills.js';
 import { loadAllTools, getToolDefinitions, type Tool } from './registry.js';
+import { getPromptProvider } from './prompts/provider.js';
 
 export interface Message {
   role: 'user' | 'assistant' | 'system';
@@ -36,7 +37,7 @@ let tokenizerLoaded = false;
 async function loadTokenizer(): Promise<void> {
   if (tokenizerLoaded) return;
   tokenizerLoaded = true;
-  
+
   try {
     const mod = await import('gpt-tokenizer') as any;
     tokenEncoder = mod.encode;
@@ -51,7 +52,7 @@ async function loadTokenizer(): Promise<void> {
  */
 async function countTokensAsync(text: string): Promise<number> {
   await loadTokenizer();
-  
+
   if (tokenEncoder) {
     try {
       return tokenEncoder(text).length;
@@ -59,7 +60,7 @@ async function countTokensAsync(text: string): Promise<number> {
       // Fall through to estimation
     }
   }
-  
+
   // Fallback: ~4 chars per token (rough but reasonable)
   return Math.ceil(text.length / 4);
 }
@@ -103,7 +104,7 @@ export class ContextManager {
   async initialize(): Promise<void> {
     // Load tools
     this.tools = await loadAllTools();
-    
+
     // Generate initial repo map
     await this.refreshRepoMap();
   }
@@ -113,11 +114,11 @@ export class ContextManager {
    */
   addFile(path: string, readOnly: boolean = false): boolean {
     const fullPath = resolve(this.cwd, path);
-    
+
     if (!existsSync(fullPath)) {
       return false;
     }
-    
+
     if (readOnly) {
       this.readOnlyFiles.add(fullPath);
       this.activeFiles.delete(fullPath);
@@ -125,7 +126,7 @@ export class ContextManager {
       this.activeFiles.add(fullPath);
       this.readOnlyFiles.delete(fullPath);
     }
-    
+
     return true;
   }
 
@@ -172,7 +173,7 @@ export class ContextManager {
    */
   async getFileContents(): Promise<Map<string, string>> {
     const contents = new Map<string, string>();
-    
+
     for (const file of [...this.activeFiles, ...this.readOnlyFiles]) {
       try {
         const content = await readFile(file, 'utf-8');
@@ -182,7 +183,7 @@ export class ContextManager {
         // Skip files that can't be read
       }
     }
-    
+
     return contents;
   }
 
@@ -205,15 +206,15 @@ export class ContextManager {
    */
   async refreshRepoMap(): Promise<string> {
     const now = Date.now();
-    
+
     // Cache for 30 seconds
     if (this.repoMapCache && now - this.repoMapTimestamp < 30000) {
       return this.repoMapCache;
     }
-    
+
     this.repoMapCache = await generateRepoMap(this.cwd);
     this.repoMapTimestamp = now;
-    
+
     return this.repoMapCache;
   }
 
@@ -221,31 +222,34 @@ export class ContextManager {
    * Build the system prompt
    */
   async buildSystemPrompt(): Promise<string> {
-    const parts: string[] = [];
-    
-    // Skill-specific prompt
-    parts.push(this.skill.systemPrompt);
-    
+    const provider = getPromptProvider();
+    const systemPrompt = await provider.getSystemPrompt({
+      cwd: this.cwd,
+      skillPrompt: this.skill.systemPrompt
+    });
+
+    const parts: string[] = [systemPrompt];
+
     // Tool definitions
     const toolDefs = getToolDefinitions(this.tools);
     parts.push('\n## Available Tools\n' + toolDefs);
-    
+
     // Active files
     const files = this.getFiles();
     if (files.active.length > 0 || files.readOnly.length > 0) {
       parts.push('\n## Context Files');
-      
+
       if (files.active.length > 0) {
         parts.push('\nEditable files:');
         parts.push(files.active.map(f => `- ${f}`).join('\n'));
       }
-      
+
       if (files.readOnly.length > 0) {
         parts.push('\nRead-only files:');
         parts.push(files.readOnly.map(f => `- ${f}`).join('\n'));
       }
     }
-    
+
     // Repository map (condensed)
     const repoMap = await this.refreshRepoMap();
     if (repoMap) {
@@ -255,7 +259,7 @@ export class ContextManager {
         parts.push('... (truncated)');
       }
     }
-    
+
     return parts.join('\n');
   }
 
@@ -264,17 +268,17 @@ export class ContextManager {
    */
   async buildMessages(userMessage: string): Promise<Message[]> {
     const messages: Message[] = [];
-    
+
     // System prompt
     const systemPrompt = await this.buildSystemPrompt();
     messages.push({ role: 'system', content: systemPrompt });
-    
+
     // File contents as context
     const fileContents = await this.getFileContents();
     if (fileContents.size > 0) {
       let fileContext = '## File Contents\n\n';
       for (const [path, content] of fileContents) {
-        const truncated = content.length > 10000 
+        const truncated = content.length > 10000
           ? content.slice(0, 10000) + '\n... (truncated)'
           : content;
         fileContext += `### ${path}\n\`\`\`\n${truncated}\n\`\`\`\n\n`;
@@ -282,15 +286,15 @@ export class ContextManager {
       messages.push({ role: 'user', content: fileContext });
       messages.push({ role: 'assistant', content: 'I have read the files. How can I help?' });
     }
-    
+
     // Conversation history
     for (const msg of this.history) {
       messages.push({ role: msg.role, content: msg.content });
     }
-    
+
     // Current message
     messages.push({ role: 'user', content: userMessage });
-    
+
     return messages;
   }
 
@@ -300,27 +304,27 @@ export class ContextManager {
   async estimateTokenCount(): Promise<number> {
     // Ensure tokenizer is loaded
     await loadTokenizer();
-    
+
     let total = 0;
-    
+
     // System prompt
     const systemPrompt = await this.buildSystemPrompt();
     total += countTokens(systemPrompt);
-    
+
     // File contents
     const fileContents = await this.getFileContents();
     for (const content of fileContents.values()) {
       total += countTokens(content);
     }
-    
+
     // History
     for (const msg of this.history) {
       total += countTokens(msg.content);
     }
-    
+
     // Add overhead for message formatting (~4 tokens per message)
     total += (this.history.length + 2) * 4;
-    
+
     return total;
   }
 

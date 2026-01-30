@@ -5,7 +5,7 @@
 
 import { readdir } from 'fs/promises';
 import { join, dirname } from 'path';
-import { fileURLToPath } from 'url';
+import { fileURLToPath, pathToFileURL } from 'url';
 import { z } from 'zod';
 import { getMCPManager, type MCPTool } from './mcp/manager.js';
 
@@ -30,25 +30,25 @@ export type { Tool as ToolModule };
 // Load all tools from the tools directory
 export const loadTools = async (): Promise<Map<string, Tool>> => {
   const tools = new Map<string, Tool>();
-  
+
   try {
     const files = await readdir(TOOLS_DIR);
-    
+
     for (const file of files) {
       if (!file.endsWith('.ts') && !file.endsWith('.js')) continue;
       if (file.includes('.test.')) continue; // Skip test files
-      
+
       try {
         const modulePath = join(TOOLS_DIR, file);
-        const module = await import(modulePath);
-        
+        const module = await import(pathToFileURL(modulePath).href);
+
         // Support both 'tool' export and direct exports
         const toolDef = module.tool || module;
-        
+
         if (toolDef.name && toolDef.execute) {
           // Support both 'inputSchema' and 'schema'
           const schema = toolDef.inputSchema || toolDef.schema;
-          
+
           tools.set(toolDef.name, {
             name: toolDef.name,
             description: toolDef.description || 'No description',
@@ -71,22 +71,22 @@ export const loadTools = async (): Promise<Map<string, Tool>> => {
       console.error('Failed to read tools directory:', error);
     }
   }
-  
+
   return tools;
 };
 
 // Load MCP tools and merge with built-in tools
 export const loadAllTools = async (): Promise<Map<string, Tool>> => {
   const tools = await loadTools();
-  
+
   try {
     const mcpManager = getMCPManager();
     const mcpTools = mcpManager.getAllTools();
-    
+
     for (const mcpTool of mcpTools) {
       // Prefix MCP tool names to avoid conflicts
       const toolName = `mcp_${mcpTool.serverName}_${mcpTool.name}`;
-      
+
       tools.set(toolName, {
         name: toolName,
         description: mcpTool.description,
@@ -100,18 +100,18 @@ export const loadAllTools = async (): Promise<Map<string, Tool>> => {
   } catch {
     // MCP not configured, skip
   }
-  
+
   return tools;
 };
 
 // Get tool definitions for LLM prompt
 export const getToolDefinitions = (tools: Map<string, Tool>): string => {
   const sections: string[] = [];
-  
+
   // Group by source
   const builtinTools: Tool[] = [];
   const mcpTools: Tool[] = [];
-  
+
   for (const tool of tools.values()) {
     if (tool.source === 'mcp') {
       mcpTools.push(tool);
@@ -119,7 +119,7 @@ export const getToolDefinitions = (tools: Map<string, Tool>): string => {
       builtinTools.push(tool);
     }
   }
-  
+
   // Built-in tools
   if (builtinTools.length > 0) {
     sections.push('## Built-in Tools\n');
@@ -127,7 +127,7 @@ export const getToolDefinitions = (tools: Map<string, Tool>): string => {
       sections.push(formatToolDefinition(tool));
     }
   }
-  
+
   // MCP tools
   if (mcpTools.length > 0) {
     sections.push('\n## MCP Tools\n');
@@ -135,7 +135,7 @@ export const getToolDefinitions = (tools: Map<string, Tool>): string => {
       sections.push(formatToolDefinition(tool));
     }
   }
-  
+
   return sections.join('\n');
 };
 
@@ -146,11 +146,11 @@ function formatToolDefinition(tool: Tool): string {
     tool.description,
     `Permission: ${tool.permission}`,
   ];
-  
+
   if (tool.serverName) {
     lines.push(`Server: ${tool.serverName}`);
   }
-  
+
   // Extract parameters from schema
   if (tool.inputSchema && 'shape' in tool.inputSchema) {
     const shape = (tool.inputSchema as z.ZodObject<z.ZodRawShape>).shape;
@@ -163,20 +163,20 @@ function formatToolDefinition(tool: Tool): string {
         return `  - ${key}${optional}: ${typeName}${description ? ` - ${description}` : ''}`;
       })
       .join('\n');
-    
+
     if (params) {
       lines.push('Parameters:');
       lines.push(params);
     }
   }
-  
+
   return lines.join('\n') + '\n';
 }
 
 // Get human-readable type name from Zod type
 function getTypeName(zodType: z.ZodTypeAny): string {
   const def = zodType._def;
-  
+
   if (def.typeName === 'ZodString') return 'string';
   if (def.typeName === 'ZodNumber') return 'number';
   if (def.typeName === 'ZodBoolean') return 'boolean';
@@ -185,7 +185,7 @@ function getTypeName(zodType: z.ZodTypeAny): string {
   if (def.typeName === 'ZodEnum') return `enum(${def.values.join('|')})`;
   if (def.typeName === 'ZodOptional') return getTypeName(def.innerType);
   if (def.typeName === 'ZodDefault') return getTypeName(def.innerType);
-  
+
   return def.typeName?.replace('Zod', '').toLowerCase() || 'unknown';
 }
 

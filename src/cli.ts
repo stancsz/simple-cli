@@ -22,10 +22,19 @@ const YOLO_MODE = process.argv.includes('--yolo');
 const MOE_MODE = process.argv.includes('--moe');
 const WATCH_MODE = process.argv.includes('--watch');
 const SWARM_MODE = process.argv.includes('--swarm');
+const UI_MODE = process.argv.includes('--ui') || process.argv.includes('-ui');
 const DEBUG = process.argv.includes('--debug') || process.env.DEBUG === 'true';
 
-// Handle --swarm mode
-if (SWARM_MODE) {
+// Handle --ui mode
+if (UI_MODE) {
+  import('./ui/server.js').then(({ startServer }) => {
+    startServer({ port: 3000, host: 'localhost' }).catch(err => {
+      console.error('UI Server error:', err);
+      process.exit(1);
+    });
+  });
+} else if (SWARM_MODE) {
+  // Handle --swarm mode
   if (process.argv.includes('--help')) {
     printSwarmHelp();
     process.exit(0);
@@ -56,7 +65,7 @@ function printBanner(): void {
     YOLO_MODE ? '[YOLO]' : '[Safe]',
     WATCH_MODE ? '[Watch]' : '',
   ].filter(Boolean).join(' ');
-  
+
   console.log(`
 ╔═══════════════════════════════════════════╗
 ║  Simple-CLI v${VERSION}                        ║

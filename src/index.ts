@@ -10,21 +10,39 @@ import { loadTools, type Tool } from './registry.js';
 import { createProvider } from './providers/index.js';
 import { createMultiProvider } from './providers/multi.js';
 import { routeTask, loadTierConfig, formatRoutingDecision, type Tier } from './router.js';
-import { readFileSync, existsSync } from 'fs';
+import { getPromptProvider } from './prompts/provider.js';
 
 const YOLO_MODE = process.argv.includes('--yolo');
 const MOE_MODE = process.argv.includes('--moe');
 let tools: Map<string, Tool>;
 let history: Array<{ role: string; content: string }> = [];
 
-const loadRules = (): string => existsSync('./AGENT.md') ? readFileSync('./AGENT.md', 'utf-8') : '';
-
 const buildPrompt = async (): Promise<string> => {
   const repoMap = await generateRepoMap();
   const toolDefs = Array.from(tools.values()).map(t => `- ${t.name}: ${t.description}`).join('\n');
-  return `You are Simple-CLI, an agentic coding assistant.
-## Context\n${repoMap}\n## Tools\n${toolDefs}\n## Rules\n${loadRules()}
-## Format: <thought>reasoning</thought> then {"tool": "name", "args": {}} or {"tool": "none", "message": "..."}`;
+  const provider = getPromptProvider();
+  const systemPrompt = await provider.getSystemPrompt({ cwd: process.cwd() });
+
+  return `${systemPrompt}
+
+## REQUIRED OUTPUT FORMAT
+You must ALWAYS respond using this exact format:
+<thought>
+Your internal reasoning and plan.
+</thought>
+{"tool": "toolName", "args": {...}}
+
+If no tool is needed, use:
+<thought>
+Reasoning.
+</thought>
+{"tool": "none", "message": "Your message to the user"}
+
+## AVAILABLE TOOLS
+${toolDefs}
+
+## CONTEXT
+${repoMap}`;
 };
 
 import { jsonrepair } from 'jsonrepair';
