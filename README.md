@@ -1,6 +1,6 @@
 # Simple CLI
 
-> Lean, lightweight, and packs a punch.
+> 小西LI巨能打 -- Lean, lightweight, and packs a punch.
 
 **simplecli** is a minimalist, high-performance coding agent. It is designed to be the leanest version of **Claude Code** + **Cursor CLI**, giving you the power of an agentic swarm unit with a core codebase you can actually read in 5 minutes.
 
