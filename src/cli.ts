@@ -13,7 +13,8 @@ import { routeTask, loadTierConfig, formatRoutingDecision, type Tier } from './r
 import { executeCommand } from './commands.js';
 import { getMCPManager } from './mcp/manager.js';
 import { listSkills, setActiveSkill, getActiveSkill } from './skills.js';
-import { readFileSync, existsSync } from 'fs';
+import { readFileSync, existsSync, statSync } from 'fs';
+import { resolve } from 'path';
 import { runSwarm, parseSwarmArgs, printSwarmHelp } from './commands/swarm.js';
 import { jsonrepair } from 'jsonrepair';
 
@@ -85,12 +86,27 @@ function loadAgentRules(): string {
 
 async function main(): Promise<void> {
   console.clear();
+
+  const args = process.argv.slice(2).filter(arg => !arg.startsWith('-'));
+  let targetDir = process.cwd();
+
+  if (args.length > 0) {
+    try {
+      if (statSync(args[0]).isDirectory()) {
+        targetDir = resolve(args[0]);
+        process.chdir(targetDir);
+        args.shift();
+      }
+    } catch { /* ignored */ }
+  }
+
   intro(pc.bgCyan(pc.black(' SIMPLE-CLI ')) + pc.dim(` v${VERSION} ${MOE_MODE ? pc.yellow('[MoE]') : ''} ${YOLO_MODE ? pc.red('[YOLO]') : pc.green('[Safe]')}`));
+  note(`Working Directory: ${pc.cyan(targetDir)}`, 'Context');
 
   const s = clackSpinner();
   s.start('Initializing context and tools...');
 
-  const ctx = getContextManager();
+  const ctx = getContextManager(targetDir); // Pass targetDir to context manager
   await ctx.initialize();
 
   const mcpManager = getMCPManager();
@@ -131,7 +147,6 @@ async function main(): Promise<void> {
     let input: string | symbol;
 
     // Support initial prompt from command line
-    const args = process.argv.slice(2).filter(arg => !arg.startsWith('-'));
     if (isFirstPrompt && args.length > 0) {
       input = args.join(' ');
       note(input, pc.cyan('Initial Task'));
