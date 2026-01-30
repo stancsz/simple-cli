@@ -100,14 +100,12 @@ async function main(): Promise<void> {
     } catch { /* ignored */ }
   }
 
-  intro(pc.bgCyan(pc.black(' SIMPLE-CLI ')) + pc.dim(` v${VERSION} ${MOE_MODE ? pc.yellow('[MoE]') : ''} ${YOLO_MODE ? pc.red('[YOLO]') : pc.green('[Safe]')}`));
-  note(`Working Directory: ${pc.cyan(targetDir)}`, 'Context');
+  console.log(`\n ${pc.bgCyan(pc.black(' SIMPLE-CLI '))} ${pc.dim(`v${VERSION}`)} ${pc.green('●')} ${pc.cyan(targetDir)}\n`);
 
-  const s = clackSpinner();
-  s.start('Initializing context and tools...');
-
-  const ctx = getContextManager(targetDir); // Pass targetDir to context manager
+  console.log(`${pc.dim('○')} Initializing...`);
+  const ctx = getContextManager(targetDir);
   await ctx.initialize();
+  console.log(`${pc.green('●')} Ready.`);
 
   const mcpManager = getMCPManager();
   try {
@@ -121,7 +119,6 @@ async function main(): Promise<void> {
   const multiProvider = tierConfigs ? createMultiProvider(tierConfigs) : null;
   const singleProvider = !MOE_MODE ? createProvider() : null;
 
-  s.stop('Architecture ready.');
 
   const generate = async (input: string): Promise<string> => {
     const history = ctx.getHistory();
@@ -133,7 +130,7 @@ async function main(): Promise<void> {
       const routing = await routeTask(input, async (prompt) => {
         return multiProvider.generateWithTier(1, prompt, [{ role: 'user', content: input }]);
       });
-      if (DEBUG) note(formatRoutingDecision(routing, tierConfigs), 'Routing');
+      if (DEBUG) console.log(pc.dim(`[Routing] Tier: ${routing.tier}`));
       return multiProvider.generateWithTier(routing.tier as Tier, fullPrompt, history.map(m => ({ role: m.role, content: m.content })));
     }
 
@@ -149,7 +146,7 @@ async function main(): Promise<void> {
     // Support initial prompt from command line
     if (isFirstPrompt && args.length > 0) {
       input = args.join(' ');
-      note(input, pc.cyan('Initial Task'));
+      console.log(`\n${pc.magenta('➤')} ${pc.bold(input)}`);
     } else {
       input = await text({
         message: pc.dim(`[@${skill.name}]`) + ' Chat with Simple-CLI',
@@ -163,7 +160,7 @@ async function main(): Promise<void> {
     isFirstPrompt = false;
 
     if (isCancel(input)) {
-      outro('Goodbye!');
+      console.log(`\n${pc.dim('—')} Goodbye!`);
       mcpManager.disconnectAll();
       process.exit(0);
     }
@@ -179,8 +176,8 @@ async function main(): Promise<void> {
           readOnlyFiles: ctx.getState().readOnlyFiles,
           history: ctx.getHistory(),
           io: {
-            output: (m) => note(m, 'Output'),
-            error: (m) => note(m, pc.red('Error')),
+            output: (m) => console.log(`\n${pc.dim('○')} ${m}`),
+            error: (m) => console.log(`\n${pc.red('✖')} ${m}`),
             confirm: async (m) => {
               const c = await clackConfirm({ message: m });
               return !isCancel(c) && c;
@@ -192,7 +189,7 @@ async function main(): Promise<void> {
           }
         });
       } catch (err) {
-        note(pc.red(String(err)), 'Command Error');
+        console.log(`\n${pc.red('✖')} ${pc.red(String(err))}`);
       }
       continue;
     }
@@ -214,9 +211,9 @@ async function main(): Promise<void> {
         const newSkill = setActiveSkill(skillName);
         if (newSkill) {
           ctx.setSkill(newSkill);
-          note(`Switched to @${newSkill.name} skill`, 'Skill');
+          console.log(`\n${pc.cyan('★')} Switched to @${newSkill.name}`);
         } else {
-          note(`Skill @${skillName} not found.`, pc.red('Error'));
+          console.log(`\n${pc.red('✖')} Skill @${skillName} not found.`);
         }
       }
       continue;
@@ -226,32 +223,28 @@ async function main(): Promise<void> {
 
     let steps = 0;
     while (steps < 15) {
-      s.start('Thinking...');
       const response = await generate(trimmedInput);
       const { thought, action } = parseResponse(response);
-      s.stop('Thought complete.');
 
-      if (thought) note(thought, pc.cyan('Thought'));
+      if (thought) console.log(`\n${pc.dim('💭')} ${pc.cyan(thought)}`);
 
       if (action.tool !== 'none') {
         if (await confirm(action.tool, action.args || {}, ctx)) {
-          s.start(`Executing ${pc.cyan(action.tool)}...`);
+          console.log(`${pc.yellow('⚙')} ${pc.dim(`Executing ${action.tool}...`)}`);
           const result = await executeTool(action.tool, action.args || {}, ctx);
-          s.stop(`Tool ${pc.cyan(action.tool)} finished.`);
-
-          note(result.length > 1000 ? result.slice(0, 1000) + '...' : result, pc.green('Result'));
+          console.log(`${pc.green('✔')} ${pc.dim(result.length > 500 ? result.slice(0, 500) + '...' : result)}`);
 
           ctx.addMessage('assistant', response);
           ctx.addMessage('user', `Tool result: ${result}`);
           steps++;
         } else {
-          note('Operation cancelled.', pc.yellow('Skipped'));
+          console.log(`${pc.yellow('⚠')} Skipped.`);
           ctx.addMessage('assistant', response);
           break;
         }
       } else {
         const msg = action.message || response.replace(/<thought>[\s\S]*?<\/thought>/, '').trim();
-        if (msg) note(msg, pc.magenta('Simple-CLI'));
+        if (msg) console.log(`\n${pc.magenta('✦')} ${msg}`);
         ctx.addMessage('assistant', response);
         break;
       }

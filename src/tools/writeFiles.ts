@@ -60,8 +60,12 @@ export const execute = async (args: Record<string, unknown>): Promise<WriteResul
 
         for (const { search, replace } of file.searchReplace) {
           if (content.includes(search)) {
-            content = content.replace(search, replace);
-            changesApplied++;
+            // Apply replacement to all occurrences
+            const newContent = content.replaceAll(search, replace);
+            if (newContent !== content) {
+              content = newContent;
+              changesApplied++;
+            }
           }
         }
 

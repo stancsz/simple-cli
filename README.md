@@ -4,10 +4,11 @@
 
 **Simple-CLI** is a clean, minimalist implementation of a coding agent designed for **scaling agentic swarms**.
 
-It is the **"anti-Cursor"**: it explicitly **does not care** about UI/UX, because a good swarm unit shouldn't. It cares about being a low-cost, reliable, programmable building block that you can spin up by the hundreds to solve problems at scale.
+It is the **"anti-Cursor"**: it explicitly **does not care** about UI/UX for itself, because a good swarm unit shouldn't. However, it is an **expert at building premium UI/UX for you**, driven by a core philosophy of visual excellence and modern aesthetics.
 
 ```bash
-simple-cli --yolo --auto-commit "refactor auth module to use JWT"
+# Headless but capable of building world-class frontend
+simple-cli --yolo "Build a premium React dashboard with glassmorphism and dark mode"
 ```
 
 ---
@@ -166,7 +167,8 @@ simple-cli --yolo "use powershell to find all large files and delete them"
 │                        │                               │
 │  ┌─────────────────────┴───────────────────────────┐   │
 │  │                Tool Registry                     │   │
-│  │  readFiles │ writeFiles │ runCommand │ git │ ...│   │
+│  │  readFiles │ writeFiles │ runCommand │ git      │   │
+│  │  listDir   │ analyzeFile │ grep      │ glob     │   │
 │  └─────────────────────┬───────────────────────────┘   │
 │                        │                               │
 │  ┌─────────────────────┴───────────────────────────┐   │
@@ -183,6 +185,8 @@ simple-cli --yolo "use powershell to find all large files and delete them"
 3. **Model agnostic** - LiteLLM means any model works: GPT-5.2, Gemini 3 Pro, Claude 3.7, Llama 4.
 4. **Tool-first** - 12 built-in tools + unlimited MCP tools.
 5. **Fail-forward** - Reflection loop retries with context on failures.
+6. **Premium Aesthetics** - Built-in focus on modern design (8px rhythm, glassmorphism, curated palettes).
+7. **Structured Analysis** - Deep codebase understanding via `ts-morph` and directory listing.
 
 ---
 
@@ -315,12 +319,18 @@ agent.on('close', (code) => console.log(`Agent finished with code ${code}`));
 - **Tool Friendly** - Seamlessly works with `gh`, `git`, `npm`, `powershell`, `curl`, and any other CLI tool.
 - **Zero-Config Auth** - If you're logged into GitHub/AWS/GCP on your machine, the agent is too.
 
-### Code Editing
-- **Fuzzy matching** - Finds similar code even with minor differences
-- **Whitespace flexibility** - Handles indentation mismatches
-- **Reflection loop** - Retries up to 3 times with error context
+### Code Editing & Analysis
+- **Fuzzy matching** - Finds similar code even with minor differences.
+- **Whitespace flexibility** - Handles indentation mismatches.
+- **Structured Analysis** - Uses `analyzeFile` (ts-morph) to extract symbols without reading raw files.
+- **Directory Insights** - Uses `listDir` to safely explore project structure.
+- **Reflection loop** - Retries up to 3 times with error context.
 
-Note: Aider's editing is more sophisticated (tree-sitter AST, multiple formats). Simple-CLI uses a simpler fuzzy SEARCH/REPLACE approach.
+### Premium UI/UX Philosophy
+Unlike other headles agents, Simple-CLI is programmed with high-end design sensibilities:
+- **World-Class Aesthetics** - Automatically applies modern design tokens (gradients, blur, depth).
+- **Modern Stack** - Expert in Vite, Tailwind, React, and Lucide for rapid premium prototyping.
+- **Zero-Config Premium** - Just ask for "Premium" or "Stunning" and the agent handles the design system.
 
 ### Mix of Experts (MoE) Routing
 Route tasks to the right model tier for cost optimization:
