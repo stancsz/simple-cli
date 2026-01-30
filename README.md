@@ -1,14 +1,14 @@
 # Simple-CLI
 
-> The headless swarm unit.
+> Lean, lightweight, and packs a punch.
 
-**Simple-CLI** is a clean, minimalist implementation of a coding agent designed for **scaling agentic swarms**.
+**Simple-CLI** is a minimalist, high-performance coding agent. It is designed to be the leanest version of **Claude Code** + **Cursor CLI**, giving you the power of an agentic swarm unit with a core codebase you can actually read in 5 minutes.
 
-It is the **"anti-Cursor"**: it explicitly **does not care** about UI/UX for itself, because a good swarm unit shouldn't. However, it is an **expert at building premium UI/UX for you**, driven by a core philosophy of visual excellence and modern aesthetics.
+It’s lightweight but powerful, optimized for **token efficiency**, and supports all major API providers.
 
 ```bash
-# Headless but capable of building world-class frontend
-simple-cli --yolo "Build a premium React dashboard with glassmorphism and dark mode"
+# Lightweight but packs a punch
+simple-cli --yolo "Build a premium React dashboard with glassmorphism"
 ```
 
 ---
@@ -31,7 +31,7 @@ Different tools for different needs. Here's an honest comparison:
 | **Community** | ⚠️ Tiny | 🌟 Large | 📈 Growing | 🌟 Large | 📈 Growing |
 | **Reliability** | ⚠️ Alpha | 🌟 Production | 🌟 Production | 🌟 Production | ✅ Beta |
 
-**Honest verdict:** If you want a tool that just works out of the box with zero fuss, use **Cursor** or **Aider**. Use **Simple-CLI** only if you are a developer who wants to build *on top of* an agent, integrating it into scripts, pipelines, or your own tools, and you value a codebase you can fully understand and modify.
+**The Verdict:** If you want a tool that just works out of the box with zero fuss, use **Cursor** or **Aider**. Use **Simple-CLI** if you want a **lean, lightweight** foundation that you can fully understand, modify, and integrate into your own custom workflows.
 
 ---
 
@@ -468,23 +468,17 @@ simple-cli --auto-commit "final cleanup"
 
 ## Philosophy: The Swarm Unit
 
-**Simple-CLI** is a response to the heavy, UI-focused tools of today (like Cursor's Composer).
+**Simple-CLI** is a lean version of Claude Code and Cursor CLI. It provides the essential agentic "muscles" without the bloat.
 
-Modern coding agents are powerful but often trapped inside heavy IDEs. If you want to run an **agent swarm**—spinning up 50 agents to refactor a legacy codebase overnight—you don't need 50 instances of VS Code. You need 50 lightweight, headless CLIs.
-
-1.  **Zero UI/UX**: By design. UI is overhead for a swarm.
-2.  **Cost Efficiency**: Native **Mix of Experts (MoE)** routing ensures you don't burn **GPT-5.2 Pro** tokens on formatting tasks, keeping the overall system cost low.
-3.  **Scalability**: Stateless and git-native means you can parallelize it trivially.
-
-It is designed to be the standardized **"compute unit"** of agentic coding.
-
-**Crucially, Simple-CLI is the WORKER, not the orchestrator.**
-It is not designed to manage the entire project roadmap or coordinate other agents. It is designed to take a specific task, execute it reliably, and exit. You build the orchestrator (the "Manager"); Simple-CLI provides the muscles (the "Workers").
+1.  **Extreme Token Efficiency**: Native **Mix of Experts (MoE)** routing and structured analysis tools (`analyzeFile`, `listDir`) ensure you only send the tokens that matter.
+2.  **Model Agnostic**: Supports virtually any API provider via LiteLLM (OpenAI, Anthropic, Gemini, DeepSeek, etc.).
+3.  **Hackable Core**: The orchestration loop is under **150 lines of code**. You can modify, extend, or embed it in minutes.
+4.  **Premium Output**: While the CLI is minimalist, its engineering sensibilities are high-end (Vite, Tailwind, modern design patterns).
 
 **Strengths:**
-- Small codebase (~2k LOC) you can read in an afternoon
-- Easy to understand, modify, and embed
-- Headless-first design for scripting
+- Small codebase (~150 LOC core) you can read in an afternoon
+- Highly token-efficient via structured analysis and MoE
+- Standalone, headless-first design
 - Model agnostic via LiteLLM
 
 **Weaknesses:**
