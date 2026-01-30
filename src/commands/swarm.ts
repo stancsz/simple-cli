@@ -21,10 +21,10 @@ export interface SwarmCliOptions {
  */
 export function parseSwarmArgs(args: string[]): SwarmCliOptions {
   const options: SwarmCliOptions = {};
-  
+
   for (let i = 0; i < args.length; i++) {
     const arg = args[i];
-    
+
     if (arg === '--tasks' && args[i + 1]) {
       options.tasksFile = args[++i];
     } else if (arg === '--task' && args[i + 1]) {
@@ -44,7 +44,7 @@ export function parseSwarmArgs(args: string[]): SwarmCliOptions {
       options.tasksFile = arg;
     }
   }
-  
+
   return options;
 }
 
@@ -55,24 +55,24 @@ export function loadTasksFromFile(filePath: string): { tasks: SwarmTask[]; optio
   if (!existsSync(filePath)) {
     throw new Error(`Tasks file not found: ${filePath}`);
   }
-  
+
   const content = readFileSync(filePath, 'utf-8');
   const data = JSON.parse(content);
-  
+
   // Support both { tasks: [...] } and [...] formats
   if (Array.isArray(data)) {
     return { tasks: data };
   }
-  
+
   const tasks = data.tasks || [];
   const options: Partial<CoordinatorOptions> = {};
-  
+
   if (data.session) {
     if (data.session.concurrency) options.concurrency = data.session.concurrency;
     if (data.session.timeout) options.timeout = data.session.timeout;
     if (data.session.branch) options.branch = data.session.branch;
   }
-  
+
   return { tasks, options };
 }
 
@@ -85,7 +85,7 @@ export async function createTasksFromScope(
   type: SwarmTask['type'] = 'implement'
 ): Promise<SwarmTask[]> {
   const result = await globExecute({ pattern: scope, maxResults: 100, includeDirectories: false });
-  
+
   return result.matches.map((file, i) => ({
     id: `task-${i}`,
     type,
@@ -103,10 +103,10 @@ export async function createTasksFromScope(
  */
 export async function runSwarm(options: SwarmCliOptions): Promise<void> {
   console.log('\n🐝 Simple-CLI Swarm Mode\n');
-  
+
   let tasks: SwarmTask[] = [];
   let coordinatorOptions: Partial<CoordinatorOptions> = {};
-  
+
   // Load tasks from file or create from options
   if (options.tasksFile) {
     console.log(`📄 Loading tasks from ${options.tasksFile}...`);
@@ -129,31 +129,31 @@ export async function runSwarm(options: SwarmCliOptions): Promise<void> {
       retries: 2,
     }];
   }
-  
+
   if (tasks.length === 0) {
     console.error('❌ No tasks to run. Provide --tasks <file> or --task "description"');
     process.exit(1);
   }
-  
+
   console.log(`📋 ${tasks.length} task(s) to execute\n`);
-  
+
   // Apply CLI options
   if (options.concurrency) coordinatorOptions.concurrency = options.concurrency;
   if (options.timeout) coordinatorOptions.timeout = options.timeout;
   if (options.branch) coordinatorOptions.branch = options.branch;
   if (options.yolo !== undefined) coordinatorOptions.yolo = options.yolo;
-  
+
   // Create coordinator
   const coordinator = new SwarmCoordinator({
     cwd: process.cwd(),
     ...coordinatorOptions,
   });
-  
+
   // Add event handlers
   coordinator.on('task:start', (task, workerId) => {
     console.log(`🚀 [${workerId}] Starting: ${task.description.slice(0, 60)}...`);
   });
-  
+
   coordinator.on('task:complete', (task, result) => {
     const status = result.success ? '✅' : '⚠️';
     console.log(`${status} [${task.id}] Done in ${result.duration}ms`);
@@ -161,25 +161,25 @@ export async function runSwarm(options: SwarmCliOptions): Promise<void> {
       console.log(`   Files: ${result.filesChanged.join(', ')}`);
     }
   });
-  
+
   coordinator.on('task:fail', (task, error) => {
     console.error(`❌ [${task.id}] Failed: ${error.message}`);
   });
-  
+
   coordinator.on('task:retry', (task, attempt) => {
     console.log(`🔄 [${task.id}] Retry attempt ${attempt}`);
   });
-  
+
   // Add tasks
   coordinator.addTasks(tasks);
-  
+
   // Run swarm
   const startTime = Date.now();
   console.log(`⏱️  Starting swarm with concurrency: ${coordinatorOptions.concurrency || 4}\n`);
-  
+
   try {
     const result = await coordinator.run();
-    
+
     // Print summary
     console.log('\n' + '═'.repeat(50));
     console.log('📊 SWARM COMPLETE');
@@ -190,16 +190,16 @@ export async function runSwarm(options: SwarmCliOptions): Promise<void> {
     console.log(`   Skipped:        ${result.skipped} ⏭️`);
     console.log(`   Duration:       ${((Date.now() - startTime) / 1000).toFixed(1)}s`);
     console.log(`   Success Rate:   ${(result.successRate * 100).toFixed(1)}%`);
-    
+
     if (result.failedTasks.length > 0) {
       console.log('\n❌ Failed Tasks:');
       for (const f of result.failedTasks) {
         console.log(`   - ${f.task.id}: ${f.error}`);
       }
     }
-    
+
     console.log('═'.repeat(50) + '\n');
-    
+
     // Exit with error code if any failures
     if (result.failed > 0) {
       process.exit(1);
@@ -218,7 +218,7 @@ export function printSwarmHelp(): void {
 🐝 Simple-CLI Swarm Mode
 
 USAGE
-  simple-cli --swarm [options]
+  simple --swarm [options]
 
 OPTIONS
   --tasks <file>       Load tasks from JSON file
@@ -231,16 +231,16 @@ OPTIONS
 
 EXAMPLES
   # Run tasks from file
-  simple-cli --swarm --tasks tasks.json
+  simple --swarm --tasks tasks.json
 
   # Single task
-  simple-cli --swarm --yolo --task "add tests to all files"
+  simple --swarm --yolo --task "add tests to all files"
 
   # Task per file matching pattern
-  simple-cli --swarm --yolo --task "add JSDoc" --scope "src/**/*.ts"
+  simple --swarm --yolo --task "add JSDoc" --scope "src/**/*.ts"
 
   # With concurrency limit
-  simple-cli --swarm --concurrency 2 --tasks tasks.json
+  simple --swarm --concurrency 2 --tasks tasks.json
 
 TASKS FILE FORMAT
   {

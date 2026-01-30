@@ -32,25 +32,25 @@ export const connectMCPServer = async (server: MCPServer): Promise<Client> => {
   if (connections.has(server.name)) {
     return connections.get(server.name)!.client;
   }
-  
+
   const transport = new StdioClientTransport({
     command: server.command,
     args: server.args || [],
     env: { ...process.env, ...server.env } as Record<string, string>
   });
-  
+
   const client = new Client({
-    name: 'simple-cli',
+    name: 'simplecli',
     version: '0.1.0'
   }, {
     capabilities: {}
   });
-  
+
   await client.connect(transport);
-  
+
   connections.set(server.name, { client, transport });
   console.log(`  ✓ Connected to MCP server: ${server.name}`);
-  
+
   return client;
 };
 
@@ -60,9 +60,9 @@ export const listMCPTools = async (serverName: string): Promise<MCPTool[]> => {
   if (!connection) {
     throw new Error(`MCP server "${serverName}" not connected`);
   }
-  
+
   const result = await connection.client.listTools();
-  
+
   return result.tools.map(tool => ({
     name: tool.name,
     description: tool.description || '',
@@ -72,20 +72,20 @@ export const listMCPTools = async (serverName: string): Promise<MCPTool[]> => {
 
 // Call an MCP tool
 export const callMCPTool = async (
-  serverName: string, 
-  toolName: string, 
+  serverName: string,
+  toolName: string,
   args: Record<string, unknown>
 ): Promise<unknown> => {
   const connection = connections.get(serverName);
   if (!connection) {
     throw new Error(`MCP server "${serverName}" not connected`);
   }
-  
+
   const result = await connection.client.callTool({
     name: toolName,
     arguments: args
   });
-  
+
   return result.content;
 };
 

@@ -93,7 +93,7 @@ export class MCPManager {
       configPath,
       join(process.cwd(), 'mcp.json'),
       join(process.cwd(), '.mcp.json'),
-      join(process.env.HOME || '', '.config', 'simple-cli', 'mcp.json'),
+      join(process.env.HOME || '', '.config', 'simplecli', 'mcp.json'),
     ].filter(Boolean) as string[];
 
     for (const path of paths) {
@@ -146,7 +146,7 @@ export class MCPManager {
 
     try {
       const client = new Client(
-        { name: 'simple-cli', version: '0.1.0' },
+        { name: 'simplecli', version: '0.2.1' },
         { capabilities: {} }
       );
 

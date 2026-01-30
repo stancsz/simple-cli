@@ -180,7 +180,7 @@ function looksLikeHtml(content: string): boolean {
 // Convert HTML to Markdown using turndown or fallback
 async function htmlToMarkdown(html: string): Promise<string> {
   const turndown = await getTurndown();
-  
+
   if (turndown) {
     try {
       return turndown.turndown(html);
@@ -188,7 +188,7 @@ async function htmlToMarkdown(html: string): Promise<string> {
       // Fall through to regex fallback
     }
   }
-  
+
   return htmlToMarkdownFallback(html);
 }
 
@@ -208,7 +208,7 @@ export async function execute(input: ScraperInput): Promise<{
     const response = await fetch(url, {
       signal: controller.signal,
       headers: {
-        'User-Agent': 'SimpleCLI/0.1.0 (+https://github.com/simple-cli)',
+        'User-Agent': 'simplecli/0.2.1 (+https://github.com/stancsz/simple-cli)',
         'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
       },
     });
@@ -231,7 +231,7 @@ export async function execute(input: ScraperInput): Promise<{
     if (convertToMarkdown && (contentType.includes('text/html') || looksLikeHtml(content))) {
       content = slimDownHtml(content);
       content = await htmlToMarkdown(content);
-      
+
       // Clean up excessive whitespace
       content = content.replace(/\n{3,}/g, '\n\n').trim();
     }

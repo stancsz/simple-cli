@@ -1,15 +1,15 @@
 {
-  "name": "simple-cli",
-  "version": "0.2.0",
-  "description": "A headless, minimalist, agentic coding assistant with MCP support",
+  "name": "simplecli",
+  "version": "0.2.1",
+  "description": "A lean, lightweight coding agent. Packs a punch with token efficiency.",
   "type": "module",
-  "main": "dist/index.js",
+  "main": "dist/cli.js",
   "bin": {
-    "simple-cli": "./bin/run.js"
+    "simple": "./dist/cli.js"
   },
   "oclif": {
-    "bin": "simple-cli",
-    "dirname": "simple-cli",
+    "bin": "simple",
+    "dirname": "simplecli",
     "commands": "./dist/commands",
     "plugins": [],
     "topicSeparator": " ",
@@ -25,7 +25,7 @@
   "scripts": {
     "start": "node --loader ts-node/esm src/cli.ts",
     "dev": "node --loader ts-node/esm --watch src/index.ts",
-    "build": "tsc && oclif manifest",
+    "build": "tsc",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "test:watch": "vitest",

@@ -3,7 +3,7 @@
  * 
  * @example
  * ```typescript
- * import { SwarmCoordinator } from 'simple-cli/swarm';
+ * import { SwarmCoordinator } from 'simplecli/swarm';
  * 
  * const coordinator = new SwarmCoordinator({
  *   cwd: '/path/to/repo',

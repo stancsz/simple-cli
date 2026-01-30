@@ -35,15 +35,15 @@ interface MemoryStore {
 
 // Get memory file path
 function getMemoryPath(): string {
-  const baseDir = process.env.SIMPLE_CLI_DATA_DIR || 
-    join(process.env.HOME || '', '.config', 'simple-cli');
+  const baseDir = process.env.SIMPLE_CLI_DATA_DIR ||
+    join(process.env.HOME || '', '.config', 'simplecli');
   return join(baseDir, 'memory.json');
 }
 
 // Load memory store
 async function loadMemory(): Promise<MemoryStore> {
   const path = getMemoryPath();
-  
+
   if (!existsSync(path)) {
     return { version: 1, entries: {} };
   }
@@ -59,10 +59,10 @@ async function loadMemory(): Promise<MemoryStore> {
 // Save memory store
 async function saveMemory(store: MemoryStore): Promise<void> {
   const path = getMemoryPath();
-  
+
   // Ensure directory exists
   await mkdir(dirname(path), { recursive: true });
-  
+
   await writeFile(path, JSON.stringify(store, null, 2));
 }
 
@@ -93,7 +93,7 @@ export async function execute(input: MemoryInput): Promise<{
         }
         const fullKey = generateKey(namespace, key);
         const entry = store.entries[fullKey];
-        
+
         if (!entry) {
           return {
             operation,
@@ -101,7 +101,7 @@ export async function execute(input: MemoryInput): Promise<{
             data: null,
           };
         }
-        
+
         return {
           operation,
           success: true,
@@ -122,16 +122,16 @@ export async function execute(input: MemoryInput): Promise<{
           };
         }
         const fullKey = generateKey(namespace, key);
-        
+
         store.entries[fullKey] = {
           key,
           value,
           timestamp: Date.now(),
           namespace,
         };
-        
+
         await saveMemory(store);
-        
+
         return {
           operation,
           success: true,
@@ -150,9 +150,9 @@ export async function execute(input: MemoryInput): Promise<{
         const fullKey = generateKey(namespace, key);
         const existed = fullKey in store.entries;
         delete store.entries[fullKey];
-        
+
         await saveMemory(store);
-        
+
         return {
           operation,
           success: true,
@@ -169,7 +169,7 @@ export async function execute(input: MemoryInput): Promise<{
             preview: e.value.slice(0, 100) + (e.value.length > 100 ? '...' : ''),
           }))
           .sort((a, b) => b.timestamp - a.timestamp);
-        
+
         return {
           operation,
           success: true,
@@ -189,10 +189,10 @@ export async function execute(input: MemoryInput): Promise<{
             error: 'Query required for search operation',
           };
         }
-        
+
         const queryLower = query.toLowerCase();
         const matches = Object.values(store.entries)
-          .filter(e => 
+          .filter(e =>
             e.key.toLowerCase().includes(queryLower) ||
             e.value.toLowerCase().includes(queryLower)
           )
@@ -203,7 +203,7 @@ export async function execute(input: MemoryInput): Promise<{
             preview: e.value.slice(0, 100) + (e.value.length > 100 ? '...' : ''),
           }))
           .slice(0, 20);
-        
+
         return {
           operation,
           success: true,
@@ -217,7 +217,7 @@ export async function execute(input: MemoryInput): Promise<{
 
       case 'clear': {
         const beforeCount = Object.keys(store.entries).length;
-        
+
         if (namespace === 'all') {
           store.entries = {};
         } else {
@@ -227,11 +227,11 @@ export async function execute(input: MemoryInput): Promise<{
             }
           }
         }
-        
+
         await saveMemory(store);
-        
+
         const afterCount = Object.keys(store.entries).length;
-        
+
         return {
           operation,
           success: true,
