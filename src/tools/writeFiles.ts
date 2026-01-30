@@ -4,7 +4,7 @@
  */
 
 import { readFile, writeFile, mkdir } from 'fs/promises';
-import { dirname } from 'path';
+import { dirname, resolve } from 'path';
 import { z } from 'zod';
 
 export const name = 'writeFiles';
@@ -46,15 +46,17 @@ export const execute = async (args: Record<string, unknown>): Promise<WriteResul
       if (file.content !== undefined) {
         // Full file write
         await writeFile(file.path, file.content, 'utf-8');
+        const absPath = resolve(file.path);
         results.push({
           path: file.path,
           success: true,
-          message: 'File written successfully'
+          message: `File written successfully to ${absPath}`
         });
       } else if (file.searchReplace && file.searchReplace.length > 0) {
         // Search/replace operations
         let content = await readFile(file.path, 'utf-8');
         let changesApplied = 0;
+        const absPath = resolve(file.path);
 
         for (const { search, replace } of file.searchReplace) {
           if (content.includes(search)) {
@@ -68,13 +70,13 @@ export const execute = async (args: Record<string, unknown>): Promise<WriteResul
           results.push({
             path: file.path,
             success: true,
-            message: `Applied ${changesApplied} search/replace operation(s)`
+            message: `Applied ${changesApplied} search/replace operation(s) to ${absPath}`
           });
         } else {
           results.push({
             path: file.path,
             success: false,
-            message: 'No matching search patterns found'
+            message: `No matching search patterns found in ${absPath}`
           });
         }
       } else {

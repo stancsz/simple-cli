@@ -1,40 +1,31 @@
 #!/usr/bin/env node
 /**
- * Simple-CLI - Enhanced agentic coding assistant
- * Integrates: MoE routing, MCP tools, skills, file watching, swarm, and commands
+ * Simple-CLI - Premium TUI agentic coding assistant
+ * Powered by @clack/prompts.
  */
-
 import 'dotenv/config';
-import * as readline from 'readline';
+import { intro, outro, text, spinner as clackSpinner, note, confirm as clackConfirm, isCancel, select } from '@clack/prompts';
+import pc from 'picocolors';
 import { ContextManager, getContextManager } from './context.js';
 import { createProvider } from './providers/index.js';
 import { createMultiProvider } from './providers/multi.js';
 import { routeTask, loadTierConfig, formatRoutingDecision, type Tier } from './router.js';
-import { executeCommand, parseCommand } from './commands.js';
+import { executeCommand } from './commands.js';
 import { getMCPManager } from './mcp/manager.js';
-import { FileWatcher, createFileWatcher } from './watcher.js';
 import { listSkills, setActiveSkill, getActiveSkill } from './skills.js';
 import { readFileSync, existsSync } from 'fs';
 import { runSwarm, parseSwarmArgs, printSwarmHelp } from './commands/swarm.js';
+import { jsonrepair } from 'jsonrepair';
 
 // CLI flags
 const YOLO_MODE = process.argv.includes('--yolo');
 const MOE_MODE = process.argv.includes('--moe');
-const WATCH_MODE = process.argv.includes('--watch');
 const SWARM_MODE = process.argv.includes('--swarm');
-const UI_MODE = process.argv.includes('--ui') || process.argv.includes('-ui');
 const DEBUG = process.argv.includes('--debug') || process.env.DEBUG === 'true';
+const VERSION = '0.2.0';
 
-// Handle --ui mode
-if (UI_MODE) {
-  import('./ui/server.js').then(({ startServer }) => {
-    startServer({ port: 3000, host: 'localhost' }).catch(err => {
-      console.error('UI Server error:', err);
-      process.exit(1);
-    });
-  });
-} else if (SWARM_MODE) {
-  // Handle --swarm mode
+// Handle --swarm mode
+if (SWARM_MODE) {
   if (process.argv.includes('--help')) {
     printSwarmHelp();
     process.exit(0);
@@ -46,81 +37,36 @@ if (UI_MODE) {
     process.exit(1);
   });
 } else {
-  // Continue with normal CLI
-  startCli();
-}
-
-// Version
-const VERSION = '0.1.0';
-
-// Start the interactive CLI
-function startCli(): void {
   main().catch(console.error);
 }
 
-// Banner
-function printBanner(): void {
-  const modes = [
-    MOE_MODE ? '[MoE]' : '[Single]',
-    YOLO_MODE ? '[YOLO]' : '[Safe]',
-    WATCH_MODE ? '[Watch]' : '',
-  ].filter(Boolean).join(' ');
-
-  console.log(`
-╔═══════════════════════════════════════════╗
-║  Simple-CLI v${VERSION}                        ║
-║  Agentic coding assistant with MCP/MoE    ║
-╠═══════════════════════════════════════════╣
-║  Commands: /help, --swarm for swarm mode  ║
-║  Modes: ${modes.padEnd(32)}║
-╚═══════════════════════════════════════════╝
-`);
-}
-
-// Parse LLM response
-function parseResponse(response: string): { thought: string; action: { tool: string; args?: Record<string, unknown>; message?: string } } {
+function parseResponse(response: string) {
   const thought = response.match(/<thought>([\s\S]*?)<\/thought>/)?.[1]?.trim() || '';
   const jsonMatch = response.match(/\{[\s\S]*"tool"[\s\S]*\}/);
-  let action = { tool: 'none', message: 'No action', args: {} as Record<string, unknown> };
+  let action = { tool: 'none', message: '', args: {} as Record<string, unknown> };
   if (jsonMatch) {
     try {
-      action = JSON.parse(jsonMatch[0]);
-    } catch {
-      // Keep default
-    }
+      action = JSON.parse(jsonrepair(jsonMatch[0]));
+    } catch { /* skip */ }
   }
   return { thought, action };
 }
 
-// Confirm tool execution
-async function confirm(
-  rl: readline.Interface,
-  tool: string,
-  args: Record<string, unknown>,
-  ctx: ContextManager
-): Promise<boolean> {
+async function confirm(tool: string, args: Record<string, unknown>, ctx: ContextManager): Promise<boolean> {
   if (YOLO_MODE) return true;
-
   const t = ctx.getTools().get(tool);
-  if (!t) return false;
-  if (t.permission === 'read') return true;
+  if (!t || t.permission === 'read') return true;
 
-  return new Promise((resolve) => {
-    rl.question(`[CONFIRM] ${tool}(${JSON.stringify(args)})? (y/n) `, (answer) => {
-      resolve(answer.toLowerCase() === 'y');
-    });
+  const confirmed = await clackConfirm({
+    message: `Allow ${pc.cyan(tool)} with args ${pc.dim(JSON.stringify(args))}?`,
+    initialValue: true,
   });
+  return !isCancel(confirmed) && confirmed;
 }
 
-// Execute tool
 async function executeTool(name: string, args: Record<string, unknown>, ctx: ContextManager): Promise<string> {
-  const tools = ctx.getTools();
-  const tool = tools.get(name);
-
-  if (!tool) {
-    return `Error: Tool "${name}" not found`;
-  }
-
+  const tool = ctx.getTools().get(name);
+  if (!tool) return `Error: Tool "${name}" not found`;
   try {
     const result = await tool.execute(args);
     return typeof result === 'string' ? result : JSON.stringify(result, null, 2);
@@ -129,59 +75,38 @@ async function executeTool(name: string, args: Record<string, unknown>, ctx: Con
   }
 }
 
-// Load AGENT.md rules
 function loadAgentRules(): string {
   const paths = ['./AGENT.md', './.agent.md', './.aider/agent.md'];
   for (const path of paths) {
-    if (existsSync(path)) {
-      return readFileSync(path, 'utf-8');
-    }
+    if (existsSync(path)) return readFileSync(path, 'utf-8');
   }
   return '';
 }
 
-// Main CLI loop
 async function main(): Promise<void> {
-  printBanner();
+  console.clear();
+  intro(pc.bgCyan(pc.black(' SIMPLE-CLI ')) + pc.dim(` v${VERSION} ${MOE_MODE ? pc.yellow('[MoE]') : ''} ${YOLO_MODE ? pc.red('[YOLO]') : pc.green('[Safe]')}`));
 
-  // Initialize context
+  const s = clackSpinner();
+  s.start('Initializing context and tools...');
+
   const ctx = getContextManager();
   await ctx.initialize();
-  console.log(`Loaded ${ctx.getTools().size} tools`);
 
-  // Initialize MCP if configured
   const mcpManager = getMCPManager();
   try {
     const configs = await mcpManager.loadConfig();
-    if (configs.length > 0) {
-      console.log(`Connecting to ${configs.length} MCP server(s)...`);
-      await mcpManager.connectAll(configs);
-    }
+    if (configs.length > 0) await mcpManager.connectAll(configs);
   } catch (error) {
     if (DEBUG) console.error('MCP init error:', error);
   }
 
-  // Initialize providers
   const tierConfigs = MOE_MODE ? loadTierConfig() : null;
   const multiProvider = tierConfigs ? createMultiProvider(tierConfigs) : null;
   const singleProvider = !MOE_MODE ? createProvider() : null;
 
-  // Initialize file watcher
-  let watcher: FileWatcher | null = null;
-  if (WATCH_MODE) {
-    watcher = createFileWatcher({
-      root: ctx.getCwd(),
-      onAIComment: (path, comments) => {
-        console.log(`\n[Watch] AI comments detected in ${path}`);
-        for (const c of comments) {
-          console.log(`  Line ${c.line}: ${c.text}`);
-        }
-      },
-    });
-    console.log('File watcher active');
-  }
+  s.stop('Architecture ready.');
 
-  // Generate response
   const generate = async (input: string): Promise<string> => {
     const history = ctx.getHistory();
     const systemPrompt = await ctx.buildSystemPrompt();
@@ -189,167 +114,132 @@ async function main(): Promise<void> {
     const fullPrompt = rules ? `${systemPrompt}\n\n## Project Rules\n${rules}` : systemPrompt;
 
     if (MOE_MODE && multiProvider && tierConfigs) {
-      // Route to appropriate tier
       const routing = await routeTask(input, async (prompt) => {
         return multiProvider.generateWithTier(1, prompt, [{ role: 'user', content: input }]);
       });
-
-      if (DEBUG) console.log(formatRoutingDecision(routing, tierConfigs));
-
-      return multiProvider.generateWithTier(
-        routing.tier as Tier,
-        fullPrompt,
-        history.map(m => ({ role: m.role, content: m.content }))
-      );
+      if (DEBUG) note(formatRoutingDecision(routing, tierConfigs), 'Routing');
+      return multiProvider.generateWithTier(routing.tier as Tier, fullPrompt, history.map(m => ({ role: m.role, content: m.content })));
     }
 
-    return singleProvider!.generateResponse(
-      fullPrompt,
-      history.map(m => ({ role: m.role, content: m.content }))
-    );
+    return singleProvider!.generateResponse(fullPrompt, history.map(m => ({ role: m.role, content: m.content })));
   };
 
-  // IO functions for commands
-  const io = {
-    output: (msg: string) => console.log(msg),
-    error: (msg: string) => console.error(`[Error] ${msg}`),
-    confirm: async (msg: string): Promise<boolean> => {
-      return new Promise((resolve) => {
-        rl.question(`${msg} (y/n) `, (answer) => resolve(answer.toLowerCase() === 'y'));
-      });
-    },
-    prompt: async (msg: string): Promise<string> => {
-      return new Promise((resolve) => {
-        rl.question(msg, resolve);
-      });
-    },
-  };
+  let isFirstPrompt = true;
 
-  // Command context
-  const cmdContext = {
-    cwd: ctx.getCwd(),
-    activeFiles: ctx.getState().activeFiles,
-    readOnlyFiles: ctx.getState().readOnlyFiles,
-    history: ctx.getHistory(),
-    io,
-  };
-
-  // Create readline interface
-  const rl = readline.createInterface({
-    input: process.stdin,
-    output: process.stdout,
-  });
-
-  // Handle Ctrl+C gracefully
-  rl.on('close', () => {
-    console.log('\nGoodbye!');
-    watcher?.stop();
-    mcpManager.disconnectAll();
-    process.exit(0);
-  });
-
-  // Main prompt loop
-  const prompt = (): void => {
+  while (true) {
     const skill = getActiveSkill();
-    const promptText = `\n[${skill.name}]> `;
+    let input: string | symbol;
 
-    rl.question(promptText, async (input) => {
-      input = input.trim();
-
-      if (!input) {
-        prompt();
-        return;
-      }
-
-      // Handle slash commands
-      if (input.startsWith('/')) {
-        try {
-          await executeCommand(input, cmdContext);
-        } catch (error) {
-          console.error(`[Error] ${error instanceof Error ? error.message : error}`);
+    // Support initial prompt from command line
+    const args = process.argv.slice(2).filter(arg => !arg.startsWith('-'));
+    if (isFirstPrompt && args.length > 0) {
+      input = args.join(' ');
+      note(input, pc.cyan('Initial Task'));
+    } else {
+      input = await text({
+        message: pc.dim(`[@${skill.name}]`) + ' Chat with Simple-CLI',
+        placeholder: 'Ask anything or use /help',
+        validate(value) {
+          if (value.trim().length === 0) return 'Input required';
         }
-        prompt();
-        return;
-      }
+      });
+    }
 
-      // Handle skill switching
-      if (input.startsWith('@')) {
-        const skillName = input.slice(1).trim();
-        if (skillName === 'list') {
-          console.log('\nAvailable skills:');
-          for (const s of listSkills()) {
-            const marker = s.name === skill.name ? '* ' : '  ';
-            console.log(`${marker}@${s.name} - ${s.description}`);
-          }
-        } else {
-          const newSkill = setActiveSkill(skillName);
-          if (newSkill) {
-            ctx.setSkill(newSkill);
-            console.log(`Switched to @${newSkill.name} skill`);
-          } else {
-            console.log(`Unknown skill: @${skillName}. Use @list to see available skills.`);
-          }
-        }
-        prompt();
-        return;
-      }
+    isFirstPrompt = false;
 
-      // Check for watch mode triggers
-      if (watcher) {
-        const watchPrompt = watcher.getActionableCommentsPrompt();
-        if (watchPrompt) {
-          input = `${watchPrompt}\n\nUser request: ${input}`;
-        }
-      }
+    if (isCancel(input)) {
+      outro('Goodbye!');
+      mcpManager.disconnectAll();
+      process.exit(0);
+    }
 
-      // Add to context history
-      ctx.addMessage('user', input);
+    const trimmedInput = (input as string).trim();
 
+    // Slash command
+    if (trimmedInput.startsWith('/')) {
       try {
-        // Generate response
-        console.log('\nThinking...');
-        const response = await generate(input);
-        const { thought, action } = parseResponse(response);
-
-        // Display thought
-        if (thought) {
-          console.log(`\n[Thought] ${thought}`);
-        }
-
-        // Handle action
-        if (action.tool !== 'none') {
-          const args = action.args || {};
-
-          if (await confirm(rl, action.tool, args, ctx)) {
-            console.log(`[Action] ${action.tool}`);
-            const result = await executeTool(action.tool, args, ctx);
-            console.log(`[Result] ${result.slice(0, 1000)}${result.length > 1000 ? '...' : ''}`);
-
-            // Update history with result
-            ctx.addMessage('assistant', response);
-            ctx.addMessage('user', `Tool result: ${result}`);
-          } else {
-            console.log('[Skipped]');
-            ctx.addMessage('assistant', response);
+        await executeCommand(trimmedInput, {
+          cwd: ctx.getCwd(),
+          activeFiles: ctx.getState().activeFiles,
+          readOnlyFiles: ctx.getState().readOnlyFiles,
+          history: ctx.getHistory(),
+          io: {
+            output: (m) => note(m, 'Output'),
+            error: (m) => note(m, pc.red('Error')),
+            confirm: async (m) => {
+              const c = await clackConfirm({ message: m });
+              return !isCancel(c) && c;
+            },
+            prompt: async (m) => {
+              const p = await text({ message: m });
+              return isCancel(p) ? '' : p as string;
+            }
           }
-        } else {
-          console.log(`\n${action.message || 'No response'}`);
-          ctx.addMessage('assistant', response);
+        });
+      } catch (err) {
+        note(pc.red(String(err)), 'Command Error');
+      }
+      continue;
+    }
+
+    // Skill switching
+    if (trimmedInput.startsWith('@')) {
+      const skillName = trimmedInput.slice(1).trim();
+      if (skillName === 'list') {
+        const skills = listSkills();
+        const selected = await select({
+          message: 'Select a skill',
+          options: skills.map(s => ({ label: `@${s.name} - ${s.description}`, value: s.name }))
+        });
+        if (!isCancel(selected)) {
+          const newSkill = setActiveSkill(selected as string);
+          if (newSkill) ctx.setSkill(newSkill);
         }
-      } catch (error) {
-        console.error(`[Error] ${error instanceof Error ? error.message : error}`);
-        if (DEBUG && error instanceof Error) {
-          console.error(error.stack);
+      } else {
+        const newSkill = setActiveSkill(skillName);
+        if (newSkill) {
+          ctx.setSkill(newSkill);
+          note(`Switched to @${newSkill.name} skill`, 'Skill');
+        } else {
+          note(`Skill @${skillName} not found.`, pc.red('Error'));
         }
       }
+      continue;
+    }
 
-      prompt();
-    });
-  };
+    ctx.addMessage('user', trimmedInput);
 
-  // Start the prompt loop
-  prompt();
+    let steps = 0;
+    while (steps < 15) {
+      s.start('Thinking...');
+      const response = await generate(trimmedInput);
+      const { thought, action } = parseResponse(response);
+      s.stop('Thought complete.');
+
+      if (thought) note(thought, pc.cyan('Thought'));
+
+      if (action.tool !== 'none') {
+        if (await confirm(action.tool, action.args || {}, ctx)) {
+          s.start(`Executing ${pc.cyan(action.tool)}...`);
+          const result = await executeTool(action.tool, action.args || {}, ctx);
+          s.stop(`Tool ${pc.cyan(action.tool)} finished.`);
+
+          note(result.length > 1000 ? result.slice(0, 1000) + '...' : result, pc.green('Result'));
+
+          ctx.addMessage('assistant', response);
+          ctx.addMessage('user', `Tool result: ${result}`);
+          steps++;
+        } else {
+          note('Operation cancelled.', pc.yellow('Skipped'));
+          ctx.addMessage('assistant', response);
+          break;
+        }
+      } else {
+        const msg = action.message || response.replace(/<thought>[\s\S]*?<\/thought>/, '').trim();
+        if (msg) note(msg, pc.magenta('Simple-CLI'));
+        ctx.addMessage('assistant', response);
+        break;
+      }
+    }
+  }
 }
-
-// Run
-main().catch(console.error);

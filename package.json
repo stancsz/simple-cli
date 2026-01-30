@@ -23,9 +23,8 @@
     }
   },
   "scripts": {
-    "start": "node --loader ts-node/esm src/index.ts",
+    "start": "node --loader ts-node/esm src/cli.ts",
     "dev": "node --loader ts-node/esm --watch src/index.ts",
-    "ui": "npx tsx src/cli.ts --ui",
     "build": "tsc && oclif manifest",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
