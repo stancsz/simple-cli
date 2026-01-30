@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="logo.jpeg" width="200" alt="Simple CLI Logo" />
+</p>
+
 # Simple CLI
 
 > 小西LI巨能打 -- Lean, lightweight, and packs a punch.
