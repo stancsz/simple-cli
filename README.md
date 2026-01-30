@@ -6,9 +6,20 @@
 
 It’s lightweight but powerful, optimized for **token efficiency**, and supports all major API providers.
 
+---
+
+## Quick Start 🚀
+
 ```bash
-# Lightweight but packs a punch
-simple-cli --yolo "Build a premium React dashboard with glassmorphism"
+# 1. Install globally
+npm install -g simple-cli
+
+# 2. Set your API key (any provider)
+export OPENAI_API_KEY="sk-..."
+# or ANTHROPIC_API_KEY, GEMINI_API_KEY, etc.
+
+# 3. Start building
+simple-cli "Build a premium React dashboard with glassmorphism"
 ```
 
 ---
@@ -256,9 +267,7 @@ Aider is the most mature open-source AI coding assistant. It's battle-tested and
 
 ---
 
-## Quick Start
-
-### Installation
+## Installation & Setup
 ```bash
 npm install -g simple-cli
 # or
