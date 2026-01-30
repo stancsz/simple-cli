@@ -1,26 +1,27 @@
 <p align="center">
-  <img src="logo.jpeg" width="200" alt="Simple CLI Logo" />
+  <img src="logo.jpeg" width="240" alt="Simple CLI Logo" />
 </p>
 
 # Simple CLI
+> **小西LI巨能打** — Lean, lightweight, and packs a punch. 🥊
 
-> 小西LI巨能打 -- Lean, lightweight, and packs a punch.
+**Simple CLI** is the minimalist's answer to the "heavy" AI coding agents of today. While tools like Cursor or Claude Code wrap their logic in complex UIs and proprietary IDEs, **Simple CLI** stays close to the metal. 
 
-**simplecli** is a minimalist, high-performance coding agent. It is designed to be the leanest version of **Claude Code** + **Cursor CLI**, giving you the power of an agentic swarm unit with a core codebase you can actually read in 5 minutes.
-
-It’s lightweight but powerful, optimized for **token efficiency**, and supports all major API providers.
+It is the **leanest implementation** of an agentic coding assistant, designed for developers who want the power of an agentic swarm unit with a core codebase they can actually read, understand, and modify in 5 minutes.
 
 ---
 
 ## Quick Start 🚀
 
+Get up and running in seconds. No complex configuration, no proprietary sign-ups.
+
 ```bash
 # 1. Install globally
 npm install -g @stan-chen/simple-cli
 
-# 2. Set your API key (any provider)
+# 2. Set your API key (any provider supported by LiteLLM)
 export OPENAI_API_KEY="sk-..."
-# or ANTHROPIC_API_KEY, GEMINI_API_KEY, etc.
+# Works with ANTHROPIC_API_KEY, GEMINI_API_KEY, DEEPSEEK_API_KEY, etc.
 
 # 3. Start building
 simple "Build a premium React dashboard with glassmorphism"
@@ -28,504 +29,114 @@ simple "Build a premium React dashboard with glassmorphism"
 
 ---
 
-## Comparison
+## Why Simple CLI? ⚡
 
-Different tools for different needs. Here's an honest comparison:
+### 🧠 Extreme Token Efficiency
+Most agents blast thousands of lines of code into the LLM context. **Simple CLI** is surgical. Using structured analysis tools like `analyzeFile` (via `ts-morph`) and `listDir`, it extracts exactly what it needs to understand your codebase, keeping costs low and speed high.
 
-| Feature | simplecli | Aider | Claude Code | Cursor | Cline |
-|---------|------------|-------|-------------|--------|-------|
-| **Maturity** | ⚠️ Experimental | ✅ Mature | ✅ Mature | ✅ Mature | 📈 Growing |
-| **Edit quality** | ⚠️ Basic (Fuzzy) | 🌟 Excellent | 🌟 Excellent | 🌟 Excellent | ✅ Good |
-| **Headless/scripting** | 🌟 Native | ✅ Yes | ❌ No | ❌ No | ❌ Needs VS Code |
-| **Interactive UX** | ⚠️ Minimal | ✅ Good | 🌟 Excellent | 🌟 Excellent | ✅ Good |
-| **Model support** | ✅ Any (LiteLLM) | ✅ Many | ⚠️ Claude only | ✅ Multiple | ✅ Many |
-| **MCP Protocol** | ✅ Native | ❌ Planned? | ✅ Native | ⚠️ Limited | ✅ Native |
-| **Codebase size** | ~2k LOC | ~50k+ LOC | Proprietary | Proprietary | ~15k LOC |
-| **Language** | TypeScript | Python | ? | ? | TypeScript |
-| **Documentation** | ⚠️ Sparse | 🌟 Excellent | ✅ Good | ✅ Good | ✅ Good |
-| **Community** | ⚠️ Tiny | 🌟 Large | 📈 Growing | 🌟 Large | 📈 Growing |
-| **Reliability** | ⚠️ Alpha | 🌟 Production | 🌟 Production | 🌟 Production | ✅ Beta |
+### 🎨 World-Class Design Sensibilities
+Built-in engineering doctrine that prioritizes visual excellence. While the CLI is minimalist, its **output** is premium. Just ask for "stunning" or "premium" and it will default to Vite, Tailwind, and modern design patterns (8px rhythm, glassmorphism, curated palettes).
 
-**The Verdict:** If you want a tool that just works out of the box with zero fuss, use **Cursor** or **Aider**. Use **simplecli** if you want a **lean, lightweight** foundation that you can fully understand, modify, and integrate into your own custom workflows.
+### 🤖 The "Hackable" 150-Line Core
+The entire orchestration loop is under **150 lines of code**. It’s not a black box; it’s a tool you can actually master. If you need a custom tool or a specific logic shift, you can change it in minutes.
 
 ---
 
-## Use Cases
+## Use Cases: From Scripting to Swarms 🐝
 
-### 1. Fire and Forget
+### 1. The "Fire & Forget" Fix
+Don't wait around. Fire a task and let the agent handle the cycle of coding, linting, and committing.
 ```bash
-# Single command, walk away
-simple --yolo --auto-commit --auto-test \
-  "add comprehensive test coverage for src/utils/"
+simple --yolo --auto-commit --auto-test "fix all TypeScript naming inconsistencies in src/models"
 ```
 
-### 2. Agent Swarms
-
-simplecli is designed as a **swarm unit**—a lightweight, headless agent that can be spawned by the hundreds to solve problems in parallel.
-
-#### Architecture
-
-```
-┌─────────────────────────────────────────────────────────────────┐
-│                         ORCHESTRATOR                             │
-│   (Your code: Python, TypeScript, Go, or another simplecli)    │
-└───────────────┬─────────────────────────────────────────────────┘
-                │
-        ┌───────┴───────┐
-        │  Task Queue   │
-        │  (in-memory)  │
-        └───────┬───────┘
-                │
-    ┌───────────┼───────────┬───────────┐
-    ▼           ▼           ▼           ▼
-┌───────┐  ┌───────┐  ┌───────┐  ┌───────┐
-│Worker │  │Worker │  │Worker │  │Worker │
-│  #1   │  │  #2   │  │  #3   │  │  #N   │
-└───┬───┘  └───┬───┘  └───┬───┘  └───┬───┘
-    │          │          │          │
-    └──────────┴──────────┴──────────┘
-                    │
-            ┌───────┴───────┐
-            │   Git Repo    │
-            │ (shared state)│
-            └───────────────┘
-```
-
-#### Core Principles
-
-1. **Git as Coordination Layer**: No database required. Git merge handles concurrent edits.
-2. **Task Granularity**: Tasks should be file-scoped or function-scoped.
-3. **Fail-Forward Design**: Workers are disposable. Atomic commits mean partial work can be cherry-picked.
-
-#### Swarm Mode CLI
-
-- `--swarm`: Activates swarm mode. It has a default completion stop (terminates once tasks are finished).
-- `--swarm --yolo`: Runs the swarm in auto-approval mode.
-
-```bash
-# Start a swarm session
-simple --swarm "refactor all modules"
-```
-
-#### Programmatic Orchestration
+### 2. High-Density Agent Swarms
+Simple CLI is designed to be the **standardized compute unit** of agentic coding. Spin up 50 workers to refactor a legacy codebase overnight using nothing but Git for coordination.
 
 ```python
-# Python orchestrator spawning multiple simplecli agents
-import subprocess
+# Programmatic orchestration in Python
 import asyncio
 
-async def run_agent(task: str, workdir: str):
-    proc = await asyncio.create_subprocess_exec(
-        'simple', '--yolo', '--swarm', task,
-        cwd=workdir,
-        stdout=asyncio.subprocess.PIPE
-    )
-    return await proc.communicate()
+async def run_worker(task, path):
+    proc = await asyncio.create_subprocess_exec('simple', '--yolo', task, cwd=path)
+    await proc.wait()
 
-# Parallel agents working on different modules
 await asyncio.gather(
-    run_agent("refactor auth module", "./services/auth"),
-    run_agent("add input validation", "./services/api"),
-    run_agent("optimize database queries", "./services/data"),
+    run_worker("implement auth", "./services/auth"),
+    run_worker("add logging", "./services/api")
 )
 ```
 
-For more details on coordination patterns (Fan-Out, Pipeline, Map-Reduce), see the [Full Swarm Specification](./docs/SWARM-DESIGN.md).
+---
 
-### 3. CI/CD Integration
-```yaml
-# GitHub Actions
-- name: AI Code Review
-  run: |
-    simple --skill review --yolo \
-      "review changes in this PR and suggest improvements"
-```
+## Comparison Table ⚖️
 
-### 4. Cron Jobs
-```bash
-# Daily dependency updates
-0 3 * * * cd /app && simple --yolo --auto-commit \
-  "update outdated dependencies and fix any breaking changes"
-```
-
-### 5. Native Tool Integration
-simplecli inherits your full host environment, allowing it to use any tool installed on your machine. This makes it a first-class citizen for local development workflows.
-
-```bash
-# Leverages your local 'gh' auth and config
-simple --yolo "create a test issue in stancsz/claude-code-litellm"
-
-# Native git operations
-simple --yolo "initialize a new repo and commit the current files"
-
-# Call into standard Unix/Windows tools
-simple --yolo "use powershell to find all large files and delete them"
-```
+| Feature | Simple CLI | Aider | Claude Code | Cursor |
+|---------|:-----------:|:-----:|:-----------:|:------:|
+| **Maturity** | ⚠️ Alpha | ✅ Mature | ✅ Mature | ✅ Mature |
+| **UX** | Minimalist | CLI-first | Polished | Full IDE |
+| **Logic** | **150 LOC Core** | ~50k LOC | Proprietary | Proprietary |
+| **Models** | **Any (LiteLLM)** | Many | Claude Only | Multiple |
+| **Headless** | 🌟 Native | ✅ Yes | ❌ No | ❌ No |
+| **MCP Protocol** | ✅ Native | ❌ No | ✅ Native | ⚠️ Limited |
 
 ---
 
-## Architecture: Simplicity by Design
+## 🛠 Features You'll Actually Use
 
-```
+*   **Native Tool Integration**: Inherits your full machine environment. If you're logged into `gh`, `aws`, or `git`, the agent is too.
+*   **Mix of Experts (MoE)**: Native routing to use the right model for the right task (e.g., GPT-4o for logic, GPT-4o-mini for docs).
+*   **Self-Evolution**: The agent can upgrade itself by writing its own tools into `src/tools/`.
+*   **Skills/Presets**: Switch personas instantly with `@code`, `@architect`, `@test`, or `@review`.
+
+---
+
+## 🏗 Architecture: Simplicity by Design
+
+```text
 ┌─────────────────────────────────────────────────────────┐
-│                    simplecli                            │
+│                    Simple CLI                           │
 ├─────────────────────────────────────────────────────────┤
-│  ┌─────────┐  ┌─────────┐  ┌─────────┐  ┌─────────┐   │
-│  │ LiteLLM │  │ simple- │  │ ts-morph│  │  Clack  │   │
-│  │ (models)│  │   git   │  │ (edits) │  │  (UI)   │   │
-│  └────┬────┘  └────┬────┘  └────┬────┘  └────┬────┘   │
-│       │            │            │            │         │
-│  ┌────┴────────────┴────────────┴────────────┴────┐   │
-│  │              Agent Core (~150 LOC)              │   │
-│  │  • Parse response → Execute tool → Reflect     │   │
-│  └─────────────────────┬───────────────────────────┘   │
-│                        │                               │
-│  ┌─────────────────────┴───────────────────────────┐   │
-│  │                Tool Registry                     │   │
-│  │  readFiles │ writeFiles │ runCommand │ git      │   │
-│  │  listDir   │ analyzeFile │ grep      │ glob     │   │
-│  └─────────────────────┬───────────────────────────┘   │
-│                        │                               │
-│  ┌─────────────────────┴───────────────────────────┐   │
-│  │              MCP Protocol Layer                  │   │
-│  │     Composio │ Filesystem │ GitHub │ Memory     │   │
-│  └─────────────────────────────────────────────────┘   │
+│  LiteLLM │ simple-git │ ts-morph │ MCP Protocol │ UI    │
+├─────────────────────────────────────────────────────────┤
+│              Agent Core (~150 LOC)                      │
+│     (Response → Tool Execution → Reflection)            │
 └─────────────────────────────────────────────────────────┘
 ```
 
-### Core Principles
-
-1. **Minimal core** - The orchestrator is under 150 lines. Everything else is a plugin.
-2. **Git-native state** - No database. Git is the source of truth.
-3. **Model agnostic** - LiteLLM means any model works: GPT-5.2, Gemini 3 Pro, Claude 3.7, Llama 4.
+1. **Minimal core** - The orchestrator is human-readable.
+2. **Git-native state** - No database. Git is the only source of truth.
+3. **Model agnostic** - Use OpenAI, Anthropic, Gemini, or local models.
 4. **Tool-first** - 12 built-in tools + unlimited MCP tools.
-5. **Fail-forward** - Reflection loop retries with context on failures.
-6. **Premium Aesthetics** - Built-in focus on modern design (8px rhythm, glassmorphism, curated palettes).
-7. **Structured Analysis** - Deep codebase understanding via `ts-morph` and directory listing.
 
 ---
 
-## Comparison Deep Dive
+## CLI Reference 📖
 
-### vs Aider
-
-Aider is the most mature open-source AI coding assistant. It's battle-tested and feature-rich.
-
-| Aspect | Aider | simplecli |
-|--------|-------|------------|
-| **Maturity** | 2+ years, production-ready | New, experimental |
-| **Edit quality** | Excellent (10+ formats, tree-sitter) | Good (fuzzy SEARCH/REPLACE) |
-| **Repo understanding** | Advanced (repo map, tags) | Basic |
-| **Voice input** | ✅ Yes | ❌ No |
-| **Browser scraping** | ✅ Full (Playwright) | Basic (fetch only) |
-| **Documentation** | Extensive | Minimal |
-| **Headless scripting** | ✅ Works well | ✅ Primary focus |
-| **MCP tools** | ❌ No | ✅ Yes |
-
-**Use Aider if:** You want a mature, feature-complete tool with excellent edit quality.
-
-**Use simplecli if:** You want a minimal codebase you can understand, modify, or embed.
-
-### vs Claude Code (Anthropic)
-
-| Aspect | Claude Code | simplecli |
-|--------|-------------|------------|
-| **UX polish** | Excellent | Basic |
-| **Edit quality** | Excellent | Good |
-| **Model choice** | Claude only | Any model |
-| **Headless** | ❌ No | ✅ Yes |
-| **Source available** | ❌ No | ✅ Yes |
-| **MCP** | ✅ Native | ✅ Yes |
-
-**Use Claude Code if:** You want the best Claude experience with polished UI.
-
-**Use simplecli if:** You need headless operation or model flexibility.
-
-### vs Cursor
-
-| Aspect | Cursor | simplecli |
-|--------|--------|------------|
-| **Type** | Full IDE | CLI tool |
-| **UX** | Excellent | Minimal |
-| **Features** | Comprehensive | Focused |
-| **Price** | $20/month | Free + model costs |
-| **Headless** | ❌ No | ✅ Yes |
-
-**Use Cursor if:** You want AI deeply integrated into a modern IDE.
-
-**Use simplecli if:** You need CLI-based automation without an IDE.
-
-### vs Cline
-
-| Aspect | Cline | simplecli |
-|--------|-------|------------|
-| **Environment** | VS Code extension | Standalone |
-| **Features** | Rich | Minimal |
-| **MCP support** | ✅ Good | ✅ Good |
-| **Headless** | ⚠️ Needs VS Code | ✅ Native |
-| **Community** | Active | New |
-
-**Use Cline if:** You work in VS Code and want powerful AI assistance there.
-
-**Use simplecli if:** You need a standalone CLI you can script or embed.
-
----
-
-## Installation & Setup
 ```bash
-npm install -g @stan-chen/simple-cli
-# or
-npx @stan-chen/simple-cli
-```
+# Basic Usage
+simple [MESSAGE] [FLAGS]
 
-### Configuration
-```bash
-# Set your preferred model
-export OPENAI_API_KEY="sk-..."
-# or
-export ANTHROPIC_API_KEY="sk-..."
-# or
-export GEMINI_API_KEY="..."
-```
+# Common Flags
+--yolo           No approval needed for tools
+--auto-commit    Auto-commit after every success
+--moe            Enable Mix of Experts routing
+--skill=SKILL    Start with a specific skill (e.g., architect)
 
-### Basic Usage
-```bash
-# Interactive mode
-simple
-
-# Single task (fire and forget)
-simple --yolo "fix all TypeScript errors in src/"
-
-# With auto-commit
-simple --yolo --auto-commit "add input validation to all API endpoints"
-
-# With specific skill
-simple --skill architect "design a caching layer for the API"
-
-# With Mix of Experts (cost optimization)
-simple --moe --yolo "implement user authentication"
-```
-
-### Programmatic Usage
-```typescript
-import { spawn } from 'child_process';
-
-const agent = spawn('simple', [
-  '--yolo',
-  '--auto-commit',
-  'refactor the database module'
-], {
-  cwd: '/path/to/project',
-  env: { ...process.env, OPENAI_API_KEY: 'sk-...' }
-});
-
-agent.stdout.on('data', (data) => console.log(data.toString()));
-agent.on('close', (code) => console.log(`Agent finished with code ${code}`));
+# Chat Commands
+/add [file]      Add file to context
+/diff            Show current changes
+/tokens          Show usage statistics
+/undo            Revert last agent move
 ```
 
 ---
 
-## Features
+## 🤝 Contributing & License
 
-### Native Tool Integration
-- **Full Environment Inheritance** - Inherits `PATH`, `HOME`, and secret tokens (like `GH_TOKEN`) from your shell.
-- **Tool Friendly** - Seamlessly works with `gh`, `git`, `npm`, `powershell`, `curl`, and any other CLI tool.
-- **Zero-Config Auth** - If you're logged into GitHub/AWS/GCP on your machine, the agent is too.
+Simple CLI is intentionally minimal. Before opening a PR, ask yourself:
+1. Does it help headless automation?
+2. Can it be a tool instead of core logic?
+3. **Does it keep the core under 150 lines?**
 
-### Code Editing & Analysis
-- **Fuzzy matching** - Finds similar code even with minor differences.
-- **Whitespace flexibility** - Handles indentation mismatches.
-- **Structured Analysis** - Uses `analyzeFile` (ts-morph) to extract symbols without reading raw files.
-- **Directory Insights** - Uses `listDir` to safely explore project structure.
-- **Reflection loop** - Retries up to 3 times with error context.
-
-### Premium UI/UX Philosophy
-Unlike other headles agents, simplecli is programmed with high-end design sensibilities:
-- **World-Class Aesthetics** - Automatically applies modern design tokens (gradients, blur, depth).
-- **Modern Stack** - Expert in Vite, Tailwind, React, and Lucide for rapid premium prototyping.
-- **Zero-Config Premium** - Just ask for "Premium" or "Stunning" and the agent handles the design system.
-
-### Mix of Experts (MoE) Routing
-Route tasks to the right model tier for cost optimization:
-
-```
-Tier 1: Orchestrator (GPT-5.2 Pro / Gemini 3 Pro) - Complex architecture
-Tier 2: Senior (GPT-5.2 Codex / Gemini 3 Deep Think) - Agentic software engineering
-Tier 3: Junior (GPT-5 Mini / Gemini 3 Flash) - High-speed reasoning
-Tier 4: Intern (GPT-5 Nano) - Low latency tasks
-Tier 5: Utility (Gemini 2.5 Flash) - Formatting, docs
-```
-
-### Self-Evolution
-The agent can upgrade itself by writing new tools.
-
-1.  **Dynamic Registry**: `src/registry.ts` scans `src/tools/*.ts` at runtime.
-2.  **Self-Modification**: The agent can use `writeFiles` to create a new tool (e.g., `src/tools/sql.ts`).
-3.  **Instant Upgrade**: On the next run, the new tool is automatically loaded and available in the system prompt.
-
-This allows the agent to permanently expand its capabilities (adding database access, API clients, etc.) without you needing to rebuild the core.
-
-### MCP Protocol Support
-Connect to 250+ tools via Model Context Protocol:
-
-```json
-{
-  "mcpServers": {
-    "composio": {
-      "command": "npx",
-      "args": ["-y", "composio-core", "mcp"]
-    },
-    "github": {
-      "command": "npx", 
-      "args": ["-y", "@modelcontextprotocol/server-github"]
-    }
-  }
-}
-```
-
-### Skills/Presets
-Switch agent behavior with `@skill` or `--skill`:
-
-| Skill | Description |
-|-------|-------------|
-| `@code` | General coding (default) |
-| `@architect` | System design, high-level planning |
-| `@test` | Writing and debugging tests |
-| `@debug` | Troubleshooting issues |
-| `@refactor` | Code improvements |
-| `@review` | Code review |
-| `@git` | Version control operations |
-| `@shell` | Shell scripting |
-| `@ask` | Read-only Q&A |
-
----
-
-## CLI Reference
-
-```
-USAGE
-  $ simple [MESSAGE] [FLAGS]
-
-FLAGS
-  --yolo           Auto-approve all tool executions
-  --moe            Enable Mix of Experts routing
-  --swarm          Enable swarm mode (multi-agent orchestration)
-  --auto-commit    Commit changes automatically
-  --auto-lint      Lint after changes (default: true)
-  --auto-test      Run tests after changes
-  --test-cmd=CMD   Test command to run
-  --skill=SKILL    Initial skill (code, architect, test, etc.)
-  --watch          Watch files for AI comments
-
-SWARM MODE
-  simple --swarm --tasks <file>     Run tasks from JSON file
-  simple --swarm --task "desc"      Run single task
-  simple --swarm --task "desc" --scope "src/**/*.ts"  Task per file
-  simple --swarm --concurrency 4    Set parallel workers
-
-COMMANDS
-  simple add <files>     Add files to context
-  simple git status      Show git status
-  simple git commit      Commit with AI message
-  simple mcp status      Show MCP server status
-
-SLASH COMMANDS (in chat)
-  /add <file>    Add file to context
-  /drop [file]   Remove file(s) from context
-  /ls            List files in context
-  /diff          Show git diff
-  /commit [msg]  Commit changes
-  /undo          Undo last commit
-  /clear         Clear chat history
-  /tokens        Show token usage
-  /help          Show commands
-```
-
----
-
-## For Agent Builders
-
-simplecli is designed to be a building block for larger systems.
-
-### Spawn Pattern
-```typescript
-// Spawn agents for parallel work
-const agents = tasks.map(task => 
-  spawn('simple', ['--yolo', task], { cwd: workdir })
-);
-await Promise.all(agents.map(a => new Promise(r => a.on('close', r))));
-```
-
-### Supervisor Pattern
-```typescript
-// Supervisor agent coordinating worker agents
-const supervisor = new simplecli({ skill: 'architect' });
-const plan = await supervisor.run('break down this feature into tasks');
-
-for (const task of plan.tasks) {
-  const worker = new simplecli({ skill: 'code', yolo: true });
-  await worker.run(task);
-}
-```
-
-### Pipeline Pattern
-```bash
-# Sequential pipeline
-simple --yolo "implement feature" && \
-simple --skill test --yolo "add tests" && \
-simple --skill review --yolo "review and improve" && \
-simple --auto-commit "final cleanup"
-```
-
----
-
-## Philosophy: The Swarm Unit
-
-**simplecli** is a lean version of Claude Code and Cursor CLI. It provides the essential agentic "muscles" without the bloat.
-
-1.  **Extreme Token Efficiency**: Native **Mix of Experts (MoE)** routing and structured analysis tools (`analyzeFile`, `listDir`) ensure you only send the tokens that matter.
-2.  **Model Agnostic**: Supports virtually any API provider via LiteLLM (OpenAI, Anthropic, Gemini, DeepSeek, etc.).
-3.  **Hackable Core**: The orchestration loop is under **150 lines of code**. You can modify, extend, or embed it in minutes.
-4.  **Premium Output**: While the CLI is minimalist, its engineering sensibilities are high-end (Vite, Tailwind, modern design patterns).
-
-**Strengths:**
-- Small codebase (~150 LOC core) you can read in an afternoon
-- Highly token-efficient via structured analysis and MoE
-- Standalone, headless-first design
-- Model agnostic via LiteLLM
-
-**Weaknesses:**
-- Less mature than alternatives
-- Fewer edit formats than Aider
-- Basic interactive UX
-- Limited documentation
-- Not battle-tested in production
-
-**Use simplecli when:**
-- You need a minimal, hackable foundation
-- You're building agent pipelines or automation
-- You want to understand how AI coding agents work
-- You need headless/scripted operation
-
-**Use something else when:**
-- You need production-ready reliability (use Aider)
-- You want polished UX (use Cursor or Claude Code)
-- You work primarily in VS Code (use Cline)
-
----
-
-## License
-
-MIT
-
----
-
-## Contributing
-
-simplecli is intentionally minimal. Before adding features, ask:
-
-1. Does this help headless/automated usage?
-2. Can this be an MCP tool instead of core?
-3. Does this keep the core under 150 lines?
-
-If yes to all three, open a PR.
+Licensed under **MIT**. Built for the swarm era. 🚀
