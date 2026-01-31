@@ -22,8 +22,33 @@ import { jsonrepair } from 'jsonrepair';
 const YOLO_MODE = process.argv.includes('--yolo');
 const MOE_MODE = process.argv.includes('--moe');
 const SWARM_MODE = process.argv.includes('--swarm');
+const CLAW_MODE = process.argv.includes('--claw') || process.argv.includes('-claw');
 const DEBUG = process.argv.includes('--debug') || process.env.DEBUG === 'true';
 const VERSION = '0.2.0';
+
+// Handle --claw mode (JIT Agent Generation)
+if (CLAW_MODE) {
+  const { execSync } = await import('child_process');
+  const args = process.argv.slice(2).filter(a => !a.startsWith('-'));
+  const intent = args.join(' ') || 'unspecified task';
+
+  console.log(pc.cyan('🧬 Initiating JIT Agent Generation...'));
+  console.log(pc.dim(`Intent: "${intent}"`));
+
+  try {
+    const output = execSync(`npx tsx tools/claw.ts run clawJit intent="${intent}"`, {
+      cwd: process.cwd(),
+      encoding: 'utf-8',
+      stdio: 'inherit'
+    });
+
+    console.log(pc.green('\n✅ JIT Agent ready. Run `simple` to begin.'));
+    process.exit(0);
+  } catch (error) {
+    console.error(pc.red('❌ Failed to initialize Claw mode:'), error);
+    process.exit(1);
+  }
+}
 
 // Handle --swarm mode
 if (SWARM_MODE) {

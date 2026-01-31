@@ -39,9 +39,6 @@ function schedule() {
     const id = `ghost-${Date.now().toString(36)}`;
     const cmd = `simple -claw "${INTENT}" --ghost`;
 
-    // NOTE: In a real implementation, we would write to crontab or use Windows Task Scheduler.
-    // For this reference implementation, we just mock the DB entry.
-
     const ghost = {
         id,
         intent: INTENT,
@@ -58,11 +55,72 @@ function schedule() {
     console.log(`- Intent: ${INTENT}`);
     console.log(`- Schedule: ${CRON}`);
 
-    // Windows-specific note: Real implementation would use 'schtasks'
+    // Real OS scheduler integration
     if (os.platform() === 'win32') {
-        console.log('(Mock): Would run: schtasks /create ...');
+        scheduleWindows(id, cmd, CRON);
     } else {
-        console.log('(Mock): Would update crontab ...');
+        scheduleUnix(id, cmd, CRON);
+    }
+}
+
+function scheduleWindows(id, cmd, cron) {
+    // Convert cron to Windows Task Scheduler format
+    const cronParts = cron.split(' ');
+    if (cronParts.length !== 5) {
+        console.error('Invalid cron format. Expected: min hour day month weekday');
+        return;
+    }
+
+    const [minute, hour, day, month, weekday] = cronParts;
+
+    // Build schtasks command
+    let scheduleType = '/SC ONCE';
+    let modifier = '';
+
+    if (minute === '*' && hour === '*') {
+        scheduleType = '/SC MINUTE';
+        modifier = '/MO 1';
+    } else if (hour === '*') {
+        scheduleType = '/SC HOURLY';
+    } else if (day === '*' && month === '*') {
+        scheduleType = '/SC DAILY';
+    }
+
+    const startTime = `${hour === '*' ? '00' : hour.padStart(2, '0')}:${minute === '*' ? '00' : minute.padStart(2, '0')}`;
+
+    const schtasksCmd = `schtasks /CREATE /TN "SimpleCLI_${id}" /TR "${cmd}" ${scheduleType} ${modifier} /ST ${startTime} /F`;
+
+    try {
+        execSync(schtasksCmd, { encoding: 'utf-8', stdio: 'inherit' });
+        console.log(`✅ Created Windows task: SimpleCLI_${id}`);
+    } catch (error) {
+        console.error('Failed to create Windows task:', error.message);
+    }
+}
+
+function scheduleUnix(id, cmd, cron) {
+    try {
+        // Get current crontab
+        let currentCrontab = '';
+        try {
+            currentCrontab = execSync('crontab -l', { encoding: 'utf-8' });
+        } catch (e) {
+            // No crontab exists yet
+        }
+
+        // Add new entry with ID comment
+        const entry = `${cron} ${cmd} # SimpleCLI_${id}`;
+        const newCrontab = currentCrontab ? `${currentCrontab}\n${entry}` : entry;
+
+        // Write back to crontab
+        const tempFile = path.join(os.tmpdir(), `crontab_${id}.txt`);
+        fs.writeFileSync(tempFile, newCrontab);
+        execSync(`crontab ${tempFile}`, { encoding: 'utf-8' });
+        fs.unlinkSync(tempFile);
+
+        console.log(`✅ Added to crontab: ${entry}`);
+    } catch (error) {
+        console.error('Failed to update crontab:', error.message);
     }
 }
 
@@ -86,16 +144,45 @@ function kill() {
     }
 
     let ghosts = loadGhosts();
-    const initialLen = ghosts.length;
-    ghosts = ghosts.filter(g => g.id !== ID && g.id !== 'all');
+    const toKill = ID === 'all' ? ghosts : ghosts.filter(g => g.id === ID);
 
-    if (ghosts.length < initialLen || ID === 'all') {
-        saveGhosts(ghosts);
-        console.log(`Terminated ghost task(s): ${ID}`);
-    } else {
+    if (toKill.length === 0 && ID !== 'all') {
         console.error(`Ghost ID ${ID} not found.`);
         process.exit(1);
     }
+
+    // Remove from OS scheduler
+    toKill.forEach(ghost => {
+        if (os.platform() === 'win32') {
+            try {
+                execSync(`schtasks /DELETE /TN "SimpleCLI_${ghost.id}" /F`, { stdio: 'ignore' });
+                console.log(`✅ Removed Windows task: SimpleCLI_${ghost.id}`);
+            } catch (e) {
+                console.warn(`⚠️  Task SimpleCLI_${ghost.id} not found in scheduler`);
+            }
+        } else {
+            try {
+                const currentCrontab = execSync('crontab -l', { encoding: 'utf-8' });
+                const lines = currentCrontab.split('\n');
+                const filtered = lines.filter(line => !line.includes(`SimpleCLI_${ghost.id}`));
+
+                if (filtered.length < lines.length) {
+                    const tempFile = path.join(os.tmpdir(), `crontab_cleanup_${Date.now()}.txt`);
+                    fs.writeFileSync(tempFile, filtered.join('\n'));
+                    execSync(`crontab ${tempFile}`, { encoding: 'utf-8' });
+                    fs.unlinkSync(tempFile);
+                    console.log(`✅ Removed from crontab: SimpleCLI_${ghost.id}`);
+                }
+            } catch (e) {
+                console.warn(`⚠️  Could not update crontab: ${e.message}`);
+            }
+        }
+    });
+
+    // Update DB
+    ghosts = ghosts.filter(g => !toKill.includes(g));
+    saveGhosts(ghosts);
+    console.log(`Terminated ${toKill.length} ghost task(s)`);
 }
 
 switch (ACTION) {

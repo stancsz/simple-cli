@@ -31,10 +31,84 @@ async function generatePersona(intent) {
         return `# AGENT.md: ${intent}\n\n## Persona\nExpert for ${intent}.\n\n## Constraints\n- Test Mode active.`;
     }
 
-    // TODO: connect to actual LLM here. For MVP/Demo, we use a template generator.
-    // In a real implementation this would call OpenAI/Anthropic API.
+    // Real LLM Integration
+    const apiKey = process.env.OPENAI_API_KEY || process.env.ANTHROPIC_API_KEY;
+    const baseUrl = process.env.LITELLM_BASE_URL || 'https://api.openai.com/v1';
+    const model = process.env.CLAW_MODEL || 'gpt-4';
 
-    const rules = [
+    if (!apiKey) {
+        console.warn('⚠️  No API key found. Falling back to template generation.');
+        return fallbackTemplate(intent);
+    }
+
+    const prompt = `You are an expert at generating specialized agent personas. Create a detailed AGENT.md file for an AI agent whose sole purpose is: "${intent}"
+
+The AGENT.md should include:
+1. A persona description (who is this agent, what expertise does it have)
+2. A strategy section (how it will approach the task)
+3. Constraints (what it should NOT do)
+
+Format it in Markdown with proper headers. Be specific and actionable.`;
+
+    try {
+        const https = require('https');
+        const url = new URL(`${baseUrl}/chat/completions`);
+
+        const body = JSON.stringify({
+            model,
+            messages: [{ role: 'user', content: prompt }],
+            temperature: 0.7,
+            max_tokens: 1000
+        });
+
+        const options = {
+            hostname: url.hostname,
+            port: url.port || 443,
+            path: url.pathname,
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${apiKey}`,
+                'Content-Length': Buffer.byteLength(body)
+            }
+        };
+
+        return new Promise((resolve, reject) => {
+            const req = https.request(options, (res) => {
+                let data = '';
+                res.on('data', chunk => data += chunk);
+                res.on('end', () => {
+                    try {
+                        const json = JSON.parse(data);
+                        if (json.choices && json.choices[0]) {
+                            resolve(json.choices[0].message.content);
+                        } else {
+                            console.error('Unexpected API response:', json);
+                            resolve(fallbackTemplate(intent));
+                        }
+                    } catch (e) {
+                        console.error('Failed to parse LLM response:', e);
+                        resolve(fallbackTemplate(intent));
+                    }
+                });
+            });
+
+            req.on('error', (e) => {
+                console.error('LLM request failed:', e.message);
+                resolve(fallbackTemplate(intent));
+            });
+
+            req.write(body);
+            req.end();
+        });
+    } catch (error) {
+        console.error('Error calling LLM:', error);
+        return fallbackTemplate(intent);
+    }
+}
+
+function fallbackTemplate(intent) {
+    return [
         '# 🛡️ JIT AGENT: ' + intent.toUpperCase(),
         '',
         '## 🎭 Persona',
@@ -52,8 +126,6 @@ async function generatePersona(intent) {
         '- Keep the "memory" clean and organized.',
         ''
     ].join('\n');
-
-    return rules;
 }
 
 (async () => {
