@@ -12,7 +12,7 @@ Please refer to the comprehensive wiki in the `docs/` folder or visit the [GitHu
 
 ---
 
-## Quick Start 🚀
+## Quick Start
 
 ```bash
 # 1. Install globally
@@ -25,4 +25,4 @@ export OPENAI_API_KEY="sk-..."
 simple "Build a premium React dashboard"
 ```
 
-For detailed architecture, design philosophy, and customization guides, see our [Documentation Index](docs/index.md).
+For detailed architecture, design philosophy, and customization guides, see the [Documentation Index](docs/index.md).
