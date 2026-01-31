@@ -8,16 +8,14 @@
 Simple-CLI is a **lean, autonomous AI agent** that lives in your terminal. Unlike bloated IDEs, it's built for speed, horizontal scalability, and intelligent task execution.
 
 ```bash
-# Just start coding
+# Interactive mode (chat loop)
 simple
 
-# Or jump straight to a task
-simple "Build a REST API with auth"
-```
+# One-shot execution
+simple "Add TypeScript to this project"
 
-**Optional:** Enable OpenClaw integration for advanced features like JIT specialization:
-```bash
-simple --claw "Security audit my React app"
+# OpenClaw agent mode (auto-schedules background tasks)
+simple --claw "Delete trash emails every hour"
 ```
 
 ---
@@ -59,21 +57,33 @@ simple
 
 ---
 
-## Core Workflow
+## Three Ways to Use
 
-### Interactive Agent Session
-
+### 1. Interactive Mode
 ```bash
 simple
 ```
+Launch a chat session where you can ask questions, request changes, and see the agent iterate through multi-step tasks autonomously.
 
-When you run `simple`, you get:
-1. **Codebase Understanding** - It analyzes your project structure
-2. **Interactive Loop** - Ask questions, request changes, review diffs
-3. **Tool Execution** - File edits, searches, command execution
-4. **Autonomous Iteration** - It can loop through multi-step tasks
+### 2. One-Shot Execution
+```bash
+simple "Convert this Express app to Fastify"
+```
+Execute a single task and exit. Perfect for scripting or quick one-off commands.
 
-All with beautiful terminal UI powered by `@clack/prompts`.
+### 3. OpenClaw Agent Mode
+```bash
+simple --claw "Delete trash emails every hour"
+```
+Runs in OpenClaw-compatible environments with full access to skills, memory, and scheduling. The agent can:
+- Generate specialized personas (JIT)
+- Use OpenClaw skills from `skills/` directory
+- **Automatically schedule recurring tasks** (e.g., "every hour" → creates ghost task)
+- Persist memory across sessions
+
+When you use `--claw`, the agent intelligently determines if your task should run:
+- **Once** (immediate execution)
+- **Recurring** (auto-creates scheduled background task)
 
 ---
 
@@ -146,38 +156,39 @@ Distribute tasks across isolated Git worktrees:
 
 ---
 
-## Real-World Usage
+## Real-World Examples
 
-### Basic Interactive Mode
+### Native Usage (Modes 1 & 2)
+
 ```bash
-# Launch and chat
+# Interactive exploration
 simple
+→ "What database does this app use?"
+→ "Add input validation to the user registration endpoint"
 
-# Direct command (one-shot)
-simple "Add TypeScript to this project"
+# One-shot tasks
+simple "Add TypeScript strict mode and fix all errors"
+simple "Generate OpenAPI docs from my Express routes"
+simple "Refactor to use async/await instead of callbacks"
 ```
 
-### Advanced: OpenClaw JIT Mode
+### OpenClaw Mode (Mode 3)
 
 ```bash
-# Generate specialized agent for code generation
-simple --claw "Create a REST API with auth, rate limiting, and OpenAPI docs"
+# Immediate execution with specialized agent
+simple --claw "Audit this React app for security vulnerabilities"
+simple --claw "Migrate from Vue 2 to Vue 3"
 
-# Refactoring specialist
-simple --claw "Convert class components to hooks in src/"
-
-# Security audit expert
-simple --claw "Audit for SQL injection and XSS vulnerabilities"
+# Auto-scheduled recurring tasks
+simple --claw "Check for npm vulnerabilities every day at 9am"
+simple --claw "Delete old log files every week"
+simple --claw "Run integration tests hourly"
 ```
 
-### Recurring Tasks (OpenClaw Ghost Mode)
-```bash
-# Auto-update dependencies weekly
-npx tsx tools/claw.ts run clawGhost \
-  action=schedule \
-  intent="Update npm deps and test" \
-  cron="0 3 * * 0"
-```
+When you provide time-based language ("every hour", "daily", etc.), the `--claw` mode **automatically:**
+1. Generates a specialized agent persona for the task
+2. Creates a scheduled background task (Ghost Mode)
+3. Registers it with your OS scheduler (crontab / Task Scheduler)
 
 ---
 
