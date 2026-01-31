@@ -34,27 +34,21 @@ export class PromptProvider {
             parts.push(...this.loadFromDirectory(builtInDir));
         }
 
-        // 2. Global user overrides (~/.simple/prompts)
-        const globalDir = join(homedir(), '.simple', 'prompts');
-        if (existsSync(globalDir)) {
-            parts.push(...this.loadFromDirectory(globalDir));
+        // 2. Global user rules (~/.simple/AGENT.md)
+        const globalRulesPath = join(homedir(), '.simple', 'AGENT.md');
+        if (existsSync(globalRulesPath)) {
+            parts.push('\n## Global Rules\n' + readFileSync(globalRulesPath, 'utf-8'));
         }
 
-        // 3. Project-specific overrides (.simple/prompts in project root)
-        const projectDir = join(options.cwd, '.simple', 'prompts');
-        if (existsSync(projectDir)) {
-            parts.push(...this.loadFromDirectory(projectDir));
+        // 3. Project rules (AGENT.md)
+        const rules = this.loadProjectRules(options.cwd);
+        if (rules) {
+            parts.push('\n## Project Rules\n' + rules);
         }
 
         // 4. Skill-specific prompt (Dynamic based on @skill)
         if (options.skillPrompt) {
             parts.push('\n## Skill Context: ' + options.skillPrompt);
-        }
-
-        // 5. Local project rules (AGENT.md, .cursorrules, etc.)
-        const rules = this.loadProjectRules(options.cwd);
-        if (rules) {
-            parts.push('\n## Project Rules\n' + rules);
         }
 
         return parts.join('\n\n').trim();
@@ -72,7 +66,14 @@ export class PromptProvider {
     }
 
     private loadProjectRules(cwd: string): string | null {
-        const commonPaths = ['AGENT.md', '.agent.md', '.aider/agent.md', '.cursorrules'];
+        const commonPaths = [
+            '.simple/AGENT.md',
+            '.agent/AGENT.md',
+            'AGENT.md',
+            '.agent.md',
+            '.cursorrules',
+            '.aider/agent.md'
+        ];
         for (const p of commonPaths) {
             const fullPath = join(cwd, p);
             if (existsSync(fullPath)) {

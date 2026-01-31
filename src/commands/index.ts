@@ -111,9 +111,8 @@ export default class Chat extends Command {
 
     // Generate function
     const generate = async (messages: Message[]): Promise<string> => {
-      const systemPrompt = await ctx.buildSystemPrompt();
-      const rules = loadAgentRules();
-      const fullPrompt = rules ? `${systemPrompt}\n\n## Project Rules\n${rules}` : systemPrompt;
+      const fullPrompt = await ctx.buildSystemPrompt();
+
 
       const llmMessages = messages.map(m => ({ role: m.role, content: m.content }));
 
@@ -419,15 +418,4 @@ async function handleCommand(
   }
 }
 
-/**
- * Load agent rules from AGENT.md
- */
-function loadAgentRules(): string {
-  const paths = ['./AGENT.md', './.agent.md', './.aider/agent.md'];
-  for (const path of paths) {
-    if (existsSync(path)) {
-      return readFileSync(path, 'utf-8');
-    }
-  }
-  return '';
-}
+

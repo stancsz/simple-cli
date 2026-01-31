@@ -76,27 +76,7 @@ async function executeTool(name: string, args: Record<string, unknown>, ctx: Con
   }
 }
 
-function loadAgentRules(): string {
-  const paths = [
-    './AGENT.md',
-    './.agent.md',
-    './.agent/AGENT.md',
-    './.agent/prompt.md',
-    './.agent/prompts.md',
-    './.simple/rules.md',
-    './.simple/prompts.md',
-    './.simple/AGENT.md',
-    './.cursorrules',
-    './.aider/agent.md'
-  ];
-  let combinedRules = '';
-  for (const path of paths) {
-    if (existsSync(resolve(path))) {
-      combinedRules += `\n\n--- Source: ${path} ---\n${readFileSync(resolve(path), 'utf-8')}`;
-    }
-  }
-  return combinedRules.trim();
-}
+
 
 async function main(): Promise<void> {
   console.clear();
@@ -139,9 +119,8 @@ async function main(): Promise<void> {
 
   const generate = async (input: string): Promise<string> => {
     const history = ctx.getHistory();
-    const systemPrompt = await ctx.buildSystemPrompt();
-    const rules = loadAgentRules();
-    const fullPrompt = rules ? `${systemPrompt}\n\n## Project Rules\n${rules}` : systemPrompt;
+    const fullPrompt = await ctx.buildSystemPrompt();
+
 
     if (MOE_MODE && multiProvider && tierConfigs) {
       const routing = await routeTask(input, async (prompt) => {

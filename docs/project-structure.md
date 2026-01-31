@@ -23,12 +23,12 @@ When initializing a new repository or integrating Simple-CLI into an existing on
 
 ## Orchestration & Rules (.simple / .agent)
 
-The `.simple/` or `.agent/` folder serves as the "brain" for project-specific orchestration. It contains documentation that defines the boundaries and success criteria of the agentic loop.
+The `.simple/` or `.agent/` folder serves as the "brain" for project-specific orchestration. It contains the **AGENT.md** file, which is the primary source of truth for the project.
 
-*   **Custom Prompts**: Store specialized project instructions or personas here (e.g., `prompts.md`).
-*   **Success Criteria**: Define what "done" looks like for this specific project (e.g., `rules.md`, `REQUIREMENTS.md` or `SPEC.md`).
-*   **Tests**: Store validation logic or test scripts used by the **Success Loop** to verify task completion.
-*   **Autonomous Evolution**: If these folders or their core files are missing, Simple-CLI may autonomously create them based on the initial user prompt and project analysis to establish a baseline for its work.
+*   **Consolidated Rules**: All project-specific constraints, success criteria, and quality standards should be defined in `.simple/AGENT.md`.
+*   **Evolution & Tool Standards**: Guidelines for how the agent should expand its own capabilities (via scripts or skills) are also managed within this file.
+*   **Persona & Prompts**: Specialized project instructions or domain-specific language should be included as sections within the `AGENT.md` to keep context surgically precise.
+*   **Autonomous Evolution**: If this folder or `AGENT.md` is missing, Simple-CLI may autonomously create it based on initial project analysis to establish a baseline.
 
 ---
 
@@ -62,7 +62,7 @@ export const tool = {
 ## Core Configuration Files
 
 ### 1. `AGENT.md` (The Project Rulebook)
-Stored in the project root, this file acts as the primary "instruction manual" for the agent.
+Stored in the project root or `.simple/AGENT.md`, this file acts as the primary "instruction manual" for the agent.
 - **Usage**: Define coding standards, testing requirements, and task constraints.
 - **Visibility**: Every request processed by the agent includes the contents of this file in its system prompt.
 
