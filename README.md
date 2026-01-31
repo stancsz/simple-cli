@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="docs/assets/logo.jpeg" alt="Simple-CLI Logo" width="200"/>
+</p>
+
 # Simple-CLI ⚡
 
 > **The terminal-native AI coding assistant that shapes itself to your task.**
