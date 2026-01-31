@@ -3,7 +3,7 @@ import { readFileSync, existsSync } from 'fs';
 import { join, resolve } from 'path';
 import { homedir } from 'os';
 import { globSync } from 'glob';
-import * as yaml from 'yaml';
+import yaml from 'yaml';
 import { execSync } from 'child_process';
 
 /**
@@ -44,12 +44,25 @@ export const tool = {
  */
 function findSkillFiles(): string[] {
     const globalSkills = existsSync(CLAW_GLOBAL_PATH)
-        ? globSync('**/SKILL.md', { cwd: CLAW_GLOBAL_PATH, absolute: true })
+        ? globSync('**/SKILL.md', { cwd: CLAW_GLOBAL_PATH, absolute: true, windowsPathsNoEscape: true })
         : [];
 
-    const localSkills = globSync('**/SKILL.md', { cwd: CLAW_LOCAL_PATH, absolute: true, ignore: 'node_modules/**' });
+    // Main recursive scan
+    const localSkills = globSync('**/SKILL.md', {
+        cwd: CLAW_LOCAL_PATH,
+        absolute: true,
+        ignore: ['node_modules/**', '.git/**'],
+        windowsPathsNoEscape: true
+    });
 
-    return [...new Set([...globalSkills, ...localSkills])];
+    // Explicit skills scan (just in case main glob missed it due to ignore rules or depth)
+    const explicitSkills = globSync('skills/**/SKILL.md', {
+        cwd: CLAW_LOCAL_PATH,
+        absolute: true,
+        windowsPathsNoEscape: true
+    });
+
+    return [...new Set([...globalSkills, ...localSkills, ...explicitSkills])];
 }
 
 /**
@@ -126,6 +139,7 @@ function runSkill(name: string, args: Record<string, any>): string {
     const env = {
         ...process.env,
         CLAW_SKILL_PATH: match,
+        CLAW_PROJECT_ROOT: CLAW_LOCAL_PATH,
         ...Object.fromEntries(Object.entries(args).map(([k, v]) => [`INPUT_${k.toUpperCase()}`, String(v)]))
     };
 
@@ -145,7 +159,7 @@ function runSkill(name: string, args: Record<string, any>): string {
  * Simple frontmatter parser
  */
 function parseFrontmatter(content: string): any {
-    const match = content.match(/^---\n([\s\S]*?)\n---/);
+    const match = content.match(/^---\r?\n([\s\S]*?)\r?\n---/);
     if (!match) return {};
     return yaml.parse(match[1]);
 }

@@ -43,3 +43,4 @@ yarn-error.log*
 # Lock files (optional - remove if you want to commit)
 # package-lock.json
 # yarn.lock
+**/workdir**
