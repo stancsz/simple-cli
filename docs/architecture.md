@@ -1,3 +1,9 @@
+---
+layout: default
+title: Architecture
+nav_order: 2
+---
+
 # System Architecture
 
 Simple-CLI's power stems from its modular design and "Just-in-Time" context resolution.
