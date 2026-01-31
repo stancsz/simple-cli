@@ -1,3 +1,8 @@
+---
+layout: home
+title: Home
+---
+
 <p align="center">
   <img src="assets/logo.jpeg" width="240" alt="Simple CLI Logo" />
 </p>

@@ -1,3 +1,8 @@
+---
+layout: page
+title: Taxonomy of Action
+---
+
 # The Taxonomy of Action
 
 In Simple-CLI, capabilities are organized into a clear hierarchy, evolving from simple system primitives to high-level, context-aware expertise.

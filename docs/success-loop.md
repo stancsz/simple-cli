@@ -1,3 +1,8 @@
+---
+layout: page
+title: Success Loop
+---
+
 # The Success Loop (Ralph Wiggum Mode)
 
 Simple-CLI implements a "no-quit" iteration cycle designed to ensure tasks satisfy all project requirements before completion. This process is internally known as the **Reflection Loop**.

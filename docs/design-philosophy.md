@@ -1,3 +1,8 @@
+---
+layout: page
+title: Design Philosophy
+---
+
 # Design Philosophy
 
 Simple-CLI is built on specific engineering niche decisions that prioritize hackability, efficiency, and autonomous reliability.
