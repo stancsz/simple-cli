@@ -1,6 +1,6 @@
 # Simple CLI
 <p align="center">
-  <img src="logo.jpeg" width="240" alt="Simple CLI Logo" />
+  <img src="docs/assets/logo.jpeg" width="240" alt="Simple CLI Logo" />
 </p>
 > **小西LI巨能打** — Lean, lightweight, and packs a punch. 🥊
 

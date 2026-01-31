@@ -1,6 +1,7 @@
 title: Simple-CLI Wiki
 description: A lean, premium agentic coding assistant
-theme: minima
+theme: jekyll-theme-minimal
+logo: /assets/logo.jpeg
 plugins:
   - jekyll-feed
   - jekyll-seo-tag

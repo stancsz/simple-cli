@@ -5,6 +5,10 @@ title: Simple-CLI Documentation
 
 # Simple-CLI
 
+<p align="center">
+  <img src="assets/logo.jpeg" width="240" alt="Simple CLI Logo" />
+</p>
+
 **Simple-CLI** is a lean, premium agentic coding assistant designed for speed, token efficiency, and horizontal scalability. It prioritizes a "Thin Core" architecture, allowing the agent to dynamically evolve its own capabilities.
 
 ## Key Features
