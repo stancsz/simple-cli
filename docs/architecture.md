@@ -1,8 +1,3 @@
----
-layout: page
-title: Architecture
----
-
 # System Architecture
 
 Simple-CLI's power stems from its modular design and "Just-in-Time" context resolution.

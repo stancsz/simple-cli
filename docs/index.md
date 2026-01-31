@@ -1,8 +1,3 @@
----
-layout: home
-title: Simple-CLI
----
-
 # Simple-CLI
 
 Simple-CLI is a minimalist alternative to heavy-duty AI coding agents. While other tools wrap logic in complex UIs and proprietary IDEs, Simple-CLI operates directly in the terminal, staying close to the metal.

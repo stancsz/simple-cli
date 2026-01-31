@@ -1,8 +1,3 @@
----
-layout: page
-title: Project Structure
----
-
 # Recommended Project Structure
 
 When initializing a new repository or integrating Simple-CLI into an existing one, we highly recommend following this standardized directory structure. This ensures the agent can immediately discover your documentation, scripts, and custom capabilities.
