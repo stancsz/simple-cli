@@ -1,15 +1,11 @@
 ---
 layout: home
-title: Home
+title: Simple-CLI
 ---
 
-<p align="center">
-  <img src="assets/logo.jpeg" width="240" alt="Simple CLI Logo" />
-</p>
+# Simple-CLI
 
-> **小西LI巨能打** — Lean, lightweight, and packs a punch.
-
-**Simple-CLI** is a minimalist alternative to heavy-duty AI coding agents. While other tools wrap logic in complex UIs and proprietary IDEs, Simple-CLI operates directly in the terminal, staying close to the metal.
+Simple-CLI is a minimalist alternative to heavy-duty AI coding agents. While other tools wrap logic in complex UIs and proprietary IDEs, Simple-CLI operates directly in the terminal, staying close to the metal.
 
 It is designed for developers who need the power of an agentic swarm unit with a core codebase that is readable, understandable, and easily modified.
 
@@ -28,7 +24,7 @@ export OPENAI_API_KEY="sk-..."
 # Supports ANTHROPIC_API_KEY, GEMINI_API_KEY, DEEPSEEK_API_KEY, etc.
 
 # 3. Start building
-simple "Build a premium React dashboard with glassmorphism"
+simple "Build a premium React dashboard"
 ```
 
 ---
@@ -44,8 +40,6 @@ simple "Build a premium React dashboard with glassmorphism"
 
 ## Documentation Sections
 
-Learn more about the system architecture and design:
-
 *   [**Architecture**](architecture.md): Provider routing, the registry, and swarm logic.
 *   [**Project Structure**](project-structure.md): Recommended directory layout for new repositories.
 *   [**The Taxonomy of Action**](taxonomy.md): Understanding the hierarchy of Tools, Scripts, and Skills.
@@ -55,24 +49,8 @@ Learn more about the system architecture and design:
 
 ---
 
-## Comparison
-
-| Feature | Simple-CLI | Aider | Claude Code | Cursor |
-|---------|:-----------:|:-----:|:-----------:|:------:|
-| **Maturity** | Alpha | Mature | Mature | Mature |
-| **UX** | Minimalist | CLI-first | Polished | Full IDE |
-| **Logic** | **150 LOC Core** | ~50k LOC | Proprietary | Proprietary |
-| **Models** | **Any (LiteLLM)** | Many | Claude Only | Multiple |
-| **Headless** | Native | Yes | No | No |
-| **MCP Protocol** | Native | No | Native | Limited |
-
----
-
 ## Contributing & License
 
-Simple-CLI is intentionally minimal. Before submitting a pull request, please consider:
-1. Does the change support headless automation?
-2. Can the functionality be implemented as a tool rather than core logic?
-3. Does the core remain under 150 lines?
+Simple-CLI is intentionally minimal. Before submitting a pull request, please consider if the change supports headless automation and keeps the core under 150 lines.
 
 Licensed under **MIT**. Built for the swarm era.
