@@ -40,9 +40,34 @@ simple --claw "Delete trash emails every hour"
 
 ## Instant Setup
 
+### Option 1: Install from npm (Recommended)
+
 ```bash
 # Install
 npm install -g @stan-chen/simple-cli
+
+# Configure
+export OPENAI_API_KEY="sk-..."
+
+# Start coding
+simple
+```
+
+### Option 2: Clone from GitHub
+
+```bash
+# Clone the repository
+git clone https://github.com/stancsz/simple-cli.git
+cd simple-cli
+
+# Install dependencies
+npm install
+
+# Build the project
+npm run build
+
+# Link globally (or use npm start for dev mode)
+npm link
 
 # Configure
 export OPENAI_API_KEY="sk-..."
@@ -222,7 +247,7 @@ Built with the **Adapter Pattern** - add features without touching core.
 ### Environment Variables
 ```bash
 OPENAI_API_KEY=sk-...          # Primary LLM
-CLAW_MODEL=gpt-4               # Model selection
+CLAW_MODEL=gpt-5               # Model selection
 LITELLM_BASE_URL=...           # Proxy support
 DEBUG=true                     # Verbose logging
 ```
