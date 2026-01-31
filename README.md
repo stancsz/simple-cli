@@ -5,25 +5,34 @@
 [![npm version](https://img.shields.io/npm/v/@stan-chen/simple-cli)](https://www.npmjs.com/package/@stan-chen/simple-cli)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 
-Simple-CLI is a **lean, autonomous AI agent** that lives in your terminal. Unlike bloated IDEs, it's built for speed, horizontal scalability, and **Just-In-Time specialization**.
+Simple-CLI is a **lean, autonomous AI agent** that lives in your terminal. Unlike bloated IDEs, it's built for speed, horizontal scalability, and intelligent task execution.
 
 ```bash
-# Generate a specialized agent for your exact task
-simple --claw "Security audit my React app"
-
-# Or just jump in
+# Just start coding
 simple
+
+# Or jump straight to a task
+simple "Build a REST API with auth"
+```
+
+**Optional:** Enable OpenClaw integration for advanced features like JIT specialization:
+```bash
+simple --claw "Security audit my React app"
 ```
 
 ---
 
 ## Why Simple-CLI?
 
-🧬 **JIT Agent Generation** - Dynamically creates specialized personas for your task  
-🧠 **Autonomous Memory** - Remembers context across sessions, learns from reflections  
-👻 **Ghost Mode** - Schedule recurring tasks that run in the background  
-🌊 **Swarm Mode** - Horizontally scale with distributed agent orchestration  
-⚡ **Zero-Bloat** - Terminal-first, no Electron, no overhead  
+⚡ **Terminal-First** - No Electron, no overhead, pure speed  
+� **Autonomous Execution** - Multi-step reasoning with tool usage  
+🌊 **Swarm Mode** - Horizontally scale with distributed orchestration  
+🔌 **Multi-Provider** - OpenAI, Anthropic, LiteLLM - switch instantly  
+
+**Advanced (OpenClaw Integration):**  
+🧬 JIT Agent Generation - Task-specific personas via LLM  
+🧠 Autonomous Memory - Persistent context across sessions  
+👻 Ghost Mode - Background task scheduling  
 
 ---
 
@@ -36,15 +45,41 @@ npm install -g @stan-chen/simple-cli
 # Configure
 export OPENAI_API_KEY="sk-..."
 
-# Use it
-simple "Build a premium landing page with Next.js"
+# Start coding
+simple
 ```
 
-**That's it.** No configuration files, no setup wizards.
+**That's it.** It launches an interactive terminal session where you can:
+- Ask questions about your codebase
+- Request code changes
+- Run commands and see results
+- Let the agent iterate autonomously
+
+**Optional:** Use `simple --claw "intent"` for OpenClaw JIT mode.
 
 ---
 
-## What Makes It Different
+## Core Workflow
+
+### Interactive Agent Session
+
+```bash
+simple
+```
+
+When you run `simple`, you get:
+1. **Codebase Understanding** - It analyzes your project structure
+2. **Interactive Loop** - Ask questions, request changes, review diffs
+3. **Tool Execution** - File edits, searches, command execution
+4. **Autonomous Iteration** - It can loop through multi-step tasks
+
+All with beautiful terminal UI powered by `@clack/prompts`.
+
+---
+
+## Advanced: OpenClaw Integration
+
+Want specialized agents? Enable OpenClaw features with `--claw`.
 
 ### 🎯 Task-Optimized Agents
 
@@ -76,7 +111,8 @@ When you return, it **remembers**. Logs auto-prune and archive.
 
 ```bash
 # Schedule a recurring security check
-simple-claw-ghost schedule \
+npx tsx tools/claw.ts run clawGhost \
+  action=schedule \
   intent="Scan for CVEs" \
   cron="0 9 * * 1"  # Every Monday 9am
 ```
@@ -112,25 +148,33 @@ Distribute tasks across isolated Git worktrees:
 
 ## Real-World Usage
 
-### Code Generation
+### Basic Interactive Mode
 ```bash
-simple "Create a REST API with auth, rate limiting, and OpenAPI docs"
+# Launch and chat
+simple
+
+# Direct command (one-shot)
+simple "Add TypeScript to this project"
 ```
 
-### Refactoring
+### Advanced: OpenClaw JIT Mode
+
 ```bash
+# Generate specialized agent for code generation
+simple --claw "Create a REST API with auth, rate limiting, and OpenAPI docs"
+
+# Refactoring specialist
 simple --claw "Convert class components to hooks in src/"
-```
 
-### Security Audits
-```bash
+# Security audit expert
 simple --claw "Audit for SQL injection and XSS vulnerabilities"
 ```
 
-### Recurring Tasks
+### Recurring Tasks (OpenClaw Ghost Mode)
 ```bash
-# Ghost mode: auto-update dependencies weekly
-simple-claw-ghost schedule \
+# Auto-update dependencies weekly
+npx tsx tools/claw.ts run clawGhost \
+  action=schedule \
   intent="Update npm deps and test" \
   cron="0 3 * * 0"
 ```
