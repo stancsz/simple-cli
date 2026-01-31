@@ -1,4 +1,4 @@
-- [Home](/)
+- [Home](README.md)
 - [Architecture](architecture.md)
 - [Project Structure](project-structure.md)
 - [Taxonomy of Action](taxonomy.md)
