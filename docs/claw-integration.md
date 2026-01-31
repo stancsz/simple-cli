@@ -40,7 +40,7 @@ simple
 ```bash
 # OpenAI (default)
 export OPENAI_API_KEY="sk-..."
-export CLAW_MODEL="gpt-4"  # optional, defaults to gpt-4
+export CLAW_MODEL="gpt-5"  # optional, defaults to gpt-5
 
 # Or Anthropic
 export ANTHROPIC_API_KEY="sk-ant-..."
@@ -249,7 +249,7 @@ Or add to `.env` file:
 
 ```env
 OPENAI_API_KEY=sk-...
-CLAW_MODEL=gpt-4
+CLAW_MODEL=gpt-5
 ```
 
 ### Ghost Task Not Executing

@@ -34,7 +34,7 @@ async function generatePersona(intent) {
     // Real LLM Integration
     const apiKey = process.env.OPENAI_API_KEY || process.env.ANTHROPIC_API_KEY;
     const baseUrl = process.env.LITELLM_BASE_URL || 'https://api.openai.com/v1';
-    const model = process.env.CLAW_MODEL || 'gpt-4';
+    const model = process.env.CLAW_MODEL || 'gpt-5';
 
     if (!apiKey) {
         console.warn('⚠️  No API key found. Falling back to template generation.');
