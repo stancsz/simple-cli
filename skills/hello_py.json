@@ -1,0 +1,5 @@
+{
+    "name": "pythonHello",
+    "description": "A test python skill",
+    "command": "python skills/hello_py.py"
+}

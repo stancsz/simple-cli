@@ -22,20 +22,41 @@ export const builtinSkills: Record<string, Skill> = {
   // Code editing skill (default)
   code: {
     name: 'code',
-    description: 'General coding assistant with file editing capabilities',
+    description: 'General coding assistant with file editing and custom skill creation capabilities',
     systemPrompt: `You are a coding assistant. You help users write, modify, and debug code.
+
+## Custom Skills (Self-Evolution)
+You can create your own specialized tools in \`skills/\`, \`scripts/\`, or \`tools/\`:
+1. **TypeScript/JS**: Standard native exports.
+2. **Scripts & Binaries**: 
+   - Write any script (Python, Bash, PowerShell, etc.) or binary.
+   - **Documentation**: Provide a matching \`.md\` or \`.txt\` file (e.g., \`tool.py\` + \`tool.md\`).
+   - **Internal Documentation**: Alternatively, put Markdown in a comment block at the very top of your script.
+   
+3. **AI Attribution**: All self-created tools MUST include a marker as the first line:
+   - **Scripts**: A comment e.g. \`# [Simple-CLI AI-Created]\` or \`// [Simple-CLI AI-Created]\`.
+   - **Documentation**: A hidden comment e.g. \`<!-- [Simple-CLI AI-Created] -->\`.
+
+**Markdown Specification Example**:
+\`\`\`markdown
+<!-- [Simple-CLI AI-Created] -->
+# toolName
+Brief description.
+
+## Command
+python scripts/tool.py
+\`\`\`
+Inputs are passed via **stdin** (JSON) and the \`TOOL_INPUT\` env var.
+After creating/modifying, call \`reloadTools\`.
+
+4. **Self-Orchestration**: If a project lacks clear success criteria (missing \`.agent/\` or \`.simple/\` directories), you should take the initiative to create them. Use these folders to store implementation plans, SPEC/PRDs, and validation tests.
 
 When making changes to files:
 1. Read the file first to understand the context
 2. Make precise, targeted changes using search/replace
 3. Verify changes don't break existing functionality
-4. Follow the existing code style
-
-When asked about code:
-- Explain your reasoning clearly
-- Suggest best practices
-- Point out potential issues`,
-    tools: ['readFiles', 'writeFiles', 'runCommand', 'glob', 'grep', 'lint'],
+4. Follow the existing code style`,
+    tools: ['readFiles', 'writeFiles', 'runCommand', 'glob', 'grep', 'lint', 'reloadTools'],
   },
 
   // Architect skill for planning
@@ -243,11 +264,11 @@ export async function loadSkillFromFile(path: string): Promise<Skill | null> {
   try {
     const content = await readFile(path, 'utf-8');
     const skill = JSON.parse(content) as Skill;
-    
+
     if (!skill.name || !skill.systemPrompt) {
       return null;
     }
-    
+
     return skill;
   } catch {
     return null;
@@ -262,14 +283,14 @@ export async function saveSkillToFile(skill: Skill, path: string): Promise<void>
 // Load all custom skills from a directory
 export async function loadCustomSkills(dir: string): Promise<Record<string, Skill>> {
   const skills: Record<string, Skill> = {};
-  
+
   if (!existsSync(dir)) {
     return skills;
   }
-  
+
   try {
     const files = await readdir(dir);
-    
+
     for (const file of files) {
       if (file.endsWith('.json')) {
         const skill = await loadSkillFromFile(join(dir, file));
@@ -281,7 +302,7 @@ export async function loadCustomSkills(dir: string): Promise<Record<string, Skil
   } catch {
     // Ignore errors
   }
-  
+
   return skills;
 }
 
@@ -292,14 +313,14 @@ export function buildSkillPrompt(skill: Skill, context?: {
   history?: string;
 }): string {
   let prompt = skill.systemPrompt;
-  
+
   if (context?.files?.length) {
     prompt += `\n\n## Active Files\nYou are working with these files:\n${context.files.join('\n')}`;
   }
-  
+
   if (context?.repoMap) {
     prompt += `\n\n## Repository Structure\n${context.repoMap}`;
   }
-  
+
   return prompt;
 }

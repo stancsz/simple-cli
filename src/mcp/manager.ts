@@ -86,38 +86,75 @@ export class MCPManager {
   }
 
   /**
-   * Load MCP configuration from file
+   * Load MCP configuration from all available sources
    */
   async loadConfig(configPath?: string): Promise<MCPServerConfig[]> {
-    const paths = [
-      configPath,
-      join(process.cwd(), 'mcp.json'),
-      join(process.cwd(), '.mcp.json'),
-      join(process.env.HOME || '', '.config', 'simplecli', 'mcp.json'),
-    ].filter(Boolean) as string[];
+    const allConfigs: MCPServerConfig[] = [];
+    const sources = [
+      { path: configPath, type: 'file' },
+      { path: join(process.cwd(), 'mcp.json'), type: 'file' },
+      { path: join(process.cwd(), '.mcp.json'), type: 'file' },
+      { path: join(process.cwd(), 'mcp'), type: 'dir' },
+      { path: join(process.env.HOME || '', '.config', 'simplecli', 'mcp.json'), type: 'file' },
+      { path: join(process.env.APPDATA || '', 'simplecli', 'mcp.json'), type: 'file' },
+    ].filter(s => s.path && existsSync(s.path));
 
-    for (const path of paths) {
-      if (existsSync(path)) {
-        try {
-          const content = readFileSync(path, 'utf-8');
-          const config = JSON.parse(content);
-
-          // Handle both { servers: [...] } and { mcpServers: {...} } formats
-          if (config.servers) {
-            return config.servers.filter((s: MCPServerConfig) => s.enabled !== false);
+    for (const source of sources) {
+      try {
+        if (source.type === 'file') {
+          const content = readFileSync(source.path!, 'utf-8');
+          allConfigs.push(...this.parseConfigContent(content));
+        } else if (source.type === 'dir') {
+          // Scan directory for .json files
+          const { readdir } = await import('fs/promises');
+          const files = await readdir(source.path!);
+          for (const file of files) {
+            if (file.endsWith('.json')) {
+              const content = readFileSync(join(source.path!, file), 'utf-8');
+              allConfigs.push(...this.parseConfigContent(content));
+            }
           }
-          if (config.mcpServers) {
-            return Object.entries(config.mcpServers)
-              .map(([name, cfg]) => ({ name, ...(cfg as object) } as MCPServerConfig))
-              .filter((s: MCPServerConfig) => s.enabled !== false);
-          }
-          return [];
-        } catch (e) {
-          console.error(`Failed to parse MCP config at ${path}:`, e);
         }
+      } catch (e) {
+        if (process.env.DEBUG) console.error(`Failed to load MCP source ${source.path}:`, e);
       }
     }
 
+    // De-duplicate by name, preferring earlier (local) configs
+    const unique = new Map<string, MCPServerConfig>();
+    for (const config of allConfigs) {
+      if (!unique.has(config.name)) {
+        unique.set(config.name, config);
+      }
+    }
+
+    return Array.from(unique.values()).filter(s => s.enabled !== false);
+  }
+
+  /**
+   * Parse MCP config content which can be in multiple formats
+   */
+  private parseConfigContent(content: string): MCPServerConfig[] {
+    try {
+      const config = JSON.parse(content);
+      // Handle { servers: [...] } format
+      if (Array.isArray(config.servers)) {
+        return config.servers;
+      }
+      // Handle { mcpServers: { name: config } } format (Claude-style)
+      if (config.mcpServers) {
+        return Object.entries(config.mcpServers).map(([name, cfg]) => ({
+          name,
+          ...(cfg as any)
+        }));
+      }
+      // Handle single server config
+      if (config.name && (config.command || config.url)) {
+        return [config as MCPServerConfig];
+      }
+    } catch (e) {
+      if (process.env.DEBUG) console.error('Failed to parse MCP content:', e);
+    }
     return [];
   }
 

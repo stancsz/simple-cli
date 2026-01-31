@@ -1,0 +1,19 @@
+title: Simple-CLI Wiki
+description: A lean, premium agentic coding assistant
+theme: minima
+plugins:
+  - jekyll-feed
+  - jekyll-seo-tag
+
+markdown: kramdown
+highlighter: rouge
+
+# Navigation
+header_pages:
+  - index.md
+  - architecture.md
+  - project-structure.md
+  - taxonomy.md
+  - design-philosophy.md
+  - success-loop.md
+  - custom-skills.md

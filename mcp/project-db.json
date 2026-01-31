@@ -1,0 +1,14 @@
+{
+    "mcpServers": {
+        "project-local-db": {
+            "command": "npx",
+            "args": [
+                "-y",
+                "@modelcontextprotocol/server-sqlite",
+                "--db",
+                "./data/project.db"
+            ],
+            "enabled": true
+        }
+    }
+}
