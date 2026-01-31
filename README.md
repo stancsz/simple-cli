@@ -1,24 +1,232 @@
-# Simple-CLI
+# Simple-CLI ⚡
 
-Simple-CLI is a lean, premium agentic coding assistant designed for speed and horizontal scalability.
+> **The terminal-native AI coding assistant that shapes itself to your task.**
 
-**Documentation Has Moved.**
+[![npm version](https://img.shields.io/npm/v/@stan-chen/simple-cli)](https://www.npmjs.com/package/@stan-chen/simple-cli)
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 
-Please refer to the comprehensive wiki in the `docs/` folder or visit the [GitHub Pages site](https://stancsz.github.io/simple-cli/).
+Simple-CLI is a **lean, autonomous AI agent** that lives in your terminal. Unlike bloated IDEs, it's built for speed, horizontal scalability, and **Just-In-Time specialization**.
+
+```bash
+# Generate a specialized agent for your exact task
+simple --claw "Security audit my React app"
+
+# Or just jump in
+simple
+```
 
 ---
 
-## Quick Start
+## Why Simple-CLI?
+
+🧬 **JIT Agent Generation** - Dynamically creates specialized personas for your task  
+🧠 **Autonomous Memory** - Remembers context across sessions, learns from reflections  
+👻 **Ghost Mode** - Schedule recurring tasks that run in the background  
+🌊 **Swarm Mode** - Horizontally scale with distributed agent orchestration  
+⚡ **Zero-Bloat** - Terminal-first, no Electron, no overhead  
+
+---
+
+## Instant Setup
 
 ```bash
-# 1. Install globally
+# Install
 npm install -g @stan-chen/simple-cli
 
-# 2. Set your API key
+# Configure
 export OPENAI_API_KEY="sk-..."
 
-# 3. Start building
-simple "Build a premium React dashboard"
+# Use it
+simple "Build a premium landing page with Next.js"
 ```
 
-For detailed architecture, design philosophy, and customization guides, see the [Documentation Index](docs/index.md).
+**That's it.** No configuration files, no setup wizards.
+
+---
+
+## What Makes It Different
+
+### 🎯 Task-Optimized Agents
+
+```bash
+simple --claw "Migrate Express to Fastify"
+```
+
+This doesn't just "chat" - it **generates a specialized AI persona** via LLM:
+- Expert migration strategist
+- Framework-specific constraints
+- Best practices for the exact task
+
+Then you work with *that* agent, not a generic assistant.
+
+### 🧠 Persistent Memory
+
+Your agent builds knowledge over time:
+```
+.simple/workdir/memory/
+├── notes/        # Session summaries
+├── reflections/  # What it learned
+├── logs/         # Full execution history
+└── graph/        # Knowledge connections
+```
+
+When you return, it **remembers**. Logs auto-prune and archive.
+
+### 👻 Background Execution
+
+```bash
+# Schedule a recurring security check
+simple-claw-ghost schedule \
+  intent="Scan for CVEs" \
+  cron="0 9 * * 1"  # Every Monday 9am
+```
+
+Uses **real OS schedulers** (Windows Task Scheduler / crontab) - not polling loops.
+
+### 🌊 Swarm for Scale
+
+```bash
+simple --swarm tasks.json --concurrency 5
+```
+
+Distribute tasks across isolated Git worktrees:
+- File-level locking
+- Conflict-free merges
+- Observable task queue
+- Works on local machines or CI/CD
+
+---
+
+## Core Features
+
+| Feature | Description |
+|---------|-------------|
+| **Multi-Provider** | OpenAI, Anthropic, LiteLLM - switch with `--moe` |
+| **MCP Integration** | Model Context Protocol for external data sources |
+| **Skills System** | Extensible via `SKILL.md` manifests |
+| **Git Worktree Isolation** | Swarm agents work in separate branches |
+| **Auto-Pruning Memory** | Keeps last 50 logs, archives the rest |
+| **YOLO Mode** | `--yolo` for unattended execution |
+
+---
+
+## Real-World Usage
+
+### Code Generation
+```bash
+simple "Create a REST API with auth, rate limiting, and OpenAPI docs"
+```
+
+### Refactoring
+```bash
+simple --claw "Convert class components to hooks in src/"
+```
+
+### Security Audits
+```bash
+simple --claw "Audit for SQL injection and XSS vulnerabilities"
+```
+
+### Recurring Tasks
+```bash
+# Ghost mode: auto-update dependencies weekly
+simple-claw-ghost schedule \
+  intent="Update npm deps and test" \
+  cron="0 3 * * 0"
+```
+
+---
+
+## Architecture
+
+**Zero Core Disruption** - Everything is modular:
+
+```
+simple-cli/
+├── src/          # Core agent logic
+├── tools/        # Discoverable tool primitives
+├── skills/       # OpenClaw-compatible skill packs
+│   ├── claw-jit/     # JIT persona generation
+│   ├── claw-brain/   # Memory management
+│   └── claw-ghost/   # Task scheduling
+└── .simple/      # Your workspace state
+    ├── AGENT.md      # Generated persona
+    └── workdir/      # Memory & artifacts
+```
+
+Built with the **Adapter Pattern** - add features without touching core.
+
+---
+
+## Advanced
+
+### Environment Variables
+```bash
+OPENAI_API_KEY=sk-...          # Primary LLM
+CLAW_MODEL=gpt-4               # Model selection
+LITELLM_BASE_URL=...           # Proxy support
+DEBUG=true                     # Verbose logging
+```
+
+### MOE (Mixture of Experts)
+```bash
+simple --moe  # Routes tasks to tier-appropriate models
+```
+
+### Swarm Configuration
+```json
+{
+  "tasks": [
+    {"file": "src/auth.ts", "instruction": "Add 2FA"},
+    {"file": "src/api.ts", "instruction": "Add rate limiting"}
+  ],
+  "concurrency": 3
+}
+```
+
+---
+
+## Documentation
+
+- 📖 [Full Docs](docs/index.md) - Architecture, workflows, customization
+- 🧬 [OpenClaw Integration](docs/claw-integration.md) - JIT, Memory, Ghost Mode
+- 🌊 [Swarm Guide](docs/swarm.md) - Distributed task orchestration
+- 🛠️ [Custom Skills](docs/custom-skills.md) - Build your own
+
+---
+
+## Contributing
+
+PRs welcome! See [CONTRIBUTING.md](CONTRIBUTING.md).
+
+**Core Principles:**
+- **No bloat** - Every feature must justify its existence
+- **Agent-first** - Tools serve the agent, not the UI
+- **Horizontal scale** - Features should work in swarm mode
+- **Zero lock-in** - Portable configs, standard formats
+
+---
+
+## License
+
+MIT © [Stan Chen](https://github.com/stancsz)
+
+---
+
+## Acknowledgments
+
+Built with inspiration from:
+- **Gemini CLI** - Multi-provider architecture
+- **OpenClaw** - Skill system design
+- **Cursor/Aider** - Agentic coding patterns
+
+Powered by:
+- [@clack/prompts](https://github.com/natemoo-re/clack) - Beautiful TUI
+- [LiteLLM](https://github.com/BerriAI/litellm) - Universal LLM proxy
+
+---
+
+<p align="center">
+  <strong>Stop configuring. Start building.</strong><br>
+  <code>simple "Your next big idea"</code>
+</p>
