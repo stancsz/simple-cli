@@ -1,0 +1,5 @@
+{
+    "name": "winHello",
+    "description": "A test windows batch skill",
+    "command": ".\\skills\\hello_win.bat"
+}

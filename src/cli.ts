@@ -77,11 +77,25 @@ async function executeTool(name: string, args: Record<string, unknown>, ctx: Con
 }
 
 function loadAgentRules(): string {
-  const paths = ['./AGENT.md', './.agent.md', './.aider/agent.md'];
+  const paths = [
+    './AGENT.md',
+    './.agent.md',
+    './.agent/AGENT.md',
+    './.agent/prompt.md',
+    './.agent/prompts.md',
+    './.simple/rules.md',
+    './.simple/prompts.md',
+    './.simple/AGENT.md',
+    './.cursorrules',
+    './.aider/agent.md'
+  ];
+  let combinedRules = '';
   for (const path of paths) {
-    if (existsSync(path)) return readFileSync(path, 'utf-8');
+    if (existsSync(resolve(path))) {
+      combinedRules += `\n\n--- Source: ${path} ---\n${readFileSync(resolve(path), 'utf-8')}`;
+    }
   }
-  return '';
+  return combinedRules.trim();
 }
 
 async function main(): Promise<void> {
@@ -95,6 +109,9 @@ async function main(): Promise<void> {
       if (statSync(args[0]).isDirectory()) {
         targetDir = resolve(args[0]);
         process.chdir(targetDir);
+        // Reload .env from the new directory
+        const { config } = await import('dotenv');
+        config();
         args.shift();
       }
     } catch { /* ignored */ }

@@ -1,8 +1,7 @@
+# Simple CLI
 <p align="center">
   <img src="logo.jpeg" width="240" alt="Simple CLI Logo" />
 </p>
-
-# Simple CLI
 > **小西LI巨能打** — Lean, lightweight, and packs a punch. 🥊
 
 **Simple CLI** is the minimalist's answer to the "heavy" AI coding agents of today. While tools like Cursor or Claude Code wrap their logic in complex UIs and proprietary IDEs, **Simple CLI** stays close to the metal. 
