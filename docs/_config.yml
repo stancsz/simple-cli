@@ -2,6 +2,9 @@ title: Simple-CLI
 description: A lean, premium agentic coding assistant
 remote_theme: just-the-docs/just-the-docs
 
+url: "https://stancsz.github.io"
+baseurl: "/simple-cli"
+
 # Enable search
 search_enabled: true
 
