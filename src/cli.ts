@@ -24,7 +24,37 @@ const MOE_MODE = process.argv.includes('--moe');
 const SWARM_MODE = process.argv.includes('--swarm');
 const CLAW_MODE = process.argv.includes('--claw') || process.argv.includes('-claw');
 const DEBUG = process.argv.includes('--debug') || process.env.DEBUG === 'true';
-const VERSION = '0.2.0';
+const VERSION = '0.2.2';
+
+// Handle --version and --help immediately
+if (process.argv.includes('--version') || process.argv.includes('-v')) {
+  console.log(`Simple-CLI v${VERSION}`);
+  process.exit(0);
+}
+
+if (process.argv.includes('--help') || process.argv.includes('-h')) {
+  console.log(`
+  ${pc.bgCyan(pc.black(' SIMPLE-CLI '))} ${pc.dim(`v${VERSION}`)}
+
+  ${pc.bold('Usage:')}
+    simple [target_dir] [prompt] [options]
+
+  ${pc.bold('Options:')}
+    --version, -v      Show version
+    --help, -h         Show help
+    --yolo             Skip all confirmation prompts
+    --moe              Enable Mixture of Experts (multi-model)
+    --swarm            Enable Swarm orchestration mode
+    --claw "intent"    Enable OpenClaw JIT agent generation
+    --debug            Enable debug logging
+
+  ${pc.bold('Examples:')}
+    simple . "Build a login page"
+    simple --claw "Security audit this project"
+    simple --moe "Refactor this entire folder"
+  `);
+  process.exit(0);
+}
 
 // Handle --claw mode (JIT Agent Generation)
 if (CLAW_MODE) {
