@@ -1,8 +1,3 @@
----
-layout: page
-title: Custom Skills & Self-Evolution
----
-
 # 🧬 Enabling Self-Evolution
 
 Simple-CLI is one of the few agents that can **expand its own action space**.

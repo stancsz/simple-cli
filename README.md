@@ -8,7 +8,7 @@ Simple-CLI is a lean, premium agentic coding assistant designed for speed and ho
 
 **Documentation Has Moved.**
 
-Please refer to the comprehensive wiki in the `docs/` folder or visit the [GitHub Pages site](https://stancsz.github.io/simple-cli/).
+Please refer to the comprehensive **Docsify** wiki in the `docs/` folder or visit the [GitHub Pages site](https://stancsz.github.io/simple-cli/).
 
 ---
 

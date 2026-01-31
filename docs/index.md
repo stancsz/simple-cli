@@ -1,8 +1,3 @@
----
-layout: home
-title: Simple-CLI - Lean Agentic Coding Assistant
----
-
 <p align="center">
   <img src="assets/logo.jpeg" width="240" alt="Simple CLI Logo" />
 </p>
