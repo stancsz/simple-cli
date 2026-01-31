@@ -204,7 +204,11 @@ export class MCPManager {
         throw new Error(`Invalid MCP server config for ${serverName}: missing command or url`);
       }
 
-      await client.connect(transport);
+      // Connect with a 5-second timeout
+      await Promise.race([
+        client.connect(transport),
+        new Promise((_, reject) => setTimeout(() => reject(new Error('Connection timeout')), 5000))
+      ]);
 
       state.client = client;
       state.transport = transport;

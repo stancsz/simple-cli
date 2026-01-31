@@ -222,7 +222,7 @@ Built with the **Adapter Pattern** - add features without touching core.
 ### Environment Variables
 ```bash
 OPENAI_API_KEY=sk-...          # Primary LLM
-CLAW_MODEL=gpt-5               # Model selection
+CLAW_MODEL=gpt-5-mini          # Model selection
 LITELLM_BASE_URL=...           # Proxy support
 DEBUG=true                     # Verbose logging
 ```

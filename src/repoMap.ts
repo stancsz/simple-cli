@@ -4,7 +4,7 @@
  */
 
 import { Project, ScriptTarget } from 'ts-morph';
-import { readdir, stat } from 'fs/promises';
+import { readdir, stat, readFile } from 'fs/promises';
 import { join, extname, relative } from 'path';
 
 const IGNORED_DIRS = new Set(['node_modules', '.git', 'dist', 'build', '.next', 'coverage']);
@@ -45,39 +45,41 @@ export const generateRepoMap = async (rootDir: string = '.'): Promise<string> =>
     } catch { /* ignore access errors */ }
   }
 
-  // 2. Process Files
+  // 2. Process Files in parallel
   // Limit to 50 files for now to avoid context explosion
   const filesToProcess = validFiles.slice(0, 50);
 
-  for (const filePath of filesToProcess) {
-    const ext = extname(filePath);
-    const relPath = relative(rootDir, filePath);
+  const results = await Promise.all(
+    filesToProcess.map(async (filePath) => {
+      const ext = extname(filePath);
+      const relPath = relative(rootDir, filePath);
 
-    if (TS_EXTENSIONS.has(ext)) {
-      try {
-        // Use ts-morph
-        const sourceFile = project.createSourceFile(filePath, await import('fs/promises').then(fs => fs.readFile(filePath, 'utf-8')), { overwrite: true });
-        const symbols: string[] = [];
+      if (TS_EXTENSIONS.has(ext)) {
+        try {
+          const content = await readFile(filePath, 'utf-8');
+          const sourceFile = project.createSourceFile(filePath, content, { overwrite: true });
+          const symbols: string[] = [];
 
-        sourceFile.getClasses().forEach(c => symbols.push(`class ${c.getName()}`));
-        sourceFile.getFunctions().forEach(f => symbols.push(`func ${f.getName()}`));
-        sourceFile.getInterfaces().forEach(i => symbols.push(`interface ${i.getName()}`));
-        sourceFile.getTypeAliases().forEach(t => symbols.push(`type ${t.getName()}`));
-        sourceFile.getVariableStatements().forEach(v => {
-          v.getDeclarations().forEach(d => symbols.push(`const ${d.getName()}`));
-        });
+          sourceFile.getClasses().forEach((c) => symbols.push(`class ${c.getName()}`));
+          sourceFile.getFunctions().forEach((f) => symbols.push(`func ${f.getName()}`));
+          sourceFile.getInterfaces().forEach((i) => symbols.push(`interface ${i.getName()}`));
+          sourceFile.getTypeAliases().forEach((t) => symbols.push(`type ${t.getName()}`));
+          sourceFile.getVariableStatements().forEach((v) => {
+            v.getDeclarations().forEach((d) => symbols.push(`const ${d.getName()}`));
+          });
 
-        if (symbols.length > 0) {
-          fileMaps.push({ path: relPath, symbols });
+          return { path: relPath, symbols };
+        } catch (e) {
+          return null;
         }
-      } catch (e) {
-        // Fallback or ignore
+      } else {
+        return { path: relPath, symbols: [] };
       }
-    } else {
-      // Simple listing for non-TS files? Or just skip symbols to keep it clean.
-      // For now, let's just list the file path for completeness if it's source code
-      fileMaps.push({ path: relPath, symbols: [] });
-    }
+    })
+  );
+
+  for (const res of results) {
+    if (res) fileMaps.push(res);
   }
 
   if (fileMaps.length === 0) return 'No source files found.';
