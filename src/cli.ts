@@ -316,7 +316,7 @@ async function main(): Promise<void> {
             const brain = ctx.getTools().get('clawBrain');
             if (brain) {
               await brain.execute({
-                action: 'reflect',
+                action: 'log_reflection',
                 content: `Executed ${action.tool} with args ${JSON.stringify(action.args)}. Result: ${result.slice(0, 200)}...`
               });
             }
