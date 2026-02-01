@@ -293,6 +293,18 @@ async function main(): Promise<void> {
 
           ctx.addMessage('assistant', response);
           ctx.addMessage('user', `Tool result: ${result}`);
+
+          // Autonomous Reflection
+          if (CLAW_MODE) {
+            const brain = ctx.getTools().get('clawBrain');
+            if (brain) {
+              await brain.execute({
+                action: 'reflect',
+                content: `Executed ${action.tool} with args ${JSON.stringify(action.args)}. Result: ${result.slice(0, 200)}...`
+              });
+            }
+          }
+
           steps++;
         } else {
           console.log(`${pc.yellow('⚠')} Skipped.`);
@@ -310,6 +322,14 @@ async function main(): Promise<void> {
           console.log(`${pc.cyan('📊 Execution Summary:')}`);
           console.log(`${pc.dim('  Steps taken:')} ${steps}`);
           console.log(`${pc.dim('  Final status:')} Task completed`);
+
+          // Autonomous Pruning on Exit
+          const brain = ctx.getTools().get('clawBrain');
+          if (brain) {
+            console.log(pc.dim('🧠 Organizing memory...'));
+            await brain.execute({ action: 'prune' });
+          }
+
           console.log(`\n${pc.green('✅')} Autonomous task completed.`);
           console.log(`${pc.dim('Exiting autonomous mode...')}`);
           mcpManager.disconnectAll();

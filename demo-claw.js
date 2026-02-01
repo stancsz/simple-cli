@@ -35,7 +35,7 @@ async function runCli(intent) {
         const timeout = setTimeout(() => {
             console.log('\n⏱️  Timeout reached, stopping process...');
             cliProcess.kill('SIGINT');
-        }, 45000);
+        }, 90000);
 
         cliProcess.on('close', (code) => {
             clearTimeout(timeout);
