@@ -250,6 +250,7 @@ export class ContextManager {
       }
     }
 
+
     // Repository map (condensed)
     const repoMap = await this.refreshRepoMap();
     if (repoMap) {
@@ -258,6 +259,15 @@ export class ContextManager {
       if (repoMap.split('\n').length > 50) {
         parts.push('... (truncated)');
       }
+    }
+
+    // CLAW MODE: Inject JIT Agent Persona
+    const agentFile = resolve(this.cwd, '.simple', 'workdir', 'AGENT.md');
+    if (process.argv.includes('--claw') && existsSync(agentFile)) {
+      try {
+        const agentPersona = readFileSync(agentFile, 'utf-8');
+        parts.push('\n\n' + agentPersona);
+      } catch { /* ignore read errors */ }
     }
 
     return parts.join('\n');
@@ -292,8 +302,9 @@ export class ContextManager {
       messages.push({ role: msg.role, content: msg.content });
     }
 
-    // Current message
-    messages.push({ role: 'user', content: userMessage });
+    // Current message with format reminder for JSON mode
+    const formatReminder = '\n\nCRITICAL: Respond with ONLY a JSON object. NO conversational text. No markdown wrappers. Use this format: {"thought": "...", "tool": "tool_name", "args": {...}}';
+    messages.push({ role: 'user', content: userMessage + formatReminder });
 
     return messages;
   }

@@ -22,20 +22,28 @@ export async function generateJitAgent(intent: string, targetDir: string): Promi
     try {
         const provider = createProvider();
 
-        const prompt = `You are an expert at generating specialized agent personas. Create a detailed AGENT.md file for an AI agent whose sole purpose is: "${intent}"
+        const prompt = `You are an expert at generating specialized agent personas. Create a detailed AGENT.md file for an AI agent whose sole purpose is: "${intent}".
 
 The AGENT.md should include:
 1. A persona description (who is this agent, what expertise does it have)
-2. A strategy section (how it will approach the task)
-3. Constraints (what it should NOT do)
+2. A Direct Execution Strategy (how you will use the AVAILABLE TOOLS to fulfill the task RIGHT NOW)
+3. Constraints (what you should NOT do)
 
-Format it in Markdown with proper headers. Be specific and actionable.`;
+IMPORTANT:
+- YOU ARE THE AUTOMATION. Do not write scripts for the user to run. Use the tools yourself.
+- DO NOT suggest "waiting" or "scheduling". Perform the FIRST SCAN and ORGANIZATION right now.
+- DO NOT mention "5-minute intervals" or "background execution" as something you need to set up; just perform the actions when called.
+- Use list_dir to see files, move_file to organize them, write_to_file to log data.
+- DO NOT include "IMMEDIATE ACTION" or pseudo-code sections.
+- The agent will receive its tool knowledge and technical constraints via the main system prompt.
+
+Format it in Markdown with proper headers. Be brief, technical, and action-oriented.`;
 
 
         console.log(pc.dim('  Calling LLM for persona generation...'));
 
         const timeoutPromise = new Promise<null>((_, reject) =>
-            setTimeout(() => reject(new Error('LLM Timeout')), 8000)
+            setTimeout(() => reject(new Error('LLM Timeout')), 20000)
         );
 
         const responsePromise = provider.generateResponse('You are a helpful assistant specialized in agent design.', [
@@ -51,7 +59,15 @@ Format it in Markdown with proper headers. Be specific and actionable.`;
             console.warn(pc.yellow('⚠️  LLM call failed. Using fallback blueprint.'));
             content = fallbackTemplate(intent);
         } else {
-            content = response;
+            let processed = response;
+            // Extremely aggressive stripping of pseudo-code and action blocks
+            // Remove everything after these headers (case insensitive)
+            processed = processed.split(/## (IMMEDIATE ACTION|ACTION PLAN|COMMANDS|EXECUTION|NEXT STEPS|ACTION)/i)[0];
+
+            // Remove all code blocks everywhere
+            processed = processed.replace(/```[\s\S]*?```/g, '');
+
+            content = processed.trim() || fallbackTemplate(intent);
         }
 
         const workdir = path.dirname(agentFile);
@@ -76,17 +92,17 @@ function fallbackTemplate(intent: string): string {
         '',
         '## 🎭 Persona',
         `You are a specialized agent focused solely on: "${intent}".`,
-        'Your goal is to execute this intent with maximum efficiency and zero side effects.',
+        'Your goal is to execute this intent with maximum efficiency.',
         '',
-        '## 🚀 Strategy',
-        '- Analyze the intent deeply.',
-        '- Use available tools to gather context.',
-        '- Document all findings in `.simple/workdir/memory/notes/`.',
-        '- Reflect on your progress in `.simple/workdir/memory/reflections/`.',
+        '## 🚀 Strategy (IMMEDIATE ACTION)',
+        '1. **Explore**: Immediately list files in the current directory.',
+        '2. **Execute**: Use the available tools (move_file, run_command, write_to_file) to FULFILL the intent.',
+        '3. **Verify**: Check your work after each step.',
         '',
         '## 🔐 Constraints',
-        '- Do not modify files outside the scope of the intent.',
-        '- Keep the "memory" clean and organized.',
+        '- DO NOT write scripts or recipes for the user.',
+        '- DO NOT use conversational filler or explanations.',
+        '- Use ONLY valid JSON for every response.',
         ''
     ].join('\n');
 }

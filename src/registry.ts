@@ -317,7 +317,11 @@ export const getToolDefinitions = (tools: Map<string, Tool>): string => {
   const projectTools: Tool[] = [];
   const mcpTools: Tool[] = [];
 
+  const isClaw = process.argv.includes('--claw') || process.argv.includes('-claw');
+
   for (const tool of tools.values()) {
+    if (isClaw && tool.name === 'scheduler') continue;
+
     if (tool.source === 'mcp') {
       mcpTools.push(tool);
     } else if (tool.source === 'project') {

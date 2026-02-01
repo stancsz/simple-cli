@@ -8,6 +8,8 @@
  * 3. Adding more files and running again
  */
 
+import dotenv from 'dotenv';
+dotenv.config({ override: true });
 import { execSync, spawn } from 'child_process';
 import { mkdirSync, writeFileSync, existsSync, rmSync, readFileSync, readdirSync } from 'fs';
 import { join } from 'path';
@@ -19,9 +21,10 @@ const __dirname = dirname(__filename);
 
 const DEMO_DIR = join(__dirname, 'demo_downloads');
 
-async function runCli(intent) {
+async function runCli(intent, model = null) {
     return new Promise((resolve, reject) => {
-        console.log(`\n🚀 Starting Simple-CLI with intent: "${intent}"...\n`);
+        const modelToUse = model || process.env.OPENAI_MODEL || 'gpt-4o-mini';
+        console.log(`\n🚀 Starting Simple-CLI with model: ${modelToUse} and intent: "${intent}"...\n`);
         const cliProcess = spawn('node', [
             join(__dirname, 'dist', 'cli.js'),
             DEMO_DIR,
@@ -29,7 +32,8 @@ async function runCli(intent) {
             intent
         ], {
             cwd: __dirname,
-            stdio: 'inherit'
+            stdio: 'inherit',
+            env: { ...process.env, OPENAI_MODEL: modelToUse }
         });
 
         const timeout = setTimeout(() => {
@@ -74,10 +78,14 @@ async function main() {
     writeFileSync(join(DEMO_DIR, 'receipt_starbucks.txt'), 'Receipt\nTotal: $12.50\nDate: 2026-01-31');
     writeFileSync(join(DEMO_DIR, 'Expenses.csv'), 'Date,Amount,Description\n');
 
-    const intent = 'Every 5 minutes, scan my Downloads folder. Sort images (jpg, png) into /Photos, docs (pdf, docx) into /Documents, and installers (exe, msi) into /Trash. If you find a receipt, extract the total and log it to Expenses.csv before moving the file.';
+    const intent = "Scan my current directory. Sort images (jpg, png) into /Photos, docs (pdf, docx) into /Documents, and installers (exe, msi) into /Trash. If you find a receipt, extract the total and log it to Expenses.csv before moving the file. DO NOT write a script. Use your tools (list_dir, move_file, write_to_file) to do it yourself right now.";
 
-    // Run 1
-    await runCli(intent);
+    const openAiModel = process.env.OPENAI_MODEL || 'gpt-5-mini';
+    const geminiModel = process.env.GEMINI_MODEL || 'gemini-3-flash-preview';
+
+    // Run 1: OpenAI
+    console.log(`\n🔵 Phase 1: Organizing with OpenAI (${openAiModel})`);
+    await runCli(intent, openAiModel);
 
     console.log('\n📦 Phase 1 Results:');
     showResults();
@@ -88,8 +96,9 @@ async function main() {
     writeFileSync(join(DEMO_DIR, 'report_v2.docx'), 'more document data');
     writeFileSync(join(DEMO_DIR, 'receipt_dinner.txt'), 'Dinner Receipt\nTotal: $45.00\nDate: 2026-01-31');
 
-    // Run 2
-    await runCli(intent);
+    // Run 2: Gemini
+    console.log(`\n🟢 Phase 2: Organizing with Gemini (${geminiModel})`);
+    await runCli(intent, geminiModel);
 
     console.log('\n📦 Phase 2 Results:');
     showResults();

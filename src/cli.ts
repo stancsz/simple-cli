@@ -80,6 +80,23 @@ if (SWARM_MODE) {
 }
 
 function parseResponse(response: string) {
+  // Try parsing as pure JSON first (for JSON mode)
+  try {
+    const parsed = JSON.parse(jsonrepair(response.trim()));
+    const tool = parsed.tool;
+    if (tool) {
+      return {
+        thought: parsed.thought || '',
+        action: {
+          tool: tool,
+          message: parsed.message || '',
+          args: parsed.args || parsed.parameters || parsed.input || parsed
+        }
+      };
+    }
+  } catch { /* Fall through to legacy format */ }
+
+  // Legacy format with <thought> tags
   const thought = response.match(/<thought>([\s\S]*?)<\/thought>/)?.[1]?.trim() || '';
   const jsonMatch = response.match(/\{[\s\S]*"tool"[\s\S]*\}/);
   let action = { tool: 'none', message: '', args: {} as Record<string, unknown> };
@@ -315,6 +332,13 @@ async function main(): Promise<void> {
         const msg = action.message || response.replace(/<thought>[\s\S]*?<\/thought>/, '').trim();
         if (msg) console.log(`\n${pc.magenta('✦')} ${msg}`);
         ctx.addMessage('assistant', response);
+
+        // In autonomous mode, if we haven't done any steps yet, nudge the agent
+        if (isAutonomousMode && steps === 0) {
+          console.log(pc.yellow('⚡ Agent replied with text only. Forcing tool usage...'));
+          ctx.addMessage('user', 'Do not just explain. Use the tools (e.g., list_dir) to execute the plan immediately.');
+          continue;
+        }
 
         // In autonomous mode, show summary and exit
         if (isAutonomousMode) {

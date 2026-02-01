@@ -45,15 +45,30 @@ The AGENT.md should include:
 2. A strategy section (how it will approach the task)
 3. Constraints (what it should NOT do)
 
+IMPORTANT:
+- DO NOT include "IMMEDIATE ACTION" or "Commands" sections.
+- DO NOT include any code blocks (markdown or plaintext).
+- DO NOT mention specific tool names like move_file or list_dir.
+- Focus on high-level persona and behavioral strategy.
+- The agent will receive its tool knowledge and technical constraints via the main system prompt.
+
 Format it in Markdown with proper headers. Be specific and actionable.`;
 
         console.log('Calling LLM for persona generation...');
-        const response = await provider.generateResponse('You are a helpful assistant.', [
+        let response = await provider.generateResponse('You are an expert persona generator. Respond with ONLY the AGENT.md content. NO markdown wrapper code blocks.', [
             { role: 'user', content: prompt }
         ]);
         console.log('LLM response received.');
 
-        return response || fallbackTemplate(intent);
+        if (response) {
+            // Strip problematic headers that invite pseudo-code
+            response = response.replace(/## (IMMEDIATE ACTION|ACTION PLAN|COMMANDS|EXECUTION)[\s\S]*$/i, '');
+
+            // Strip ALL code blocks to prevent pseudo-code execution
+            response = response.replace(/```[\s\S]*?```/g, '');
+        }
+
+        return response.trim() || fallbackTemplate(intent);
     } catch (error) {
         console.error('Error calling LLM:', error.message);
         return fallbackTemplate(intent);
