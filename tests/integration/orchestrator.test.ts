@@ -9,11 +9,11 @@ import { join } from 'path';
 import { tmpdir } from 'os';
 
 // Mock modules before importing
-vi.mock('litellm', () => ({
-  completion: vi.fn()
+vi.mock('ai', () => ({
+  generateText: vi.fn()
 }));
 
-import { completion } from 'litellm';
+import { generateText } from 'ai';
 
 describe('orchestrator integration', () => {
   let testDir: string;

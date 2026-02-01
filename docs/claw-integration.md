@@ -40,15 +40,20 @@ simple
 ```bash
 # OpenAI (default)
 export OPENAI_API_KEY="sk-..."
-export CLAW_MODEL="gpt-5-mini"  # optional, defaults to gpt-5-mini
+export CLAW_MODEL="gpt-5-mini"
 
-# Or Anthropic
+# Or Anthropic (automatic prefixing supported)
 export ANTHROPIC_API_KEY="sk-ant-..."
+export CLAW_MODEL="anthropic:claude-3-5-sonnet"
 
-# Or custom LiteLLM endpoint
+# Or Google Gemini
+export GOOGLE_GENERATIVE_AI_API_KEY="..."
+export CLAW_MODEL="google:gemini-1.5-pro"
+
+# Or custom Vercel AI SDK compatible proxy (e.g. LiteLLM)
 export LITELLM_BASE_URL="https://your-proxy.com/v1"
 export OPENAI_API_KEY="your-proxy-key"
-export CLAW_MODEL="custom-model-name"
+export CLAW_MODEL="openai:custom-model-name"
 ```
 
 ### How It Works

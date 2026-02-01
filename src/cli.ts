@@ -14,15 +14,19 @@ import { executeCommand } from './commands.js';
 import { getMCPManager } from './mcp/manager.js';
 import { listSkills, setActiveSkill, getActiveSkill } from './skills.js';
 import { readFileSync, existsSync, statSync } from 'fs';
-import { resolve } from 'path';
+import { resolve, join, dirname } from 'path';
+import { fileURLToPath } from 'url';
 import { runSwarm, parseSwarmArgs, printSwarmHelp } from './commands/swarm.js';
 import { jsonrepair } from 'jsonrepair';
 
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
+
 // CLI flags
-const YOLO_MODE = process.argv.includes('--yolo');
 const MOE_MODE = process.argv.includes('--moe');
 const SWARM_MODE = process.argv.includes('--swarm');
 const CLAW_MODE = process.argv.includes('--claw') || process.argv.includes('-claw');
+const YOLO_MODE = process.argv.includes('--yolo') || CLAW_MODE;
 const DEBUG = process.argv.includes('--debug') || process.env.DEBUG === 'true';
 const VERSION = '0.2.2';
 
@@ -56,29 +60,8 @@ if (process.argv.includes('--help') || process.argv.includes('-h')) {
   process.exit(0);
 }
 
-// Handle --claw mode (JIT Agent Generation)
-if (CLAW_MODE) {
-  const { execSync } = await import('child_process');
-  const args = process.argv.slice(2).filter(a => !a.startsWith('-'));
-  const intent = args.join(' ') || 'unspecified task';
-
-  console.log(pc.cyan('🧬 Initiating JIT Agent Generation...'));
-  console.log(pc.dim(`Intent: "${intent}"`));
-
-  try {
-    const output = execSync(`npx tsx tools/claw.ts run clawJit intent="${intent}"`, {
-      cwd: process.cwd(),
-      encoding: 'utf-8',
-      stdio: 'inherit'
-    });
-
-    console.log(pc.green('\n✅ JIT Agent ready. Run `simple` to begin.'));
-    process.exit(0);
-  } catch (error) {
-    console.error(pc.red('❌ Failed to initialize Claw mode:'), error);
-    process.exit(1);
-  }
-}
+// Claw mode will be handled after directory change in main()
+let clawIntent: string | null = null;
 
 // Handle --swarm mode
 if (SWARM_MODE) {
@@ -134,10 +117,11 @@ async function executeTool(name: string, args: Record<string, unknown>, ctx: Con
 
 
 async function main(): Promise<void> {
-  console.clear();
+  // console.clear();
 
+  const originalCwd = process.cwd(); // Save original cwd before any directory changes
   const args = process.argv.slice(2).filter(arg => !arg.startsWith('-'));
-  let targetDir = process.cwd();
+  let targetDir = originalCwd;
 
   if (args.length > 0) {
     try {
@@ -150,6 +134,27 @@ async function main(): Promise<void> {
         args.shift();
       }
     } catch { /* ignored */ }
+  }
+
+  // Handle --claw mode AFTER directory change
+  if (CLAW_MODE) {
+    const { execSync } = await import('child_process');
+    // args now has directory removed, so join the rest as intent
+    clawIntent = args.join(' ') || 'unspecified task';
+
+    console.log(pc.cyan('🧬 Initiating JIT Agent Generation...'));
+    console.log(pc.dim(`Intent: "${clawIntent}"`));
+    console.log(pc.dim(`Working Directory: ${targetDir}`));
+
+    try {
+      const { generateJitAgent } = await import('./claw/jit.js');
+      await generateJitAgent(clawIntent, targetDir);
+
+      console.log(pc.green('\n✅ JIT Agent soul ready. Starting autopilot loop...\n'));
+    } catch (error) {
+      console.error(pc.red('❌ Failed to initialize Claw mode:'), error);
+      process.exit(1);
+    }
   }
 
   console.log(`\n ${pc.bgCyan(pc.black(' SIMPLE-CLI '))} ${pc.dim(`v${VERSION}`)} ${pc.green('●')} ${pc.cyan(targetDir)}\n`);
@@ -189,14 +194,15 @@ async function main(): Promise<void> {
   };
 
   let isFirstPrompt = true;
+  const isAutonomousMode = CLAW_MODE && clawIntent;
 
   while (true) {
     const skill = getActiveSkill();
     let input: string | symbol;
 
-    // Support initial prompt from command line
-    if (isFirstPrompt && args.length > 0) {
-      input = args.join(' ');
+    // Support initial prompt from command line or claw intent
+    if (isFirstPrompt && (clawIntent || args.length > 0)) {
+      input = clawIntent || args.join(' ');
       console.log(`\n${pc.magenta('➤')} ${pc.bold(input)}`);
     } else {
       input = await text({
@@ -297,6 +303,18 @@ async function main(): Promise<void> {
         const msg = action.message || response.replace(/<thought>[\s\S]*?<\/thought>/, '').trim();
         if (msg) console.log(`\n${pc.magenta('✦')} ${msg}`);
         ctx.addMessage('assistant', response);
+
+        // In autonomous mode, show summary and exit
+        if (isAutonomousMode) {
+          console.log(`\n${pc.dim('─'.repeat(60))}`);
+          console.log(`${pc.cyan('📊 Execution Summary:')}`);
+          console.log(`${pc.dim('  Steps taken:')} ${steps}`);
+          console.log(`${pc.dim('  Final status:')} Task completed`);
+          console.log(`\n${pc.green('✅')} Autonomous task completed.`);
+          console.log(`${pc.dim('Exiting autonomous mode...')}`);
+          mcpManager.disconnectAll();
+          process.exit(0);
+        }
         break;
       }
     }

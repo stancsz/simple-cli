@@ -16,7 +16,7 @@ The `ToolRegistry` is the engine for capability discovery. It scans multiple pro
 ## 2. Multi-Provider Router
 To balance cost and intelligence, Simple-CLI employs a routing mechanism:
 *   **Mixture of Experts (MoE)**: Features a lightweight router that determines the optimal model tier for the current task.
-*   **Unified Interface**: Supports major providers (OpenAI, Anthropic, Gemini, LiteLLM) through a consistent abstraction layer.
+*   **Unified Interface**: Supports major providers (OpenAI, Anthropic, Google) through the Vercel AI SDK.
 
 ## 3. Context Management
 Effective agentic coding requires precision, not volume. Simple-CLI manages context through:
