@@ -31,9 +31,20 @@ The AGENT.md should include:
 
 Format it in Markdown with proper headers. Be specific and actionable.`;
 
-        const response = await provider.generateResponse('You are a helpful assistant specialized in agent design.', [
+
+        console.log(pc.dim('  Calling LLM for persona generation...'));
+
+        const timeoutPromise = new Promise<null>((_, reject) =>
+            setTimeout(() => reject(new Error('LLM Timeout')), 8000)
+        );
+
+        const responsePromise = provider.generateResponse('You are a helpful assistant specialized in agent design.', [
             { role: 'user', content: prompt }
         ]);
+
+        const response = await Promise.race([responsePromise, timeoutPromise]);
+
+        console.log(pc.dim('  LLM response received.'));
 
         let content: string;
         if (!response || response.startsWith('Error calling LLM:')) {
