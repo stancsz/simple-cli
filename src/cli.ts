@@ -7,22 +7,30 @@ import 'dotenv/config';
 import { intro, outro, text, spinner as clackSpinner, note, confirm as clackConfirm, isCancel, select } from '@clack/prompts';
 import pc from 'picocolors';
 import { ContextManager, getContextManager } from './context.js';
-import { createProvider } from './providers/index.js';
+import { createProvider, type Provider } from './providers/index.js';
+import type { TypeLLMResponse } from '@stan-chen/typellm';
 import { createMultiProvider } from './providers/multi.js';
 import { routeTask, loadTierConfig, formatRoutingDecision, type Tier } from './router.js';
 import { executeCommand } from './commands.js';
 import { getMCPManager } from './mcp/manager.js';
 import { listSkills, setActiveSkill, getActiveSkill } from './skills.js';
-import { readFileSync, existsSync, statSync } from 'fs';
-import { resolve } from 'path';
+import { readFileSync, existsSync, statSync, appendFileSync } from 'fs';
+import fs from 'fs';
+import { readFile, writeFile, mkdir } from 'fs/promises';
+import { resolve, join, dirname } from 'path';
+import { fileURLToPath } from 'url';
 import { runSwarm, parseSwarmArgs, printSwarmHelp } from './commands/swarm.js';
 import { jsonrepair } from 'jsonrepair';
 
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
+
 // CLI flags
-const YOLO_MODE = process.argv.includes('--yolo');
 const MOE_MODE = process.argv.includes('--moe');
 const SWARM_MODE = process.argv.includes('--swarm');
 const CLAW_MODE = process.argv.includes('--claw') || process.argv.includes('-claw');
+const GHOST_MODE = process.argv.includes('--ghost');
+const YOLO_MODE = process.argv.includes('--yolo') || CLAW_MODE || GHOST_MODE;
 const DEBUG = process.argv.includes('--debug') || process.env.DEBUG === 'true';
 const VERSION = '0.2.2';
 
@@ -56,29 +64,8 @@ if (process.argv.includes('--help') || process.argv.includes('-h')) {
   process.exit(0);
 }
 
-// Handle --claw mode (JIT Agent Generation)
-if (CLAW_MODE) {
-  const { execSync } = await import('child_process');
-  const args = process.argv.slice(2).filter(a => !a.startsWith('-'));
-  const intent = args.join(' ') || 'unspecified task';
-
-  console.log(pc.cyan('🧬 Initiating JIT Agent Generation...'));
-  console.log(pc.dim(`Intent: "${intent}"`));
-
-  try {
-    const output = execSync(`npx tsx tools/claw.ts run clawJit intent="${intent}"`, {
-      cwd: process.cwd(),
-      encoding: 'utf-8',
-      stdio: 'inherit'
-    });
-
-    console.log(pc.green('\n✅ JIT Agent ready. Run `simple` to begin.'));
-    process.exit(0);
-  } catch (error) {
-    console.error(pc.red('❌ Failed to initialize Claw mode:'), error);
-    process.exit(1);
-  }
-}
+// Claw mode will be handled after directory change in main()
+let clawIntent: string | null = null;
 
 // Handle --swarm mode
 if (SWARM_MODE) {
@@ -97,6 +84,23 @@ if (SWARM_MODE) {
 }
 
 function parseResponse(response: string) {
+  // Try parsing as pure JSON first (for JSON mode)
+  try {
+    const parsed = JSON.parse(jsonrepair(response.trim()));
+    const tool = parsed.tool;
+    if (tool) {
+      return {
+        thought: parsed.thought || '',
+        action: {
+          tool: tool,
+          message: parsed.message || '',
+          args: parsed.args || parsed.parameters || parsed.input || parsed
+        }
+      };
+    }
+  } catch { /* Fall through to legacy format */ }
+
+  // Legacy format with <thought> tags
   const thought = response.match(/<thought>([\s\S]*?)<\/thought>/)?.[1]?.trim() || '';
   const jsonMatch = response.match(/\{[\s\S]*"tool"[\s\S]*\}/);
   let action = { tool: 'none', message: '', args: {} as Record<string, unknown> };
@@ -134,10 +138,58 @@ async function executeTool(name: string, args: Record<string, unknown>, ctx: Con
 
 
 async function main(): Promise<void> {
-  console.clear();
+  // console.clear();
 
+  const originalCwd = process.cwd(); // Save original cwd before any directory changes
   const args = process.argv.slice(2).filter(arg => !arg.startsWith('-'));
-  let targetDir = process.cwd();
+  let targetDir = originalCwd;
+
+  // Handle Claw Management Flags
+  if (process.argv.includes('--list')) {
+    const { listClawAssets } = await import('./claw/management.js');
+    await listClawAssets();
+    process.exit(0);
+  }
+  if (process.argv.includes('--logs')) {
+    const { showGhostLogs } = await import('./claw/management.js');
+    const id = process.argv[process.argv.indexOf('--logs') + 1];
+    await showGhostLogs(id && !id.startsWith('-') ? id : undefined);
+    process.exit(0);
+  }
+  if (process.argv.includes('--kill')) {
+    const { killGhostTask } = await import('./claw/management.js');
+    const id = process.argv[process.argv.indexOf('--kill') + 1];
+    if (!id || id.startsWith('-')) {
+      console.error(pc.red('Error: Task ID required for --kill'));
+      process.exit(1);
+    }
+    await killGhostTask(id);
+    process.exit(0);
+  }
+
+  if (process.argv.includes('--invoke') || process.argv.includes('--invoke-json')) {
+    const isJson = process.argv.includes('--invoke-json');
+    const idx = process.argv.indexOf(isJson ? '--invoke-json' : '--invoke');
+    const toolName = process.argv[idx + 1];
+    const toolArgsStr = process.argv[idx + 2] || '{}';
+
+    if (!toolName) {
+      console.error(pc.red('Error: Tool name required for --invoke'));
+      process.exit(1);
+    }
+
+    try {
+      const ctx = getContextManager(process.cwd());
+      await ctx.initialize();
+      const toolArgs = JSON.parse(toolArgsStr);
+      const result = await executeTool(toolName, toolArgs, ctx);
+      console.log(result);
+      process.exit(0);
+    } catch (error) {
+      console.error(pc.red(`Error invoking tool ${toolName}:`), error);
+      process.exit(1);
+    }
+  }
 
   if (args.length > 0) {
     try {
@@ -152,12 +204,39 @@ async function main(): Promise<void> {
     } catch { /* ignored */ }
   }
 
-  console.log(`\n ${pc.bgCyan(pc.black(' SIMPLE-CLI '))} ${pc.dim(`v${VERSION}`)} ${pc.green('●')} ${pc.cyan(targetDir)}\n`);
+  // Handle --claw mode AFTER directory change
+  if (CLAW_MODE) {
+    const { execSync } = await import('child_process');
+    // args now has directory removed, so join the rest as intent
+    clawIntent = args.join(' ') || 'unspecified task';
 
-  console.log(`${pc.dim('○')} Initializing...`);
+    console.log(pc.cyan('🧬 Initiating JIT Agent Generation...'));
+    console.log(pc.dim(`Intent: "${clawIntent}"`));
+    console.log(pc.dim(`Working Directory: ${targetDir}`));
+
+    try {
+      const { generateJitAgent } = await import('./claw/jit.js');
+      await generateJitAgent(clawIntent, targetDir);
+
+      console.log(pc.green('\n✅ JIT Agent soul ready. Starting autopilot loop...\n'));
+
+      // Inject autonomous environment variables
+      process.env.CLAW_WORKSPACE = targetDir;
+      process.env.CLAW_SKILL_PATH = join(targetDir, 'skills');
+      process.env.CLAW_DATA_DIR = join(targetDir, '.simple/workdir/memory');
+    } catch (error) {
+      console.error(pc.red('❌ Failed to initialize Claw mode:'), error);
+      process.exit(1);
+    }
+  }
+
+  if (!GHOST_MODE) {
+    console.log(`\n ${pc.bgCyan(pc.black(' SIMPLE-CLI '))} ${pc.dim(`v${VERSION}`)} ${pc.green('●')} ${pc.cyan(targetDir)}\n`);
+    console.log(`${pc.dim('○')} Initializing...`);
+  }
   const ctx = getContextManager(targetDir);
   await ctx.initialize();
-  console.log(`${pc.green('●')} Ready.`);
+  if (!GHOST_MODE) console.log(`${pc.green('●')} Ready.`);
 
   const mcpManager = getMCPManager();
   try {
@@ -172,14 +251,14 @@ async function main(): Promise<void> {
   const singleProvider = !MOE_MODE ? createProvider() : null;
 
 
-  const generate = async (input: string): Promise<string> => {
+  const generate = async (input: string): Promise<TypeLLMResponse> => {
     const history = ctx.getHistory();
     const fullPrompt = await ctx.buildSystemPrompt();
 
-
     if (MOE_MODE && multiProvider && tierConfigs) {
       const routing = await routeTask(input, async (prompt) => {
-        return multiProvider.generateWithTier(1, prompt, [{ role: 'user', content: input }]);
+        const res = await multiProvider.generateWithTier(1, prompt, [{ role: 'user', content: input }]);
+        return res.raw || JSON.stringify(res);
       });
       if (DEBUG) console.log(pc.dim(`[Routing] Tier: ${routing.tier}`));
       return multiProvider.generateWithTier(routing.tier as Tier, fullPrompt, history.map(m => ({ role: m.role, content: m.content })));
@@ -189,14 +268,15 @@ async function main(): Promise<void> {
   };
 
   let isFirstPrompt = true;
+  const isAutonomousMode = CLAW_MODE && clawIntent;
 
   while (true) {
     const skill = getActiveSkill();
     let input: string | symbol;
 
-    // Support initial prompt from command line
-    if (isFirstPrompt && args.length > 0) {
-      input = args.join(' ');
+    // Support initial prompt from command line or claw intent
+    if (isFirstPrompt && (clawIntent || args.length > 0)) {
+      input = clawIntent || args.join(' ');
       console.log(`\n${pc.magenta('➤')} ${pc.bold(input)}`);
     } else {
       input = await text({
@@ -272,33 +352,105 @@ async function main(): Promise<void> {
 
     ctx.addMessage('user', trimmedInput);
 
-    let steps = 0;
-    while (steps < 15) {
-      const response = await generate(trimmedInput);
-      const { thought, action } = parseResponse(response);
+    let currentInput = trimmedInput;
+    if (CLAW_MODE || GHOST_MODE) {
+      currentInput = `MISSION START: ${trimmedInput}. Consult your persona in AGENT.md and perform the mission tasks immediately. Use list_dir to see what you are working with.`;
+    }
 
-      if (thought) console.log(`\n${pc.dim('💭')} ${pc.cyan(thought)}`);
+    let steps = 0;
+    let ghostLogFile: string | null = null;
+    if (GHOST_MODE) {
+      const logDir = join(targetDir, '.simple/workdir/memory/logs');
+      if (!existsSync(logDir)) await mkdir(logDir, { recursive: true });
+      ghostLogFile = join(logDir, `ghost-${Date.now()}.log`);
+      await writeFile(ghostLogFile, `[GHOST START] Intent: ${trimmedInput}\n`);
+    }
+
+    while (steps < 15) {
+      const response = await generate(currentInput);
+      const { thought, tool, args, message } = response;
+      const action = { tool: tool || 'none', args: args || {}, message: message || '' };
+
+      const logMsg = (msg: string) => {
+        if (GHOST_MODE && ghostLogFile) {
+          fs.appendFileSync(ghostLogFile, msg + '\n');
+        } else {
+          console.log(msg);
+        }
+      };
+
+      if (thought) logMsg(`\n${pc.dim('💭')} ${pc.cyan(thought)}`);
 
       if (action.tool !== 'none') {
         if (await confirm(action.tool, action.args || {}, ctx)) {
-          console.log(`${pc.yellow('⚙')} ${pc.dim(`Executing ${action.tool}...`)}`);
+          logMsg(`${pc.yellow('⚙')} ${pc.dim(`Executing ${action.tool}...`)}`);
           const result = await executeTool(action.tool, action.args || {}, ctx);
-          console.log(`${pc.green('✔')} ${pc.dim(result.length > 500 ? result.slice(0, 500) + '...' : result)}`);
+          const resultStr = typeof result === 'string' ? result : JSON.stringify(result, null, 2);
+          logMsg(`${pc.green('✔')} ${pc.dim(resultStr.length > 500 ? resultStr.slice(0, 500) + '...' : resultStr)}`);
 
-          ctx.addMessage('assistant', response);
-          ctx.addMessage('user', `Tool result: ${result}`);
+          const assistantMsg = response.raw || JSON.stringify(response);
+          ctx.addMessage('assistant', assistantMsg);
+          ctx.addMessage('user', `Tool result: ${resultStr}. Continue the mission.`);
+          currentInput = 'Continue the mission.';
           steps++;
+          // Autonomous Reflection & Status Check
+          if (CLAW_MODE || GHOST_MODE) {
+            const brain = ctx.getTools().get('claw_brain');
+            if (brain) {
+              await brain.execute({
+                action: 'log_reflection',
+                content: `Executed ${action.tool}. Result: ${resultStr.slice(0, 150)}...`
+              });
+
+              // Check if mission is marked completed
+              const summary = (await brain.execute({ action: 'get_summary' })) as any;
+              if (summary.status === 'completed') {
+                logMsg(`\n${pc.green('📌')} Mission status: completed. Ending loop.`);
+                break;
+              }
+            }
+          }
+          continue;
         } else {
-          console.log(`${pc.yellow('⚠')} Skipped.`);
-          ctx.addMessage('assistant', response);
-          break;
+          logMsg(`${pc.yellow('⚠')} Skipped.`);
+          const assistantMsg = response.raw || JSON.stringify(response);
+          ctx.addMessage('assistant', assistantMsg);
+          continue;
         }
-      } else {
-        const msg = action.message || response.replace(/<thought>[\s\S]*?<\/thought>/, '').trim();
-        if (msg) console.log(`\n${pc.magenta('✦')} ${msg}`);
-        ctx.addMessage('assistant', response);
+      } else if (action.message) {
+        logMsg(`\n${pc.green('🤖')} ${action.message}`);
+        const assistantMsg = response.raw || JSON.stringify(response);
+        ctx.addMessage('assistant', assistantMsg);
         break;
       }
+      break;
     }
+    // In autonomous mode, if we haven't done any steps yet, nudge the agent
+    if (isAutonomousMode && steps === 0) {
+      console.log(pc.yellow('⚡ Agent replied with text only. Forcing tool usage...'));
+      ctx.addMessage('user', 'Do not just explain. Use the tools (e.g., list_dir) to execute the plan immediately.');
+      continue;
+    }
+
+    // In autonomous mode, show summary and exit
+    if (isAutonomousMode) {
+      console.log(`\n${pc.dim('─'.repeat(60))}`);
+      console.log(`${pc.cyan('📊 Execution Summary:')}`);
+      console.log(`${pc.dim('  Steps taken:')} ${steps}`);
+      console.log(`${pc.dim('  Final status:')} Task completed`);
+
+      // Autonomous Pruning on Exit
+      const brain = ctx.getTools().get('claw_brain');
+      if (brain) {
+        console.log(pc.dim('🧠 Organizing memory...'));
+        await brain.execute({ action: 'prune' });
+      }
+
+      console.log(`\n${pc.green('✅')} Autonomous task completed.`);
+      console.log(`${pc.dim('Exiting autonomous mode...')}`);
+      mcpManager.disconnectAll();
+      process.exit(0);
+    }
+    break;
   }
 }

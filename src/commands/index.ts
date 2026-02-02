@@ -110,16 +110,16 @@ export default class Chat extends Command {
     }
 
     // Generate function
-    const generate = async (messages: Message[]): Promise<string> => {
+    const generate = async (messages: Message[]): Promise<import('@stan-chen/typellm').TypeLLMResponse> => {
       const fullPrompt = await ctx.buildSystemPrompt();
-
 
       const llmMessages = messages.map(m => ({ role: m.role, content: m.content }));
 
       if (flags.moe && multiProvider && tierConfigs) {
         const userMsg = messages.find(m => m.role === 'user')?.content || '';
         const routing = await routeTask(userMsg, async (prompt) => {
-          return multiProvider.generateWithTier(1, prompt, [{ role: 'user', content: userMsg }]);
+          const res = await multiProvider.generateWithTier(1, prompt, [{ role: 'user', content: userMsg }]);
+          return res.message || res.thought || res.raw || '';
         });
         return multiProvider.generateWithTier(routing.tier as Tier, fullPrompt, llmMessages);
       }
@@ -169,7 +169,7 @@ export default class Chat extends Command {
         return { passed: result.passed, output: result.output };
       } : undefined,
       testFn: flags['auto-test'] && flags['test-cmd'] ? async () => {
-        const { execute } = await import('../tools/runCommand.js');
+        const { execute } = await import('../tools/run_command.js');
         const result = await execute({ command: flags['test-cmd']! });
         return { passed: result.exitCode === 0, output: result.stdout + result.stderr };
       } : undefined,

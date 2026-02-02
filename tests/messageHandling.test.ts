@@ -144,9 +144,9 @@ describe('messageHandling', () => {
   describe('conversation history management', () => {
     it('should append user message correctly', () => {
       const history: Array<{ role: string; content: string }> = [];
-      
+
       history.push({ role: 'user', content: 'First message' });
-      
+
       expect(history.length).toBe(1);
       expect(history[0].role).toBe('user');
       expect(history[0].content).toBe('First message');
@@ -154,9 +154,9 @@ describe('messageHandling', () => {
 
     it('should append assistant message correctly', () => {
       const history = [{ role: 'user', content: 'Hello' }];
-      
+
       history.push({ role: 'assistant', content: 'Hi there!' });
-      
+
       expect(history.length).toBe(2);
       expect(history[1].role).toBe('assistant');
     });
@@ -166,9 +166,9 @@ describe('messageHandling', () => {
         { role: 'user', content: 'Read file' },
         { role: 'assistant', content: '<thought>Reading</thought>{"tool":"readFiles"}' }
       ];
-      
+
       history.push({ role: 'user', content: 'Tool result: file content here' });
-      
+
       expect(history.length).toBe(3);
       expect(history[2].role).toBe('user');
       expect(history[2].content).toContain('Tool result');
@@ -180,9 +180,9 @@ describe('messageHandling', () => {
         { role: 'assistant', content: 'Hi' },
         { role: 'user', content: 'Bye' }
       ];
-      
+
       history.length = 0;
-      
+
       expect(history).toEqual([]);
     });
   });
@@ -191,12 +191,12 @@ describe('messageHandling', () => {
     it('should prepend system message to conversation', () => {
       const systemPrompt = 'You are a helpful assistant.';
       const history = [{ role: 'user', content: 'Hello' }];
-      
+
       const fullMessages = [
         { role: 'system', content: systemPrompt },
         ...history
       ];
-      
+
       expect(fullMessages.length).toBe(2);
       expect(fullMessages[0].role).toBe('system');
       expect(fullMessages[0].content).toBe(systemPrompt);
@@ -205,9 +205,9 @@ describe('messageHandling', () => {
     it('should include repo map in system prompt', () => {
       const repoMap = '📄 main.py\n  function: hello';
       const rules = 'Always write tests.';
-      
+
       const systemPrompt = `Context:\n${repoMap}\n\nRules:\n${rules}`;
-      
+
       expect(systemPrompt).toContain('main.py');
       expect(systemPrompt).toContain('Always write tests');
     });
@@ -215,14 +215,14 @@ describe('messageHandling', () => {
     it('should include tool definitions in system prompt', () => {
       const tools = `
 Available Tools:
-- readFiles: Read file contents
-- writeFiles: Write or modify files
-- runCommand: Execute shell commands
+- read_files: Read file contents
+- write_files: Write or modify files
+- run_command: Execute shell commands
 `;
-      
-      expect(tools).toContain('readFiles');
-      expect(tools).toContain('writeFiles');
-      expect(tools).toContain('runCommand');
+
+      expect(tools).toContain('read_files');
+      expect(tools).toContain('write_files');
+      expect(tools).toContain('run_command');
     });
   });
 
@@ -234,8 +234,8 @@ Available Tools:
     });
 
     it('should validate action JSON format', () => {
-      const response = '{"tool": "readFiles", "args": {"paths": ["test.txt"]}}';
-      
+      const response = '{"tool": "read_files", "args": {"paths": ["test.txt"]}}';
+
       let valid = false;
       try {
         const parsed = JSON.parse(response);
@@ -243,7 +243,7 @@ Available Tools:
       } catch {
         valid = false;
       }
-      
+
       expect(valid).toBe(true);
     });
 
@@ -253,12 +253,12 @@ Available Tools:
 I need to read the file first.
 </thought>
 
-{"tool": "readFiles", "args": {"paths": ["config.json"]}}
+{"tool": "read_files", "args": {"paths": ["config.json"]}}
 `;
-      
+
       const thoughtMatch = response.match(/<thought>([\s\S]*?)<\/thought>/);
       const jsonMatch = response.match(/\{[\s\S]*"tool"[\s\S]*\}/);
-      
+
       expect(thoughtMatch).toBeDefined();
       expect(jsonMatch).toBeDefined();
       expect(thoughtMatch![1]).toContain('read the file');

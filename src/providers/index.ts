@@ -1,107 +1,101 @@
 /**
- * Provider Bridge: Unified LLM interface via OpenAI SDK
- * Supports OpenAI, DeepSeek, Groq, and other OpenAI-compatible endpoints.
+ * Provider Bridge: Unified LLM interface via Vercel AI SDK
+ * Support for OpenAI, Anthropic, Google (Gemini), and custom endpoints.
  */
-
-import OpenAI from 'openai';
+import { createTypeLLM, type TypeLLM as TypeLLMInstance, type TypeLLMConfig, type TypeLLMResponse } from '@stan-chen/typellm';
 
 export interface Message {
-  role: string;
+  role: 'user' | 'assistant' | 'system';
   content: string;
 }
 
 export interface Provider {
   name: string;
   model: string;
-  generateResponse: (systemPrompt: string, messages: Message[]) => Promise<string>;
+  generateResponse: (systemPrompt: string, messages: Message[]) => Promise<TypeLLMResponse>;
 }
 
-// Configuration for different providers
-interface ProviderConfig {
-  apiKey?: string;
-  baseURL?: string;
-  model: string;
-}
+/**
+ * Structured output strategy:
+ * - Uses strong system prompts with explicit JSON format examples
+ * - Response parsing with jsonrepair (in cli.ts)
+ * - Format reminders in user messages (in context.ts)
+ * 
+ * This approach works across ALL providers without hitting
+ * provider-specific schema limitations (e.g., OpenAI's additionalProperties requirement)
+ */
 
-const getProviderConfig = (): ProviderConfig => {
-  // 1. OpenAI (Default)
-  if (process.env.OPENAI_API_KEY) {
-    return {
-      apiKey: process.env.OPENAI_API_KEY,
-      model: process.env.OPENAI_MODEL || 'gpt-5-mini'
-    };
+/**
+ * Creates a provider instance using TypeLLM
+ */
+export const createProviderForModel = (modelId: string): Provider => {
+  let providerType: 'openai' | 'google' | 'anthropic' | 'litellm' = 'openai';
+  let actualModel = modelId;
+  let baseURL: string | undefined;
+
+  // Handle provider selection
+  if (modelId.startsWith('anthropic:')) {
+    actualModel = modelId.split(':')[1] || modelId;
+    providerType = 'anthropic';
+  } else if (modelId.startsWith('google:') || modelId.startsWith('gemini:')) {
+    actualModel = modelId.split(':')[1] || modelId;
+    providerType = 'google';
+  } else if (modelId.startsWith('openai:')) {
+    actualModel = modelId.split(':')[1] || modelId;
+    providerType = 'openai';
+  } else if (modelId.startsWith('claude') || (process.env.ANTHROPIC_API_KEY && !process.env.OPENAI_API_KEY)) {
+    providerType = 'anthropic';
+  } else if (modelId.startsWith('gemini') || (process.env.GEMINI_API_KEY && !process.env.OPENAI_API_KEY)) {
+    providerType = 'google';
+  } else if (process.env.LITELLM_BASE_URL) {
+    providerType = 'litellm';
+    baseURL = process.env.LITELLM_BASE_URL;
+  } else {
+    providerType = 'openai';
   }
-  // 2. DeepSeek
-  if (process.env.DEEPSEEK_API_KEY) {
-    return {
-      apiKey: process.env.DEEPSEEK_API_KEY,
-      baseURL: 'https://api.deepseek.com/v1',
-      model: process.env.DEEPSEEK_MODEL || 'deepseek-chat'
-    };
-  }
-  // 3. Groq
-  if (process.env.GROQ_API_KEY) {
-    return {
-      apiKey: process.env.GROQ_API_KEY,
-      baseURL: 'https://api.groq.com/openai/v1',
-      model: process.env.GROQ_MODEL || 'llama3-70b-8192'
-    };
-  }
-  // 4. Mistral
-  if (process.env.MISTRAL_API_KEY) {
-    return {
-      apiKey: process.env.MISTRAL_API_KEY,
-      baseURL: 'https://api.mistral.ai/v1',
-      model: process.env.MISTRAL_MODEL || 'mistral-large-latest'
-    };
+
+  // Final check for the Google key mapping
+  if (providerType === 'google' && process.env.GEMINI_API_KEY && !process.env.GOOGLE_GENERATIVE_AI_API_KEY) {
+    process.env.GOOGLE_GENERATIVE_AI_API_KEY = process.env.GEMINI_API_KEY;
   }
 
-  throw new Error('No supported API key found (OPENAI_API_KEY, DEEPSEEK_API_KEY, GROQ_API_KEY, MISTRAL_API_KEY)');
-};
-
-export const createProviderForModel = (model: string): Provider => {
-  // Quick heuristic to determine provider for specific model overrides
-  // logic can be improved, but this assumes the environment variables set the *default* linkage
-  // If a specific model is requested (e.g. for MoE), we try to route it.
-
-  let config = getProviderConfig();
-
-  // Override config if model implies a different provider? 
-  // For the sake of "Simple-CLI", we assume the default connected provider serves the requested model
-  // or we just use OpenAI SDK's flexibility.
-
-  if (model.includes('gpt')) config = { ...config, apiKey: process.env.OPENAI_API_KEY, baseURL: undefined };
-  else if (model.includes('deepseek')) config = { ...config, apiKey: process.env.DEEPSEEK_API_KEY, baseURL: 'https://api.deepseek.com/v1' };
-
-  if (!config.apiKey) throw new Error(`Cannot route for model ${model} - missing API key`);
-
-  const client = new OpenAI({
-    apiKey: config.apiKey,
-    baseURL: config.baseURL
+  const llm = createTypeLLM({
+    provider: providerType,
+    model: actualModel,
+    baseURL: baseURL,
+    apiKey: providerType === 'openai' ? process.env.OPENAI_API_KEY :
+      providerType === 'google' ? process.env.GEMINI_API_KEY || process.env.GOOGLE_GENERATIVE_AI_API_KEY :
+        providerType === 'anthropic' ? process.env.ANTHROPIC_API_KEY :
+          undefined,
+    temperature: 0
   });
 
   return {
-    name: 'openai-compatible',
-    model,
-    generateResponse: async (systemPrompt: string, messages: Message[]): Promise<string> => {
+    name: providerType,
+    model: actualModel,
+    generateResponse: async (systemPrompt: string, messages: Message[]): Promise<TypeLLMResponse> => {
       try {
-        const response = await client.chat.completions.create({
-          model: model,
-          messages: [
-            { role: 'system', content: systemPrompt },
-            ...messages.map(m => ({ role: m.role as 'user' | 'assistant' | 'system', content: m.content }))
-          ]
-        });
-        return response.choices[0]?.message?.content || '';
+        const response = await llm.generate(systemPrompt, messages);
+        console.log(`[DEBUG] TypeLLM Response: ${JSON.stringify(response).substring(0, 300)}...`);
+        return response;
       } catch (e) {
-        return `Error calling LLM: ${e instanceof Error ? e.message : e}`; // Fail gracefully
+        return {
+          thought: `Error calling TypeLLM: ${e instanceof Error ? e.message : e}`,
+          tool: 'none',
+          args: {},
+          raw: String(e)
+        };
       }
     }
   };
 };
 
+/**
+ * Creates the default provider
+ */
 export const createProvider = (): Provider => {
-  const config = getProviderConfig();
-  console.log(`🤖 Using model: ${config.model}`);
-  return createProviderForModel(config.model);
+  const isClaw = process.argv.includes('--claw') || process.argv.includes('-claw');
+  const model = (isClaw ? process.env.CLAW_MODEL : null) || process.env.OPENAI_MODEL || process.env.GEMINI_MODEL || 'gpt-4o-mini';
+  console.log(`🤖 Using TypeLLM with model: ${model}`);
+  return createProviderForModel(model);
 };

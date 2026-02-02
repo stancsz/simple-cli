@@ -49,9 +49,9 @@ export const loadTierConfig = (): Map<Tier, TierConfig> => {
     const envModel = process.env[`MOE_TIER_${tier}_MODEL`];
     const model = envModel || DEFAULT_TIERS[tier].defaultModel;
 
-    // LiteLLM auto-detects provider from model name prefix (e.g., "anthropic/claude-3", "gemini/gemini-pro")
-    // For OpenAI models without prefix, it defaults to OpenAI
-    const provider = model.includes('/') ? model.split('/')[0] as 'openai' | 'anthropic' | 'gemini' : 'openai';
+    // Vercel AI SDK supports provider prefixes (e.g., "anthropic:claude-3", "google:gemini-pro")
+    // For standard models without prefix, it defaults based on environment variables.
+    const provider = model.includes(':') ? model.split(':')[0] as any : 'openai';
 
     tiers.set(tier, {
       tier,

@@ -20,9 +20,9 @@ Get up and running in seconds. Simple-CLI requires no complex configuration or p
 # 1. Install globally
 npm install -g @stan-chen/simple-cli
 
-# 2. Set your API key (any provider supported by LiteLLM)
+# 2. Set your API key (any provider supported by Vercel AI SDK)
 export OPENAI_API_KEY="sk-..."
-# Supports ANTHROPIC_API_KEY, GEMINI_API_KEY, DEEPSEEK_API_KEY, etc.
+# Supports ANTHROPIC_API_KEY, GOOGLE_GENERATIVE_AI_API_KEY, etc.
 
 # 3. Start building
 simple "Build a premium React dashboard"

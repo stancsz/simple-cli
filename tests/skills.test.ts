@@ -139,7 +139,7 @@ describe('skills', () => {
         name: 'custom',
         description: 'A custom skill',
         systemPrompt: 'You are a custom assistant.',
-        tools: ['readFiles'],
+        tools: ['read_files'],
       };
       await writeFile(skillPath, JSON.stringify(customSkill));
 

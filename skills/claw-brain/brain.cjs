@@ -62,7 +62,6 @@ function reflect() {
 
 function prune() {
     const MAX_LOGS = 50;
-    const MAX_LOG_AGE_DAYS = 7;
 
     console.log('🧹 Analyzing memory for pruning...');
 

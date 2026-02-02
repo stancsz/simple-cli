@@ -67,7 +67,7 @@ describe('Project Skills (Custom Tools)', () => {
 
     it('should reload tools via the reloadTools tool', async () => {
         const { getContextManager } = await import('../src/context.js');
-        const { execute: reloadExecute } = await import('../src/tools/reloadTools.js');
+        const { execute: reloadExecute } = await import('../src/tools/reload_tools.js');
 
         const ctx = getContextManager();
         await ctx.initialize();

@@ -7,7 +7,7 @@
 import { z } from 'zod';
 import { getContextManager } from '../context.js';
 
-export const name = 'reloadTools';
+export const name = 'reload_tools';
 
 export const description = 'Reload all tools to pick up new skills or changes to existing tools';
 

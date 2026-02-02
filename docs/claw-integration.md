@@ -40,15 +40,20 @@ simple
 ```bash
 # OpenAI (default)
 export OPENAI_API_KEY="sk-..."
-export CLAW_MODEL="gpt-5-mini"  # optional, defaults to gpt-5-mini
+export CLAW_MODEL="gpt-5-mini"
 
-# Or Anthropic
+# Or Anthropic (automatic prefixing supported)
 export ANTHROPIC_API_KEY="sk-ant-..."
+export CLAW_MODEL="anthropic:claude-3-5-sonnet"
 
-# Or custom LiteLLM endpoint
+# Or Google Gemini
+export GOOGLE_GENERATIVE_AI_API_KEY="..."
+export CLAW_MODEL="google:gemini-1.5-pro"
+
+# Or custom Vercel AI SDK compatible proxy (e.g. LiteLLM)
 export LITELLM_BASE_URL="https://your-proxy.com/v1"
 export OPENAI_API_KEY="your-proxy-key"
-export CLAW_MODEL="custom-model-name"
+export CLAW_MODEL="openai:custom-model-name"
 ```
 
 ### How It Works
@@ -132,17 +137,23 @@ When memory grows beyond **50 log files**, pruning will:
 
 ## 👻 Ghost Mode (Persistence)
 
-Ghost Mode enables **background task scheduling** using the OS scheduler.
+Ghost Mode enables **headless background execution** using the OS scheduler.
 
 ### Schedule a Recurrent Task
 
+Use the `scheduler` tool within Simple-CLI to create persistent missions:
+
 ```bash
-# Schedule a task to run every hour
-npx tsx tools/claw.ts run clawGhost \
-  action=schedule \
-  intent="Check CI/CD pipeline status" \
-  cron="0 * * * *"
+# Within Simple-CLI, use the scheduler tool
+> scheduler action=create intent="Audit project weekly" cron="0 0 * * 1"
 ```
+
+**Alternative**: Use the direct flag for one-off ghost runs:
+
+```bash
+simple --claw "One-time deep scan" --ghost
+```
+This runs the agent silently and redirects all output to `.simple/workdir/memory/logs/`.
 
 **Cron Format**: `minute hour day month weekday`
 - `* * * * *` = every minute
@@ -165,20 +176,20 @@ schtasks /CREATE /TN "SimpleCLI_ghost-xyz" /TR "simple -claw 'intent'" /SC HOURL
 0 * * * * simple -claw "Check pipeline status" # SimpleCLI_ghost-xyz
 ```
 
-### List Ghost Tasks
+### Management & Observability
+
+Simple-CLI provides first-class flags for managing your autonomous missions:
 
 ```bash
-npx tsx tools/claw.ts run clawGhost action=list
-```
+# List all available skills and scheduled ghost tasks
+simple --list
 
-### Kill Ghost Tasks
+# View the most recent (or specific) execution log
+simple --logs
+simple --logs ghost-123
 
-```bash
-# Kill specific task
-npx tsx tools/claw.ts run clawGhost action=kill id=ghost-xyz
-
-# Kill all ghost tasks
-npx tsx tools/claw.ts run clawGhost action=kill id=all
+# Terminate and remove a scheduled task
+simple --kill SimpleCLI_ghost-xyz
 ```
 
 This will:

@@ -27,9 +27,9 @@ simple --claw "Delete trash emails every hour"
 ## Why Simple-CLI?
 
 ⚡ **Terminal-First** - No Electron, no overhead, pure speed  
-� **Autonomous Execution** - Multi-step reasoning with tool usage  
+🤖 **Autonomous Execution** - Multi-step reasoning with tool usage  
 🌊 **Swarm Mode** - Horizontally scale with distributed orchestration  
-🔌 **Multi-Provider** - OpenAI, Anthropic, LiteLLM - switch instantly  
+🔌 **Multi-Provider** - OpenAI, Anthropic, Google - powered by Vercel AI SDK  
 
 **Advanced (OpenClaw Integration):**  
 🧬 JIT Agent Generation - Task-specific personas via LLM  
@@ -176,7 +176,7 @@ Distribute tasks across isolated Git worktrees:
 
 | Feature | Description |
 |---------|-------------|
-| **Multi-Provider** | OpenAI, Anthropic, LiteLLM - switch with `--moe` |
+| **Multi-Provider** | OpenAI, Anthropic, Google - powered by Vercel AI SDK |
 | **MCP Integration** | Model Context Protocol for external data sources |
 | **Skills System** | Extensible via `SKILL.md` manifests |
 | **Git Worktree Isolation** | Swarm agents work in separate branches |
@@ -306,7 +306,7 @@ Built with inspiration from:
 
 Powered by:
 - [@clack/prompts](https://github.com/natemoo-re/clack) - Beautiful TUI
-- [LiteLLM](https://github.com/BerriAI/litellm) - Universal LLM proxy
+- [Vercel AI SDK](https://sdk.vercel.ai) - Unified AI toolkit
 
 ---
 

@@ -7,6 +7,7 @@ import { z } from 'zod';
 import { execSync, spawnSync } from 'child_process';
 import { readFileSync, existsSync } from 'fs';
 import { extname, basename } from 'path';
+import { platform } from 'os';
 import type { Tool } from '../registry.js';
 
 // Input schema
@@ -65,13 +66,37 @@ function detectLanguage(filePath: string): string | null {
   return LANGUAGE_MAP[ext] || null;
 }
 
+// Detect if a binary exists in PATH
+function detectBinary(bin: string): boolean {
+  try {
+    const isWin = platform() === 'win32';
+    const cmd = isWin ? 'where' : 'which';
+    execSync(`${cmd} ${bin}`, { stdio: 'ignore' });
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+// Get correct python binary
+function getPythonBinary(): string | null {
+  if (detectBinary('python3')) return 'python3';
+  if (detectBinary('python')) return 'python';
+  return null;
+}
+
+// Platform agnostic /dev/null
+function getNullDevice(): string {
+  return platform() === 'win32' ? 'NUL' : '/dev/null';
+}
+
 // Parse error output for line numbers
 function parseErrors(output: string, filePath: string): LintError[] {
   const errors: LintError[] = [];
   const fileName = basename(filePath);
   const escapedFileName = fileName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
   const escapedFilePath = filePath.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-  
+
   // Common patterns for error messages: file:line:col: message
   // groups: [lineIndex, columnIndex (or -1), messageIndex (or -1)]
   const patterns: Array<{ regex: RegExp; groups: [number, number, number] }> = [
@@ -93,16 +118,16 @@ function parseErrors(output: string, filePath: string): LintError[] {
     let match;
     while ((match = regex.exec(output)) !== null) {
       const [lineIdx, colIdx, msgIdx] = groups;
-      
+
       const line = parseInt(match[lineIdx], 10);
       const column = colIdx >= 0 && match[colIdx] ? parseInt(match[colIdx], 10) : undefined;
       let message = msgIdx >= 0 && match[msgIdx] ? match[msgIdx].trim() : '';
-      
+
       // Use syntax error message if we found one and this pattern doesn't have a message
       if (!message && syntaxErrorMessage) {
         message = syntaxErrorMessage;
       }
-      
+
       if (line > 0) {
         errors.push({
           line,
@@ -127,14 +152,26 @@ function parseErrors(output: string, filePath: string): LintError[] {
 function lintPython(filePath: string, code: string): LintResult {
   const errors: LintError[] = [];
   let output = '';
+  const pythonBin = getPythonBinary();
+
+  if (!pythonBin) {
+    return {
+      file: filePath,
+      language: 'python',
+      errors: [],
+      warnings: [],
+      passed: true, // skipped
+      output: 'Python binary not found, skipping lint.',
+    };
+  }
 
   // Try Python syntax check
   try {
-    const result = spawnSync('python3', ['-m', 'py_compile', filePath], {
+    const result = spawnSync(pythonBin, ['-m', 'py_compile', filePath], {
       encoding: 'utf-8',
       timeout: 10000,
     });
-    
+
     if (result.status !== 0) {
       output = result.stderr || result.stdout || '';
       errors.push(...parseErrors(output, filePath));
@@ -142,7 +179,7 @@ function lintPython(filePath: string, code: string): LintResult {
   } catch {
     // Fall back to basic syntax check
     try {
-      execSync(`python3 -c "compile(open('${filePath}').read(), '${filePath}', 'exec')"`, {
+      execSync(`${pythonBin} -c "compile(open('${filePath}').read(), '${filePath}', 'exec')"`, {
         encoding: 'utf-8',
         timeout: 10000,
       });
@@ -156,11 +193,11 @@ function lintPython(filePath: string, code: string): LintResult {
 
   // Try flake8 for additional checks
   try {
-    const result = spawnSync('python3', ['-m', 'flake8', '--select=E9,F821,F823,F831,F406,F407,F701,F702,F704,F706', filePath], {
+    const result = spawnSync(pythonBin, ['-m', 'flake8', '--select=E9,F821,F823,F831,F406,F407,F701,F702,F704,F706', filePath], {
       encoding: 'utf-8',
       timeout: 10000,
     });
-    
+
     if (result.stdout) {
       output += '\n' + result.stdout;
       errors.push(...parseErrors(result.stdout, filePath));
@@ -192,8 +229,9 @@ function lintJavaScript(filePath: string, code: string, isTypeScript: boolean): 
       const result = spawnSync('npx', ['tsc', '--noEmit', '--skipLibCheck', filePath], {
         encoding: 'utf-8',
         timeout: 30000,
+        shell: platform() === 'win32' // Required for npx on Windows
       });
-      
+
       if (result.status !== 0) {
         output = (result.stdout || '') + (result.stderr || '');
         errors.push(...parseErrors(output, filePath));
@@ -204,7 +242,7 @@ function lintJavaScript(filePath: string, code: string, isTypeScript: boolean): 
         encoding: 'utf-8',
         timeout: 10000,
       });
-      
+
       if (result.status !== 0) {
         output = result.stderr || '';
         errors.push(...parseErrors(output, filePath));
@@ -221,8 +259,9 @@ function lintJavaScript(filePath: string, code: string, isTypeScript: boolean): 
     const result = spawnSync('npx', ['eslint', '--format', 'compact', filePath], {
       encoding: 'utf-8',
       timeout: 30000,
+      shell: platform() === 'win32'
     });
-    
+
     if (result.stdout) {
       output += '\n' + result.stdout;
       errors.push(...parseErrors(result.stdout, filePath));
@@ -243,6 +282,11 @@ function lintJavaScript(filePath: string, code: string, isTypeScript: boolean): 
 
 // Go linting
 function lintGo(filePath: string): LintResult {
+  if (!detectBinary('go')) {
+    return {
+      file: filePath, language: 'go', errors: [], warnings: [], passed: true, output: 'Go not found'
+    };
+  }
   const errors: LintError[] = [];
   let output = '';
 
@@ -251,7 +295,7 @@ function lintGo(filePath: string): LintResult {
       encoding: 'utf-8',
       timeout: 30000,
     });
-    
+
     output = result.stderr + result.stdout;
     if (result.status !== 0) {
       errors.push(...parseErrors(output, filePath));
@@ -274,15 +318,20 @@ function lintGo(filePath: string): LintResult {
 
 // Rust linting
 function lintRust(filePath: string): LintResult {
+  if (!detectBinary('rustc')) {
+    return {
+      file: filePath, language: 'rust', errors: [], warnings: [], passed: true, output: 'Rustc not found'
+    };
+  }
   const errors: LintError[] = [];
   let output = '';
 
   try {
-    const result = spawnSync('rustc', ['--emit=metadata', '-o', '/dev/null', filePath], {
+    const result = spawnSync('rustc', ['--emit=metadata', '-o', getNullDevice(), filePath], {
       encoding: 'utf-8',
       timeout: 30000,
     });
-    
+
     output = result.stderr + result.stdout;
     if (result.status !== 0) {
       errors.push(...parseErrors(output, filePath));
@@ -308,35 +357,42 @@ function lintShell(filePath: string): LintResult {
   const errors: LintError[] = [];
   let output = '';
 
-  try {
-    const result = spawnSync('bash', ['-n', filePath], {
-      encoding: 'utf-8',
-      timeout: 10000,
-    });
-    
-    output = result.stderr + result.stdout;
-    if (result.status !== 0) {
-      errors.push(...parseErrors(output, filePath));
-    }
-  } catch (e) {
-    if (e instanceof Error) {
-      output = e.message;
-    }
-  }
+  // Try shellcheck first (cross platform)
+  if (detectBinary('shellcheck')) {
+    try {
+      const result = spawnSync('shellcheck', ['-f', 'gcc', filePath], {
+        encoding: 'utf-8',
+        timeout: 10000,
+      });
 
-  // Try shellcheck
-  try {
-    const result = spawnSync('shellcheck', ['-f', 'gcc', filePath], {
-      encoding: 'utf-8',
-      timeout: 10000,
-    });
-    
-    if (result.stdout) {
-      output += '\n' + result.stdout;
-      errors.push(...parseErrors(result.stdout, filePath));
+      if (result.stdout) {
+        output += '\n' + result.stdout;
+        errors.push(...parseErrors(result.stdout, filePath));
+      }
+    } catch {
+      // shellcheck error
     }
-  } catch {
-    // shellcheck not available
+  } else if (detectBinary('bash')) {
+    // Fallback to bash -n, works on Windows if Git Bash / WSL is in path, or Linux/Mac
+    try {
+      const result = spawnSync('bash', ['-n', filePath], {
+        encoding: 'utf-8',
+        timeout: 10000,
+      });
+
+      output = result.stderr + result.stdout;
+      if (result.status !== 0) {
+        errors.push(...parseErrors(output, filePath));
+      }
+    } catch (e) {
+      if (e instanceof Error) {
+        output = e.message;
+      }
+    }
+  } else {
+    return {
+      file: filePath, language: 'shell', errors: [], warnings: [], passed: true, output: 'No shell linter found (bash/shellcheck missing)'
+    };
   }
 
   return {

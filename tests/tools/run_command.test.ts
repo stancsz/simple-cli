@@ -1,0 +1,233 @@
+/**
+ * Tests for runCommand tool
+ * Equivalent to Aider's test_run_cmd.py and GeminiCLI's run_shell_command.test.ts
+ */
+
+import { describe, it, expect, beforeEach, afterEach } from 'vitest';
+import { writeFile, mkdir, rm } from 'fs/promises';
+import { join } from 'path';
+import { tmpdir } from 'os';
+import { execute, schema } from '../../src/tools/run_command.js';
+
+const isWindows = process.platform === 'win32';
+
+describe('run_command', () => {
+  let testDir: string;
+
+  beforeEach(async () => {
+    testDir = join(tmpdir(), `simple-cli-test-${Date.now()}`);
+    await mkdir(testDir, { recursive: true });
+  });
+
+  afterEach(async () => {
+    await rm(testDir, { recursive: true, force: true });
+  });
+
+  describe('basic execution', () => {
+    it('should run echo command successfully', async () => {
+      const result = await execute({ command: 'echo "Hello, World!"' });
+
+      expect(result.exitCode).toBe(0);
+      expect(result.stdout).toContain('Hello, World!');
+      expect(result.timedOut).toBe(false);
+    });
+
+    it('should capture stdout', async () => {
+      const result = await execute({ command: 'echo test-output' });
+
+      expect(result.exitCode).toBe(0);
+      expect(result.stdout).toBe('test-output');
+    });
+
+    it('should capture stderr', async () => {
+      // Use a command that reliably writes to stderr on both platforms
+      const command = isWindows ? 'dir nonexistent_file_xyz 2>&1' : 'ls nonexistent_file_xyz 2>&1';
+      const result = await execute({ command });
+
+      expect(result.exitCode).not.toBe(0);
+      expect(result.stdout + result.stderr).toMatch(/nonexistent/i);
+    });
+
+    it('should return non-zero exit code for failed commands', async () => {
+      const result = await execute({ command: isWindows ? 'cmd /c exit 1' : 'exit 1' });
+
+      expect(result.exitCode).toBe(1);
+    });
+
+    it('should handle command not found', async () => {
+      const result = await execute({ command: 'nonexistent_command_xyz' });
+
+      expect(result.exitCode).not.toBe(0);
+    });
+  });
+
+  describe('working directory', () => {
+    it('should execute command in specified directory', async () => {
+      const testFile = join(testDir, 'test.txt');
+      await writeFile(testFile, 'test content');
+
+      const result = await execute({
+        command: isWindows ? 'dir /b' : 'ls',
+        cwd: testDir
+      });
+
+      expect(result.exitCode).toBe(0);
+      expect(result.stdout).toContain('test.txt');
+    });
+
+    it('should handle invalid working directory', async () => {
+      const result = await execute({
+        command: 'echo test',
+        cwd: '/nonexistent/path/xyz'
+      });
+
+      expect(result.exitCode).not.toBe(0);
+    });
+  });
+
+  describe('timeout handling', () => {
+    it('should timeout long-running commands', async () => {
+      const command = isWindows ? 'powershell -Command "Start-Sleep -Seconds 10"' : 'sleep 10';
+      const result = await execute({
+        command,
+        timeout: 500
+      });
+
+      expect(result.timedOut).toBe(true);
+    });
+
+    it('should complete before timeout', async () => {
+      const result = await execute({
+        command: 'echo fast',
+        timeout: 5000
+      });
+
+      expect(result.timedOut).toBe(false);
+      expect(result.stdout).toBe('fast');
+    });
+  });
+
+  describe('environment variables', () => {
+    it('should pass custom environment variables', async () => {
+      const command = isWindows ? 'echo %TEST_VAR%' : 'echo $TEST_VAR';
+      const result = await execute({
+        command,
+        env: { TEST_VAR: 'custom_value' }
+      });
+
+      expect(result.stdout).toContain('custom_value');
+    });
+
+    it('should filter sensitive environment variables', async () => {
+      // The tool should not pass through API keys
+      const command = isWindows ? 'set' : 'env';
+      const result = await execute({
+        command,
+        env: {
+          API_KEY: 'secret123',
+          SECRET_TOKEN: 'token456',
+          NORMAL_VAR: 'allowed'
+        }
+      });
+
+      // NORMAL_VAR should be present, but not the secrets
+      expect(result.stdout).toContain('NORMAL_VAR=allowed');
+      expect(result.stdout).not.toContain('secret123');
+      expect(result.stdout).not.toContain('token456');
+    });
+  });
+
+  describe('output truncation', () => {
+    it('should truncate very large stdout', async () => {
+      // Create a command that generates lots of output cross-platform
+      const command = isWindows
+        ? 'powershell -Command "1..10000 | ForEach-Object { \'test row \' + $_ }"'
+        : 'yes "test row" | head -n 10000';
+
+      const result = await execute({
+        command,
+        timeout: 10000
+      });
+
+      // Should complete and potentially be truncated
+      expect(result.stdout.length).toBeLessThanOrEqual(100100); // 100KB + buffer
+    });
+  });
+
+  describe('shell features', () => {
+    it('should support piping', async () => {
+      const command = isWindows
+        ? 'echo hello | findstr hello'
+        : 'echo "hello world" | grep hello';
+      const result = await execute({ command });
+
+      expect(result.exitCode).toBe(0);
+      expect(result.stdout).toContain('hello');
+    });
+
+    it('should support command chaining with &&', async () => {
+      const result = await execute({
+        command: 'echo first && echo second'
+      });
+
+      expect(result.exitCode).toBe(0);
+      expect(result.stdout).toContain('first');
+      expect(result.stdout).toContain('second');
+    });
+
+    it('should stop on error with &&', async () => {
+      const command = isWindows
+        ? 'cmd /c "exit 1 && echo should_not_appear"'
+        : 'exit 1 && echo should_not_appear';
+      const result = await execute({ command });
+
+      expect(result.exitCode).not.toBe(0);
+      expect(result.stdout).not.toContain('should_not_appear');
+    });
+  });
+
+  describe('schema validation', () => {
+    it('should validate input schema', () => {
+      // Valid input
+      expect(() => schema.parse({ command: 'echo test' })).not.toThrow();
+
+      // Invalid input - missing command
+      expect(() => schema.parse({})).toThrow();
+
+      // Invalid input - command not a string
+      expect(() => schema.parse({ command: 123 })).toThrow();
+    });
+  });
+
+  describe('file operations via shell', () => {
+    it('should be able to count lines in a file', async () => {
+      const testFile = join(testDir, 'lines.txt');
+      await writeFile(testFile, 'line1\nline2\nline3\n');
+
+      const command = isWindows
+        ? `powershell -Command "(Get-Content '${testFile}').Count"`
+        : `wc -l < "${testFile}"`;
+
+      const result = await execute({ command });
+
+      expect(result.exitCode).toBe(0);
+      expect(result.stdout.trim()).toBe('3');
+    });
+
+    it('should list files in directory', async () => {
+      const file1 = join(testDir, 'file1.txt');
+      const file2 = join(testDir, 'file2.txt');
+      await writeFile(file1, '');
+      await writeFile(file2, '');
+
+      const result = await execute({
+        command: isWindows ? 'dir /b' : 'ls',
+        cwd: testDir
+      });
+
+      expect(result.exitCode).toBe(0);
+      expect(result.stdout).toContain('file1.txt');
+      expect(result.stdout).toContain('file2.txt');
+    });
+  });
+});

@@ -7,7 +7,7 @@ import { readdir, stat } from 'fs/promises';
 import { join, relative } from 'path';
 import { z } from 'zod';
 
-export const name = 'listDir';
+export const name = 'list_dir';
 
 export const description = 'List the contents of a directory, showing file sizes and directory indicators';
 

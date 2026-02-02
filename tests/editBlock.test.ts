@@ -7,7 +7,7 @@ import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { writeFile, readFile, mkdir, rm } from 'fs/promises';
 import { join } from 'path';
 import { tmpdir } from 'os';
-import { execute as writeFilesExecute } from '../src/tools/writeFiles.js';
+import { execute as writeFilesExecute } from '../src/tools/write_files.js';
 
 describe('editBlock', () => {
   let testDir: string;

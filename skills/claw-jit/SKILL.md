@@ -1,7 +1,7 @@
 ---
 name: clawJit
 description: Dynamically generates a specialized AGENT.md based on high-level user intent (The "Instant Soul").
-command: node jit-generator.cjs
+command: node jit-generator.js
 parameters:
   intent:
     type: string

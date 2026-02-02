@@ -44,3 +44,12 @@ yarn-error.log*
 # package-lock.json
 # yarn.lock
 **/workdir**
+**/demo_**
+
+# Use explicit ignores for test artifacts
+demo_downloads/
+test_claw_*/
+.simple/
+BINGO.txt
+test-jit.ts
+scraper_screenshots/

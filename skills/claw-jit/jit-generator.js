@@ -1,10 +1,10 @@
 /**
  * [Simple-CLI AI-Created]
  * JIT Agent Generator Implementation
+ * Uses the main CLI's provider system - no reimplementation!
  */
-const fs = require('fs');
-const path = require('path');
-const https = require('https');
+import fs from 'fs';
+import path from 'path';
 
 const INTENT = process.env.INPUT_INTENT || process.argv[2];
 if (!INTENT) {
@@ -31,78 +31,46 @@ async function generatePersona(intent) {
         return `# AGENT.md: ${intent}\n\n## Persona\nExpert for ${intent}.\n\n## Constraints\n- Test Mode active.`;
     }
 
-    // Real LLM Integration
-    const apiKey = process.env.OPENAI_API_KEY || process.env.ANTHROPIC_API_KEY;
-    const baseUrl = process.env.LITELLM_BASE_URL || 'https://api.openai.com/v1';
-    const model = process.env.CLAW_MODEL || 'gpt-5-mini';
+    // Import the main provider system - reuse, don't reimplement!
+    try {
+        const realProjectRoot = process.env.REAL_PROJECT_ROOT || PROJECT_ROOT;
+        const providerPath = path.join(realProjectRoot, 'dist', 'providers', 'index.js');
+        const { createProvider } = await import('file://' + providerPath.replace(/\\/g, '/'));
+        const provider = createProvider();
 
-    if (!apiKey) {
-        console.warn('⚠️  No API key found. Falling back to template generation.');
-        return fallbackTemplate(intent);
-    }
-
-    const prompt = `You are an expert at generating specialized agent personas. Create a detailed AGENT.md file for an AI agent whose sole purpose is: "${intent}"
+        const prompt = `You are an expert at generating specialized agent personas. Create a detailed AGENT.md file for an AI agent whose sole purpose is: "${intent}"
 
 The AGENT.md should include:
 1. A persona description (who is this agent, what expertise does it have)
 2. A strategy section (how it will approach the task)
 3. Constraints (what it should NOT do)
 
+IMPORTANT:
+- DO NOT include "IMMEDIATE ACTION" or "Commands" sections.
+- DO NOT include any code blocks (markdown or plaintext).
+- DO NOT mention specific tool names like move_file or list_dir.
+- Focus on high-level persona and behavioral strategy.
+- The agent will receive its tool knowledge and technical constraints via the main system prompt.
+
 Format it in Markdown with proper headers. Be specific and actionable.`;
 
-    try {
-        const https = require('https');
-        const url = new URL(`${baseUrl}/chat/completions`);
+        console.log('Calling LLM for persona generation...');
+        let response = await provider.generateResponse('You are an expert persona generator. Respond with ONLY the AGENT.md content. NO markdown wrapper code blocks.', [
+            { role: 'user', content: prompt }
+        ]);
+        console.log('LLM response received.');
 
-        const body = JSON.stringify({
-            model,
-            messages: [{ role: 'user', content: prompt }],
-            temperature: 0.7,
-            max_tokens: 1000
-        });
+        if (response) {
+            // Strip problematic headers that invite pseudo-code
+            response = response.replace(/## (IMMEDIATE ACTION|ACTION PLAN|COMMANDS|EXECUTION)[\s\S]*$/i, '');
 
-        const options = {
-            hostname: url.hostname,
-            port: url.port || 443,
-            path: url.pathname,
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${apiKey}`,
-                'Content-Length': Buffer.byteLength(body)
-            }
-        };
+            // Strip ALL code blocks to prevent pseudo-code execution
+            response = response.replace(/```[\s\S]*?```/g, '');
+        }
 
-        return new Promise((resolve, reject) => {
-            const req = https.request(options, (res) => {
-                let data = '';
-                res.on('data', chunk => data += chunk);
-                res.on('end', () => {
-                    try {
-                        const json = JSON.parse(data);
-                        if (json.choices && json.choices[0]) {
-                            resolve(json.choices[0].message.content);
-                        } else {
-                            console.error('Unexpected API response:', json);
-                            resolve(fallbackTemplate(intent));
-                        }
-                    } catch (e) {
-                        console.error('Failed to parse LLM response:', e);
-                        resolve(fallbackTemplate(intent));
-                    }
-                });
-            });
-
-            req.on('error', (e) => {
-                console.error('LLM request failed:', e.message);
-                resolve(fallbackTemplate(intent));
-            });
-
-            req.write(body);
-            req.end();
-        });
+        return response.trim() || fallbackTemplate(intent);
     } catch (error) {
-        console.error('Error calling LLM:', error);
+        console.error('Error calling LLM:', error.message);
         return fallbackTemplate(intent);
     }
 }

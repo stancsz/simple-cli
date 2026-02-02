@@ -8,8 +8,8 @@ import { writeFile, readFile, mkdir, rm, stat } from 'fs/promises';
 import { existsSync } from 'fs';
 import { join } from 'path';
 import { tmpdir } from 'os';
-import { execute as readFilesExecute } from '../src/tools/readFiles.js';
-import { execute as writeFilesExecute } from '../src/tools/writeFiles.js';
+import { execute as readFilesExecute } from '../src/tools/read_files.js';
+import { execute as writeFilesExecute } from '../src/tools/write_files.js';
 
 describe('fileOperations', () => {
   let testDir: string;

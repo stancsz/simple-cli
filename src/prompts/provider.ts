@@ -67,6 +67,7 @@ export class PromptProvider {
 
     private loadProjectRules(cwd: string): string | null {
         const commonPaths = [
+            '.simple/workdir/AGENT.md',
             '.simple/AGENT.md',
             '.agent/AGENT.md',
             'AGENT.md',

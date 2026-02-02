@@ -7,6 +7,7 @@ import { Message } from '../context.js';
 import { EditBlock, applyFileEdits, parseEditBlocks, EditResult } from './editor.js';
 import { GitManager, generateCommitMessage } from './git.js';
 import * as ui from './ui.js';
+import type { TypeLLMResponse } from '@stan-chen/typellm';
 
 export interface AgentConfig {
   maxReflections: number;
@@ -38,25 +39,21 @@ export interface ReflectionContext {
 /**
  * Parse LLM response into structured format
  */
-export function parseResponse(response: string): AgentResponse {
-  // Extract thought/reasoning
-  const thoughtMatch = response.match(/<thought>([\s\S]*?)<\/thought>/i);
-  const thought = thoughtMatch?.[1]?.trim();
+export function parseResponse(response: TypeLLMResponse): AgentResponse {
+  const raw = response.raw || '';
 
-  // Extract edit blocks
-  const editBlocks = parseEditBlocks(response);
+  // Extract edit blocks - Aider style blocks are within the raw text
+  const editBlocks = parseEditBlocks(raw);
 
-  // Extract tool action
-  const jsonMatch = response.match(/\{[\s\S]*"tool"[\s\S]*\}/);
-  let action: AgentResponse['action'] = { tool: 'none', message: 'No action parsed' };
+  // Use structured fields from TypeLLM if available
+  const thought = response.thought;
+  const tool = response.tool || 'none';
+  const args = response.args as Record<string, unknown> || {};
+  const message = response.message || '';
 
-  if (jsonMatch) {
-    try {
-      action = JSON.parse(jsonMatch[0]);
-    } catch {
-      // Keep default
-    }
-  }
+  const action: AgentResponse['action'] = tool !== 'none'
+    ? { tool, args }
+    : { tool: 'none', message: message || (tool === 'none' ? 'No action parsed' : '') };
 
   return { thought, action, editBlocks };
 }
@@ -136,7 +133,7 @@ Provide SEARCH/REPLACE blocks for the necessary changes.
 export class Agent {
   private config: AgentConfig;
   private git: GitManager;
-  private generateFn: (messages: Message[]) => Promise<string>;
+  private generateFn: (messages: Message[]) => Promise<TypeLLMResponse>;
   private executeTool: (name: string, args: Record<string, unknown>) => Promise<unknown>;
   private lintFn?: (file: string) => Promise<{ passed: boolean; output: string }>;
   private testFn?: () => Promise<{ passed: boolean; output: string }>;
@@ -144,7 +141,7 @@ export class Agent {
   constructor(options: {
     config: AgentConfig;
     git: GitManager;
-    generateFn: (messages: Message[]) => Promise<string>;
+    generateFn: (messages: Message[]) => Promise<TypeLLMResponse>;
     executeTool: (name: string, args: Record<string, unknown>) => Promise<unknown>;
     lintFn?: (file: string) => Promise<{ passed: boolean; output: string }>;
     testFn?: () => Promise<{ passed: boolean; output: string }>;
@@ -228,13 +225,13 @@ export class Agent {
           const reflectionPrompt = buildReflectionPrompt({
             attempt,
             previousError: failed.map(f => f.error).join('\n'),
-            previousResponse: llmResponse,
+            previousResponse: llmResponse.raw || JSON.stringify(llmResponse),
             failedEdits: failed,
           });
 
           messages = [
             ...messages,
-            { role: 'assistant', content: llmResponse },
+            { role: 'assistant', content: llmResponse.raw || JSON.stringify(llmResponse) },
             { role: 'user', content: reflectionPrompt },
           ];
           continue;
@@ -257,7 +254,7 @@ export class Agent {
               const lintPrompt = buildLintErrorPrompt(file, lintResult.output);
               messages = [
                 ...messages,
-                { role: 'assistant', content: llmResponse },
+                { role: 'assistant', content: llmResponse.raw || JSON.stringify(llmResponse) },
                 { role: 'user', content: lintPrompt },
               ];
               continue;
@@ -275,7 +272,7 @@ export class Agent {
             const testPrompt = buildTestFailurePrompt(testResult.output);
             messages = [
               ...messages,
-              { role: 'assistant', content: llmResponse },
+              { role: 'assistant', content: llmResponse.raw || JSON.stringify(llmResponse) },
               { role: 'user', content: testPrompt },
             ];
             continue;
@@ -293,10 +290,10 @@ export class Agent {
               const commitMessage = await ui.spin(
                 'Generating commit message...',
                 () => generateCommitMessage(diff, async (prompt) => {
-                  const result = await this.generateFn([
+                  const res = await this.generateFn([
                     { role: 'user', content: prompt },
                   ]);
-                  return result;
+                  return res.message || res.thought || res.raw || '';
                 })
               );
 
@@ -347,7 +344,7 @@ export class Agent {
  */
 export async function summarizeHistory(
   history: Message[],
-  generateFn: (messages: Message[]) => Promise<string>,
+  generateFn: (messages: Message[]) => Promise<TypeLLMResponse>,
   maxMessages: number = 10
 ): Promise<Message[]> {
   if (history.length <= maxMessages) {
@@ -372,9 +369,11 @@ Provide a brief summary that captures:
 2. Key decisions made
 3. Important context for future messages`;
 
-  const summary = await generateFn([
+  const summaryRes = await generateFn([
     { role: 'user', content: summaryPrompt },
   ]);
+
+  const summary = summaryRes.message || summaryRes.thought || summaryRes.raw || 'No summary generated';
 
   return [
     history[0], // Keep first

@@ -7,8 +7,9 @@ import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { writeFile, mkdir, rm, access } from 'fs/promises';
 import { join } from 'path';
 import { tmpdir } from 'os';
-import { execute as runCommandExecute } from '../src/tools/runCommand.js';
-import { execute as writeFilesExecute } from '../src/tools/writeFiles.js';
+import { execute as runCommandExecute } from '../src/tools/run_command.js';
+import { execute as writeFilesExecute } from '../src/tools/write_files.js';
+const isWindows = process.platform === 'win32';
 import { constants } from 'fs';
 
 describe('security', () => {
@@ -25,8 +26,9 @@ describe('security', () => {
 
   describe('environment variable filtering', () => {
     it('should not pass API keys to shell commands', async () => {
+      const command = isWindows ? 'set' : 'env';
       const result = await runCommandExecute({
-        command: 'env',
+        command,
         env: {
           MY_API_KEY: 'secret-key-123',
           NORMAL_VAR: 'allowed'
@@ -38,8 +40,9 @@ describe('security', () => {
     });
 
     it('should not pass secret tokens to shell commands', async () => {
+      const command = isWindows ? 'set' : 'env';
       const result = await runCommandExecute({
-        command: 'env',
+        command,
         env: {
           SECRET_TOKEN: 'my-secret-token',
           PUBLIC_VAR: 'public-value'
@@ -51,8 +54,9 @@ describe('security', () => {
     });
 
     it('should not pass passwords to shell commands', async () => {
+      const command = isWindows ? 'set' : 'env';
       const result = await runCommandExecute({
-        command: 'env',
+        command,
         env: {
           DB_PASSWORD: 'super-secret-password',
           DB_HOST: 'localhost'
@@ -64,8 +68,9 @@ describe('security', () => {
     });
 
     it('should preserve safe environment variables', async () => {
+      const command = isWindows ? 'echo %PATH%' : 'echo $PATH';
       const result = await runCommandExecute({
-        command: 'echo $PATH',
+        command,
       });
 
       expect(result.exitCode).toBe(0);
@@ -76,8 +81,9 @@ describe('security', () => {
 
   describe('command timeout', () => {
     it('should timeout long-running commands', async () => {
+      const command = isWindows ? 'powershell -Command "Start-Sleep -Seconds 10"' : 'sleep 10';
       const result = await runCommandExecute({
-        command: 'sleep 10',
+        command,
         timeout: 500
       });
 
@@ -107,8 +113,11 @@ describe('security', () => {
   describe('output truncation', () => {
     it('should truncate very large stdout', async () => {
       // Generate large output
+      const command = isWindows
+        ? 'powershell -Command "1..5000 | ForEach-Object { \'test row\' }"'
+        : 'yes "test line" | head -n 20000';
       const result = await runCommandExecute({
-        command: 'yes "test line" | head -n 20000',
+        command,
         timeout: 10000
       });
 
@@ -122,7 +131,7 @@ describe('security', () => {
       await writeFile(join(testDir, 'marker.txt'), 'found');
 
       const result = await runCommandExecute({
-        command: 'ls',
+        command: isWindows ? 'dir /b' : 'ls',
         cwd: testDir
       });
 
@@ -196,26 +205,26 @@ describe('security', () => {
 
   describe('permission tiers', () => {
     it('should classify read operations correctly', async () => {
-      const { loadTools } = await import('../src/registry.js');
-      const tools = await loadTools();
+      const { loadAllTools } = await import('../src/registry.js');
+      const tools = await loadAllTools();
 
-      const readTool = tools.get('readFiles');
+      const readTool = tools.get('read_files');
       expect(readTool?.permission).toBe('read');
     });
 
     it('should classify write operations correctly', async () => {
-      const { loadTools } = await import('../src/registry.js');
-      const tools = await loadTools();
+      const { loadAllTools } = await import('../src/registry.js');
+      const tools = await loadAllTools();
 
-      const writeTool = tools.get('writeFiles');
+      const writeTool = tools.get('write_files');
       expect(writeTool?.permission).toBe('write');
     });
 
     it('should classify execute operations correctly', async () => {
-      const { loadTools } = await import('../src/registry.js');
-      const tools = await loadTools();
+      const { loadAllTools } = await import('../src/registry.js');
+      const tools = await loadAllTools();
 
-      const execTool = tools.get('runCommand');
+      const execTool = tools.get('run_command');
       expect(execTool?.permission).toBe('execute');
     });
   });
