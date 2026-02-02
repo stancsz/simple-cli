@@ -141,14 +141,18 @@ export class Worker extends EventEmitter {
       // Set timeout
       timeoutId = setTimeout(() => {
         if (!resolved) {
-          this.kill();
-          finish({
-            success: false,
-            filesChanged: [],
-            error: `Task timed out after ${timeout}ms`,
-            duration: timeout,
-            output: this.output,
-          });
+          (async () => {
+            try {
+              await this.kill();
+            } catch (e) { /* best-effort */ }
+            finish({
+              success: false,
+              filesChanged: [],
+              error: `Task timed out after ${timeout}ms`,
+              duration: timeout,
+              output: this.output,
+            });
+          })();
         }
       }, timeout);
 
@@ -216,16 +220,53 @@ export class Worker extends EventEmitter {
    * Kill the worker process
    */
   kill(): void {
-    if (this.process && !this.process.killed) {
-      this.process.kill('SIGTERM');
-      
-      // Force kill after 5 seconds
-      setTimeout(() => {
-        if (this.process && !this.process.killed) {
-          this.process.kill('SIGKILL');
+    // Keep backwards-compatible signature: return a Promise but allow callers to ignore it.
+    const graceMs = 5000;
+    const promise = (async () => {
+      if (!this.process) return;
+      if (this.process.killed) return;
+      this.isTerminating = true;
+      // stop reporting unexpected-exit while we intentionally terminate
+      try { this.process.off('exit', this.onUnexpectedExit); } catch (e) {}
+
+      // If IPC is available, politely ask the child to shutdown
+      try {
+        if ((this.process as any).connected) {
+          try { (this.process as any).send({ type: 'shutdown' }); } catch (e) {}
         }
-      }, 5000);
-    }
+      } catch (e) {}
+
+      try {
+        this.process.kill('SIGTERM');
+      } catch (e) {
+        // ignore
+      }
+
+      // wait for exit up to graceMs, otherwise force-kill
+      await new Promise((resolve) => {
+        let resolved = false;
+        const onExit = () => {
+          if (resolved) return;
+          resolved = true;
+          clearTimeout(timer);
+          resolve(undefined);
+        };
+        const timer = setTimeout(() => {
+          try { if (this.process && !this.process.killed) this.process.kill('SIGKILL'); } catch (e) {}
+          // still wait for exit event
+        }, graceMs);
+        try { this.process.once('exit', onExit); } catch (e) { resolve(undefined); }
+      });
+
+      try { this.process = null; } catch (e) {}
+    })();
+    // Log kill action for auditing
+    try {
+      const fs = require('fs');
+      const path = require('path');
+      fs.appendFileSync(path.join(process.cwd(), '.worker_kill.log'), `${new Date().toISOString()} kill requested for worker ${this.id}\n`);
+    } catch (e) {}
+    return promise as unknown as void;
   }
 
   /**

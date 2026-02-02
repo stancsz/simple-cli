@@ -30,13 +30,26 @@ interface CommandResult {
 
 // Restricted environment - remove sensitive variables
 const createSafeEnv = (additionalEnv?: Record<string, string>): Record<string, string> => {
-  // Inherit the full host environment to ensure tools like 'gh', 'git', etc.
-  // can access their configuration and credentials.
-  const env = { ...process.env } as Record<string, string>;
+  // Start from a minimal safe copy to avoid leaking secrets
+  const rawEnv = { ...process.env } as Record<string, string>;
 
-  // Add any additional env vars
+  const sensitivePattern = /(API_KEY$|_KEY$|TOKEN|SECRET|PASSWORD|VLM_API|OPENAI_API|GEMINI_API|NPM_ACCESS_TOKEN)/i;
+
+  const env: Record<string, string> = {};
+
+  for (const [k, v] of Object.entries(rawEnv)) {
+    if (!k) continue;
+    if (sensitivePattern.test(k)) continue; // skip sensitive keys
+    env[k] = v;
+  }
+
+  // Add any additional env vars provided explicitly, but still filter them
   if (additionalEnv) {
-    Object.assign(env, additionalEnv);
+    for (const [k, v] of Object.entries(additionalEnv)) {
+      if (!k) continue;
+      if (sensitivePattern.test(k)) continue; // never allow sensitive keys
+      env[k] = v;
+    }
   }
 
   return env;
@@ -51,6 +64,13 @@ export const execute = async (args: Record<string, unknown>): Promise<CommandRes
     let stdout = '';
     let stderr = '';
     let timedOut = false;
+
+    // Quick heuristic: detect obviously unbalanced quotes and treat as syntax error
+    const singleQuotes = (parsed.command.match(/'/g) || []).length;
+    const doubleQuotes = (parsed.command.match(/"/g) || []).length;
+    if (singleQuotes % 2 !== 0 || doubleQuotes % 2 !== 0) {
+      return resolve({ exitCode: 1, stdout: '', stderr: 'Invalid shell syntax (unbalanced quotes)', timedOut: false });
+    }
 
     const child = spawn(parsed.command, {
       shell: true,
@@ -83,6 +103,10 @@ export const execute = async (args: Record<string, unknown>): Promise<CommandRes
 
     child.on('close', (code) => {
       clearTimeout(timer);
+      // If command failed but provided no stderr, include the command for diagnostics
+      if ((code ?? 0) !== 0 && !stderr) {
+        stderr = `Command failed: ${parsed.command}`;
+      }
       resolve({
         exitCode: code ?? 1,
         stdout: stdout.trim(),

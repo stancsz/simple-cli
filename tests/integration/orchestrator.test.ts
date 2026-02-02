@@ -4,6 +4,7 @@
  */
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { parseResponse } from '../../src/lib/agent';
 import { writeFile, mkdir, rm, readFile } from 'fs/promises';
 import { join } from 'path';
 import { tmpdir } from 'os';
@@ -53,12 +54,15 @@ Then I will make the necessary changes.
 {"tool": "readFiles", "args": {"paths": ["test.txt"]}}
 `;
 
-      const jsonMatch = response.match(/\{[\s\S]*"tool"[\s\S]*\}/);
-      expect(jsonMatch).toBeDefined();
-
-      const action = JSON.parse(jsonMatch![0]);
-      expect(action.tool).toBe('read_files');
-      expect(action.args.paths).toEqual(['test.txt']);
+      // Use the repository's parser so tool names are normalized
+      const parsed = parseResponse(response);
+      expect(parsed.action).toBeDefined();
+      if ('tool' in parsed.action) {
+        expect(parsed.action.tool).toBe('read_files');
+        expect((parsed.action as any).args.paths).toEqual(['test.txt']);
+      } else {
+        throw new Error('No action parsed');
+      }
     });
 
     it('should handle response with no action', () => {

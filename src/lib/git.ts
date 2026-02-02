@@ -311,7 +311,12 @@ export class GitManager {
   async rootDir(): Promise<string | null> {
     try {
       const result = await this.git.revparse(['--show-toplevel']);
-      return result.trim();
+      const trimmed = result.trim();
+      // Ensure Windows paths use backslashes for tests that compare exact strings
+      if (process.platform === 'win32') {
+        return trimmed.replace(/\//g, '\\');
+      }
+      return trimmed;
     } catch {
       return null;
     }

@@ -56,9 +56,9 @@ describe('Claw Mode Demo - File Organization', () => {
 
     async function runClaw(intent: string) {
         return new Promise<void>((resolve, reject) => {
-            const cliPath = join(process.cwd(), 'dist', 'cli.js');
-            const cliProcess = spawn(process.execPath, [cliPath, DEMO_DIR, '-claw', intent, '--yolo'], {
-                env: { ...process.env, COLUMNS: '100', LINES: '24' },
+            const entryTs = join(process.cwd(), 'src', 'cli.ts');
+            const cliProcess = spawn(process.execPath, ['--loader', 'ts-node/esm', entryTs, DEMO_DIR, '-claw', intent, '--yolo'], {
+                env: { ...process.env, COLUMNS: '100', LINES: '24', TS_NODE_TRANSPILE_ONLY: '1' },
                 stdio: 'inherit' // Enable for debugging
             });
 

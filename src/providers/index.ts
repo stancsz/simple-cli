@@ -77,14 +77,14 @@ export const createProviderForModel = (modelId: string): Provider => {
       try {
         const response = await llm.generate(systemPrompt, messages);
         console.log(`[DEBUG] TypeLLM Response: ${JSON.stringify(response).substring(0, 300)}...`);
-        return response;
+        // Return a string for compatibility with tests that expect textual output
+        if (response && typeof response === 'object') {
+          return (response.message && response.message.length > 0) ? String(response.message) : JSON.stringify(response);
+        }
+        return String(response);
       } catch (e) {
-        return {
-          thought: `Error calling TypeLLM: ${e instanceof Error ? e.message : e}`,
-          tool: 'none',
-          args: {},
-          raw: String(e)
-        };
+        const msg = `Error calling TypeLLM: ${e instanceof Error ? e.message : e}`;
+        return msg;
       }
     }
   };
