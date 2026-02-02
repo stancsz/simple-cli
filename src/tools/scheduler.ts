@@ -1,77 +1,70 @@
 /**
  * Tool: scheduler
- * Schedule recurring tasks or one-time delayed commands.
- * [Simple-CLI AI-Created]
+ * Manage Ghost Tasks (scheduled executions) using crontab or schtasks
  */
 
-import { z } from 'zod';
 import { execSync } from 'child_process';
 import { platform } from 'os';
+import { z } from 'zod';
+import { resolve, join } from 'path';
 
 export const name = 'scheduler';
 
-export const description = 'Schedule a task to run at a specific interval or time.';
+export const description = 'Schedule a task to run automatically at intervals. CRITICAL for fulfilling "Every X minutes" or "Every day" intents. Tasks run in --ghost mode.';
 
 export const permission = 'execute' as const;
 
 export const schema = z.object({
-    action: z.enum(['create', 'list', 'delete']).describe('Operation to perform'),
-    taskName: z.string().describe('Unique name for the task'),
-    command: z.string().optional().describe('Command to execute (required for create)'),
-    interval: z.string().optional().describe('Interval (e.g., "1h", "daily", "weekly") - Windows format: "HOURLY", "DAILY", etc.'),
-    time: z.string().optional().describe('Specific time for the task (HH:mm)')
+    intent: z.string().describe('The task description/intent to execute'),
+    schedule: z.string().describe('Cron expression (e.g. "0 * * * *") or interval in minutes'),
+    name: z.string().optional().describe('Unique name for the task'),
+    targetDir: z.string().optional().describe('Working directory for the task')
 });
 
-export const execute = async (args: Record<string, unknown>) => {
-    const parsed = schema.parse(args);
+export const execute = async (args: Record<string, unknown>): Promise<string> => {
+    const { intent, schedule, name: taskName, targetDir } = schema.parse(args);
     const isWindows = platform() === 'win32';
+    const cwd = resolve(targetDir || process.cwd());
+    const id = taskName || `ghost-${Date.now()}`;
 
-    switch (parsed.action) {
-        case 'create':
-            if (!parsed.command) throw new Error('command is required for create action');
-            if (isWindows) {
-                return createWindowsTask(parsed.taskName, parsed.command, parsed.interval || 'HOURLY');
-            } else {
-                return createUnixCron(parsed.taskName, parsed.command, parsed.interval || '1h');
+    // Path to simple-cli. We assume it's installed globally or use the current one.
+    // For local dev, we use the absolute path to dist/cli.js
+    const cliPath = resolve(join(process.cwd(), 'dist', 'cli.js'));
+    const command = `node "${cliPath}" "${cwd}" -claw "${intent}" --ghost --yolo`;
+
+    try {
+        if (isWindows) {
+            const interval = parseInt(schedule) || 60;
+            const escapedCommand = command.replace(/"/g, '\\"');
+            try {
+                execSync(`schtasks /create /sc minute /mo ${interval} /tn "${id}" /tr "${escapedCommand}" /f`);
+                return `Task scheduled on Windows: ${id} Every ${interval} minutes.`;
+            } catch (e: any) {
+                return `Error scheduling on Windows: ${e.message}`;
             }
-        case 'list':
-            if (isWindows) {
-                return execSync('schtasks /query /fo LIST', { encoding: 'utf-8' });
-            } else {
-                return execSync('crontab -l', { encoding: 'utf-8' });
+        } else {
+            try {
+                // Determine cron expression
+                let cronExpr = schedule;
+                if (!schedule.includes('*')) {
+                    const mins = parseInt(schedule) || 60;
+                    cronExpr = `*/${mins} * * * *`;
+                }
+
+                const cronEntry = `${cronExpr} ${command} # ${id}`;
+                let currentCron = '';
+                try {
+                    currentCron = execSync('crontab -l', { encoding: 'utf-8' });
+                } catch (e) { /* ignore empty crontab */ }
+
+                const newCron = currentCron.trim() + '\n' + cronEntry + '\n';
+                execSync(`echo "${newCron}" | crontab -`);
+                return `Task scheduled on Linux/Mac: ${id} with schedule ${cronExpr}`;
+            } catch (e: any) {
+                return `Error scheduling on Linux/Mac: ${e.message}`;
             }
-        case 'delete':
-            if (isWindows) {
-                return execSync(`schtasks /delete /tn "${parsed.taskName}" /f`, { encoding: 'utf-8' });
-            } else {
-                // Crontab deletion is more complex, for now just a mockup or simple grep -v
-                return 'Crontab deletion not fully implemented in this demo.';
-            }
+        }
+    } catch (error) {
+        throw new Error(`Failed to schedule task: ${error instanceof Error ? error.message : error}`);
     }
 };
-
-function createWindowsTask(name: string, command: string, interval: string) {
-    // Simplistic Windows schtasks wrapper
-    const sc = interval.toUpperCase() === '1H' ? 'HOURLY' : interval.toUpperCase();
-    const cmd = `schtasks /create /sc ${sc} /tn "${name}" /tr "${command.replace(/"/g, '\\"')}" /f`;
-    try {
-        const output = execSync(cmd, { encoding: 'utf-8' });
-        return `Task "${name}" created successfully on Windows.\n${output}`;
-    } catch (e: any) {
-        return `Failed to create Windows task: ${e.stderr || e.message}`;
-    }
-}
-
-function createUnixCron(name: string, command: string, interval: string) {
-    // Simplistic cron wrapper
-    let cronInterval = '0 * * * *'; // Hourly default
-    if (interval === 'daily') cronInterval = '0 0 * * *';
-
-    const cronLine = `${cronInterval} ${command} # ${name}`;
-    try {
-        execSync(`(crontab -l 2>/dev/null; echo "${cronLine}") | crontab -`, { encoding: 'utf-8' });
-        return `Task "${name}" added to crontab.`;
-    } catch (e: any) {
-        return `Failed to add to crontab: ${e.message}`;
-    }
-}

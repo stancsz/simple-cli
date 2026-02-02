@@ -64,7 +64,8 @@ export default class GitCommit extends Command {
 
       message = await ui.spin('Generating commit message...', async () => {
         return generateCommitMessage(currentDiff, async (prompt) => {
-          return provider.generateResponse(prompt, []);
+          const res = await provider.generateResponse(prompt, []);
+          return res.message || res.thought || res.raw || '';
         });
       });
 

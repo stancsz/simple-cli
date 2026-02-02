@@ -22,7 +22,7 @@ I need to analyze the code first.
 Then make changes.
 </thought>
 
-{"tool": "readFiles", "args": {"paths": ["src/index.ts"]}}
+{"tool": "read_files", "args": {"paths": ["src/index.ts"]}}
 `;
 
       const result = parseResponse(response);
@@ -35,13 +35,13 @@ Then make changes.
       const response = `
 <thought>Let me read the file</thought>
 
-{"tool": "readFiles", "args": {"paths": ["test.txt"]}}
+{"tool": "read_files", "args": {"paths": ["test.txt"]}}
 `;
 
       const result = parseResponse(response);
 
       expect(result.action).toEqual({
-        tool: 'readFiles',
+        tool: 'read_files',
         args: { paths: ['test.txt'] },
       });
     });
@@ -63,7 +63,7 @@ Then make changes.
       const response = `
 <thought>Let me help</thought>
 
-{"tool": "readFiles" broken json
+{"tool": "read_files" broken json
 `;
 
       const result = parseResponse(response);

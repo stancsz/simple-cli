@@ -22,13 +22,13 @@ async function testConnection() {
 
         const duration = Date.now() - start;
 
-        if (response && response.includes('PONG')) {
+        if (response && (response.raw?.includes('PONG') || response.message?.includes('PONG'))) {
             console.log(pc.green(`✅ Success! Received response in ${duration}ms`));
-            console.log(pc.dim(`   Output: "${response}"`));
+            console.log(pc.dim(`   Output: "${response.message || response.thought || response.raw}"`));
             process.exit(0);
         } else {
             console.log(pc.red('❌ Received unexpected response:'));
-            console.log(response);
+            console.log(JSON.stringify(response, null, 2));
             process.exit(1);
         }
     } catch (error) {

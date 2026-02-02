@@ -7,7 +7,7 @@ import { Project, ScriptTarget } from 'ts-morph';
 import { z } from 'zod';
 import { readFile } from 'fs/promises';
 
-export const name = 'analyzeFile';
+export const name = 'analyze_file';
 
 export const description = 'Perform structured analysis of a TypeScript/JavaScript file to extract classes, functions, and interfaces.';
 

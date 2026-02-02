@@ -56,7 +56,7 @@ When making changes to files:
 2. Make precise, targeted changes using search/replace
 3. Verify changes don't break existing functionality
 4. Follow the existing code style`,
-    tools: ['readFiles', 'writeFiles', 'runCommand', 'glob', 'grep', 'lint', 'reloadTools'],
+    tools: ['read_files', 'write_files', 'run_command', 'glob', 'grep', 'lint', 'reload_tools', 'scheduler'],
   },
 
   // Architect skill for planning
@@ -78,7 +78,7 @@ When working on architecture:
 
 Focus on high-level design rather than implementation details.
 Generate diagrams and documentation when helpful.`,
-    tools: ['readFiles', 'glob', 'grep', 'memory'],
+    tools: ['read_files', 'glob', 'grep', 'memory'],
     modelPreference: 'orchestrator',
   },
 
@@ -100,7 +100,7 @@ You should NOT:
 - Create new files
 
 Always read files before answering questions about them.`,
-    tools: ['readFiles', 'glob', 'grep'],
+    tools: ['read_files', 'glob', 'grep'],
   },
 
   // Help/docs skill
@@ -116,7 +116,7 @@ Always read files before answering questions about them.`,
 
 Be concise and provide examples when helpful.
 Reference official documentation when available.`,
-    tools: ['readFiles', 'scrapeUrl'],
+    tools: ['read_files', 'scrape_url'],
   },
 
   // Test skill
@@ -137,7 +137,7 @@ Test guidelines:
 - Use appropriate mocking when needed
 
 After writing tests, run them to verify they pass.`,
-    tools: ['readFiles', 'writeFiles', 'runCommand', 'glob', 'grep', 'lint'],
+    tools: ['read_files', 'write_files', 'run_command', 'glob', 'grep', 'lint', 'scheduler'],
   },
 
   // Debug skill
@@ -157,7 +157,7 @@ Debugging tips:
 - Check recent changes that might have caused the issue
 - Look for common patterns (null checks, async issues, etc.)
 - Use the linter to catch syntax errors`,
-    tools: ['readFiles', 'writeFiles', 'runCommand', 'grep', 'lint', 'git'],
+    tools: ['read_files', 'write_files', 'run_command', 'grep', 'lint', 'git', 'scheduler'],
   },
 
   // Refactor skill
@@ -179,7 +179,7 @@ Refactoring principles:
 - Follow SOLID principles
 
 Always run tests after refactoring to ensure nothing broke.`,
-    tools: ['readFiles', 'writeFiles', 'runCommand', 'glob', 'grep', 'lint', 'git'],
+    tools: ['read_files', 'write_files', 'run_command', 'glob', 'grep', 'lint', 'git', 'scheduler'],
   },
 
   // Review skill
@@ -196,7 +196,7 @@ Always run tests after refactoring to ensure nothing broke.`,
 
 Provide constructive feedback with specific suggestions.
 Prioritize critical issues over minor style concerns.`,
-    tools: ['readFiles', 'glob', 'grep', 'git', 'lint'],
+    tools: ['read_files', 'glob', 'grep', 'git', 'lint'],
   },
 
   // Shell skill
@@ -215,7 +215,7 @@ Safety guidelines:
 - Use safe defaults (no force flags unless needed)
 - Be careful with destructive operations
 - Test commands before applying to production`,
-    tools: ['runCommand', 'readFiles', 'writeFiles', 'glob'],
+    tools: ['run_command', 'read_files', 'write_files', 'glob'],
   },
 
   // Git skill
@@ -235,7 +235,7 @@ Git guidelines:
 - Make small, focused commits
 - Keep branches up to date
 - Review changes before committing`,
-    tools: ['git', 'readFiles', 'glob', 'grep'],
+    tools: ['git', 'read_files', 'glob', 'grep'],
   },
 };
 

@@ -263,7 +263,7 @@ export class ContextManager {
 
     // CLAW MODE: Inject JIT Agent Persona
     const agentFile = resolve(this.cwd, '.simple', 'workdir', 'AGENT.md');
-    if (process.argv.includes('--claw') && existsSync(agentFile)) {
+    if ((process.argv.includes('--claw') || process.argv.includes('-claw')) && existsSync(agentFile)) {
       try {
         const agentPersona = readFileSync(agentFile, 'utf-8');
         parts.push('\n\n' + agentPersona);

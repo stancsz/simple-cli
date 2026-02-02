@@ -2,7 +2,7 @@
  * Provider Bridge: Unified LLM interface via Vercel AI SDK
  * Support for OpenAI, Anthropic, Google (Gemini), and custom endpoints.
  */
-import { createTypeLLM, type TypeLLM as TypeLLMInstance, type TypeLLMConfig } from '@stancsz/typellm';
+import { createTypeLLM, type TypeLLM as TypeLLMInstance, type TypeLLMConfig, type TypeLLMResponse } from '@stan-chen/typellm';
 
 export interface Message {
   role: 'user' | 'assistant' | 'system';
@@ -12,7 +12,7 @@ export interface Message {
 export interface Provider {
   name: string;
   model: string;
-  generateResponse: (systemPrompt: string, messages: Message[]) => Promise<string>;
+  generateResponse: (systemPrompt: string, messages: Message[]) => Promise<TypeLLMResponse>;
 }
 
 /**
@@ -65,29 +65,26 @@ export const createProviderForModel = (modelId: string): Provider => {
     baseURL: baseURL,
     apiKey: providerType === 'openai' ? process.env.OPENAI_API_KEY :
       providerType === 'google' ? process.env.GEMINI_API_KEY || process.env.GOOGLE_GENERATIVE_AI_API_KEY :
-        undefined,
+        providerType === 'anthropic' ? process.env.ANTHROPIC_API_KEY :
+          undefined,
     temperature: 0
   });
 
   return {
     name: providerType,
     model: actualModel,
-    generateResponse: async (systemPrompt: string, messages: Message[]): Promise<string> => {
+    generateResponse: async (systemPrompt: string, messages: Message[]): Promise<TypeLLMResponse> => {
       try {
         const response = await llm.generate(systemPrompt, messages);
-
-        // Return normalized JSON string for CLI to parse
-        const normalized = JSON.stringify({
-          thought: response.thought,
-          tool: response.tool,
-          args: response.args,
-          message: response.message
-        });
-
-        console.log(`[DEBUG] TypeLLM Response: ${normalized.substring(0, 300)}...`);
-        return normalized;
+        console.log(`[DEBUG] TypeLLM Response: ${JSON.stringify(response).substring(0, 300)}...`);
+        return response;
       } catch (e) {
-        return `Error calling TypeLLM: ${e instanceof Error ? e.message : e}`;
+        return {
+          thought: `Error calling TypeLLM: ${e instanceof Error ? e.message : e}`,
+          tool: 'none',
+          args: {},
+          raw: String(e)
+        };
       }
     }
   };
@@ -97,7 +94,8 @@ export const createProviderForModel = (modelId: string): Provider => {
  * Creates the default provider
  */
 export const createProvider = (): Provider => {
-  const model = process.env.OPENAI_MODEL || process.env.GEMINI_MODEL || 'gpt-4o-mini';
+  const isClaw = process.argv.includes('--claw') || process.argv.includes('-claw');
+  const model = (isClaw ? process.env.CLAW_MODEL : null) || process.env.OPENAI_MODEL || process.env.GEMINI_MODEL || 'gpt-4o-mini';
   console.log(`🤖 Using TypeLLM with model: ${model}`);
   return createProviderForModel(model);
 };

@@ -14,9 +14,9 @@ describe('registry', () => {
       const tools = await loadTools();
 
       expect(tools.size).toBeGreaterThanOrEqual(3);
-      expect(tools.has('readFiles')).toBe(true);
-      expect(tools.has('writeFiles')).toBe(true);
-      expect(tools.has('runCommand')).toBe(true);
+      expect(tools.has('read_files')).toBe(true);
+      expect(tools.has('write_files')).toBe(true);
+      expect(tools.has('run_command')).toBe(true);
     });
 
     it('should have correct structure for each tool', async () => {
@@ -37,9 +37,9 @@ describe('registry', () => {
     it('should have correct permissions for tools', async () => {
       const tools = await loadTools();
 
-      expect(tools.get('readFiles')?.permission).toBe('read');
-      expect(tools.get('writeFiles')?.permission).toBe('write');
-      expect(tools.get('runCommand')?.permission).toBe('execute');
+      expect(tools.get('read_files')?.permission).toBe('read');
+      expect(tools.get('write_files')?.permission).toBe('write');
+      expect(tools.get('run_command')?.permission).toBe('execute');
     });
   });
 
@@ -48,9 +48,9 @@ describe('registry', () => {
       const tools = await loadTools();
       const definitions = getToolDefinitions(tools);
 
-      expect(definitions).toContain('readFiles');
-      expect(definitions).toContain('writeFiles');
-      expect(definitions).toContain('runCommand');
+      expect(definitions).toContain('read_files');
+      expect(definitions).toContain('write_files');
+      expect(definitions).toContain('run_command');
       expect(definitions).toContain('Permission:');
     });
 
@@ -77,10 +77,10 @@ describe('registry', () => {
       await rm(testDir, { recursive: true, force: true });
     });
 
-    it('should execute readFiles tool via registry', async () => {
+    it('should execute read_files tool via registry', async () => {
       const tools = await loadTools();
-      const readFiles = tools.get('readFiles');
-      
+      const readFiles = tools.get('read_files');
+
       const filePath = join(testDir, 'test.txt');
       await writeFile(filePath, 'test content');
 
@@ -90,10 +90,10 @@ describe('registry', () => {
       expect((result as any[])[0].content).toBe('test content');
     });
 
-    it('should execute writeFiles tool via registry', async () => {
+    it('should execute write_files tool via registry', async () => {
       const tools = await loadTools();
-      const writeFiles = tools.get('writeFiles');
-      
+      const writeFiles = tools.get('write_files');
+
       const filePath = join(testDir, 'new.txt');
 
       const result = await writeFiles!.execute({
@@ -103,9 +103,9 @@ describe('registry', () => {
       expect((result as any[])[0].success).toBe(true);
     });
 
-    it('should execute runCommand tool via registry', async () => {
+    it('should execute run_command tool via registry', async () => {
       const tools = await loadTools();
-      const runCommand = tools.get('runCommand');
+      const runCommand = tools.get('run_command');
 
       const result = await runCommand!.execute({ command: 'echo hello' });
 
@@ -115,9 +115,9 @@ describe('registry', () => {
   });
 
   describe('tool schema validation', () => {
-    it('should validate readFiles input', async () => {
+    it('should validate read_files input', async () => {
       const tools = await loadTools();
-      const readFiles = tools.get('readFiles');
+      const readFiles = tools.get('read_files');
 
       // Valid input
       expect(() => readFiles!.inputSchema.parse({ paths: ['file.txt'] })).not.toThrow();
@@ -126,9 +126,9 @@ describe('registry', () => {
       expect(() => readFiles!.inputSchema.parse({})).toThrow();
     });
 
-    it('should validate writeFiles input', async () => {
+    it('should validate write_files input', async () => {
       const tools = await loadTools();
-      const writeFiles = tools.get('writeFiles');
+      const writeFiles = tools.get('write_files');
 
       // Valid input
       expect(() => writeFiles!.inputSchema.parse({
@@ -139,9 +139,9 @@ describe('registry', () => {
       expect(() => writeFiles!.inputSchema.parse({})).toThrow();
     });
 
-    it('should validate runCommand input', async () => {
+    it('should validate run_command input', async () => {
       const tools = await loadTools();
-      const runCommand = tools.get('runCommand');
+      const runCommand = tools.get('run_command');
 
       // Valid input
       expect(() => runCommand!.inputSchema.parse({ command: 'echo test' })).not.toThrow();

@@ -16,29 +16,34 @@ import { mkdirSync, writeFileSync, existsSync, rmSync, readFileSync, readdirSync
 import { join } from 'path';
 
 const DEMO_DIR = join(process.cwd(), 'demo_downloads');
-const TIMEOUT = 120000; // 2 minutes for double run
+const TIMEOUT = 300000; // 5 minutes for double run with potentially slow LLMs
 
 describe('Claw Mode Demo - File Organization', () => {
     beforeAll(() => {
-        // Clean up any existing demo directory
-        if (existsSync(DEMO_DIR)) {
-            rmSync(DEMO_DIR, { recursive: true, force: true });
+        try {
+            console.log('🧹 Cleaning existing demo dir...');
+            if (existsSync(DEMO_DIR)) {
+                rmSync(DEMO_DIR, { recursive: true, force: true });
+            }
+
+            console.log('📂 Creating demo directory structure...');
+            mkdirSync(DEMO_DIR, { recursive: true });
+            mkdirSync(join(DEMO_DIR, 'Photos'), { recursive: true });
+            mkdirSync(join(DEMO_DIR, 'Documents'), { recursive: true });
+            mkdirSync(join(DEMO_DIR, 'Trash'), { recursive: true });
+
+            console.log('📝 Creating initial sample files...');
+            writeFileSync(join(DEMO_DIR, 'vacation.jpg'), 'fake image data');
+            writeFileSync(join(DEMO_DIR, 'invoice.pdf'), 'fake document data');
+            writeFileSync(join(DEMO_DIR, 'setup.msi'), 'fake installer data');
+            writeFileSync(join(DEMO_DIR, 'receipt_starbucks.txt'), 'Receipt\nTotal: $12.50\nDate: 2026-01-31');
+            writeFileSync(join(DEMO_DIR, 'Expenses.csv'), 'Date,Amount,Description\n');
+
+            console.log('✅ Demo environment created at:', DEMO_DIR);
+        } catch (error) {
+            console.error('❌ beforeAll failed:', error);
+            throw error;
         }
-
-        // Create demo directory structure
-        mkdirSync(DEMO_DIR);
-        mkdirSync(join(DEMO_DIR, 'Photos'));
-        mkdirSync(join(DEMO_DIR, 'Documents'));
-        mkdirSync(join(DEMO_DIR, 'Trash'));
-
-        // Create initial sample files
-        writeFileSync(join(DEMO_DIR, 'vacation.jpg'), 'fake image data');
-        writeFileSync(join(DEMO_DIR, 'invoice.pdf'), 'fake document data');
-        writeFileSync(join(DEMO_DIR, 'setup.msi'), 'fake installer data');
-        writeFileSync(join(DEMO_DIR, 'receipt_starbucks.txt'), 'Receipt\nTotal: $12.50\nDate: 2026-01-31');
-        writeFileSync(join(DEMO_DIR, 'Expenses.csv'), 'Date,Amount,Description\n');
-
-        console.log('✅ Demo environment created at:', DEMO_DIR);
     });
 
     afterAll(() => {
@@ -51,20 +56,16 @@ describe('Claw Mode Demo - File Organization', () => {
 
     async function runClaw(intent: string) {
         return new Promise<void>((resolve, reject) => {
-            const cliProcess = spawn('node', [
-                'dist/cli.js',
-                DEMO_DIR,
-                '-claw',
-                intent
-            ], {
-                cwd: process.cwd(),
-                stdio: ['pipe', 'pipe', 'pipe']
+            const cliPath = join(process.cwd(), 'dist', 'cli.js');
+            const cliProcess = spawn(process.execPath, [cliPath, DEMO_DIR, '-claw', intent, '--yolo'], {
+                env: { ...process.env, COLUMNS: '100', LINES: '24' },
+                stdio: 'inherit' // Enable for debugging
             });
 
             const timeout = setTimeout(() => {
                 cliProcess.kill();
                 resolve(); // Consider timeout as finished for demo
-            }, 45000);
+            }, 120000); // 2 minutes per pass for slower models
 
             cliProcess.on('close', (code) => {
                 clearTimeout(timeout);

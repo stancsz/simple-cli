@@ -19,10 +19,30 @@ export async function generateJitAgent(intent: string, targetDir: string): Promi
         fs.mkdirSync(path.join(memoryDir, 'graph'), { recursive: true });
     }
 
+    // Load recent memory context if available
+    const reflectionsDir = path.join(memoryDir, 'reflections');
+    let memoryContext = '';
+    try {
+        if (fs.existsSync(reflectionsDir)) {
+            const files = fs.readdirSync(reflectionsDir)
+                .filter(f => f.endsWith('.md'))
+                .sort()
+                .reverse()
+                .slice(0, 3);
+
+            for (const f of files) {
+                const content = fs.readFileSync(path.join(reflectionsDir, f), 'utf-8');
+                memoryContext += `\n--- Previous Reflection (${f}) ---\n${content}\n`;
+            }
+        }
+    } catch (e) { /* ignore */ }
+
     try {
         const provider = createProvider();
 
         const prompt = `You are an expert at generating specialized agent personas. Create a detailed AGENT.md file for an AI agent whose sole purpose is: "${intent}".
+        
+        ${memoryContext ? `HISTORICAL CONTEXT:\n${memoryContext}\nNOTE: If the intent implies a recurring task (e.g. contains "every", "maintain", "audit", "check"), you MUST IGNORE past success markers. Perform the task afresh based on current file state.` : ''}
 
 The AGENT.md should include:
 1. A persona description (who is this agent, what expertise does it have)
@@ -31,9 +51,8 @@ The AGENT.md should include:
 
 IMPORTANT:
 - YOU ARE THE AUTOMATION. Do not write scripts for the user to run. Use the tools yourself.
-- DO NOT suggest "waiting" or "scheduling". Perform the FIRST SCAN and ORGANIZATION right now.
-- DO NOT mention "5-minute intervals" or "background execution" as something you need to set up; just perform the actions when called.
-- Use list_dir to see files, move_file to organize them, write_to_file to log data.
+- DO NOT suggest "waiting". Perform the FIRST SCAN and ORGANIZATION right now.
+- Use list_dir to see files, move_file to organize them, write_to_file to log data, scheduler to automate recurring tasks.
 - DO NOT include "IMMEDIATE ACTION" or pseudo-code sections.
 - The agent will receive its tool knowledge and technical constraints via the main system prompt.
 
@@ -51,15 +70,18 @@ Format it in Markdown with proper headers. Be brief, technical, and action-orien
         ]);
 
         const response = await Promise.race([responsePromise, timeoutPromise]);
+        const res = response as any; // Cast for now as TypeLLMResponse might not be globally shared yet
 
         console.log(pc.dim('  LLM response received.'));
 
         let content: string;
-        if (!response || response.startsWith('Error calling LLM:')) {
+        if (!res || res.thought?.startsWith('Error calling TypeLLM:')) {
             console.warn(pc.yellow('⚠️  LLM call failed. Using fallback blueprint.'));
             content = fallbackTemplate(intent);
         } else {
-            let processed = response;
+            // Use the most likely field for the Markdown content
+            let processed = res.message || res.thought || res.raw || '';
+
             // Extremely aggressive stripping of pseudo-code and action blocks
             // Remove everything after these headers (case insensitive)
             processed = processed.split(/## (IMMEDIATE ACTION|ACTION PLAN|COMMANDS|EXECUTION|NEXT STEPS|ACTION)/i)[0];

@@ -36,7 +36,7 @@ I need to read the file first to understand its contents.
 Then I will make the necessary changes.
 </thought>
 
-{"tool": "readFiles", "args": {"paths": ["test.txt"]}}
+{"tool": "read_files", "args": {"paths": ["test.txt"]}}
 `;
 
       const thoughtMatch = response.match(/<thought>([\s\S]*?)<\/thought>/);
@@ -57,7 +57,7 @@ Then I will make the necessary changes.
       expect(jsonMatch).toBeDefined();
 
       const action = JSON.parse(jsonMatch![0]);
-      expect(action.tool).toBe('readFiles');
+      expect(action.tool).toBe('read_files');
       expect(action.args.paths).toEqual(['test.txt']);
     });
 
@@ -79,7 +79,7 @@ Then I will make the necessary changes.
       const response = `
 <thought>Let me help</thought>
 
-{"tool": "readFiles" this is broken
+{"tool": "read_files" this is broken
 `;
 
       const jsonMatch = response.match(/\{[\s\S]*"tool"[\s\S]*\}/);
@@ -122,8 +122,8 @@ I will need to:
       await writeFile(testFile, 'original content');
 
       // Import tools
-      const { execute: readExecute } = await import('../../src/tools/readFiles.js');
-      const { execute: writeExecute } = await import('../../src/tools/writeFiles.js');
+      const { execute: readExecute } = await import('../../src/tools/read_files.js');
+      const { execute: writeExecute } = await import('../../src/tools/write_files.js');
 
       // Read file
       const readResult = await readExecute({ paths: [testFile] });
@@ -144,7 +144,7 @@ I will need to:
     });
 
     it('should handle file not found gracefully', async () => {
-      const { execute: readExecute } = await import('../../src/tools/readFiles.js');
+      const { execute: readExecute } = await import('../../src/tools/read_files.js');
 
       const result = await readExecute({
         paths: [join(testDir, 'nonexistent.txt')]
@@ -155,10 +155,11 @@ I will need to:
     });
 
     it('should handle command execution with environment', async () => {
-      const { execute: runExecute } = await import('../../src/tools/runCommand.js');
+      const { execute: runExecute } = await import('../../src/tools/run_command.js');
 
+      const command = process.platform === 'win32' ? 'echo %TEST_VAR%' : 'echo $TEST_VAR';
       const result = await runExecute({
-        command: 'echo $TEST_VAR',
+        command,
         env: { TEST_VAR: 'hello_world' }
       });
 
@@ -200,39 +201,39 @@ I will need to:
 
   describe('permission handling', () => {
     it('should identify read permissions correctly', async () => {
-      const { loadTools } = await import('../../src/registry.js');
-      const tools = await loadTools();
+      const { loadAllTools } = await import('../../src/registry.js');
+      const tools = await loadAllTools();
 
-      const readFiles = tools.get('readFiles');
+      const readFiles = tools.get('read_files');
       expect(readFiles?.permission).toBe('read');
     });
 
     it('should identify write permissions correctly', async () => {
-      const { loadTools } = await import('../../src/registry.js');
-      const tools = await loadTools();
+      const { loadAllTools } = await import('../../src/registry.js');
+      const tools = await loadAllTools();
 
-      const writeFiles = tools.get('writeFiles');
+      const writeFiles = tools.get('write_files');
       expect(writeFiles?.permission).toBe('write');
     });
 
     it('should identify execute permissions correctly', async () => {
-      const { loadTools } = await import('../../src/registry.js');
-      const tools = await loadTools();
+      const { loadAllTools } = await import('../../src/registry.js');
+      const tools = await loadAllTools();
 
-      const runCommand = tools.get('runCommand');
+      const runCommand = tools.get('run_command');
       expect(runCommand?.permission).toBe('execute');
     });
   });
 
   describe('system prompt building', () => {
     it('should include tool definitions in prompt', async () => {
-      const { loadTools, getToolDefinitions } = await import('../../src/registry.js');
-      const tools = await loadTools();
+      const { loadAllTools, getToolDefinitions } = await import('../../src/registry.js');
+      const tools = await loadAllTools();
       const definitions = getToolDefinitions(tools);
 
-      expect(definitions).toContain('readFiles');
-      expect(definitions).toContain('writeFiles');
-      expect(definitions).toContain('runCommand');
+      expect(definitions).toContain('read_files');
+      expect(definitions).toContain('write_files');
+      expect(definitions).toContain('run_command');
       expect(definitions).toContain('Permission:');
     });
 

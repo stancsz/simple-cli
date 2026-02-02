@@ -9,6 +9,7 @@ import { join, dirname, basename, extname } from 'path';
 import { fileURLToPath, pathToFileURL } from 'url';
 import { z } from 'zod';
 import { getMCPManager, type MCPTool } from './mcp/manager.js';
+import YAML from 'yaml';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const TOOLS_DIR = join(__dirname, 'tools');
@@ -60,10 +61,10 @@ function extractDocFromComments(content: string): string {
 
 /**
  * Parses a tool definition from a Markdown file (.md) or string
+ * Supports YAML frontmatter as per OpenClaw PRD.
  */
-function parseMarkdownTool(content: string, filename: string): any {
-  const lines = content.split('\n');
-  const meta: any = {
+export function getMeta(content: string, filename: string): any {
+  let meta: any = {
     name: basename(filename, extname(filename)),
     description: '',
     command: '',
@@ -71,6 +72,24 @@ function parseMarkdownTool(content: string, filename: string): any {
     permission: 'execute'
   };
 
+  // 1. Try YAML frontmatter (OpenClaw style)
+  if (content.startsWith('---')) {
+    const end = content.indexOf('---', 3);
+    if (end > -1) {
+      try {
+        const yamlStr = content.slice(3, end);
+        const yamlMeta = YAML.parse(yamlStr);
+        if (yamlMeta) {
+          return { ...meta, ...yamlMeta };
+        }
+      } catch {
+        // Fall back to manual parsing if YAML fails
+      }
+    }
+  }
+
+  // 2. Fallback to manual Markdown section parsing
+  const lines = content.split('\n');
   let currentSection = '';
 
   for (const line of lines) {
@@ -96,11 +115,31 @@ function parseMarkdownTool(content: string, filename: string): any {
 
 // Helper to create a Tool from metadata (JSON or MD)
 function createScriptTool(meta: any, source: 'project' | 'builtin', spec?: string): Tool {
+  let inputSchema: z.ZodType = z.object({}).passthrough();
+
+  if (meta.parameters && typeof meta.parameters === 'object') {
+    const shape: Record<string, z.ZodTypeAny> = {};
+    for (const [key, param] of Object.entries(meta.parameters)) {
+      const p = param as any;
+      let schema: z.ZodTypeAny = z.string();
+      if (p.type === 'number' || p === 'number') schema = z.number();
+      else if (p.type === 'boolean' || p === 'boolean') schema = z.boolean();
+      else if (p.type === 'array' || p === 'array') schema = z.array(z.any());
+      else if (p.type === 'object' || p === 'object') schema = z.object({}).passthrough();
+
+      if (typeof p === 'object' && p.description) {
+        schema = schema.describe(p.description);
+      }
+      shape[key] = schema;
+    }
+    inputSchema = z.object(shape).passthrough();
+  }
+
   return {
     name: meta.name,
     description: meta.description || `Script tool: ${meta.command}`,
     permission: meta.permission || 'execute',
-    inputSchema: z.object({}).passthrough(), // Flexible schema for scripts
+    inputSchema,
     source,
     specification: spec,
     execute: async (args: Record<string, unknown>) => {
@@ -112,10 +151,16 @@ function createScriptTool(meta: any, source: 'project' | 'builtin', spec?: strin
           finalCommand = `powershell -ExecutionPolicy Bypass -File ${finalCommand}`;
         }
 
+        const env: Record<string, string> = { ...process.env, TOOL_INPUT: JSON.stringify(args) };
+        // Pass arguments as INPUT_{NAME} for OpenClaw parity
+        for (const [key, value] of Object.entries(args)) {
+          env[`INPUT_${key.toUpperCase()}`] = typeof value === 'string' ? value : JSON.stringify(value);
+        }
+
         const child = spawn(finalCommand, {
           shell: true,
           cwd: process.cwd(),
-          env: { ...process.env, TOOL_INPUT: JSON.stringify(args) },
+          env,
         });
 
         let stdout = '';
@@ -172,7 +217,7 @@ async function loadToolsFromDir(dir: string, source: 'builtin' | 'project'): Pro
         if (!tools.has(item)) {
           const doc = await findDocInDir(fullPath, item);
           if (doc && doc.file.endsWith('.md')) {
-            const meta = parseMarkdownTool(doc.content, doc.file);
+            const meta = getMeta(doc.content, doc.file);
             if (meta && meta.command) {
               tools.set(meta.name, createScriptTool(meta, source, doc.content));
             }
@@ -188,20 +233,27 @@ async function loadToolsFromDir(dir: string, source: 'builtin' | 'project'): Pro
       if (ext === '.ts' || ext === '.js' || ext === '.mjs') {
         if (item.includes('.test.')) continue;
         try {
-          const module = await import(pathToFileURL(fullPath).href);
-          const toolDef = module.tool || module;
+          // Peek at file content to see if it looks like a module with exports
+          // This avoids executing scripts with top-level side effects during import
+          const content = await readFile(fullPath, 'utf-8');
+          if (!content.includes('export ')) {
+            // Fall through to Case 2 (Generic Script)
+          } else {
+            const module = await import(pathToFileURL(fullPath).href);
+            const toolDef = module.tool || module;
 
-          if (toolDef.name && toolDef.execute) {
-            const schema = toolDef.inputSchema || toolDef.schema;
-            tools.set(toolDef.name, {
-              name: toolDef.name,
-              description: toolDef.description || 'No description',
-              permission: toolDef.permission || 'read',
-              inputSchema: schema || z.object({}),
-              execute: toolDef.execute,
-              source,
-            });
-            continue;
+            if (toolDef.name && toolDef.execute) {
+              const schema = toolDef.inputSchema || toolDef.schema;
+              tools.set(toolDef.name, {
+                name: toolDef.name,
+                description: toolDef.description || 'No description',
+                permission: toolDef.permission || 'read',
+                inputSchema: schema || z.object({}),
+                execute: toolDef.execute,
+                source,
+              });
+              continue;
+            }
           }
         } catch { /* might be a script, fall through */ }
       }
@@ -221,11 +273,11 @@ async function loadToolsFromDir(dir: string, source: 'builtin' | 'project'): Pro
             if (companion.file.endsWith('.json')) {
               meta = JSON.parse(companion.content);
             } else {
-              meta = parseMarkdownTool(companion.content, companion.file);
+              meta = getMeta(companion.content, companion.file);
               specContent = companion.content;
             }
           } else if (internalDoc) {
-            meta = parseMarkdownTool(internalDoc, item);
+            meta = getMeta(internalDoc, item);
             if (!meta.command) {
               if (ext === '.py') meta.command = `python ${fullPath}`;
               else if (ext === '.sh') meta.command = `bash ${fullPath}`;
@@ -249,7 +301,7 @@ async function loadToolsFromDir(dir: string, source: 'builtin' | 'project'): Pro
           if (ext === '.json') {
             meta = JSON.parse(content);
           } else {
-            meta = parseMarkdownTool(content, item);
+            meta = getMeta(content, item);
           }
           if (meta && meta.name && meta.command) {
             tools.set(meta.name, createScriptTool(meta, source, content));
@@ -270,10 +322,22 @@ export const loadTools = async (): Promise<Map<string, Tool>> => {
   const builtinTools = await loadToolsFromDir(TOOLS_DIR, 'builtin');
 
   const allProjectTools = new Map<string, Tool>();
+
+  // Local project dirs
   for (const d of customDirs) {
     const dirPath = join(process.cwd(), d);
     const tools = await loadToolsFromDir(dirPath, 'project');
     for (const [name, tool] of tools) {
+      allProjectTools.set(name, tool);
+    }
+  }
+
+  // Global OpenClaw skills (from PRD)
+  const home = process.env.HOME || process.env.USERPROFILE || '';
+  const globalClawDir = join(home, '.openclaw', 'workspace', 'skills');
+  const globalTools = await loadToolsFromDir(globalClawDir, 'project');
+  for (const [name, tool] of globalTools) {
+    if (!allProjectTools.has(name)) {
       allProjectTools.set(name, tool);
     }
   }
@@ -320,7 +384,6 @@ export const getToolDefinitions = (tools: Map<string, Tool>): string => {
   const isClaw = process.argv.includes('--claw') || process.argv.includes('-claw');
 
   for (const tool of tools.values()) {
-    if (isClaw && tool.name === 'scheduler') continue;
 
     if (tool.source === 'mcp') {
       mcpTools.push(tool);
