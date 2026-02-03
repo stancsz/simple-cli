@@ -22,6 +22,12 @@ export class Worker extends EventEmitter {
   private startedAt: number = 0;
   private output: string = '';
   private options: WorkerOptions;
+  private isTerminating: boolean = false;
+  private onUnexpectedExit = (code: number | null) => {
+    if (!this.isTerminating) {
+      this.emit('error', new Error(`Worker process exited unexpectedly with code ${code}`));
+    }
+  };
 
   constructor(options: WorkerOptions) {
     super();
@@ -70,7 +76,7 @@ export class Worker extends EventEmitter {
         if (resolved) return;
         resolved = true;
         cleanup();
-        
+
         this.state = result.success ? 'completed' : 'failed';
         this.emit('complete', result);
         resolve(result);
@@ -86,7 +92,7 @@ export class Worker extends EventEmitter {
 
       // Use node to run the CLI directly
       const cliPath = new URL('../index.js', import.meta.url).pathname;
-      
+
       this.process = spawn('node', [cliPath, ...args], {
         cwd: this.options.cwd,
         env: {
@@ -113,7 +119,7 @@ export class Worker extends EventEmitter {
       this.process.on('close', (code) => {
         const duration = Date.now() - this.startedAt;
         const success = code === 0;
-        
+
         // Parse output for changed files (simplified)
         const filesChanged = this.parseChangedFiles(this.output);
         const commitHash = this.parseCommitHash(this.output);
@@ -188,7 +194,7 @@ export class Worker extends EventEmitter {
    */
   private parseChangedFiles(output: string): string[] {
     const files: string[] = [];
-    
+
     // Look for common patterns indicating file changes
     const patterns = [
       /(?:wrote|created|modified|updated)\s+([^\s]+)/gi,
@@ -227,14 +233,14 @@ export class Worker extends EventEmitter {
       if (this.process.killed) return;
       this.isTerminating = true;
       // stop reporting unexpected-exit while we intentionally terminate
-      try { this.process.off('exit', this.onUnexpectedExit); } catch (e) {}
+      try { this.process.off('exit', this.onUnexpectedExit); } catch (e) { }
 
       // If IPC is available, politely ask the child to shutdown
       try {
         if ((this.process as any).connected) {
-          try { (this.process as any).send({ type: 'shutdown' }); } catch (e) {}
+          try { (this.process as any).send({ type: 'shutdown' }); } catch (e) { }
         }
-      } catch (e) {}
+      } catch (e) { }
 
       try {
         this.process.kill('SIGTERM');
@@ -252,20 +258,20 @@ export class Worker extends EventEmitter {
           resolve(undefined);
         };
         const timer = setTimeout(() => {
-          try { if (this.process && !this.process.killed) this.process.kill('SIGKILL'); } catch (e) {}
+          try { if (this.process && !this.process.killed) this.process.kill('SIGKILL'); } catch (e) { }
           // still wait for exit event
         }, graceMs);
-        try { this.process.once('exit', onExit); } catch (e) { resolve(undefined); }
+        try { if (this.process) this.process.once('exit', onExit); } catch (e) { resolve(undefined); }
       });
 
-      try { this.process = null; } catch (e) {}
+      try { this.process = null; } catch (e) { }
     })();
     // Log kill action for auditing
     try {
       const fs = require('fs');
       const path = require('path');
       fs.appendFileSync(path.join(process.cwd(), '.worker_kill.log'), `${new Date().toISOString()} kill requested for worker ${this.id}\n`);
-    } catch (e) {}
+    } catch (e) { }
     return promise as unknown as void;
   }
 

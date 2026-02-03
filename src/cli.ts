@@ -485,8 +485,8 @@ async function main(): Promise<void> {
     // In autonomous mode, if we haven't done any steps yet, nudge the agent
     if (isAutonomousMode && steps === 0) {
       autonomousNudges++;
-      console.log(pc.yellow('⚡ Agent replied with text only. Forcing tool usage...'));
-        if (autonomousNudges > 0) {
+      console.log(pc.yellow(`⚡ Agent replied with text only. Forcing tool usage (nudge ${autonomousNudges}/2)...`));
+      if (autonomousNudges > 2) {
         console.log(pc.yellow('⚠️ Agent did not act after several nudges — running deterministic fallback organizer...'));
         try {
           runDeterministicOrganizer(targetDir);

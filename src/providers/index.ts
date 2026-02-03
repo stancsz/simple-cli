@@ -76,15 +76,17 @@ export const createProviderForModel = (modelId: string): Provider => {
     generateResponse: async (systemPrompt: string, messages: Message[]): Promise<TypeLLMResponse> => {
       try {
         const response = await llm.generate(systemPrompt, messages);
-        console.log(`[DEBUG] TypeLLM Response: ${JSON.stringify(response).substring(0, 300)}...`);
-        // Return a string for compatibility with tests that expect textual output
-        if (response && typeof response === 'object') {
-          return (response.message && response.message.length > 0) ? String(response.message) : JSON.stringify(response);
-        }
-        return String(response);
+        if ((process.env.DEBUG === 'true') && response) console.log(`[DEBUG] TypeLLM Response: ${JSON.stringify(response).substring(0, 300)}...`);
+        return response;
       } catch (e) {
         const msg = `Error calling TypeLLM: ${e instanceof Error ? e.message : e}`;
-        return msg;
+        return {
+          thought: 'Error occurred during generation',
+          tool: 'none',
+          args: {},
+          message: msg,
+          raw: msg
+        };
       }
     }
   };
