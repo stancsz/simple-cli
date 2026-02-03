@@ -8,6 +8,8 @@ import pc from 'picocolors';
 
 export { p as prompts };
 
+const NON_INTERACTIVE = process.env.VITEST === 'true' || process.env.TEST === 'true' || !process.stdin.isTTY;
+
 /**
  * UI Theme colors
  */
@@ -113,6 +115,7 @@ export async function text(options: {
   defaultValue?: string;
   validate?: (value: string) => string | undefined;
 }): Promise<string | symbol> {
+  if (NON_INTERACTIVE) return options.defaultValue ?? options.placeholder ?? '';
   return p.text(options);
 }
 
@@ -123,6 +126,7 @@ export async function password(options: {
   message: string;
   validate?: (value: string) => string | undefined;
 }): Promise<string | symbol> {
+  if (NON_INTERACTIVE) return '';
   return p.password(options);
 }
 
@@ -133,6 +137,7 @@ export async function confirm(options: {
   message: string;
   initialValue?: boolean;
 }): Promise<boolean | symbol> {
+  if (NON_INTERACTIVE) return options.initialValue ?? true;
   return p.confirm(options);
 }
 
@@ -144,6 +149,7 @@ export async function select<T extends string>(options: {
   options: Array<{ value: T; label: string; hint?: string }>;
   initialValue?: T;
 }): Promise<T | symbol> {
+  if (NON_INTERACTIVE) return options.initialValue ?? options.options[0].value;
   return p.select(options as any);
 }
 
@@ -156,6 +162,7 @@ export async function multiselect<T extends string>(options: {
   initialValues?: T[];
   required?: boolean;
 }): Promise<T[] | symbol> {
+  if (NON_INTERACTIVE) return options.initialValues ?? [];
   return p.multiselect(options as any);
 }
 
@@ -166,6 +173,20 @@ export async function group<T extends Record<string, unknown>>(
   prompts: Record<keyof T, () => Promise<unknown>>,
   options?: { onCancel?: () => void }
 ): Promise<T> {
+  if (NON_INTERACTIVE) {
+    const result: any = {};
+    for (const k of Object.keys(prompts)) {
+      // Attempt to call each prompt function but if it would prompt, we expect those to return defaults because of NON_INTERACTIVE
+      try {
+        // eslint-disable-next-line @typescript-eslint/await-thenable
+        result[k] = await (prompts as any)[k]();
+      } catch {
+        result[k] = undefined;
+      }
+    }
+    return result as T;
+  }
+
   return p.group(prompts as any, options) as unknown as Promise<T>;
 }
 

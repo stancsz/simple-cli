@@ -3,6 +3,7 @@
  * Routes tasks to appropriate model tiers based on complexity
  */
 
+import { jsonrepair } from 'jsonrepair';
 import { z } from 'zod';
 
 // Tier definitions
@@ -50,8 +51,8 @@ export const loadTierConfig = (): Map<Tier, TierConfig> => {
     const model = envModel || DEFAULT_TIERS[tier].defaultModel;
 
     // Vercel AI SDK supports provider prefixes (e.g., "anthropic:claude-3", "google:gemini-pro")
-    // For standard models without prefix, it defaults based on environment variables.
-    const provider = model.includes(':') ? model.split(':')[0] as any : 'openai';
+    // Some tests/tools use slash separators ("anthropic/claude-3-opus"). Accept either.
+    const provider = model.includes(':') || model.includes('/') ? model.split(/[:\/]/)[0] as any : 'openai';
 
     tiers.set(tier, {
       tier,
@@ -100,15 +101,24 @@ export const routeTask = async (
       return getDefaultRouting(task);
     }
 
-    const parsed = RoutingResponseSchema.parse(JSON.parse(jsonMatch[0]));
+    try {
+      const repaired = jsonrepair(jsonMatch[0]);
+      const data = JSON.parse(repaired);
 
-    return {
-      tier: parsed.recommendedTier as Tier,
-      complexity: parsed.complexity,
-      contextRequired: parsed.contextRequired,
-      risk: parsed.risk,
-      reasoning: parsed.reasoning
-    };
+      // Fuzzy mapping for recommendedTier
+      const tierValue = data.recommendedTier || data.tier || data.recommended_tier || 3;
+      const complexityValue = data.complexity || 5;
+
+      return {
+        tier: (Math.max(1, Math.min(5, Number(tierValue)))) as Tier,
+        complexity: Number(complexityValue),
+        contextRequired: data.contextRequired === 'high' ? 'high' : 'low',
+        risk: data.risk === 'high' ? 'high' : 'low',
+        reasoning: data.reasoning || 'No reasoning provided'
+      };
+    } catch (e) {
+      return getDefaultRouting(task);
+    }
   } catch (error) {
     console.error('Routing error, using default:', error);
     return getDefaultRouting(task);

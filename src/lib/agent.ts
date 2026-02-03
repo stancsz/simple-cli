@@ -39,21 +39,59 @@ export interface ReflectionContext {
 /**
  * Parse LLM response into structured format
  */
-export function parseResponse(response: TypeLLMResponse): AgentResponse {
-  const raw = response.raw || '';
+export function parseResponse(response: TypeLLMResponse | string): AgentResponse {
+  // Accept either a TypeLLMResponse object or a raw string (tests and some providers pass raw text)
+  const raw = typeof response === 'string' ? response : (response.raw || '');
 
   // Extract edit blocks - Aider style blocks are within the raw text
   const editBlocks = parseEditBlocks(raw);
 
-  // Use structured fields from TypeLLM if available
-  const thought = response.thought;
-  const tool = response.tool || 'none';
-  const args = response.args as Record<string, unknown> || {};
-  const message = response.message || '';
+  // If we were given a structured TypeLLMResponse, prefer its typed fields
+  if (typeof response !== 'string') {
+    const thought = response.thought;
+    let tool = response.tool || 'none';
+    const args = (response.args as Record<string, unknown>) || {};
+    const message = response.message || '';
 
-  const action: AgentResponse['action'] = tool !== 'none'
-    ? { tool, args }
-    : { tool: 'none', message: message || (tool === 'none' ? 'No action parsed' : '') };
+    // normalize tool name to snake_case
+    if (tool && tool !== 'none') {
+      tool = tool.replace(/([a-z0-9])([A-Z])/g, '$1_$2').toLowerCase();
+    }
+
+    const action: AgentResponse['action'] = tool !== 'none'
+      ? { tool, args }
+      : { tool: 'none', message: message || (tool === 'none' ? 'No action parsed' : '') };
+
+    return { thought, action, editBlocks };
+  }
+
+  // For raw string input, attempt to extract a <thought> block and a JSON action
+  let thought: string | undefined;
+  const thoughtMatch = raw.match(/<thought>[\s\S]*?<\/thought>/i);
+  if (thoughtMatch) {
+    thought = thoughtMatch[0].replace(/<\/?thought>/gi, '').trim();
+  }
+
+  // Extract first JSON-looking object from the raw text
+  let action: AgentResponse['action'] = { tool: 'none', message: 'No action parsed' };
+  const jsonMatch = raw.match(/\{[\s\S]*\}/);
+  if (jsonMatch) {
+    try {
+      const parsed = JSON.parse(jsonMatch[0]);
+      let tool = parsed.tool || parsed.command || 'none';
+      const args = parsed.args || parsed.parameters || {};
+      if (tool && tool !== 'none') {
+        // normalize camelCase to snake_case
+        tool = String(tool).replace(/([a-z0-9])([A-Z])/g, '$1_$2').toLowerCase();
+        action = { tool, args };
+      } else {
+        action = { tool: 'none', message: parsed.message || 'No action parsed' };
+      }
+    } catch (e) {
+      // If JSON.parse fails, leave action as 'none'
+      action = { tool: 'none', message: 'No action parsed' };
+    }
+  }
 
   return { thought, action, editBlocks };
 }

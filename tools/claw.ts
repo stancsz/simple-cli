@@ -138,6 +138,9 @@ function runSkill(name: string, args: Record<string, any>): string {
     // Real implementation would need a more robust argument parser matching OpenClaw spec
     const env = {
         ...process.env,
+        // Ensure OpenClaw-compatible env keys are always present for skill subprocesses
+        CLAW_WORKSPACE: process.env.CLAW_WORKSPACE || CLAW_LOCAL_PATH,
+        CLAW_DATA_DIR: process.env.CLAW_DATA_DIR || join(CLAW_LOCAL_PATH, '.simple/workdir/memory'),
         CLAW_SKILL_PATH: match,
         CLAW_PROJECT_ROOT: CLAW_LOCAL_PATH,
         ...Object.fromEntries(Object.entries(args).map(([k, v]) => [`INPUT_${k.toUpperCase()}`, String(v)]))
