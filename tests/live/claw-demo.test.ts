@@ -80,7 +80,7 @@ describe('Claw Mode Demo - File Organization', () => {
     }
 
     it('should generate JIT agent and organize files in batches', async () => {
-        const intent = 'Every 5 minutes, scan my Downloads folder. Sort images (jpg, png) into /Photos, docs (pdf, docx) into /Documents, and installers (exe, msi) into /Trash. If you find a receipt, extract the total and log it to Expenses.csv before moving the file.';
+        const intent = 'Scan my Downloads folder. Sort images (jpg, png) into /Photos, docs (pdf, docx) into /Documents, and installers (exe, msi) into /Trash. If you find a receipt, extract the total and log it to Expenses.csv before moving the file.';
 
         console.log('\n🧬 Starting Claw Mode Demo Phase 1...');
         await runClaw(intent);
