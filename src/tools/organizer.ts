@@ -24,10 +24,13 @@ export function runDeterministicOrganizer(targetDir: string) {
       const lower = f.toLowerCase();
       try {
         if (lower.endsWith('.jpg') || lower.endsWith('.png')) {
+          console.log(pc.dim(`  -> Moving ${f} to Photos`));
           fs.renameSync(src, join(photosDir, f));
         } else if (lower.endsWith('.pdf') || lower.endsWith('.docx')) {
+          console.log(pc.dim(`  -> Moving ${f} to Documents`));
           fs.renameSync(src, join(docsDir, f));
         } else if (lower.endsWith('.exe') || lower.endsWith('.msi')) {
+          console.log(pc.dim(`  -> Moving ${f} to Trash`));
           fs.renameSync(src, join(trashDir, f));
         } else if ((lower.includes('receipt') || lower.startsWith('receipt')) && lower.endsWith('.txt')) {
           const content = fs.readFileSync(src, 'utf-8');
@@ -36,11 +39,13 @@ export function runDeterministicOrganizer(targetDir: string) {
             const line = `${new Date().toISOString().split('T')[0]},${m[1]},${f}\n`;
             if (!fs.existsSync(expensesPath)) fs.appendFileSync(expensesPath, 'Date,Amount,Description\n');
             fs.appendFileSync(expensesPath, line);
+            console.log(pc.dim(`  -> Logged receipt: ${f}`));
           }
+          console.log(pc.dim(`  -> Moving ${f} to Documents`));
           fs.renameSync(src, join(docsDir, f));
         }
       } catch (err) {
-        // ignore per-file failures
+        console.error(pc.red(`  ! Failed to process ${f}:`), err instanceof Error ? err.message : err);
       }
     }
     console.log(pc.green('✔ Deterministic organizer finished'));
