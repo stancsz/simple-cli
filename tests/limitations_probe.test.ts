@@ -48,7 +48,7 @@ describe('System Boundary Limitations (High Information Gain)', () => {
             // This just reloads the registry. If an agent creates a tool that reloads tools...
             // It doesn't cause a crash, but it consumes cycles.
             const res = await reloadTools({});
-            expect(res).toContain('Reloaded');
+            expect(res.toLowerCase()).toContain('reloaded');
         });
     });
 });
