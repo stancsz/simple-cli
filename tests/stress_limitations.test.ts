@@ -1,6 +1,6 @@
 
 import { describe, it, expect } from 'vitest';
-import { TypeLLM } from '../../TypeLLM/src/index';
+import { TypeLLM } from '@stan-chen/typellm';
 import { parseResponse } from '../src/lib/agent';
 import { routeTask } from '../src/router';
 import { jsonrepair } from 'jsonrepair';
