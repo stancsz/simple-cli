@@ -332,11 +332,21 @@ export const loadTools = async (): Promise<Map<string, Tool>> => {
     }
   }
 
-  // Global OpenClaw skills (from PRD)
   const home = process.env.HOME || process.env.USERPROFILE || '';
+
+  // Global OpenClaw skills (from PRD)
   const globalClawDir = join(home, '.openclaw', 'workspace', 'skills');
   const globalTools = await loadToolsFromDir(globalClawDir, 'project');
   for (const [name, tool] of globalTools) {
+    if (!allProjectTools.has(name)) {
+      allProjectTools.set(name, tool);
+    }
+  }
+
+  // Global Simple-CLI Tools (~/.simple/tools)
+  const globalSimpleDir = join(home, '.simple', 'tools');
+  const simpleTools = await loadToolsFromDir(globalSimpleDir, 'project');
+  for (const [name, tool] of simpleTools) {
     if (!allProjectTools.has(name)) {
       allProjectTools.set(name, tool);
     }
