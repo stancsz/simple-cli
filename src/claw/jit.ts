@@ -44,21 +44,25 @@ export async function generateJitAgent(intent: string, targetDir: string): Promi
         const prompt = `You are the architect of a high-performance agent swarm. 
 Your task: Create a MISSION_DIRECTIVE (AGENT.md) for a specialized autonomous sub-agent.
 
+WORKSPACE_PATH: "${targetDir}"
 INTENT: "${intent}"
 
 ${memoryContext ? `## HISTORICAL MISSION LOGS:\n${memoryContext}\nCRITICAL: If the intent denotes a recurring or state-dependent task, ignore past completion tokens. Re-verify the current filesystem state immediately.` : ''}
 
 ## DIRECTIVE PREREQUISITES:
 1. THE AGENT IS THE TOOL. You are not writing a guide for a human. You are writing the internal operating logic for an AI.
-2. IMMEDIATE ACTION IS MANDATORY. The first thing the agent does upon activation is use list_dir or analyze_file.
-3. NO CONVERSATIONAL FILLER. The sub-agent must communicate ONLY via JSON tool calls and internal thoughts.
-4. MISSION OBJECTIVE: Fulfill the intent in as few steps as possible.
+2. CURRENT DIRECTORY FOCUS. The sub-agent is ALREADY in the WORKSPACE_PATH. It MUST ALWAYS use relative paths starting with '.' or filenames.
+3. NO OUTSIDE PATHS. Explicitly FORBID searching or moving files outside WORKSPACE_PATH. Do not look for "C:\Users\..." or "/Users/...".
+4. IMMEDIATE ACTION IS MANDATORY. The first thing the agent does upon activation is use list_dir(".") to see what is actually in the current folder.
+5. NO CONVERSATIONAL FILLER. The sub-agent must communicate ONLY via JSON tool calls and internal thoughts.
+6. CONDITIONAL LOGIC MASTERY. If the intent has "If" or "When" clauses (e.g., logging receipts before moving), the agent MUST prioritize the multi-step sequence (Read -> Process -> Move). 
+7. MISSION OBJECTIVE: Fulfill the intent in as few steps as possible.
 
 ## OUTPUT FORMAT (AGENT.md):
 - # [Agent Persona Name]
 - ## 🎯 Objective: Concise mission statement.
-- ## 🛠️ Execution Strategy: Step-by-step plan using list_dir, move_file, write_to_file, scheduler, etc.
-- ## ⚠️ Constraints: Critical failure conditions (e.g., "Do not delete .env files").
+- ## 🛠️ Execution Strategy: Step-by-step plan using list_dir, move_file, write_to_file, scheduler, etc. ALWAYS start with list_dir("."). Address multi-step sequences explicitly.
+- ## ⚠️ Constraints: Critical failure conditions (e.g., "Do not delete .env files"). FORBID absolute paths.
 
 IMPORTANT: DO NOT include code blocks, pseudo-code, or markdown examples in the AGENT.md. The agent already knows the tool syntax. Only describe the logic.`;
 
@@ -139,13 +143,15 @@ function fallbackTemplate(intent: string): string {
         `Execute the following mission with zero human oversight: "${intent}"`,
         '',
         '## 🛠️ Execution Strategy',
-        '1. **RECONNAISSANCE**: Call list_dir(".") and recursively explore relevant subdirectories.',
-        '2. **ANALYSIS**: For every file found, call analyze_file to understand structure and content.',
-        '3. **OPERATION**: Execute the intent using move_file, write_to_file, or run_command.',
+        '1. **RECONNAISSANCE**: Call list_dir(".") immediately to explore the folder contents. NEVER use absolute paths.',
+        '2. **ANALYSIS**: For every file found in the CURRENT folder, call analyze_file to understand structure and content.',
+        '3. **OPERATION**: Execute the intent using move_file, write_to_file, or run_command. Use RELATIVE paths.',
         '4. **PERSISTENCE**: If the intent describes a recurring need, call scheduler immediately.',
         '5. **VALIDATION**: Re-verify the filesystem state after every destructive action.',
         '',
         '## ⚠️ Constraints',
+        '- DO NOT search for files outside the current directory.',
+        '- DO NOT use absolute paths starting with C:\\ or /.',
         '- DO NOT reply with conversational text or advice.',
         '- DO NOT create tutorial files or examples.',
         '- ALL output must be exactly one JSON object containing "thought", "tool", and "args".',
