@@ -17,7 +17,7 @@ export OPENAI_API_KEY="..."
 simple "Refactor the authentication layer in src/auth"
 ```
 
-[NPM](https://www.npmjs.com/package/@stan-chen/simple-cli) | [Documentation](docs/index.md)
+[NPM](https://www.npmjs.com/package/@stan-chen/simple-cli) | [Documentation](https://stancsz.github.io/simple-cli)
 
 ---
 
