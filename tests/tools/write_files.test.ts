@@ -140,8 +140,8 @@ describe('writeFiles', () => {
       expect(await readFile(filePath, 'utf-8')).toBe('original content');
     });
 
-    it('should replace only first occurrence', async () => {
-      const filePath = join(testDir, 'first_only.txt');
+    it('should replace all occurrences', async () => {
+      const filePath = join(testDir, 'all_occurrences.txt');
       await writeFile(filePath, 'line1\nline2\nline1\nline3');
 
       const result = await execute({
@@ -152,7 +152,7 @@ describe('writeFiles', () => {
       });
 
       expect(result[0].success).toBe(true);
-      expect(await readFile(filePath, 'utf-8')).toBe('new_line\nline2\nline1\nline3');
+      expect(await readFile(filePath, 'utf-8')).toBe('new_line\nline2\nnew_line\nline3');
     });
 
     it('should handle multiline search/replace', async () => {
