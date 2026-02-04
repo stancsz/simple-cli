@@ -41,11 +41,16 @@ export async function generateJitAgent(intent: string, targetDir: string): Promi
     try {
         const provider = createProvider();
 
+        // Load OpenClaw context (SOUL.md, AGENTS.md, etc.)
+        const openClawContext = loadOpenClawContext(targetDir);
+
         const prompt = `You are the architect of a high-performance agent swarm. 
 Your task: Create a MISSION_DIRECTIVE (AGENT.md) for a specialized autonomous sub-agent.
 
 WORKSPACE_PATH: "${targetDir}"
 INTENT: "${intent}"
+
+${openClawContext}
 
 ${memoryContext ? `## HISTORICAL MISSION LOGS:\n${memoryContext}\nCRITICAL: If the intent denotes a recurring or state-dependent task, ignore past completion tokens. Re-verify the current filesystem state immediately.` : ''}
 
@@ -157,4 +162,40 @@ function fallbackTemplate(intent: string): string {
         '- ALL output must be exactly one JSON object containing "thought", "tool", and "args".',
         ''
     ].join('\n');
+}
+
+// Helper to find and load OpenClaw configuration files
+function loadOpenClawContext(targetDir: string): string {
+    const context: string[] = [];
+
+    // Determine search paths
+    const home = process.env.HOME || process.env.USERPROFILE || '';
+    const searchPaths = [
+        targetDir, // Local project overrides
+        process.env.CLAW_WORKSPACE, // Custom workspace
+        path.join(home, '.openclaw', 'workspace') // Default global workspace
+    ].filter(Boolean) as string[];
+
+    // Unique files we care about
+    const configFiles = [
+        { name: 'SOUL.md', label: 'Core Persona/Directives' },
+        { name: 'AGENTS.md', label: 'Agent Registry' },
+        { name: 'TOOLS.md', label: 'Tool Definitions' }
+    ];
+
+    for (const fileDef of configFiles) {
+        for (const dir of searchPaths) {
+            const filePath = path.join(dir, fileDef.name);
+            if (fs.existsSync(filePath)) {
+                try {
+                    const content = fs.readFileSync(filePath, 'utf-8');
+                    context.push(`### ${fileDef.name} (${fileDef.label})\n${content}\n`);
+                    break; // Found the file, stop searching for this specific file type
+                } catch (e) { /* ignore read errors */ }
+            }
+        }
+    }
+
+    if (context.length === 0) return '';
+    return `\n## OPENCLAW CONTEXT\nThe following context is provided by the user's OpenClaw workspace configuration. You MUST align your persona and strategy with these directives.\n\n${context.join('\n')}`;
 }
