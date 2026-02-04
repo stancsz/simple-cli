@@ -4,54 +4,70 @@ title: Home
 nav_order: 1
 ---
 
-# Simple-CLI
+# Welcome to the Future of Terminal Coding ⚡
 
-Simple-CLI is a minimalist alternative to heavy-duty AI coding agents. While other tools wrap logic in complex UIs and proprietary IDEs, Simple-CLI operates directly in the terminal, staying close to the metal.
+**Simple-CLI** is not just another wrapper around an LLM. It is a **autonomous swarm unit** designed to live in your shell.
 
-It is designed for developers who need the power of an agentic swarm unit with a core codebase that is readable, understandable, and easily modified.
+It replaces the friction of "Context Switch -> Browser -> Chat -> Copy -> Paste" with a single, powerful loop: **Command -> Execution.**
 
 ---
 
-## Quick Start
+## Why Simple-CLI?
 
-Get up and running in seconds. Simple-CLI requires no complex configuration or proprietary sign-ups.
+We built this for developers who are tired of chat interfaces. We believe:
+1.  **Terminals are Superior**: The command line is the fastest way to communicate with a computer.
+2.  **Agents should be Agile**: An agent shouldn't take 30 seconds to boot up. It should be instant.
+3.  **Code is Context**: You shouldn't have to explain your file structure. The agent should see it.
 
+---
+
+## The Innovations 🛠️
+
+### 🧠 Just-in-Time (JIT) Agency
+Most agents are generic. Simple-CLI is specific. When you run `simple --claw`, the system:
+1.  **Analyzes your intent**.
+2.  **Generates a persona** (e.g., "Senior React Performance Engineer").
+3.  **Builds a specialized toolset** for that exact moment.
+4.  **Executes and vanishes.**
+
+### 🐝 Swarm Architecture
+Why have one agent when you can have ten? Simple-CLI supports **Swarm Mode**, allowing you to spin up multiple isolated agent instances to tackle massive refactors or migrations in parallel.
+
+### 🧬 Self-Healing & Evolution
+Simple-CLI can write its own tools. If it encounters a problem it can't solve, it can write a Python script or a Node utility, save it to `skills/`, and use it immediately.
+
+---
+
+## Start Your Engine
+
+**1. Install**
 ```bash
-# 1. Install globally
 npm install -g @stan-chen/simple-cli
+```
 
-# 2. Set your API key (any provider supported by Vercel AI SDK)
+**2. Configure**
+```bash
 export OPENAI_API_KEY="sk-..."
-# Supports ANTHROPIC_API_KEY, GOOGLE_GENERATIVE_AI_API_KEY, etc.
+```
 
-# 3. Start building
-simple "Build a premium React dashboard"
+**3. Launch**
+```bash
+simple "Audit my package.json for unused dependencies"
 ```
 
 ---
 
-## Key Features
+## Explore the Documentation
 
-*   **Token Efficiency**: Surgical context management using high-fidelity repository maps.
-*   **Universal Tool Support**: Native support for TypeScript tools, multi-language scripts (Python, Bash), and binaries.
-*   **Agent Swarms**: Built-in orchestration for parallel, horizontally scalable agent units.
-*   **Self-Evolution**: The agent can create, document, and load its own specialized skills in real-time.
-
----
-
-## Documentation Sections
-
-*   [**Architecture**](architecture.md): Provider routing, the registry, and swarm logic.
-*   [**Project Structure**](project-structure.md): Recommended directory layout for new repositories.
-*   [**The Taxonomy of Action**](taxonomy.md): Understanding the hierarchy of Tools, Scripts, and Skills.
-*   [**The Success Loop**](success-loop.md): The iterative "no-quit" reflection process.
-*   [**Design Philosophy**](design-philosophy.md): Engineering decisions that drive the project.
-*   [**Custom Skills**](custom-skills.md): Enabling the agent to extend its own action space.
+*   [**The Manifesto**](design-philosophy.md): Understand the "Thin Core" and "Headless-First" philosophy.
+*   [**Architecture**](architecture.md): How the brain, hands, and instincts work together.
+*   [**Swarm Logic**](taxonomy.md): Understanding the hierarchy of Tools, Scripts, and Skills.
+*   [**Custom Skills**](custom-skills.md): Teach your agent new tricks.
 
 ---
 
-## Contributing & License
+## Join the Movement
 
-Simple-CLI is intentionally minimal. Before submitting a pull request, please consider if the change supports headless automation and keeps the core under 150 lines.
+Simple-CLI is open source and community-driven. We are building the last CLI tool you will ever need.
 
-Licensed under **MIT**. Built for the swarm era.
+[GitHub Repository](https://github.com/stancsz/simple-cli)

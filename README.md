@@ -4,53 +4,78 @@
 
 # simple-cli ⚡
 
-The terminal-native AI coding assistant. Lean, local, and built for speed.
+**The Terminal-Native AI Partner. Lean. Local. Limitless.**
+
+Stop pasting code into a browser. Start commanding a swarm directly from your terminal.
 
 ```bash
-# Get started
+# Ignite
 npm i -g @stan-chen/simple-cli
 export OPENAI_API_KEY="..."
 
-# Use it
-simple "Fix the broken imports in src/"
+# Deploy
+simple "Refactor the authentication layer in src/auth"
 ```
 
-[NPM](https://www.npmjs.com/package/@stan-chen/simple-cli) | [Docs](docs/index.md)
+[NPM](https://www.npmjs.com/package/@stan-chen/simple-cli) | [Documentation](docs/index.md)
 
 ---
 
-## What is this?
-Simple-CLI is a high-speed agent that lives in your terminal. It doesn't need an IDE extension or a heavy Electron app. It focuses on one thing: **executing tasks autonomously.**
+## Why Simple-CLI?
 
-### 1. Interactive Chat
-Just run `simple`. It opens a prompt where you can chat with your codebase, ask questions, and request multi-step features.
+Most AI tools are bloated extensions or heavy desktop apps. **Simple-CLI** is different. It lives where you live: in the shell. It is built for speed, autonomy, and raw power.
 
-### 2. Fast One-Shots
-`simple "instruction"` runs a task and exits. Use it for quick refactors or boilerplate generation.
-
-### 3. JIT Agents (`--claw`)
-Run `simple --claw "intent"`. This triggers "Just-in-Time" persona generation. The system builds a specialized sub-agent specifically designed for that task, with its own memory and strategy.
+It doesn't just "chat." It **executes**.
 
 ---
 
-## Key Capabilities
+## The Innovations 🚀
 
-*   **⚡ Speed Over Bloat**: Zero startup time. Optimized for the terminal.
-*   **🧬 Self-Evolution**: The agent can write its own tools in `skills/` or `tools/` and reload them on-the-fly.
-*   **🌊 Swarm Mode**: Run `simple --swarm tasks.json`. It spawns isolated agents across Git worktrees to work on different parts of a codebase simultaneously.
-*   **🧠 Ghost Tasks**: Tell it to "Check for vulnerabilities every Monday at 9am". It uses your actual OS scheduler (crontab/Task Scheduler) to run background jobs.
-*   **🔌 Multi-Model**: Swap between OpenAI, Anthropic, or Google Gemini instantly.
+### 1. Just-in-Time (JIT) Intelligence 🧠
+`simple --claw "Analyze this database schema"`
+Don't settle for a generic assistant. When you use `--claw`, the system analyzes your intent and **spawns a specialized sub-agent** specifically architected for that task. It builds its own memory, strategy, and persona on the fly.
+
+### 2. Agent Swarms 🐝
+`simple --swarm tasks.json`
+Need to migrate 50 files? Don't do it one by one. Unleash a **parallel swarm of agents** to attack the problem simultaneously across your codebase.
+
+### 3. Self-Evolution 🧬
+The agent isn't static. It can **write its own tools** in `skills/` or `tools/` and hot-reload them instantly. If it needs a tool to check DNS records, it builds it, uses it, and keeps it for next time.
+
+### 4. Ghost Tasks 👻
+"Check for security patches every morning at 8 AM."
+Simple-CLI integrates with your OS (crontab/Task Scheduler) to run **autonomous background missions** while you sleep.
+
+---
+
+## Get Hooked: 3 Commands to Try
+
+**The "Architect" Workflow:**
+```bash
+simple --claw "Read my entire src folder and generate a mermaid diagram of the architecture"
+```
+
+**The "Cleanup Crew" Workflow:**
+```bash
+simple --swarm tasks.json --concurrency 5
+# tasks.json contains a list of linting or refactoring jobs.
+```
+
+**The "Research Assistant" Workflow:**
+```bash
+simple "Search the web for the latest SvelteKit breaking changes and summarize them"
+```
 
 ---
 
 ## Installation
 
-**From NPM:**
+**From NPM (Recommended):**
 ```bash
 npm install -g @stan-chen/simple-cli
 ```
 
-**From Source:**
+**From Source (For the Hackers):**
 ```bash
 git clone https://github.com/stancsz/simple-cli.git
 cd simple-cli && npm install && npm run build
@@ -59,46 +84,26 @@ npm link
 
 ---
 
-## Workflows
-
-**The "Organize My Junk" Workflow:**
-```bash
-simple --claw "Move all screenshots from Desktop to ~/Pictures/Screenshots and categorize by date"
-```
-
-**The "Mass Refactor" Workflow:**
-```bash
-simple --swarm tasks.json --concurrency 3
-# tasks.json: [{"instruction": "Add Zod validation to API A"}, {"instruction": "Add Zod to API B"}]
-```
-
-**The "Automated Audit" Workflow:**
-```bash
-simple --claw "Daily security audit of package.json"
-```
-
----
-
 ## Project Structure
 ```text
 .
-├── src/          # Core reasoning & provider logic
-├── tools/        # Technical primitives (read, write, shell)
-├── skills/       # Behavioral presets (code, debug, architect)
-└── .simple/      # Local agent state, memory, and JIT personas
+├── src/          # The Brain (Core reasoning & provider logic)
+├── tools/        # The Hands (Technical primitives: read, write, shell)
+├── skills/       # The Instincts (Behavioral presets: code, debug, architect)
+└── .simple/      # The Soul (Local agent state, memory, and JIT personas)
 ```
 
 ---
 
-## Configurations
-Set your keys in `.env` or as environment variables:
-*   `OPENAI_API_KEY`
-*   `CLAW_MODEL` (Defaults to gpt-4o-mini)
-*   `DEBUG=true` (If you want to see the "thought" process)
+## Configuration
+Set your keys in `.env` or export them:
+*   `OPENAI_API_KEY` (or Anthropic, Google, etc.)
+*   `CLAW_MODEL` (Defaults to `gpt-4o-mini` for speed)
+*   `DEBUG=true` (Unlock the matrix: see the agent's thought process)
 
 ---
 
 ## Credits
-Built with [Vercel AI SDK](https://sdk.vercel.ai) and [@clack/prompts](https://github.com/natemoo-re/clack). 
+Forged with [Vercel AI SDK](https://sdk.vercel.ai) and [@clack/prompts](https://github.com/natemoo-re/clack).
 
 MIT © [Stan Chen](https://github.com/stancsz)
