@@ -68,6 +68,21 @@ simple "Search the web for the latest SvelteKit breaking changes and summarize t
 
 ---
 
+## 🎭 Persona Gallery
+
+Need a specialist? We've included a library of high-performance personas in `examples/`.
+From **Data Scientists** to **Marketing Directors**, switch modes instantly:
+
+```bash
+# Summon the Data Engineer
+export CLAW_WORKSPACE=$(pwd)/examples/data-engineer
+simple --claw "Optimize the ETL pipeline"
+```
+
+[Explore the full gallery in `examples/README.md`](examples/README.md)
+
+---
+
 ## Installation
 
 **From NPM (Recommended):**
