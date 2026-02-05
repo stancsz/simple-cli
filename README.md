@@ -81,6 +81,13 @@ simple --claw "Optimize the ETL pipeline"
 
 [Explore the full gallery in `examples/README.md`](examples/README.md)
 
+### 🤖 Integrations & Deployment
+Deploy Simple-CLI as an automated agent in your workflow:
+*   [**GitHub Actions**](examples/ci-cd/github-actions/README.md): Automate PR reviews and audits.
+*   [**Slack Bot**](examples/integrations/slack/README.md): Chat with your agent in Slack.
+*   [**Discord Bot**](examples/integrations/discord/README.md): Add an AI assistant to your server.
+*   [**Microsoft Teams**](examples/integrations/teams/README.md): Enterprise chat integration.
+
 ---
 
 ## Installation
