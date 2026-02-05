@@ -332,6 +332,18 @@ export const loadTools = async (): Promise<Map<string, Tool>> => {
     }
   }
 
+  // CLAW_WORKSPACE override (load tools from the specialized persona workspace)
+  if (process.env.CLAW_WORKSPACE) {
+    for (const d of customDirs) {
+      const dirPath = join(process.env.CLAW_WORKSPACE, d);
+      const tools = await loadToolsFromDir(dirPath, 'project');
+      for (const [name, tool] of tools) {
+        // Workspace tools (specialized) take precedence over general project tools.
+        allProjectTools.set(name, tool);
+      }
+    }
+  }
+
   const home = process.env.HOME || process.env.USERPROFILE || '';
 
   // Global OpenClaw skills (from PRD)

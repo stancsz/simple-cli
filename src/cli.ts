@@ -261,7 +261,9 @@ async function main(): Promise<void> {
       console.log(pc.green('\n✅ JIT Agent soul ready. Starting autopilot loop...\n'));
 
       // Inject autonomous environment variables
-      process.env.CLAW_WORKSPACE = targetDir;
+      if (!process.env.CLAW_WORKSPACE) {
+        process.env.CLAW_WORKSPACE = targetDir;
+      }
       process.env.CLAW_SKILL_PATH = join(targetDir, 'skills');
       process.env.CLAW_DATA_DIR = join(targetDir, '.simple/workdir/memory');
     } catch (error) {
