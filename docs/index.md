@@ -63,6 +63,8 @@ simple "Audit my package.json for unused dependencies"
 *   [**Architecture**](architecture.md): How the brain, hands, and instincts work together.
 *   [**Swarm Logic**](taxonomy.md): Understanding the hierarchy of Tools, Scripts, and Skills.
 *   [**Custom Skills**](custom-skills.md): Teach your agent new tricks.
+*   [**Deployment**](deployment.md): Run Simple-CLI in GitHub Actions or Docker.
+*   [**Integrations**](integrations.md): Connect Simple-CLI to Slack, Discord, and Teams.
 
 ---
 

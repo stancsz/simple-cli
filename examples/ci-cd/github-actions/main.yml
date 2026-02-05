@@ -1,0 +1,42 @@
+name: Simple-CLI Agent Workflow
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+  workflow_dispatch:
+    inputs:
+      task:
+        description: 'Task for the agent to perform'
+        required: true
+        default: 'Run a security audit on the src directory'
+
+jobs:
+  agent-run:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Use Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '20.x'
+
+    - name: Install Simple-CLI
+      run: npm install -g @stan-chen/simple-cli
+
+    - name: Run Agent Task
+      env:
+        OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+        # Set to non-interactive mode for CI
+        CI: true
+        TASK_INPUT: ${{ inputs.task }}
+      run: |
+        # If triggered manually, use the input task
+        if [ "${{ github.event_name }}" == "workflow_dispatch" ]; then
+          simple . "$TASK_INPUT" --yolo
+        else
+          # Default task for push/PR (e.g., code review or lint check)
+          simple . "Review the changes in this PR/commit for security vulnerabilities" --yolo
+        fi
