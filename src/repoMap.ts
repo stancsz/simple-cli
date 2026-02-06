@@ -93,7 +93,7 @@ const PARSERS: Record<string, LanguageParser> = {
 
 const tsParser = new TsParser();
 
-export const generateRepoMap = async (rootDir: string = '.'): Promise<string> => {
+export const generateRepoMap = async (rootDir: string = '.', keywords: string[] = []): Promise<string> => {
   const fileMaps: FileMap[] = [];
 
   const stack = [rootDir];

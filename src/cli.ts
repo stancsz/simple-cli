@@ -4,7 +4,6 @@
  * Powered by @clack/prompts.
  */
 import 'dotenv/config';
-<<<<<<< HEAD
 import { text, isCancel, select } from '@clack/prompts';
 import pc from 'picocolors';
 import { getContextManager } from './context.js';
@@ -15,26 +14,10 @@ import { getMCPManager } from './mcp/manager.js';
 import { readFileSync, statSync } from 'fs';
 import fs from 'fs';
 import { mkdir, writeFile } from 'fs/promises';
-=======
-import { intro, outro, text, spinner as clackSpinner, note, confirm as clackConfirm, isCancel, select } from '@clack/prompts';
-import pc from 'picocolors';
-import { ContextManager, getContextManager } from './context.js';
-import { createProvider, type Provider } from './providers/index.js';
-import type { TypeLLMResponse } from '@stan-chen/typellm';
-import { createMultiProvider } from './providers/multi.js';
-import { routeTask, loadTierConfig, formatRoutingDecision, type Tier } from './router.js';
-import { executeCommand } from './commands.js';
-import { getMCPManager } from './mcp/manager.js';
-import { listSkills, setActiveSkill, getActiveSkill } from './skills.js';
-import { readFileSync, existsSync, statSync, appendFileSync } from 'fs';
-import fs from 'fs';
-import { readFile, writeFile, mkdir } from 'fs/promises';
->>>>>>> origin/main
 import { resolve, join, dirname } from 'path';
 import { fileURLToPath } from 'url';
 import { runSwarm, parseSwarmArgs, printSwarmHelp } from './commands/swarm.js';
 import { runDeterministicOrganizer } from './tools/organizer.js';
-<<<<<<< HEAD
 
 import { SimpleCoreExecutor } from './executors/simple.js';
 import { CodexExecutor } from './executors/codex.js';
@@ -43,9 +26,6 @@ import { ClaudeExecutor } from './executors/claude.js';
 import { AiderExecutor } from './executors/aider.js';
 import { Executor } from './executors/types.js';
 import { executeTool } from './executors/utils.js';
-=======
-import { jsonrepair } from 'jsonrepair';
->>>>>>> origin/main
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -84,14 +64,12 @@ if (process.argv.includes('--help') || process.argv.includes('-h')) {
     --moe              Enable Mixture of Experts (multi-model)
     --swarm            Enable Swarm orchestration mode
     --claw "intent"    Enable OpenClaw JIT agent generation
-<<<<<<< HEAD
     --deploy [tmpl]    Deploy a full agent company structure
     --codex            Use OpenAI Codex CLI
     --gemini           Use Google Gemini CLI
     --claude           Use Claude Code CLI
     --aider            Use Aider AI Pair Programmer
-=======
->>>>>>> origin/main
+    --simple           Use Simple Core Executor (explicit)
     --debug            Enable debug logging
 
   ${pc.bold('Examples:')}
@@ -131,83 +109,6 @@ if (SERVER_MODE) {
   main().catch(console.error);
 }
 
-<<<<<<< HEAD
-=======
-function parseResponse(response: string) {
-  // Try parsing as pure JSON first (for JSON mode)
-  try {
-    const trimmed = response.trim();
-    const parsed = JSON.parse(jsonrepair(trimmed));
-    const tool = parsed.tool;
-    if (tool) {
-      return {
-        thought: parsed.thought || '',
-        action: {
-          tool: tool,
-          message: parsed.message || '',
-          args: parsed.args || parsed.parameters || parsed.input || parsed
-        }
-      };
-    }
-  } catch { /* Fall through to legacy format */ }
-
-  // Legacy format with <thought> tags
-  const thought = response.match(/<thought>([\s\S]*?)<\/thought>/)?.[1]?.trim() || '';
-
-  // Clean thought from response for message parsing
-  let cleanResponse = response.replace(/<thought>[\s\S]*?<\/thought>/, '').trim();
-
-  const jsonMatch = cleanResponse.match(/\{[\s\S]*"tool"[\s\S]*\}/);
-  let action = { tool: 'none', message: '', args: {} as Record<string, unknown> };
-
-  if (jsonMatch) {
-    try {
-      action = JSON.parse(jsonrepair(jsonMatch[0]));
-      // normalize tool names to snake_case for consistency with tool registry
-      if (action && action.tool && typeof action.tool === 'string') {
-        action.tool = String(action.tool).replace(/([a-z0-9])([A-Z])/g, '$1_$2').toLowerCase();
-      }
-      // Remove JSON block for the remaining message
-      cleanResponse = cleanResponse.replace(jsonMatch[0], '').trim();
-    } catch { /* skip */ }
-  }
-
-  // If we still have text and no message, use the remaining text
-  if (!action.message && cleanResponse) {
-    action.message = cleanResponse;
-  }
-
-  return { thought, action };
-}
-
-async function confirm(tool: string, args: Record<string, unknown>, ctx: ContextManager): Promise<boolean> {
-  if (YOLO_MODE) return true;
-  const t = ctx.getTools().get(tool);
-  if (!t || t.permission === 'read') return true;
-
-  if (NON_INTERACTIVE) return true; // auto-approve in non-interactive/test environments
-
-  const confirmed = await clackConfirm({
-    message: `Allow ${pc.cyan(tool)} with args ${pc.dim(JSON.stringify(args))}?`,
-    initialValue: true,
-  });
-  return !isCancel(confirmed) && confirmed;
-}
-
-async function executeTool(name: string, args: Record<string, unknown>, ctx: ContextManager): Promise<string> {
-  const tool = ctx.getTools().get(name);
-  if (!tool) return `Error: Tool "${name}" not found`;
-  try {
-    const result = await tool.execute(args);
-    return typeof result === 'string' ? result : JSON.stringify(result, null, 2);
-  } catch (error) {
-    return `Error: ${error instanceof Error ? error.message : error}`;
-  }
-}
-
-
-
->>>>>>> origin/main
 async function main(): Promise<void> {
   // console.clear();
 
@@ -238,7 +139,6 @@ async function main(): Promise<void> {
     process.exit(0);
   }
 
-<<<<<<< HEAD
   if (process.argv.includes('--deploy')) {
     const { deployCompany, TEMPLATES } = await import('./commands/deploy.js');
     const args = process.argv.slice(2);
@@ -287,8 +187,6 @@ async function main(): Promise<void> {
     process.exit(0);
   }
 
-=======
->>>>>>> origin/main
   if (process.argv.includes('--invoke') || process.argv.includes('--invoke-json')) {
     const isJson = process.argv.includes('--invoke-json');
     const idx = process.argv.indexOf(isJson ? '--invoke-json' : '--invoke');
@@ -369,24 +267,15 @@ async function main(): Promise<void> {
     }
   }
 
-<<<<<<< HEAD
-  const useCodex = process.argv.includes('--codex');
   const useGemini = process.argv.includes('--gemini');
   const useClaude = process.argv.includes('--claude');
   const useAider = process.argv.includes('--aider');
+  const useSimple = process.argv.includes('--simple');
 
   let executor: Executor;
   const ctx = getContextManager(targetDir);
 
-  if (useCodex) {
-    executor = new CodexExecutor();
-  } else if (useGemini) {
-    executor = new GeminiExecutor();
-  } else if (useClaude) {
-    executor = new ClaudeExecutor();
-  } else if (useAider) {
-    executor = new AiderExecutor();
-  } else {
+  if (useSimple) {
     // Simple Core Setup
     if (!GHOST_MODE) {
        console.log(`\n ${pc.bgCyan(pc.black(' SIMPLE-CLI '))} ${pc.dim(`v${VERSION}`)} ${pc.green('●')} ${pc.cyan(targetDir)}\n`);
@@ -423,6 +312,15 @@ async function main(): Promise<void> {
           clawIntent
         }
     );
+  } else if (useGemini) {
+    executor = new GeminiExecutor();
+  } else if (useClaude) {
+    executor = new ClaudeExecutor();
+  } else if (useAider) {
+    executor = new AiderExecutor();
+  } else {
+    // Default to CodexExecutor
+    executor = new CodexExecutor();
   }
 
   await executor.execute({
@@ -430,278 +328,4 @@ async function main(): Promise<void> {
       initialPrompt: args.join(' '),
       ctx
   });
-=======
-  if (!GHOST_MODE) {
-    console.log(`\n ${pc.bgCyan(pc.black(' SIMPLE-CLI '))} ${pc.dim(`v${VERSION}`)} ${pc.green('●')} ${pc.cyan(targetDir)}\n`);
-    console.log(`${pc.dim('○')} Initializing...`);
-  }
-  const ctx = getContextManager(targetDir);
-  await ctx.initialize();
-  if (!GHOST_MODE) console.log(`${pc.green('●')} Ready.`);
-
-  const mcpManager = getMCPManager();
-  try {
-    const configs = await mcpManager.loadConfig();
-    if (configs.length > 0) await mcpManager.connectAll(configs);
-  } catch (error) {
-    if (DEBUG) console.error('MCP init error:', error);
-  }
-
-  const tierConfigs = MOE_MODE ? loadTierConfig() : null;
-  const multiProvider = tierConfigs ? createMultiProvider(tierConfigs) : null;
-  const singleProvider = !MOE_MODE ? createProvider() : null;
-
-
-  const generate = async (input: string): Promise<TypeLLMResponse> => {
-    const history = ctx.getHistory();
-    const fullPrompt = await ctx.buildSystemPrompt();
-
-    if (MOE_MODE && multiProvider && tierConfigs) {
-      const routing = await routeTask(input, async (prompt) => {
-        const res = await multiProvider.generateWithTier(1, prompt, [{ role: 'user', content: input }]);
-        return res.raw || JSON.stringify(res);
-      });
-      if (DEBUG) console.log(pc.dim(`[Routing] Tier: ${routing.tier}`));
-      return multiProvider.generateWithTier(routing.tier as Tier, fullPrompt, history.map(m => ({ role: m.role, content: m.content })));
-    }
-
-    return singleProvider!.generateResponse(fullPrompt, history.map(m => ({ role: m.role, content: m.content })));
-  };
-
-  let isFirstPrompt = true;
-  const isAutonomousMode = CLAW_MODE && clawIntent;
-  let autonomousNudges = 0;
-
-  while (true) {
-    const skill = getActiveSkill();
-    let input: string | symbol;
-
-    // Support initial prompt from command line or claw intent
-    if (isFirstPrompt && (clawIntent || args.length > 0)) {
-      input = clawIntent || args.join(' ');
-      console.log(`\n${pc.magenta('➤')} ${pc.bold(input)}`);
-    } else {
-      if (NON_INTERACTIVE) {
-        // In non-interactive mode return empty string to allow tests to inject inputs
-        input = '';
-      } else {
-        input = await text({
-          message: pc.dim(`[@${skill.name}]`) + ' Chat with Simple-CLI',
-          placeholder: 'Ask anything or use /help',
-          validate(value) {
-            if (value.trim().length === 0) return 'Input required';
-          }
-        });
-      }
-    }
-
-    isFirstPrompt = false;
-
-    if (isCancel(input)) {
-      console.log(`\n${pc.dim('—')} Goodbye!`);
-      mcpManager.disconnectAll();
-      process.exit(0);
-    }
-
-    const trimmedInput = (input as string).trim();
-
-    // Slash command
-    if (trimmedInput.startsWith('/')) {
-      try {
-        await executeCommand(trimmedInput, {
-          cwd: ctx.getCwd(),
-          activeFiles: ctx.getState().activeFiles,
-          readOnlyFiles: ctx.getState().readOnlyFiles,
-          history: ctx.getHistory(),
-          io: {
-            output: (m) => console.log(`\n${pc.dim('○')} ${m}`),
-            error: (m) => console.log(`\n${pc.red('✖')} ${m}`),
-            confirm: async (m) => {
-              const c = await clackConfirm({ message: m });
-              return !isCancel(c) && c;
-            },
-            prompt: async (m) => {
-              const p = await text({ message: m });
-              return isCancel(p) ? '' : p as string;
-            }
-          }
-        });
-      } catch (err) {
-        console.log(`\n${pc.red('✖')} ${pc.red(String(err))}`);
-      }
-      continue;
-    }
-
-    // Skill switching
-    if (trimmedInput.startsWith('@')) {
-      const skillName = trimmedInput.slice(1).trim();
-      if (skillName === 'list') {
-        const skills = listSkills();
-        let selected: string | undefined;
-        if (NON_INTERACTIVE) {
-          selected = skills.length > 0 ? skills[0].name : undefined;
-        } else {
-          const sel = await select({
-            message: 'Select a skill',
-            options: skills.map(s => ({ label: `@${s.name} - ${s.description}`, value: s.name }))
-          });
-          if (!isCancel(sel)) selected = sel as string;
-        }
-        if (selected) {
-          const newSkill = setActiveSkill(selected as string);
-          if (newSkill) ctx.setSkill(newSkill);
-        }
-      } else {
-        const newSkill = setActiveSkill(skillName);
-        if (newSkill) {
-          ctx.setSkill(newSkill);
-          console.log(`\n${pc.cyan('★')} Switched to @${newSkill.name}`);
-        } else {
-          console.log(`\n${pc.red('✖')} Skill @${skillName} not found.`);
-        }
-      }
-      continue;
-    }
-
-    ctx.addMessage('user', trimmedInput);
-
-    let currentInput = trimmedInput;
-    if (CLAW_MODE || GHOST_MODE) {
-      currentInput = `MISSION START: ${trimmedInput}. Consult your persona in AGENT.md and perform the mission tasks immediately. Use list_dir to see what you are working with.`;
-    }
-
-    let steps = 0;
-    let ghostLogFile: string | null = null;
-    if (GHOST_MODE) {
-      const logDir = join(targetDir, '.simple/workdir/memory/logs');
-      if (!existsSync(logDir)) await mkdir(logDir, { recursive: true });
-      ghostLogFile = join(logDir, `ghost-${Date.now()}.log`);
-      await writeFile(ghostLogFile, `[GHOST START] Intent: ${trimmedInput}\n`);
-    }
-
-    let consecutiveErrors = 0;
-
-    while (steps < 15) {
-      const response = await generate(currentInput);
-      const { thought, tool, args, message } = response;
-      const action = { tool: tool || 'none', args: args || {}, message: message || '' };
-
-      const logMsg = (msg: string) => {
-        if (GHOST_MODE && ghostLogFile) {
-          fs.appendFileSync(ghostLogFile, msg + '\n');
-        } else {
-          console.log(msg);
-        }
-      };
-
-      if (thought) logMsg(`\n${pc.dim('💭')} ${pc.cyan(thought)}`);
-
-      if (action.tool !== 'none') {
-        if (await confirm(action.tool, action.args || {}, ctx)) {
-          logMsg(`${pc.yellow('⚙')} ${pc.dim(`Executing ${action.tool}...`)}`);
-          const result = await executeTool(action.tool, action.args || {}, ctx);
-          const resultStr = typeof result === 'string' ? result : JSON.stringify(result, null, 2);
-          logMsg(`${pc.green('✔')} ${pc.dim(resultStr.length > 500 ? resultStr.slice(0, 500) + '...' : resultStr)}`);
-
-          // Error Recovery Loop
-          if (resultStr.startsWith('Error:')) {
-            consecutiveErrors++;
-            if (consecutiveErrors >= 3) {
-              logMsg(`\n${pc.red('✖')} ${pc.red('Too many consecutive tool failures (3). Autonomous mode aborting.')}`);
-              break;
-            }
-          } else {
-            consecutiveErrors = 0;
-          }
-
-          const assistantMsg = response.raw || JSON.stringify(response);
-          ctx.addMessage('assistant', assistantMsg);
-
-          const retryMsg = consecutiveErrors > 0
-            ? ` You have ${3 - consecutiveErrors} retries left. Fix the error and continue.`
-            : '';
-
-          ctx.addMessage('user', `Tool result: ${resultStr}.${retryMsg} Continue the mission.`);
-          currentInput = 'Continue the mission.';
-          steps++;
-          // Autonomous Reflection & Status Check
-          if (CLAW_MODE || GHOST_MODE) {
-            const brain = ctx.getTools().get('claw_brain');
-            if (brain) {
-              await brain.execute({
-                action: 'log_reflection',
-                content: `Executed ${action.tool}. Result: ${resultStr.slice(0, 150)}...`
-              });
-
-              // Check if mission is marked completed
-              const summary = (await brain.execute({ action: 'get_summary' })) as any;
-              if (summary.status === 'completed') {
-                logMsg(`\n${pc.green('📌')} Mission status: completed. Ending loop.`);
-                break;
-              }
-            }
-          }
-          continue;
-        } else {
-          logMsg(`${pc.yellow('⚠')} Skipped.`);
-          const assistantMsg = response.raw || JSON.stringify(response);
-          ctx.addMessage('assistant', assistantMsg);
-          continue;
-        }
-      } else {
-        // Fallback for empty message/tool to avoid "no reply"
-        const assistantMessage = action.message || response.raw || '';
-        if (assistantMessage) {
-          logMsg(`\n${pc.green('🤖')} ${assistantMessage}`);
-          ctx.addMessage('assistant', response.raw || assistantMessage);
-        } else {
-          logMsg(`\n${pc.red('✖')} Agent returned an empty response.`);
-        }
-        break;
-      }
-      break;
-    }
-    // In autonomous mode, if we haven't done any steps yet, nudge the agent
-    if (isAutonomousMode && steps === 0) {
-      autonomousNudges++;
-      console.log(pc.yellow(`⚡ Agent replied with text only. Forcing tool usage (nudge ${autonomousNudges}/2)...`));
-      if (autonomousNudges > 2) {
-        console.log(pc.yellow('⚠️ Agent did not act after several nudges — running deterministic fallback organizer...'));
-        try {
-          runDeterministicOrganizer(targetDir);
-        } catch (err) {
-          console.error('Fallback organizer failed:', err);
-        }
-        // Exit autonomous mode after fallback
-        console.log(pc.green('✅'));
-        mcpManager.disconnectAll();
-        process.exit(0);
-      }
-      ctx.addMessage('user', 'Do not just explain. Use the tools (e.g., list_dir) to execute the plan immediately.');
-      continue;
-    }
-
-    // In autonomous mode, show summary and exit
-    if (isAutonomousMode) {
-      console.log(`\n${pc.dim('─'.repeat(60))}`);
-      console.log(`${pc.cyan('📊 Execution Summary:')}`);
-      console.log(`${pc.dim('  Steps taken:')} ${steps}`);
-      console.log(`${pc.dim('  Final status:')} Task completed`);
-
-      // Autonomous Pruning on Exit
-      const brain = ctx.getTools().get('claw_brain');
-      if (brain) {
-        console.log(pc.dim('🧠 Organizing memory...'));
-        await brain.execute({ action: 'prune' });
-      }
-
-      console.log(`\n${pc.green('✅')} Autonomous task completed.`);
-      console.log(`${pc.dim('Exiting autonomous mode...')}`);
-      mcpManager.disconnectAll();
-      process.exit(0);
-    }
-    // No break! Continue the chat loop
-    isFirstPrompt = false;
-  }
->>>>>>> origin/main
 }
