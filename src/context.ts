@@ -248,7 +248,10 @@ export class ContextManager {
       return this.repoMapCache;
     }
 
-    this.repoMapCache = await generateRepoMap(this.cwd);
+    // Adaptive: extract keywords from history
+    const keywords = this.extractKeywords(this.history);
+
+    this.repoMapCache = await generateRepoMap(this.cwd, keywords);
     this.repoMapTimestamp = now;
 
     return this.repoMapCache;
