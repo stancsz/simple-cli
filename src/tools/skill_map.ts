@@ -23,10 +23,16 @@ export const execute = async (args: Record<string, unknown>, context?: any): Pro
     };
 
     for (const tool of tools.values()) {
+        let params: string[] = [];
+        if (tool.inputSchema && 'shape' in tool.inputSchema) {
+            // @ts-ignore
+            params = Object.keys(tool.inputSchema.shape);
+        }
+
         manifest.skills.push({
             name: tool.name,
             description: tool.description,
-            parameters: tool.inputSchema?._def?.shape ? Object.keys(tool.inputSchema._def.shape) : [],
+            parameters: params,
             source: tool.source || 'builtin'
         });
     }

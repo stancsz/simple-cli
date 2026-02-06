@@ -12,6 +12,8 @@ import { generateRepoMap } from './repoMap.js';
 import { getActiveSkill, type Skill } from './skills.js';
 import { loadAllTools, getToolDefinitions, type Tool } from './registry.js';
 import { getPromptProvider } from './prompts/provider.js';
+import { KnowledgeBase } from './lib/knowledge.js';
+import { FeedbackManager } from './lib/feedback.js';
 
 export interface Message {
   role: 'user' | 'assistant' | 'system';
@@ -93,10 +95,14 @@ export class ContextManager {
   private tools: Map<string, Tool> = new Map();
   private repoMapCache: string = '';
   private repoMapTimestamp: number = 0;
+  private knowledgeBase: KnowledgeBase;
+  private feedbackManager: FeedbackManager;
 
   constructor(cwd?: string) {
     this.cwd = cwd || process.cwd();
     this.skill = getActiveSkill();
+    this.knowledgeBase = new KnowledgeBase(this.cwd);
+    this.feedbackManager = new FeedbackManager(this.cwd);
   }
 
   /**
@@ -292,6 +298,31 @@ export class ContextManager {
         }
       } catch { /* ignore */ }
     }
+
+    // Inject Knowledge Base Patterns
+    try {
+      const patterns = await this.knowledgeBase.getAllPatterns();
+      if (patterns.length > 0) {
+        parts.push('\n## Learned Patterns (Knowledge Base)');
+        parts.push(patterns.map(p => `- [${p.category}] ${p.content}`).join('\n'));
+      }
+    } catch { /* ignore */ }
+
+    // Inject Pending/Resolved Feedback
+    try {
+      const pending = await this.feedbackManager.getPendingRequests();
+      if (pending.length > 0) {
+        parts.push('\n## PENDING FEEDBACK REQUESTS (Awaiting User Input)');
+        parts.push(pending.map(p => `- [ID:${p.id}] ${p.question}`).join('\n'));
+      }
+
+      const resolved = await this.feedbackManager.getResolvedRequests();
+      if (resolved.length > 0) {
+        const recentResolved = resolved.slice(-5);
+         parts.push('\n## RECENTLY RESOLVED FEEDBACK');
+         parts.push(recentResolved.map(p => `- [ID:${p.id}] Q: ${p.question}\n  A: ${p.response}`).join('\n'));
+      }
+    } catch { /* ignore */ }
 
     // CLAW MODE: Inject JIT Agent Persona
     const agentFile = resolve(this.cwd, '.simple', 'workdir', 'AGENT.md');
