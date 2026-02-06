@@ -10,7 +10,7 @@
   "scripts": {
     "start": "node --loader ts-node/esm src/cli.ts",
     "dev": "node --loader ts-node/esm --watch src/index.ts",
-    "build": "tsc",
+    "build": "tsc && cp src/lib/anyllm.py dist/lib/",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "test:watch": "vitest",
