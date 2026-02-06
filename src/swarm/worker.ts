@@ -384,9 +384,7 @@ export class WorkerPool {
    * Get number of available workers
    */
   getAvailableCount(): number {
-    const currentAvailable = this.workers.filter(w => w.isAvailable() && !this.inUse.has(w.id)).length;
-    const canCreate = Math.max(0, this.maxWorkers - this.workers.length);
-    return currentAvailable + canCreate;
+    return Math.max(0, this.maxWorkers - this.getBusyCount());
   }
 
   /**

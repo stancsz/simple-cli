@@ -1,13 +1,13 @@
-import express, { Request, Response } from 'express';
+import express from 'express';
 import cors from 'cors';
 import bodyParser from 'body-parser';
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { SSEServerTransport } from "@modelcontextprotocol/sdk/server/sse.js";
 import { loadAllTools } from '../registry.js';
 import { z } from 'zod';
-import { spawn } from 'child_process';
 import { fileURLToPath } from 'url';
-import { dirname, join } from 'path';
+import { dirname } from 'path';
+import { getContextManager } from '../context.js';
 
 export async function startMCPServer(port: number) {
   const app = express();
@@ -19,6 +19,10 @@ export async function startMCPServer(port: number) {
     name: "SimpleCLI Worker",
     version: "1.0.0"
   });
+
+  // Initialize context manager
+  const ctx = getContextManager();
+  await ctx.initialize();
 
   // Load existing tools
   const tools = await loadAllTools();
@@ -52,68 +56,49 @@ export async function startMCPServer(port: number) {
     );
   }
 
-  // Add run_task tool
+  // Add run_task tool using ContextManager/ToolRegistry directly
   server.tool(
     "run_task",
-    "Execute a task using Simple-CLI agent",
+    "Execute a task using Simple-CLI agent tools directly",
     {
-      prompt: z.string(),
-      env: z.record(z.string()).optional()
+      tool_name: z.string(),
+      args: z.record(z.any())
     },
-    async ({ prompt, env }) => {
-       console.log(`[MCP Server] Received run_task: ${prompt.slice(0, 50)}...`);
-       return new Promise((resolve) => {
-         const __filename = fileURLToPath(import.meta.url);
-         const __dirname = dirname(__filename);
+    async ({ tool_name, args }) => {
+       try {
+         const tool = ctx.getTools().get(tool_name);
+         if (!tool) {
+            return {
+                content: [{ type: "text", text: `Error: Tool ${tool_name} not found` }],
+                isError: true
+            };
+         }
 
-         const isTs = __filename.endsWith('.ts');
-         const cliPath = isTs
-            ? join(__dirname, '..', 'cli.ts')
-            : join(__dirname, '..', 'cli.js');
+         const result = await tool.execute(args);
+         const text = typeof result === 'string' ? result : JSON.stringify(result, null, 2);
+         return {
+            content: [{ type: "text", text }]
+         };
 
-         const args = ['--yolo', prompt];
-         // Pass env
-         const childEnv = { ...process.env, ...env, SIMPLE_CLI_WORKER: 'remote' };
-
-         const cmd = isTs ? 'npx' : 'node';
-         const cmdArgs = isTs ? ['tsx', cliPath, ...args] : [cliPath, ...args];
-
-         console.log(`[MCP] Spawning: ${cmd} ${cmdArgs.join(' ')}`);
-
-         const child = spawn(cmd, cmdArgs, {
-            env: childEnv,
-            cwd: process.cwd()
-         });
-
-         let output = '';
-         child.stdout.on('data', (d) => output += d.toString());
-         child.stderr.on('data', (d) => output += d.toString());
-
-         child.on('close', (code) => {
-            resolve({
-                content: [{ type: "text", text: output }]
-            });
-         });
-       });
+       } catch (error: any) {
+         return {
+            content: [{ type: "text", text: `Error: ${error.message}` }],
+            isError: true
+         };
+       }
     }
   );
 
   let transport: SSEServerTransport;
 
-  app.get('/sse', async (req: Request, res: Response) => {
+  app.get('/sse', async (req, res) => {
     transport = new SSEServerTransport("/messages", res);
     await server.connect(transport);
   });
 
-  app.post('/messages', async (req: Request, res: Response) => {
-    console.log(`[MCP Server] Received POST to /messages. Transport active: ${!!transport}`);
+  app.post('/messages', async (req, res) => {
     if (transport) {
-        try {
-            await transport.handlePostMessage(req, res);
-        } catch (err) {
-            console.error(`[MCP Server] Error handling POST message: ${err}`);
-            res.status(500).send(String(err));
-        }
+        await transport.handlePostMessage(req, res);
     } else {
         res.status(404).send("Session not found");
     }

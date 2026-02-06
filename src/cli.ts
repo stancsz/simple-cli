@@ -60,9 +60,6 @@ if (process.argv.includes('--help') || process.argv.includes('-h')) {
     --moe              Enable Mixture of Experts (multi-model)
     --swarm            Enable Swarm orchestration mode
     --claw "intent"    Enable OpenClaw JIT agent generation
-    --deploy [tmpl]    Deploy a full agent company structure
-    --server           Start MCP SSE server
-    --port [num]       Port for MCP server (default 3000)
     --debug            Enable debug logging
 
   ${pc.bold('Examples:')}
@@ -95,8 +92,7 @@ if (SERVER_MODE) {
   const swarmOptions = parseSwarmArgs(process.argv.slice(2));
   swarmOptions.yolo = swarmOptions.yolo || YOLO_MODE;
   runSwarm(swarmOptions).catch(err => {
-    console.log(pc.red(`Swarm error: ${err instanceof Error ? err.message : String(err)}`));
-    if (err instanceof Error && err.stack) console.log(pc.dim(err.stack));
+    console.error('Swarm error:', err);
     process.exit(1);
   });
 } else {
@@ -204,54 +200,6 @@ async function main(): Promise<void> {
       process.exit(1);
     }
     await killGhostTask(id);
-    process.exit(0);
-  }
-
-  if (process.argv.includes('--deploy')) {
-    const { deployCompany, TEMPLATES } = await import('./commands/deploy.js');
-    const args = process.argv.slice(2);
-    const deployIndex = args.indexOf('--deploy');
-    const deployArgs = args.slice(deployIndex + 1).filter(a => !a.startsWith('-'));
-
-    let template = deployArgs[0];
-    let targetDir = deployArgs[1];
-
-    if (!template) {
-      if (NON_INTERACTIVE) {
-        console.error(pc.red('Error: Template name required in non-interactive mode'));
-        process.exit(1);
-      }
-      const choices = Object.entries(TEMPLATES).map(([key, config]) => ({
-        label: config.name,
-        value: key,
-        hint: config.description
-      }));
-
-      const selected = await select({
-        message: 'Select a company template to deploy:',
-        options: choices
-      });
-
-      if (isCancel(selected)) process.exit(0);
-      template = selected as string;
-    }
-
-    if (!targetDir) {
-       if (NON_INTERACTIVE) {
-          targetDir = './my-company'; // Default for non-interactive
-       } else {
-         const askedDir = await text({
-           message: 'Where should we deploy this company?',
-           placeholder: './my-company',
-           initialValue: './my-company'
-         });
-
-         if (isCancel(askedDir)) process.exit(0);
-         targetDir = askedDir.toString();
-       }
-    }
-
-    await deployCompany(template, targetDir);
     process.exit(0);
   }
 
