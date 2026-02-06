@@ -22,6 +22,7 @@ import { fileURLToPath } from 'url';
 import { runSwarm, parseSwarmArgs, printSwarmHelp } from './commands/swarm.js';
 import { runDeterministicOrganizer } from './tools/organizer.js';
 import { jsonrepair } from 'jsonrepair';
+import { validateToolExecution } from './security/validation.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -447,6 +448,16 @@ async function main(): Promise<void> {
       if (thought) logMsg(`\n${pc.dim('💭')} ${pc.cyan(thought)}`);
 
       if (action.tool !== 'none') {
+        // Validation Hook
+        const validation = validateToolExecution(action.tool, action.args || {}, ctx);
+        if (!validation.valid) {
+          logMsg(`${pc.red('🔒')} ${pc.red(validation.message || 'Operation blocked by security policy.')}`);
+          const assistantMsg = response.raw || JSON.stringify(response);
+          ctx.addMessage('assistant', assistantMsg);
+          ctx.addMessage('user', `Tool execution failed: ${validation.message}`);
+          continue;
+        }
+
         if (await confirm(action.tool, action.args || {}, ctx)) {
           logMsg(`${pc.yellow('⚙')} ${pc.dim(`Executing ${action.tool}...`)}`);
           const result = await executeTool(action.tool, action.args || {}, ctx);
