@@ -1,5 +1,7 @@
 # Dependencies
 node_modules/
+temp/
+./test_**
 
 # Build output
 dist/
