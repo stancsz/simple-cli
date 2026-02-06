@@ -423,6 +423,7 @@ async function main(): Promise<void> {
     }
 
     let steps = 0;
+    let toolFailures = 0;
     let ghostLogFile: string | null = null;
     if (GHOST_MODE) {
       const logDir = join(targetDir, '.simple/workdir/memory/logs');
@@ -451,6 +452,30 @@ async function main(): Promise<void> {
           logMsg(`${pc.yellow('⚙')} ${pc.dim(`Executing ${action.tool}...`)}`);
           const result = await executeTool(action.tool, action.args || {}, ctx);
           const resultStr = typeof result === 'string' ? result : JSON.stringify(result, null, 2);
+
+          if (resultStr.startsWith('Error: ')) {
+            toolFailures++;
+            if (toolFailures >= 3) {
+              logMsg(`\n${pc.red('✖')} Too many consecutive tool failures. Falling back to human.`);
+              break;
+            }
+
+            logMsg(`${pc.red('✖')} ${pc.dim(resultStr)}`);
+            logMsg(`${pc.yellow('⚠')} Triggering self-correction (Attempt ${toolFailures}/3)...`);
+
+            const assistantMsg = response.raw || JSON.stringify(response);
+            ctx.addMessage('assistant', assistantMsg);
+
+            const systemMsg = `Tool execution failed: ${resultStr}\nPlease fix the arguments and retry.`;
+            ctx.addMessage('system', systemMsg);
+
+            currentInput = 'Tool execution failed. Please fix and retry.';
+            steps++;
+            continue;
+          } else {
+            toolFailures = 0;
+          }
+
           logMsg(`${pc.green('✔')} ${pc.dim(resultStr.length > 500 ? resultStr.slice(0, 500) + '...' : resultStr)}`);
 
           const assistantMsg = response.raw || JSON.stringify(response);
