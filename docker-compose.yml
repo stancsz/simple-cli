@@ -1,0 +1,31 @@
+services:
+  orchestrator:
+    build: .
+    command: ["simple", "--swarm", "tasks.json", "--yolo"]
+    environment:
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - SWARM_WORKERS=http://worker-1:3000,http://worker-2:3000
+    volumes:
+      - .:/app/workdir
+    working_dir: /app/workdir
+    depends_on:
+      - worker-1
+      - worker-2
+
+  worker-1:
+    build: .
+    command: ["simple", "--server", "--port", "3000"]
+    environment:
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+    volumes:
+      - .:/app/workdir
+    working_dir: /app/workdir
+
+  worker-2:
+    build: .
+    command: ["simple", "--server", "--port", "3000"]
+    environment:
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+    volumes:
+      - .:/app/workdir
+    working_dir: /app/workdir
