@@ -7,6 +7,8 @@ import { loadAllTools } from '../registry.js';
 import { z } from 'zod';
 import { getContextManager } from '../context.js';
 import { createProvider } from '../providers/index.js';
+import { runGhostLoop } from '../lib/ghost.js';
+import net from 'net';
 
 export async function startMCPServer(port: number) {
   const app = express();
@@ -20,6 +22,31 @@ export async function startMCPServer(port: number) {
   const ctx = getContextManager();
   await ctx.initialize();
   const tools = await loadAllTools();
+
+  // Ghost Mode: HTTP Endpoint
+  app.post('/ghost', async (req, res) => {
+    const { prompt } = req.body;
+    if (!prompt) {
+       res.status(400).send('Missing prompt');
+       return;
+    }
+
+    console.log(`[Ghost] HTTP request: "${prompt}"`);
+
+    // Set headers for streaming text
+    res.setHeader('Content-Type', 'text/plain');
+    res.setHeader('Transfer-Encoding', 'chunked');
+
+    try {
+      await runGhostLoop(prompt, ctx, (msg) => {
+          res.write(msg + '\n');
+      });
+    } catch (err: any) {
+      res.write(`[Fatal Error] ${err.message}\n`);
+    }
+
+    res.end();
+  });
 
   app.get('/sse', async (req, res) => {
     console.log('[MCP] New SSE connection request');
@@ -71,60 +98,11 @@ export async function startMCPServer(port: number) {
       async ({ prompt, env }) => {
          console.log(`[MCP] run_agent_task invoked: "${prompt}"`);
 
-         // 1. Initialize Provider
-         const provider = createProvider();
-         const ctx = getContextManager(); // Re-use global context
-
-         // 2. Add User Message
-         ctx.addMessage('user', prompt);
-
-         // 3. Simple Loop (limit to 10 steps for safety in worker mode)
-         let steps = 0;
-         const maxSteps = 10;
          let finalOutput = '';
-
-         try {
-             while (steps < maxSteps) {
-                // Generate
-                const fullPrompt = await ctx.buildSystemPrompt();
-                const history = ctx.getHistory();
-                const response = await provider.generateResponse(fullPrompt, history.map(m => ({ role: m.role, content: m.content })));
-
-                const { thought, tool, args, message } = response; // typeLLM response structure
-
-                if (thought) console.log(`[Agent] Thought: ${thought}`);
-                finalOutput += `[Thought] ${thought}\n`;
-
-                if (tool && tool !== 'none') {
-                    console.log(`[Agent] Tool: ${tool}`);
-                    const toolDef = ctx.getTools().get(tool);
-                    if (toolDef) {
-                        try {
-                            const result = await toolDef.execute(args || {});
-                            const resultStr = typeof result === 'string' ? result : JSON.stringify(result);
-                            ctx.addMessage('assistant', JSON.stringify(response));
-                            ctx.addMessage('user', `Tool result: ${resultStr}`);
-                            finalOutput += `[Tool: ${tool}] Result: ${resultStr}\n`;
-                        } catch (err: any) {
-                             ctx.addMessage('user', `Tool error: ${err.message}`);
-                             finalOutput += `[Tool: ${tool}] Error: ${err.message}\n`;
-                        }
-                    } else {
-                        ctx.addMessage('user', `Error: Tool ${tool} not found`);
-                    }
-                    steps++;
-                } else {
-                    // Final message
-                    if (message) {
-                        finalOutput += `[Response] ${message}\n`;
-                        ctx.addMessage('assistant', message);
-                    }
-                    break;
-                }
-             }
-         } catch (e: any) {
-             finalOutput += `[Fatal Error] ${e.message}\n`;
-         }
+         // Use the shared ghost loop logic
+         await runGhostLoop(prompt, ctx, (msg) => {
+             finalOutput += msg + '\n';
+         }, { env });
 
          return {
             content: [{ type: "text", text: finalOutput }]
@@ -147,7 +125,6 @@ export async function startMCPServer(port: number) {
 
   app.post('/messages', async (req, res) => {
     const sessionId = req.query.sessionId as string;
-    // console.log(`[MCP] POST /messages for session: ${sessionId}`);
 
     if (!sessionId) {
         res.status(400).send("Missing sessionId parameter");
@@ -166,6 +143,63 @@ export async function startMCPServer(port: number) {
   const httpServer = app.listen(port, () => {
     console.log(`MCP Server running on port ${port}`);
     console.log(`SSE Endpoint: http://localhost:${port}/sse`);
+    console.log(`Ghost Endpoint: http://localhost:${port}/ghost`);
+  });
+
+  // Ghost Mode: Socket Listener
+  const socketPort = port + 1;
+  const socketServer = net.createServer((socket) => {
+      console.log('[Socket] New connection');
+
+      let buffer = '';
+      let processing = false;
+      const queue: string[] = [];
+
+      const processQueue = async () => {
+          if (processing) return;
+          processing = true;
+
+          while (queue.length > 0) {
+              const prompt = queue.shift();
+              if (prompt) {
+                  socket.write(`[Ghost] Received: ${prompt}\n`);
+                  try {
+                      await runGhostLoop(prompt, ctx, (msg) => {
+                          if (socket.writable) socket.write(msg + '\n');
+                      });
+                  } catch (err: any) {
+                      if (socket.writable) socket.write(`[Error] ${err.message}\n`);
+                  }
+                  if (socket.writable) socket.write('[Ghost] Done.\n');
+              }
+          }
+
+          processing = false;
+      };
+
+      socket.on('data', (data) => {
+          buffer += data.toString();
+
+          if (buffer.includes('\n')) {
+              const lines = buffer.split('\n');
+              buffer = lines.pop() || ''; // Keep the incomplete part
+
+              for (const line of lines) {
+                  if (line.trim()) {
+                      queue.push(line.trim());
+                  }
+              }
+              processQueue();
+          }
+      });
+
+      socket.on('error', (err) => {
+          console.error('[Socket] Error:', err);
+      });
+  });
+
+  socketServer.listen(socketPort, () => {
+      console.log(`Socket Server running on port ${socketPort}`);
   });
 
   // Graceful shutdown
@@ -173,7 +207,10 @@ export async function startMCPServer(port: number) {
     console.log('[MCP] Shutting down server...');
     httpServer.close(() => {
         console.log('[MCP] HTTP server closed');
-        process.exit(0);
+        socketServer.close(() => {
+             console.log('[Socket] Server closed');
+             process.exit(0);
+        });
     });
 
     // Force close after timeout
