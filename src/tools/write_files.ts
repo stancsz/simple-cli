@@ -6,6 +6,7 @@
 import { readFile, writeFile, mkdir } from 'fs/promises';
 import { dirname, resolve } from 'path';
 import { z } from 'zod';
+import { applyEdit } from '../lib/editor.js';
 
 export const name = 'write_files';
 
@@ -16,6 +17,7 @@ export const permission = 'write' as const;
 const FileWriteSchema = z.object({
   path: z.string().describe('File path to write'),
   content: z.string().optional().describe('Full content to write (for new files or full rewrites)'),
+  diff: z.string().optional().describe('Git-style merge diff (<<<<<<< SEARCH ... ======= ... >>>>>>> REPLACE)'),
   searchReplace: z.array(z.object({
     search: z.string().describe('Text to search for'),
     replace: z.string().describe('Text to replace with')
@@ -52,6 +54,64 @@ export const execute = async (args: Record<string, unknown>): Promise<WriteResul
           success: true,
           message: `File written successfully to ${absPath}`
         });
+      } else if (file.diff !== undefined) {
+        // Git-style merge diff
+        let content = await readFile(file.path, 'utf-8');
+        const diff = file.diff;
+        const absPath = resolve(file.path);
+
+        // Parse blocks: <<<<<<< SEARCH ... ======= ... >>>>>>> REPLACE
+        // Handle both LF and CRLF line endings
+        const regex = /<<<<<<< SEARCH\r?\n([\s\S]*?)\r?\n=======\r?\n([\s\S]*?)\r?\n>>>>>>> REPLACE/g;
+        let match;
+        let newContent = content;
+        let appliedCount = 0;
+        let errors = [];
+
+        // Collect all edits first
+        const edits = [];
+        while ((match = regex.exec(diff)) !== null) {
+            edits.push({ search: match[1], replace: match[2] });
+        }
+
+        if (edits.length === 0) {
+           results.push({
+             path: file.path,
+             success: false,
+             message: `No valid SEARCH/REPLACE blocks found in diff for ${absPath}`
+           });
+           continue;
+        }
+
+        // Apply edits
+        for (const edit of edits) {
+            const result = applyEdit(newContent, edit.search, edit.replace);
+            if (result.success) {
+                newContent = result.content;
+                appliedCount++;
+            } else {
+                errors.push(`Failed to apply block: ${result.error || 'Unknown error'}`);
+                if (result.suggestion) {
+                    errors.push(`Suggestion: ${result.suggestion}`);
+                }
+            }
+        }
+
+        if (appliedCount > 0) {
+             await writeFile(file.path, newContent, 'utf-8');
+             results.push({
+               path: file.path,
+               success: true,
+               message: `Applied ${appliedCount} diff operation(s) to ${absPath}` + (errors.length > 0 ? `. Errors: ${errors.join('; ')}` : '')
+             });
+        } else {
+             results.push({
+               path: file.path,
+               success: false,
+               message: `Failed to apply any diff operations to ${absPath}. ${errors.join('; ')}`
+             });
+        }
+
       } else if (file.searchReplace && file.searchReplace.length > 0) {
         // Search/replace operations
         let content = await readFile(file.path, 'utf-8');
@@ -87,7 +147,7 @@ export const execute = async (args: Record<string, unknown>): Promise<WriteResul
         results.push({
           path: file.path,
           success: false,
-          message: 'No content or searchReplace provided'
+          message: 'No content, diff, or searchReplace provided'
         });
       }
     } catch (error) {
