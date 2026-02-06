@@ -431,6 +431,8 @@ async function main(): Promise<void> {
       await writeFile(ghostLogFile, `[GHOST START] Intent: ${trimmedInput}\n`);
     }
 
+    let consecutiveErrors = 0;
+
     while (steps < 15) {
       const response = await generate(currentInput);
       const { thought, tool, args, message } = response;
@@ -453,9 +455,25 @@ async function main(): Promise<void> {
           const resultStr = typeof result === 'string' ? result : JSON.stringify(result, null, 2);
           logMsg(`${pc.green('✔')} ${pc.dim(resultStr.length > 500 ? resultStr.slice(0, 500) + '...' : resultStr)}`);
 
+          // Error Recovery Loop
+          if (resultStr.startsWith('Error:')) {
+            consecutiveErrors++;
+            if (consecutiveErrors >= 3) {
+              logMsg(`\n${pc.red('✖')} ${pc.red('Too many consecutive tool failures (3). Autonomous mode aborting.')}`);
+              break;
+            }
+          } else {
+            consecutiveErrors = 0;
+          }
+
           const assistantMsg = response.raw || JSON.stringify(response);
           ctx.addMessage('assistant', assistantMsg);
-          ctx.addMessage('user', `Tool result: ${resultStr}. Continue the mission.`);
+
+          const retryMsg = consecutiveErrors > 0
+            ? ` You have ${3 - consecutiveErrors} retries left. Fix the error and continue.`
+            : '';
+
+          ctx.addMessage('user', `Tool result: ${resultStr}.${retryMsg} Continue the mission.`);
           currentInput = 'Continue the mission.';
           steps++;
           // Autonomous Reflection & Status Check
