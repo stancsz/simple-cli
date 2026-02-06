@@ -1,0 +1,7 @@
+{
+  "skill_hubs": {
+    "devops": ["tool1", "tool2"],
+    "refactor": ["tool3", "tool4"],
+    "frontend": ["tool5", "tool6"]
+  }
+}
