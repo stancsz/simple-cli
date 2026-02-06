@@ -93,7 +93,7 @@ const PARSERS: Record<string, LanguageParser> = {
 
 const tsParser = new TsParser();
 
-export const generateRepoMap = async (rootDir: string = '.'): Promise<string> => {
+export const generateRepoMap = async (rootDir: string = '.' , keywords: string[] = []): Promise<string> => {
   const fileMaps: FileMap[] = [];
 
   const stack = [rootDir];
@@ -115,6 +115,19 @@ export const generateRepoMap = async (rootDir: string = '.'): Promise<string> =>
         }
       }
     } catch { /* ignore access errors */ }
+  }
+
+  // Prioritize files based on keywords
+  if (keywords.length > 0) {
+      validFiles.sort((a, b) => {
+          const aName = relative(rootDir, a).toLowerCase();
+          const bName = relative(rootDir, b).toLowerCase();
+          const aHas = keywords.some(k => aName.includes(k));
+          const bHas = keywords.some(k => bName.includes(k));
+          if (aHas && !bHas) return -1;
+          if (!aHas && bHas) return 1;
+          return 0;
+      });
   }
 
   // 2. Process Files in parallel

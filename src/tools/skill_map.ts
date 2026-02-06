@@ -23,10 +23,11 @@ export const execute = async (args: Record<string, unknown>, context?: any): Pro
     };
 
     for (const tool of tools.values()) {
+        const schema = tool.inputSchema as any;
         manifest.skills.push({
             name: tool.name,
             description: tool.description,
-            parameters: tool.inputSchema?._def?.shape ? Object.keys(tool.inputSchema._def.shape) : [],
+            parameters: (schema && schema._def && schema._def.shape) ? Object.keys(schema._def.shape) : [],
             source: tool.source || 'builtin'
         });
     }
