@@ -15,6 +15,7 @@ import type {
 import { DEFAULT_COORDINATOR_OPTIONS, DEFAULT_RETRY_POLICY } from './types.js';
 import { TaskQueue } from './task.js';
 import { Worker, WorkerPool } from './worker.js';
+import { RemoteWorker } from './remote_worker.js';
 
 export class SwarmCoordinator extends EventEmitter {
   private options: Required<CoordinatorOptions>;
@@ -24,6 +25,7 @@ export class SwarmCoordinator extends EventEmitter {
   private running: boolean = false;
   private startTime: number = 0;
   private aborted: boolean = false;
+  private remoteWorkers: string[] = [];
 
   constructor(options: CoordinatorOptions = {}) {
     super();
@@ -39,11 +41,16 @@ export class SwarmCoordinator extends EventEmitter {
 
     this.retryPolicy = this.options.retryPolicy as RetryPolicy;
     this.taskQueue = new TaskQueue();
+
+    if (process.env.SWARM_WORKERS) {
+        this.remoteWorkers = process.env.SWARM_WORKERS.split(',').map(s => s.trim()).filter(s => s.length > 0);
+    }
+
     this.workerPool = new WorkerPool(this.options.concurrency, {
       cwd: this.options.cwd,
       yolo: this.options.yolo,
       timeout: this.options.timeout,
-    });
+    }, this.remoteWorkers);
   }
 
   /**
@@ -114,7 +121,7 @@ export class SwarmCoordinator extends EventEmitter {
         cwd: this.options.cwd,
         yolo: this.options.yolo,
         timeout: this.options.timeout,
-      });
+      }, this.remoteWorkers);
     }
 
     this.running = true;
@@ -222,7 +229,7 @@ export class SwarmCoordinator extends EventEmitter {
   /**
    * Execute a single task on a worker
    */
-  private async executeTask(worker: Worker, task: SwarmTask): Promise<void> {
+  private async executeTask(worker: Worker | RemoteWorker, task: SwarmTask): Promise<void> {
     const attempt = this.taskQueue.getAttempts(task.id) + 1;
     
     this.emit('task:start', task, worker.id);
