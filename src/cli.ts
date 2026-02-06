@@ -31,7 +31,8 @@ const __dirname = dirname(__filename);
 // CLI flags
 const MOE_MODE = process.argv.includes('--moe');
 const SWARM_MODE = process.argv.includes('--swarm');
-const SERVER_MODE = process.argv.includes('--server');
+const DAEMON_MODE = process.argv.includes('--daemon');
+const SERVER_MODE = process.argv.includes('--server') || DAEMON_MODE;
 const CLAW_MODE = process.argv.includes('--claw') || process.argv.includes('-claw');
 const GHOST_MODE = process.argv.includes('--ghost');
 const YOLO_MODE = process.argv.includes('--yolo') || CLAW_MODE || GHOST_MODE;
@@ -59,6 +60,8 @@ if (process.argv.includes('--help') || process.argv.includes('-h')) {
     --yolo             Skip all confirmation prompts
     --moe              Enable Mixture of Experts (multi-model)
     --swarm            Enable Swarm orchestration mode
+    --server, --daemon Start in daemon/server mode (MCP & Ghost)
+    --ghost "intent"   Run in ghost mode (connects to daemon if available)
     --claw "intent"    Enable OpenClaw JIT agent generation
     --debug            Enable debug logging
 
@@ -95,6 +98,42 @@ if (SERVER_MODE) {
     console.error('Swarm error:', err);
     process.exit(1);
   });
+} else if (GHOST_MODE && process.argv.slice(2).filter(arg => !arg.startsWith('-')).length > 0) {
+  // Try connecting to daemon first
+  const portIndex = process.argv.indexOf('--port');
+  const port = portIndex !== -1 ? parseInt(process.argv[portIndex + 1]) : 3000;
+
+  const rawArgs = process.argv.slice(2);
+  const args: string[] = [];
+  for (let i = 0; i < rawArgs.length; i++) {
+    const arg = rawArgs[i];
+    if (arg === '--port') {
+      i++; // Skip value
+      continue;
+    }
+    if (arg.startsWith('-')) continue;
+    args.push(arg);
+  }
+
+  (async () => {
+    try {
+      const fetch = (await import('node-fetch')).default;
+      const response = await fetch(`http://localhost:${port}/ghost`, {
+         method: 'POST',
+         headers: { 'Content-Type': 'application/json' },
+         body: JSON.stringify({ prompt: args.join(' ') })
+      });
+
+      if (response.ok) {
+         const data = await response.json() as any;
+         console.log(data.output);
+         process.exit(0);
+      }
+    } catch (e) {
+       // Daemon not running or unreachable, fall back to local ghost mode
+    }
+    main().catch(console.error);
+  })();
 } else {
   main().catch(console.error);
 }

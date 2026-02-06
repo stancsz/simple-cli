@@ -7,6 +7,7 @@ import { loadAllTools } from '../registry.js';
 import { z } from 'zod';
 import { getContextManager } from '../context.js';
 import { createProvider } from '../providers/index.js';
+import { runGhostLoop } from '../lib/ghost.js';
 
 export async function startMCPServer(port: number) {
   const app = express();
@@ -20,6 +21,23 @@ export async function startMCPServer(port: number) {
   const ctx = getContextManager();
   await ctx.initialize();
   const tools = await loadAllTools();
+
+  // Ghost Mode Endpoint
+  app.post('/ghost', async (req, res) => {
+    const { prompt } = req.body;
+    if (!prompt) {
+      res.status(400).json({ error: 'Prompt required' });
+      return;
+    }
+    console.log(`[Ghost] Received prompt: "${prompt}"`);
+    try {
+      const output = await runGhostLoop(prompt);
+      res.json({ output });
+    } catch (err: any) {
+      console.error('[Ghost] Error:', err);
+      res.status(500).json({ error: err.message });
+    }
+  });
 
   app.get('/sse', async (req, res) => {
     console.log('[MCP] New SSE connection request');
@@ -70,62 +88,7 @@ export async function startMCPServer(port: number) {
       },
       async ({ prompt, env }) => {
          console.log(`[MCP] run_agent_task invoked: "${prompt}"`);
-
-         // 1. Initialize Provider
-         const provider = createProvider();
-         const ctx = getContextManager(); // Re-use global context
-
-         // 2. Add User Message
-         ctx.addMessage('user', prompt);
-
-         // 3. Simple Loop (limit to 10 steps for safety in worker mode)
-         let steps = 0;
-         const maxSteps = 10;
-         let finalOutput = '';
-
-         try {
-             while (steps < maxSteps) {
-                // Generate
-                const fullPrompt = await ctx.buildSystemPrompt();
-                const history = ctx.getHistory();
-                const response = await provider.generateResponse(fullPrompt, history.map(m => ({ role: m.role, content: m.content })));
-
-                const { thought, tool, args, message } = response; // typeLLM response structure
-
-                if (thought) console.log(`[Agent] Thought: ${thought}`);
-                finalOutput += `[Thought] ${thought}\n`;
-
-                if (tool && tool !== 'none') {
-                    console.log(`[Agent] Tool: ${tool}`);
-                    const toolDef = ctx.getTools().get(tool);
-                    if (toolDef) {
-                        try {
-                            const result = await toolDef.execute(args || {});
-                            const resultStr = typeof result === 'string' ? result : JSON.stringify(result);
-                            ctx.addMessage('assistant', JSON.stringify(response));
-                            ctx.addMessage('user', `Tool result: ${resultStr}`);
-                            finalOutput += `[Tool: ${tool}] Result: ${resultStr}\n`;
-                        } catch (err: any) {
-                             ctx.addMessage('user', `Tool error: ${err.message}`);
-                             finalOutput += `[Tool: ${tool}] Error: ${err.message}\n`;
-                        }
-                    } else {
-                        ctx.addMessage('user', `Error: Tool ${tool} not found`);
-                    }
-                    steps++;
-                } else {
-                    // Final message
-                    if (message) {
-                        finalOutput += `[Response] ${message}\n`;
-                        ctx.addMessage('assistant', message);
-                    }
-                    break;
-                }
-             }
-         } catch (e: any) {
-             finalOutput += `[Fatal Error] ${e.message}\n`;
-         }
-
+         const finalOutput = await runGhostLoop(prompt);
          return {
             content: [{ type: "text", text: finalOutput }]
          };

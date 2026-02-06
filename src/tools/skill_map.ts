@@ -23,10 +23,17 @@ export const execute = async (args: Record<string, unknown>, context?: any): Pro
     };
 
     for (const tool of tools.values()) {
+        let params: string[] = [];
+        if (tool.inputSchema instanceof z.ZodObject) {
+             params = Object.keys(tool.inputSchema.shape);
+        } else if ((tool.inputSchema as any)?._def?.shape) {
+             params = Object.keys((tool.inputSchema as any)._def.shape);
+        }
+
         manifest.skills.push({
             name: tool.name,
             description: tool.description,
-            parameters: tool.inputSchema?._def?.shape ? Object.keys(tool.inputSchema._def.shape) : [],
+            parameters: params,
             source: tool.source || 'builtin'
         });
     }
