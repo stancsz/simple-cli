@@ -244,15 +244,30 @@ export class TypeLLM {
 
             const apiKey = this.config.apiKey || process.env.GOOGLE_API_KEY;
             if (!apiKey) throw new Error('Missing Google API key');
-            const model = this.config.model || 'models/text-bison-001';
-            const base = this.config.baseURL || 'https://generative.googleapis.com/v1beta2';
-            const url = `${base}/${encodeURIComponent(model)}:generate?key=${encodeURIComponent(apiKey)}`;
-            const inputText = messages.map(m => `${m.role}: ${m.content}`).join('\n');
+            const model = this.config.model || 'gemini-2.0-flash';
+            const base = this.config.baseURL || 'https://generativelanguage.googleapis.com/v1beta';
+            const url = `${base}/models/${model.replace(/^models\//, '')}:generateContent?key=${encodeURIComponent(apiKey)}`;
+
+            const contents = messages
+                .filter(m => m.role !== 'system')
+                .map(m => ({
+                    role: m.role === 'assistant' ? 'model' : 'user',
+                    parts: [{ text: m.content }]
+                }));
+
             const body: any = {
-                prompt: inputText,
+                contents: contents,
+                generationConfig: {}
             };
-            if (typeof this.config.temperature === 'number' && this.config.temperature > 0) body.temperature = this.config.temperature;
-            if (this.config.maxTokens) body.maxOutputTokens = this.config.maxTokens;
+
+            if (enhancedSystem) {
+                body.systemInstruction = {
+                    parts: [{ text: enhancedSystem }]
+                };
+            }
+
+            if (typeof this.config.temperature === 'number' && this.config.temperature >= 0) body.generationConfig.temperature = this.config.temperature;
+            if (this.config.maxTokens) body.generationConfig.maxOutputTokens = this.config.maxTokens;
 
             const res = await fetchWithRetry(url, {
                 method: 'POST',
@@ -260,7 +275,7 @@ export class TypeLLM {
                 body: JSON.stringify(body)
             });
             const j = await res.json();
-            const text = j?.candidates?.[0]?.content || j?.output?.[0]?.content || JSON.stringify(j);
+            const text = j?.candidates?.[0]?.content?.parts?.[0]?.text || j?.candidates?.[0]?.content || JSON.stringify(j);
             return text;
         };
 
