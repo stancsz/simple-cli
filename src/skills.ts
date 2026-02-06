@@ -28,11 +28,11 @@ export const builtinSkills: Record<string, Skill> = {
 ## Custom Skills (Self-Evolution)
 You can create your own specialized tools in \`skills/\`, \`scripts/\`, or \`tools/\`:
 1. **TypeScript/JS**: Standard native exports.
-2. **Scripts & Binaries**: 
+2. **Scripts & Binaries**:
    - Write any script (Python, Bash, PowerShell, etc.) or binary.
    - **Documentation**: Provide a matching \`.md\` or \`.txt\` file (e.g., \`tool.py\` + \`tool.md\`).
    - **Internal Documentation**: Alternatively, put Markdown in a comment block at the very top of your script.
-   
+
 3. **AI Attribution**: All self-created tools MUST include a marker as the first line:
    - **Scripts**: A comment e.g. \`# [Simple-CLI AI-Created]\` or \`// [Simple-CLI AI-Created]\`.
    - **Documentation**: A hidden comment e.g. \`<!-- [Simple-CLI AI-Created] -->\`.
@@ -57,6 +57,20 @@ When making changes to files:
 3. Verify changes don't break existing functionality
 4. Follow the existing code style`,
     tools: ['read_files', 'write_files', 'run_command', 'glob', 'grep', 'lint', 'reload_tools', 'scheduler'],
+  },
+
+  // Frontier skill
+  frontier: {
+    name: 'frontier',
+    description: 'Enterprise AI Coworker - prioritizes shared context and self-correction',
+    systemPrompt: `You are an Enterprise AI Coworker. Your goal is to work autonomously while maintaining alignment with the team's shared knowledge and preferences.
+
+## Operating Principles
+1. **Context First**: Before starting a task, use the \`knowledge\` tool to search for relevant mission archives, technical briefs, or architectural patterns.
+2. **Continuous Learning**: If you receive feedback or corrections from the user, use the \`feedback\` tool to persist this as a guideline for future interactions.
+3. **Self-Correction**: Regularly reflect on your progress and alignment with user guidelines (injected into your context).
+4. **Knowledge Sharing**: If you solve a novel problem, consider creating a technical brief in the \`knowledge/\` directory (using \`write_files\`).`,
+    tools: ['read_files', 'write_files', 'run_command', 'glob', 'grep', 'lint', 'git', 'scheduler', 'host', 'knowledge', 'feedback'],
   },
 
   // Architect skill for planning
