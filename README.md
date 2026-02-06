@@ -4,10 +4,10 @@
 
 # simple-cli ⚡
 
-**The Hive Mind for Your Terminal.**
+**The Autonomous Partner for Your Terminal.**
 
 Stop chatting. Start commanding.
-Unleash a sentient swarm on your codebase. No copy-pasting. No waiting. Just pure, autonomous execution.
+Deploy a swarm of agents on your codebase. No copy-pasting. No waiting. Just pure, autonomous execution.
 
 ```bash
 # Ignite
@@ -26,24 +26,24 @@ simple "Refactor the authentication layer in src/auth"
 
 Most AI tools are passive chatbots waiting for input. **Simple-CLI** is an **autonomous workforce** that lives in your shell. It is built for speed, massive scale, and self-evolution.
 
-It doesn't just "help." It **takes over**.
+It doesn't just "help." It **executes**.
 
 ---
 
 ## The Game Changers 🚀
 
-### 1. JIT Agents: Infinite Personas 🧠
+### 1. JIT Agents: Context-Aware Intelligence 🧠
 `simple --claw "Analyze this database schema"`
-Don't settle for a generic assistant. When you use `--claw`, the system **morphs**. It analyzes your intent and **spawns a specialized sub-agent** (e.g., "Senior PostgreSQL Architect") with a dedicated memory, strategy, and toolset architected specifically for that task.
+Don't settle for a generic assistant. When you use `--claw`, the system adapts. It analyzes your intent and **spawns a specialized sub-agent** (e.g., "Senior PostgreSQL Architect") with a dedicated memory, strategy, and toolset architected specifically for that task.
 
-### 2. Swarm Mode: Massive Parallelism 🐝
+### 2. Swarm Mode: Parallel Execution 🐝
 `simple --swarm tasks.json`
-One agent is a helper. A swarm is an army. Need to migrate 50 files? **Unleash the swarm.** Spin up parallel agents to attack the problem simultaneously across your codebase. Watch 10 hours of work finish in 10 minutes.
+One agent is a helper. A swarm is a workforce. Need to migrate 50 files? **Unleash the swarm.** Spin up parallel agents to attack the problem simultaneously across your codebase. Watch 10 hours of work finish in 10 minutes.
 
-### 3. Self-Evolution: Antifragile Intelligence 🧬
-The agent isn't static. It **writes its own tools**. If it needs to query a specific API or parse a weird log format, it codes the tool in Python or Node, saves it to `skills/`, and uses it immediately. It gets smarter and more capable with every command you run.
+### 3. Self-Evolution: Adaptive Tooling 🧬
+The agent isn't static. It **writes its own tools**. If it needs to query a specific API or parse a unique log format, it codes the tool in Python or Node, saves it to `skills/`, and uses it immediately. It becomes more capable with every command you run.
 
-### 4. Ghost Tasks: Autonomous Missions 👻
+### 4. Ghost Tasks: Background Automation 👻
 "Check for security patches every morning at 8 AM."
 Simple-CLI integrates deeply with your OS to run **autonomous background missions**. It audits your code, optimizes your DB, and cleans up your logs while you sleep.
 
