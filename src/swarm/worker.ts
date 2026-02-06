@@ -6,6 +6,7 @@ import { spawn, ChildProcess } from 'child_process';
 import { EventEmitter } from 'events';
 import { randomUUID } from 'crypto';
 import type { SwarmTask, WorkerStatus, WorkerResult, WorkerState } from './types.js';
+import { RemoteWorker } from './remote_worker.js';
 
 export interface WorkerOptions {
   cwd: string;
@@ -312,28 +313,26 @@ export class Worker extends EventEmitter {
  * Worker pool for managing multiple workers
  */
 export class WorkerPool {
-  private workers: Worker[] = [];
+  private workers: (Worker | RemoteWorker)[] = [];
   private inUse: Set<string> = new Set();
   private options: WorkerOptions;
   private maxWorkers: number;
 
-  constructor(maxWorkers: number, options: WorkerOptions) {
+  constructor(maxWorkers: number, options: WorkerOptions, remoteWorkers?: string[]) {
     this.maxWorkers = maxWorkers;
     this.options = options;
+
+    if (remoteWorkers && remoteWorkers.length > 0) {
+        for (const url of remoteWorkers) {
+            this.workers.push(new RemoteWorker(url));
+        }
+    }
   }
 
   /**
    * Get an available worker (or create one if pool not full)
    */
-  getWorker(): Worker | null {
-    // Create new worker if pool not full
-    if (this.workers.length < this.maxWorkers) {
-      const worker = new Worker(this.options);
-      this.workers.push(worker);
-      this.inUse.add(worker.id);
-      return worker;
-    }
-
+  getWorker(): Worker | RemoteWorker | null {
     // Try to find an available worker that's not in use
     const available = this.workers.find(w => w.isAvailable() && !this.inUse.has(w.id));
     if (available) {
@@ -342,27 +341,35 @@ export class WorkerPool {
       return available;
     }
 
+    // Create new local worker if pool not full
+    if (this.workers.length < this.maxWorkers) {
+      const worker = new Worker(this.options);
+      this.workers.push(worker);
+      this.inUse.add(worker.id);
+      return worker;
+    }
+
     return null;
   }
 
   /**
    * Release a worker back to the pool
    */
-  releaseWorker(worker: Worker): void {
+  releaseWorker(worker: Worker | RemoteWorker): void {
     this.inUse.delete(worker.id);
   }
 
   /**
    * Get all workers
    */
-  getAllWorkers(): Worker[] {
+  getAllWorkers(): (Worker | RemoteWorker)[] {
     return [...this.workers];
   }
 
   /**
    * Get worker by ID
    */
-  getWorkerById(id: string): Worker | undefined {
+  getWorkerById(id: string): Worker | RemoteWorker | undefined {
     return this.workers.find(w => w.id === id);
   }
 
@@ -377,7 +384,9 @@ export class WorkerPool {
    * Get number of available workers
    */
   getAvailableCount(): number {
-    return Math.max(0, this.maxWorkers - this.getBusyCount());
+    const currentAvailable = this.workers.filter(w => w.isAvailable() && !this.inUse.has(w.id)).length;
+    const canCreate = Math.max(0, this.maxWorkers - this.workers.length);
+    return currentAvailable + canCreate;
   }
 
   /**

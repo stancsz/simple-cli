@@ -1,0 +1,16 @@
+[
+  {
+    "id": "task-1",
+    "description": "Analyze the project structure and summarize in README.md",
+    "scope": {
+      "files": ["README.md", "package.json", "src/"]
+    }
+  },
+  {
+    "id": "task-2",
+    "description": "Check for TODOs in the codebase and list them in TODOS.md",
+    "scope": {
+      "directories": ["src/"]
+    }
+  }
+]

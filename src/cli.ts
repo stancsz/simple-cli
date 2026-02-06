@@ -31,6 +31,7 @@ const __dirname = dirname(__filename);
 // CLI flags
 const MOE_MODE = process.argv.includes('--moe');
 const SWARM_MODE = process.argv.includes('--swarm');
+const SERVER_MODE = process.argv.includes('--server');
 const CLAW_MODE = process.argv.includes('--claw') || process.argv.includes('-claw');
 const GHOST_MODE = process.argv.includes('--ghost');
 const YOLO_MODE = process.argv.includes('--yolo') || CLAW_MODE || GHOST_MODE;
@@ -73,7 +74,17 @@ if (process.argv.includes('--help') || process.argv.includes('-h')) {
 let clawIntent: string | null = null;
 
 // Handle --swarm mode
-if (SWARM_MODE) {
+if (SERVER_MODE) {
+  const portIndex = process.argv.indexOf('--port');
+  const port = portIndex !== -1 ? parseInt(process.argv[portIndex + 1]) : 3000;
+
+  import('./mcp/server.js').then(({ startMCPServer }) => {
+    startMCPServer(port);
+  }).catch(err => {
+    console.error('Failed to start server:', err);
+    process.exit(1);
+  });
+} else if (SWARM_MODE) {
   if (process.argv.includes('--help')) {
     printSwarmHelp();
     process.exit(0);
