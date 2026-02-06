@@ -97,7 +97,7 @@ export const createProviderForModel = (modelId: string): Provider => {
  */
 export const createProvider = (): Provider => {
   const isClaw = process.argv.includes('--claw') || process.argv.includes('-claw');
-  const model = (isClaw ? process.env.CLAW_MODEL : null) || process.env.OPENAI_MODEL || process.env.GEMINI_MODEL || 'gpt-4o-mini';
+  const model = (isClaw ? process.env.CLAW_MODEL : null) || process.env.OPENAI_MODEL || process.env.GEMINI_MODEL || 'gpt-5-mini';
   console.log(`🤖 Using TypeLLM with model: ${model}`);
   return createProviderForModel(model);
 };

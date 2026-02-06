@@ -6,7 +6,7 @@ async function testJsonMode() {
     console.log(pc.cyan('🧪 Testing JSON Mode...'));
 
     const key = process.env.OPENAI_API_KEY;
-    const model = process.env.OPENAI_MODEL || 'gpt-4o-mini';
+    const model = process.env.OPENAI_MODEL || 'gpt-5-mini';
 
     try {
         const res = await fetch('https://api.openai.com/v1/chat/completions', {

@@ -38,9 +38,9 @@ describe('providers', () => {
   });
 
   it('should create provider with specified model', () => {
-    const provider = createProviderForModel('gpt-4o');
+    const provider = createProviderForModel('gpt-5-mini');
 
-    expect(provider.model).toBe('gpt-4o');
+    expect(provider.model).toBe('gpt-5-mini');
     expect(provider.name).toBe('openai');
   });
 
@@ -60,17 +60,20 @@ describe('providers', () => {
       message: 'Hello!'
     });
 
-    const provider = createProviderForModel('gpt-4o');
+    const provider = createProviderForModel('gpt-5-mini');
     const result = await provider.generateResponse(
       'You are helpful',
       [{ role: 'user', content: 'Hi' }]
     );
 
+    console.log('DEBUG: result is', result);
+
     expect(mockGenerate).toHaveBeenCalledWith(
       'You are helpful',
       [{ role: 'user', content: 'Hi' }]
     );
-    expect(result).toContain('Hello!');
+    // expect(result).toContain('Hello!'); // Changing this to be safe
+    expect(result.message).toBe('Hello!');
   });
 
   it('should handle empty response', async () => {
@@ -82,10 +85,11 @@ describe('providers', () => {
       message: ''
     });
 
-    const provider = createProviderForModel('gpt-4o');
+    const provider = createProviderForModel('gpt-5-mini');
     const result = await provider.generateResponse('System', [{ role: 'user', content: 'Hi' }]);
 
-    expect(result).toContain('""');
+    // expect(result).toContain('""'); // Changing expectation
+     expect(result.message).toBe('');
   });
 });
 
@@ -116,7 +120,7 @@ describe('conversation handling', () => {
       message: 'Response 2'
     });
 
-    const provider = createProviderForModel('gpt-4o');
+    const provider = createProviderForModel('gpt-5-mini');
     await provider.generateResponse('System', [
       { role: 'user', content: 'First message' },
       { role: 'assistant', content: 'First response' },
@@ -139,9 +143,11 @@ describe('error handling', () => {
     const mockGenerate = getMockGenerate();
     mockGenerate.mockRejectedValue(new Error('API Error'));
 
-    const provider = createProviderForModel('gpt-4o');
+    const provider = createProviderForModel('gpt-5-mini');
     const result = await provider.generateResponse('System', [{ role: 'user', content: 'Hi' }]);
 
-    expect(result).toContain('Error calling TypeLLM');
+    // Check error handling behavior from implementation
+    // The catch block returns an object
+    expect(result.message).toContain('Error calling TypeLLM');
   });
 });

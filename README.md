@@ -127,7 +127,7 @@ npm link
 ## Configuration
 Set your keys in `.env` or export them:
 *   `OPENAI_API_KEY` (or Anthropic, Google, etc.)
-*   `CLAW_MODEL` (Defaults to `gpt-4o-mini` for speed)
+*   `CLAW_MODEL` (Defaults to `gpt-5-mini` for speed)
 *   `DEBUG=true` (Unlock the matrix: see the agent's thought process)
 
 ---

@@ -19,9 +19,9 @@ async function testFetch() {
                 'Authorization': `Bearer ${key}`
             },
             body: JSON.stringify({
-                model: "gpt-4o-mini",
+                model: "gpt-5-mini",
                 messages: [{ role: "user", content: "Say PONG" }],
-                max_tokens: 10
+                max_completion_tokens: 10
             })
         });
 
