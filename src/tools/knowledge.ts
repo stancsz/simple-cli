@@ -1,22 +1,23 @@
 /**
- * Knowledge Tool - Provides access to shared business context
- * Scans 'knowledge/' (local) and '~/.simple/knowledge/' (global)
+ * Knowledge Tool - Unified access to business context, shared knowledge, and mission archives.
+ * Scans 'knowledge/' (local), '~/.simple/knowledge/' (global), and '.simple/workdir/memory/notes' (archives).
  */
 
 import { z } from 'zod';
 import { readdir, readFile, stat } from 'fs/promises';
-import { join, resolve, extname, basename } from 'path';
+import { join, resolve, basename } from 'path';
 import { homedir } from 'os';
 import { existsSync } from 'fs';
 import type { Tool } from '../registry.js';
 
-export const name = 'knowledge_tool';
-export const description = 'Access the shared knowledge base (business context). Use this to list, read, or search documents in the knowledge repository.';
+export const name = 'knowledge';
+export const description = 'Access the shared knowledge base (business context) and past mission archives. Use this to list, read, or search documents to gain context.';
 export const permission = 'read' as const;
 
 export const inputSchema = z.object({
-  action: z.enum(['list', 'read', 'search']).describe('Action to perform'),
-  query: z.string().optional().describe('Search query or filename to read'),
+  action: z.enum(['list', 'read', 'search', 'list_archives', 'get_brief']).describe('Action to perform'),
+  query: z.string().optional().describe('Search query, or filename to read'),
+  archiveName: z.string().optional().describe('Specific archive filename to retrieve (for get_brief)'),
 });
 
 type KnowledgeInput = z.infer<typeof inputSchema>;
@@ -48,7 +49,6 @@ async function getAllFiles(): Promise<Map<string, string>> {
       const items = await readdir(dir);
       for (const item of items) {
         if (item.endsWith('.md') || item.endsWith('.txt')) {
-          // Local takes precedence if duplicates
           if (!files.has(item)) {
             files.set(item, join(dir, item));
           }
@@ -59,9 +59,27 @@ async function getAllFiles(): Promise<Map<string, string>> {
   return files;
 }
 
-export async function execute(args: Record<string, unknown>): Promise<string> {
-  const { action, query } = inputSchema.parse(args);
+export async function execute(args: Record<string, unknown>): Promise<any> {
+  const { action, query, archiveName } = inputSchema.parse(args);
+  const cwd = process.cwd();
+  const notesDir = join(cwd, '.simple/workdir/memory/notes');
 
+  // Archive Actions (Frontier Mode)
+  if (action === 'list_archives') {
+    if (!existsSync(notesDir)) return { archives: [] };
+    const files = await readdir(notesDir);
+    return { archives: files.filter(f => f.endsWith('.md')) };
+  }
+
+  if (action === 'get_brief') {
+    if (!archiveName) throw new Error('archiveName is required for get_brief');
+    const filePath = join(notesDir, archiveName);
+    if (!existsSync(filePath)) throw new Error(`Archive ${archiveName} not found`);
+    const content = await readFile(filePath, 'utf-8');
+    return { content };
+  }
+
+  // Standard Knowledge Actions
   if (action === 'list') {
     const files = await getAllFiles();
     if (files.size === 0) {
@@ -76,7 +94,6 @@ export async function execute(args: Record<string, unknown>): Promise<string> {
     const fullPath = files.get(query);
 
     if (!fullPath) {
-      // Try fuzzy match
       const match = Array.from(files.keys()).find(f => f.toLowerCase().includes(query.toLowerCase()));
       if (match) {
         const content = await readFile(files.get(match)!, 'utf-8');
@@ -91,6 +108,8 @@ export async function execute(args: Record<string, unknown>): Promise<string> {
 
   if (action === 'search') {
     if (!query) return 'Error: Query required for "search" action.';
+    
+    // Search Knowledge Base
     const files = await getAllFiles();
     const results: string[] = [];
 
@@ -98,14 +117,26 @@ export async function execute(args: Record<string, unknown>): Promise<string> {
       try {
         const content = await readFile(path, 'utf-8');
         if (content.toLowerCase().includes(query.toLowerCase())) {
-          // Simple snippet extraction
           const idx = content.toLowerCase().indexOf(query.toLowerCase());
           const start = Math.max(0, idx - 50);
           const end = Math.min(content.length, idx + 100);
           const snippet = content.slice(start, end).replace(/\n/g, ' ');
-          results.push(`- [${name}]: "...${snippet}..."`);
+          results.push(`- [KB:${name}]: "...${snippet}..."`);
         }
       } catch { /* skip */ }
+    }
+
+    // Search Mission Archives (Frontier)
+    if (existsSync(notesDir)) {
+         const archiveFiles = await readdir(notesDir);
+         for (const file of archiveFiles.filter(f => f.endsWith('.md'))) {
+             try {
+                 const text = await readFile(join(notesDir, file), 'utf-8');
+                 if (text.toLowerCase().includes(query.toLowerCase())) {
+                     results.push(`- [ARCHIVE:${file}]: "...found match in archive..."`);
+                 }
+             } catch {}
+         }
     }
 
     if (results.length === 0) return `No matches found for "${query}".`;
