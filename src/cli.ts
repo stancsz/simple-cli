@@ -31,6 +31,7 @@ const __dirname = dirname(__filename);
 // CLI flags
 const MOE_MODE = process.argv.includes('--moe');
 const SWARM_MODE = process.argv.includes('--swarm');
+const SERVER_MODE = process.argv.includes('--server');
 const CLAW_MODE = process.argv.includes('--claw') || process.argv.includes('-claw');
 const GHOST_MODE = process.argv.includes('--ghost');
 const YOLO_MODE = process.argv.includes('--yolo') || CLAW_MODE || GHOST_MODE;
@@ -59,7 +60,6 @@ if (process.argv.includes('--help') || process.argv.includes('-h')) {
     --moe              Enable Mixture of Experts (multi-model)
     --swarm            Enable Swarm orchestration mode
     --claw "intent"    Enable OpenClaw JIT agent generation
-    --deploy [tmpl]    Deploy a full agent company structure
     --debug            Enable debug logging
 
   ${pc.bold('Examples:')}
@@ -74,7 +74,17 @@ if (process.argv.includes('--help') || process.argv.includes('-h')) {
 let clawIntent: string | null = null;
 
 // Handle --swarm mode
-if (SWARM_MODE) {
+if (SERVER_MODE) {
+  const portIndex = process.argv.indexOf('--port');
+  const port = portIndex !== -1 ? parseInt(process.argv[portIndex + 1]) : 3000;
+
+  import('./mcp/server.js').then(({ startMCPServer }) => {
+    startMCPServer(port);
+  }).catch(err => {
+    console.error('Failed to start server:', err);
+    process.exit(1);
+  });
+} else if (SWARM_MODE) {
   if (process.argv.includes('--help')) {
     printSwarmHelp();
     process.exit(0);
@@ -190,54 +200,6 @@ async function main(): Promise<void> {
       process.exit(1);
     }
     await killGhostTask(id);
-    process.exit(0);
-  }
-
-  if (process.argv.includes('--deploy')) {
-    const { deployCompany, TEMPLATES } = await import('./commands/deploy.js');
-    const args = process.argv.slice(2);
-    const deployIndex = args.indexOf('--deploy');
-    const deployArgs = args.slice(deployIndex + 1).filter(a => !a.startsWith('-'));
-
-    let template = deployArgs[0];
-    let targetDir = deployArgs[1];
-
-    if (!template) {
-      if (NON_INTERACTIVE) {
-        console.error(pc.red('Error: Template name required in non-interactive mode'));
-        process.exit(1);
-      }
-      const choices = Object.entries(TEMPLATES).map(([key, config]) => ({
-        label: config.name,
-        value: key,
-        hint: config.description
-      }));
-
-      const selected = await select({
-        message: 'Select a company template to deploy:',
-        options: choices
-      });
-
-      if (isCancel(selected)) process.exit(0);
-      template = selected as string;
-    }
-
-    if (!targetDir) {
-       if (NON_INTERACTIVE) {
-          targetDir = './my-company'; // Default for non-interactive
-       } else {
-         const askedDir = await text({
-           message: 'Where should we deploy this company?',
-           placeholder: './my-company',
-           initialValue: './my-company'
-         });
-
-         if (isCancel(askedDir)) process.exit(0);
-         targetDir = askedDir.toString();
-       }
-    }
-
-    await deployCompany(template, targetDir);
     process.exit(0);
   }
 
