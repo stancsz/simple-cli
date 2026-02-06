@@ -1,14 +1,13 @@
 import { Tool } from '../registry.js';
 import { z } from 'zod';
 
-const API_KEY = process.env.JULES_API_KEY;
 const BASE_URL = 'https://jules.googleapis.com/v1alpha';
 
 export const inputSchema = z.object({
-  action: z.enum(['list_sources', 'start_session', 'check_status']).describe('Action to perform'),
+  action: z.enum(['list_sources', 'start_session', 'check_status', 'sync_pr']).describe('Action to perform'),
   source: z.string().optional().describe('Source name for start_session (e.g. "sources/github/owner/repo")'),
   prompt: z.string().optional().describe('Task prompt for Jules (for start_session)'),
-  sessionId: z.string().optional().describe('Session ID for check_status'),
+  sessionId: z.string().optional().describe('Session ID for check_status or sync_pr'),
   automationMode: z.enum(['AUTO_CREATE_PR', 'NONE']).default('AUTO_CREATE_PR').optional().describe('PR mode for new sessions')
 });
 
@@ -16,14 +15,40 @@ export const name = 'jules';
 export const description = 'Developer Agent Manager. Use to list repositories, start building tasks with Jules, and track PR progress.';
 export const permission = 'execute';
 
+function getApiKey() {
+    const key = process.env.JULES_API_KEY;
+    if (!key) throw new Error('JULES_API_KEY not found in environment.');
+    return key;
+}
+
+async function fetchSession(sessionId: string) {
+    const response = await fetch(`${BASE_URL}/sessions/${sessionId}`, {
+        headers: { 'X-Goog-Api-Key': getApiKey() }
+    });
+    if (!response.ok) throw new Error(`API Error: ${response.status} ${await response.text()}`);
+    return await response.json();
+}
+
+async function fetchActivities(sessionId: string) {
+    const response = await fetch(`${BASE_URL}/sessions/${sessionId}/activities?pageSize=5`, {
+        headers: { 'X-Goog-Api-Key': getApiKey() }
+    });
+    if (!response.ok) throw new Error(`API Error: ${response.status} ${await response.text()}`);
+    return await response.json();
+}
+
+async function delay(ms: number) {
+    return new Promise(resolve => setTimeout(resolve, ms));
+}
+
 export const execute = async (args: Record<string, unknown>): Promise<any> => {
     const { action, source, prompt, sessionId, automationMode } = inputSchema.parse(args);
-    if (!API_KEY) throw new Error('JULES_API_KEY not found in environment.');
+    getApiKey(); // Validate API key presence
 
     switch (action) {
         case 'list_sources': {
             const response = await fetch(`${BASE_URL}/sources`, {
-                headers: { 'X-Goog-Api-Key': API_KEY }
+                headers: { 'X-Goog-Api-Key': getApiKey() }
             });
             if (!response.ok) throw new Error(`API Error: ${response.status} ${await response.text()}`);
             const data: any = await response.json();
@@ -36,7 +61,7 @@ export const execute = async (args: Record<string, unknown>): Promise<any> => {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
-                    'X-Goog-Api-Key': API_KEY
+                    'X-Goog-Api-Key': getApiKey()
                 },
                 body: JSON.stringify({
                     prompt,
@@ -59,18 +84,8 @@ export const execute = async (args: Record<string, unknown>): Promise<any> => {
         case 'check_status': {
             if (!sessionId) throw new Error('Session ID is required for check_status.');
             
-            // Get Session
-            const sessionRes = await fetch(`${BASE_URL}/sessions/${sessionId}`, {
-                headers: { 'X-Goog-Api-Key': API_KEY }
-            });
-            if (!sessionRes.ok) throw new Error(`API Error: ${sessionRes.status}`);
-            const sessionData: any = await sessionRes.json();
-
-            // Get Activities
-            const activitiesRes = await fetch(`${BASE_URL}/sessions/${sessionId}/activities?pageSize=5`, {
-                headers: { 'X-Goog-Api-Key': API_KEY }
-            });
-            const activitiesData: any = await activitiesRes.json();
+            const sessionData: any = await fetchSession(sessionId);
+            const activitiesData: any = await fetchActivities(sessionId);
 
             const pr = sessionData.outputs?.find((o: any) => o.pullRequest)?.pullRequest;
             
@@ -82,6 +97,33 @@ export const execute = async (args: Record<string, unknown>): Promise<any> => {
                     originator: a.originator,
                     summary: a.progressUpdated?.title || (a.planGenerated ? 'Plan Generated' : 'Activity')
                 }))
+            };
+        }
+
+        case 'sync_pr': {
+            if (!sessionId) throw new Error('Session ID is required for sync_pr.');
+
+            // Poll for PR
+            for (let i = 0; i < 5; i++) {
+                const sessionData: any = await fetchSession(sessionId);
+                const pr = sessionData.outputs?.find((o: any) => o.pullRequest)?.pullRequest;
+                if (pr?.url) {
+                    return { prUrl: pr.url };
+                }
+                if (i < 4) await delay(2000); // Wait 2s before next retry (total ~10s wait)
+            }
+
+            // If no PR found after polling, return activities
+            const activitiesData: any = await fetchActivities(sessionId);
+            const activities = (activitiesData.activities || []).map((a: any) => ({
+                time: a.createTime,
+                originator: a.originator,
+                summary: a.progressUpdated?.title || (a.planGenerated ? 'Plan Generated' : 'Activity')
+            }));
+
+            return {
+                summary: 'PR not ready yet. Recent activities:',
+                activities
             };
         }
 
