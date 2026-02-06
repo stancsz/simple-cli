@@ -53,6 +53,30 @@ The agent isn't static. It **writes its own tools**. If it needs to query a spec
 "Check for security patches every morning at 8 AM."
 Simple-CLI integrates with your OS (crontab/Task Scheduler) to run **autonomous background missions** while you sleep.
 
+### 6. Dynamic Model Routing 🔀
+`simple "Refactor the login system"`
+The system now intelligently acts as a **Dynamic Model Router**. It analyzes your intent and automatically selects the best LLM for the job:
+
+*   **Scripting & Code Gen** -> Uses **Simple-CLI** with **OpenAI Codex** (GPT-3.5/4) for speed and precision.
+*   **Creative & Explanations** -> Uses **Simple-CLI** with **Google Gemini** for fast, fluent responses.
+*   **Complex Reasoning** -> Uses **Simple-CLI** with **Claude 3 Opus** for deep architectural analysis.
+
+No more manual flag switching. Just state your intent.
+
+---
+
+## 🔬 Real-World Case Studies
+
+**Case Study 1: Architectural Analysis**
+> User: "Explain how to refactor the entire authentication module to use OAuth2."
+> **Router Decision:** `model: anthropic:claude-3-opus`
+> **Result:** The agent recognized the complexity and architectural nature of the request, automatically selecting Claude's large context window for superior reasoning.
+
+**Case Study 2: Rapid Scripting**
+> User: "Write a python script to parse this CSV and plot a graph."
+> **Router Decision:** `model: openai:gpt-3.5-turbo-instruct`
+> **Result:** The agent chose the lightweight Codex models to instantly generate and verify the script without overhead.
+
 ---
 
 ## Get Hooked: 3 Commands to Try

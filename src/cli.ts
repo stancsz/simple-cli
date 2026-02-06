@@ -20,7 +20,6 @@ import { runSwarm, parseSwarmArgs, printSwarmHelp } from './commands/swarm.js';
 import { runDeterministicOrganizer } from './tools/organizer.js';
 
 import { SimpleCoreExecutor } from './executors/simple.js';
-import { AiderExecutor } from './executors/aider.js';
 import { Executor } from './executors/types.js';
 import { executeTool } from './executors/utils.js';
 
@@ -267,16 +266,12 @@ async function main(): Promise<void> {
   const useGemini = process.argv.includes('--gemini');
   const useClaude = process.argv.includes('--claude');
   const useCodex = process.argv.includes('--codex');
-  const useAider = process.argv.includes('--aider');
   // const useSimple = process.argv.includes('--simple'); // Implied default now
 
   let executor: Executor;
   const ctx = getContextManager(targetDir);
 
-  if (useAider) {
-      executor = new AiderExecutor();
-  } else {
-    // Simple Core Setup for everything else
+  // Simple Core Setup for everything else
     if (!GHOST_MODE) {
        console.log(`\n ${pc.bgCyan(pc.black(' SIMPLE-CLI '))} ${pc.dim(`v${VERSION}`)} ${pc.green('●')} ${pc.cyan(targetDir)}\n`);
        console.log(`${pc.dim('○')} Initializing...`);
@@ -327,7 +322,6 @@ async function main(): Promise<void> {
           clawIntent
         }
     );
-  }
 
   await executor.execute({
       targetDir,

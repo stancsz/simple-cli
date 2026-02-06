@@ -156,3 +156,63 @@ export const formatRoutingDecision = (decision: RoutingDecision, tiers: Map<Tier
   return `[Router] Tier ${decision.tier} (${tierConfig?.role}) | Complexity: ${decision.complexity}/10 | Model: ${tierConfig?.model}
          Reasoning: ${decision.reasoning}`;
 };
+
+export interface StrategyDecision {
+  framework: 'simple';
+  model: 'codex' | 'gemini' | 'claude';
+  reasoning: string;
+}
+
+const STRATEGY_PROMPT = `You are a strategic AI task router.
+Analyze the following task and decide on the best Model to use.
+
+Models:
+- 'codex': Best for raw code generation, simple scripts (OpenAI).
+- 'gemini': Best for creative tasks, explanations, or fast responses (Google).
+- 'claude': Best for complex reasoning, architecture, and large context (Anthropic).
+
+Respond ONLY with valid JSON:
+{
+  "model": "<codex|gemini|claude>",
+  "reasoning": "<brief explanation>"
+}
+
+Task:
+`;
+
+export const routeTaskStrategy = async (
+  task: string,
+  orchestratorCall: (prompt: string) => Promise<string>
+): Promise<StrategyDecision> => {
+  try {
+    const response = await orchestratorCall(STRATEGY_PROMPT + task);
+
+    const jsonMatch = response.match(/\{[\s\S]*\}/);
+    if (!jsonMatch) return getDefaultStrategy(task);
+
+    const repaired = jsonrepair(jsonMatch[0]);
+    const data = JSON.parse(repaired);
+
+    return {
+      framework: 'simple',
+      model: ['codex', 'gemini', 'claude'].includes(data.model) ? data.model : 'codex',
+      reasoning: data.reasoning || 'No reasoning'
+    };
+  } catch (err) {
+    return getDefaultStrategy(task);
+  }
+};
+
+const getDefaultStrategy = (task: string): StrategyDecision => {
+  const t = task.toLowerCase();
+  if (t.includes('write') || t.includes('script') || t.includes('codex')) {
+      return { framework: 'simple', model: 'codex', reasoning: 'Code generation keywords' };
+  }
+  if (t.includes('gemini') || t.includes('explain')) {
+      return { framework: 'simple', model: 'gemini', reasoning: 'Explanation keywords' };
+  }
+  if (t.includes('claude') || t.includes('complex') || t.includes('architect') || t.includes('refactor')) {
+      return { framework: 'simple', model: 'claude', reasoning: 'Complex keywords detected' };
+  }
+  return { framework: 'simple', model: 'codex', reasoning: 'Default fallback' };
+};
