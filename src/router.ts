@@ -158,17 +158,13 @@ export const formatRoutingDecision = (decision: RoutingDecision, tiers: Map<Tier
 };
 
 export interface StrategyDecision {
-  framework: 'simple' | 'aider';
+  framework: 'simple';
   model: 'codex' | 'gemini' | 'claude';
   reasoning: string;
 }
 
 const STRATEGY_PROMPT = `You are a strategic AI task router.
-Analyze the following task and decide on the best CLI framework and Model to use.
-
-Frameworks:
-- 'aider': Best for complex refactoring, multi-file edits, and "pair programming" style tasks.
-- 'simple': Best for specific, isolated tasks, script generation, questions, or when "simple" is requested.
+Analyze the following task and decide on the best Model to use.
 
 Models:
 - 'codex': Best for raw code generation, simple scripts (OpenAI).
@@ -177,7 +173,6 @@ Models:
 
 Respond ONLY with valid JSON:
 {
-  "framework": "<simple|aider>",
   "model": "<codex|gemini|claude>",
   "reasoning": "<brief explanation>"
 }
@@ -199,7 +194,7 @@ export const routeTaskStrategy = async (
     const data = JSON.parse(repaired);
 
     return {
-      framework: ['simple', 'aider'].includes(data.framework) ? data.framework : 'simple',
+      framework: 'simple',
       model: ['codex', 'gemini', 'claude'].includes(data.model) ? data.model : 'codex',
       reasoning: data.reasoning || 'No reasoning'
     };
@@ -210,14 +205,14 @@ export const routeTaskStrategy = async (
 
 const getDefaultStrategy = (task: string): StrategyDecision => {
   const t = task.toLowerCase();
-  if (t.includes('aider') || t.includes('refactor') || t.includes('architect')) {
-    return { framework: 'aider', model: 'claude', reasoning: 'Complex keywords detected' };
-  }
   if (t.includes('write') || t.includes('script') || t.includes('codex')) {
       return { framework: 'simple', model: 'codex', reasoning: 'Code generation keywords' };
   }
   if (t.includes('gemini') || t.includes('explain')) {
       return { framework: 'simple', model: 'gemini', reasoning: 'Explanation keywords' };
+  }
+  if (t.includes('claude') || t.includes('complex') || t.includes('architect') || t.includes('refactor')) {
+      return { framework: 'simple', model: 'claude', reasoning: 'Complex keywords detected' };
   }
   return { framework: 'simple', model: 'codex', reasoning: 'Default fallback' };
 };

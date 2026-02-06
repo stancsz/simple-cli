@@ -15,7 +15,6 @@ import { jsonrepair } from 'jsonrepair';
 import type { AnyLLMResponse } from '../lib/anyllm.js';
 import fs from 'fs';
 import { executeTool } from './utils.js';
-import { AiderExecutor } from './aider.js';
 
 export interface SimpleExecutorFlags {
   moe: boolean;
@@ -95,14 +94,6 @@ export class SimpleCoreExecutor implements Executor {
         const strategy = await routeTaskStrategy(promptToAnalyze, orchestrator);
         console.log(pc.cyan(`⚡ Router selected: ${pc.bold(strategy.framework)} with ${pc.bold(strategy.model)}`));
         console.log(pc.dim(`   Reasoning: ${strategy.reasoning}`));
-
-        if (strategy.framework === 'aider') {
-             console.log(pc.green('🚀 Handing off to Aider...'));
-             const aider = new AiderExecutor();
-             await aider.execute(options);
-             this.mcpManager.disconnectAll();
-             return;
-        }
 
         // Switch Model for Simple Framework
         let modelId = 'openai:gpt-3.5-turbo-instruct'; // default fallback
