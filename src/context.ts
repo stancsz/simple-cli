@@ -293,6 +293,17 @@ export class ContextManager {
       } catch { /* ignore */ }
     }
 
+    // Inject User Guidelines (Feedback)
+    const guidelinesPath = join(homedir(), '.simple', 'guidelines.md');
+    if (existsSync(guidelinesPath)) {
+      try {
+        const guidelines = readFileSync(guidelinesPath, 'utf-8');
+        if (guidelines.trim()) {
+          parts.push('\n## User Guidelines (Learned Preferences)\n' + guidelines);
+        }
+      } catch { /* ignore */ }
+    }
+
     // CLAW MODE: Inject JIT Agent Persona
     const agentFile = resolve(this.cwd, '.simple', 'workdir', 'AGENT.md');
     if ((process.argv.includes('--claw') || process.argv.includes('-claw')) && existsSync(agentFile)) {
