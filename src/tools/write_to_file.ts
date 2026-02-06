@@ -5,6 +5,7 @@
 import { writeFile, mkdir } from 'fs/promises';
 import { dirname, resolve } from 'path';
 import { z } from 'zod';
+import { getContextManager } from '../context.js';
 
 export const name = 'write_to_file';
 export const description = 'Write content to a single file. Overwrites if it exists.';
@@ -17,8 +18,18 @@ export const schema = z.object({
 
 export const execute = async (args: Record<string, unknown>): Promise<string> => {
     const { path, content } = schema.parse(args);
-    const absPath = resolve(path);
+    const ctx = getContextManager();
+
+    let targetPath = path;
+    const isStaging = ctx.isStagingMode();
+
+    if (isStaging) {
+        targetPath = ctx.getStagedPath(path);
+    }
+
+    const absPath = resolve(targetPath);
     await mkdir(dirname(absPath), { recursive: true });
     await writeFile(absPath, content, 'utf-8');
-    return `Successfully wrote to ${path}`;
+
+    return `Successfully wrote to ${path}` + (isStaging ? ' (STAGED)' : '');
 };

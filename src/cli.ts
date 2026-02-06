@@ -34,6 +34,7 @@ const SWARM_MODE = process.argv.includes('--swarm');
 const SERVER_MODE = process.argv.includes('--server');
 const CLAW_MODE = process.argv.includes('--claw') || process.argv.includes('-claw');
 const GHOST_MODE = process.argv.includes('--ghost');
+const SAFE_MODE = process.argv.includes('--safe');
 const YOLO_MODE = process.argv.includes('--yolo') || CLAW_MODE || GHOST_MODE;
 const DEBUG = process.argv.includes('--debug') || process.env.DEBUG === 'true';
 const VERSION = '0.2.2';
@@ -60,6 +61,7 @@ if (process.argv.includes('--help') || process.argv.includes('-h')) {
     --moe              Enable Mixture of Experts (multi-model)
     --swarm            Enable Swarm orchestration mode
     --claw "intent"    Enable OpenClaw JIT agent generation
+    --safe             Enable Safe Mode (Staging Layer)
     --debug            Enable debug logging
 
   ${pc.bold('Examples:')}
@@ -288,8 +290,14 @@ async function main(): Promise<void> {
     console.log(`${pc.dim('○')} Initializing...`);
   }
   const ctx = getContextManager(targetDir);
+  ctx.setStagingMode(SAFE_MODE);
   await ctx.initialize();
-  if (!GHOST_MODE) console.log(`${pc.green('●')} Ready.`);
+  if (!GHOST_MODE) {
+    console.log(`${pc.green('●')} Ready.`);
+    if (SAFE_MODE) {
+      console.log(`${pc.yellow('🛡️ Safe Mode Active:')} Writes redirected to .simple/staging/`);
+    }
+  }
 
   const mcpManager = getMCPManager();
   try {
