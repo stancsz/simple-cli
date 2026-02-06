@@ -91,12 +91,19 @@ export class RemoteWorker extends EventEmitter {
   private async connect() {
     // url is like http://host:port. Append /sse
     const sseUrl = new URL('/sse', this.url);
+    console.log(`[RemoteWorker] Connecting to ${sseUrl.href}...`);
     const transport = new SSEClientTransport(sseUrl);
     this.client = new Client(
         { name: "simple-cli-orchestrator", version: "1.0.0" },
         { capabilities: {} }
     );
-    await this.client.connect(transport);
+    try {
+        await this.client.connect(transport);
+        console.log(`[RemoteWorker] Connected to ${sseUrl.href}`);
+    } catch (err) {
+        console.error(`[RemoteWorker] Connection failed: ${err}`);
+        throw err;
+    }
   }
 
   private buildPrompt(task: SwarmTask): string {

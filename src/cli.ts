@@ -95,7 +95,8 @@ if (SERVER_MODE) {
   const swarmOptions = parseSwarmArgs(process.argv.slice(2));
   swarmOptions.yolo = swarmOptions.yolo || YOLO_MODE;
   runSwarm(swarmOptions).catch(err => {
-    console.error('Swarm error:', err);
+    console.log(pc.red(`Swarm error: ${err instanceof Error ? err.message : String(err)}`));
+    if (err instanceof Error && err.stack) console.log(pc.dim(err.stack));
     process.exit(1);
   });
 } else {

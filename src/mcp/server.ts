@@ -1,4 +1,4 @@
-import express from 'express';
+import express, { Request, Response } from 'express';
 import cors from 'cors';
 import bodyParser from 'body-parser';
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
@@ -61,6 +61,7 @@ export async function startMCPServer(port: number) {
       env: z.record(z.string()).optional()
     },
     async ({ prompt, env }) => {
+       console.log(`[MCP Server] Received run_task: ${prompt.slice(0, 50)}...`);
        return new Promise((resolve) => {
          const __filename = fileURLToPath(import.meta.url);
          const __dirname = dirname(__filename);
@@ -99,14 +100,20 @@ export async function startMCPServer(port: number) {
 
   let transport: SSEServerTransport;
 
-  app.get('/sse', async (req, res) => {
+  app.get('/sse', async (req: Request, res: Response) => {
     transport = new SSEServerTransport("/messages", res);
     await server.connect(transport);
   });
 
-  app.post('/messages', async (req, res) => {
+  app.post('/messages', async (req: Request, res: Response) => {
+    console.log(`[MCP Server] Received POST to /messages. Transport active: ${!!transport}`);
     if (transport) {
-        await transport.handlePostMessage(req, res);
+        try {
+            await transport.handlePostMessage(req, res);
+        } catch (err) {
+            console.error(`[MCP Server] Error handling POST message: ${err}`);
+            res.status(500).send(String(err));
+        }
     } else {
         res.status(404).send("Session not found");
     }
