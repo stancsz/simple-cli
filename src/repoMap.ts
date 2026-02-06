@@ -1,10 +1,10 @@
 /**
  * RepoMap: Symbol-aware context generation
- * Uses ts-morph for TypeScript/JavaScript and simple parsing for others.
+ * Uses ts-morph for TypeScript/JavaScript and RegexParser for others.
  */
 
 import { Project, ScriptTarget } from 'ts-morph';
-import { readdir, stat, readFile } from 'fs/promises';
+import { readdir, readFile } from 'fs/promises';
 import { join, extname, relative } from 'path';
 
 const IGNORED_DIRS = new Set(['node_modules', '.git', 'dist', 'build', '.next', 'coverage']);
@@ -15,14 +15,86 @@ interface FileMap {
   symbols: string[];
 }
 
+interface LanguageParser {
+  parse(content: string, filePath: string): string[];
+}
+
+class TsParser implements LanguageParser {
+  private project: Project;
+
+  constructor() {
+    this.project = new Project({
+      compilerOptions: { target: ScriptTarget.ESNext, allowJs: true },
+      skipAddingFilesFromTsConfig: true,
+      useInMemoryFileSystem: true
+    });
+  }
+
+  parse(content: string, filePath: string): string[] {
+    try {
+      const sourceFile = this.project.createSourceFile(filePath, content, { overwrite: true });
+      const symbols: string[] = [];
+
+      sourceFile.getClasses().forEach((c) => symbols.push(`class ${c.getName()}`));
+      sourceFile.getFunctions().forEach((f) => symbols.push(`func ${f.getName()}`));
+      sourceFile.getInterfaces().forEach((i) => symbols.push(`interface ${i.getName()}`));
+      sourceFile.getTypeAliases().forEach((t) => symbols.push(`type ${t.getName()}`));
+      sourceFile.getVariableStatements().forEach((v) => {
+        v.getDeclarations().forEach((d) => symbols.push(`const ${d.getName()}`));
+      });
+
+      return symbols;
+    } catch {
+      return [];
+    }
+  }
+}
+
+class RegexParser implements LanguageParser {
+  constructor(private patterns: RegExp[]) {}
+
+  parse(content: string): string[] {
+    const symbols: string[] = [];
+    const lines = content.split('\n');
+
+    for (const line of lines) {
+        for (const pattern of this.patterns) {
+            const match = line.match(pattern);
+            if (match) {
+                // Return the full match for clarity (e.g., "class MyClass")
+                symbols.push(match[0].trim());
+            }
+        }
+    }
+    return symbols;
+  }
+}
+
+const PARSERS: Record<string, LanguageParser> = {
+    // Python
+    '.py': new RegexParser([
+        /^\s*class\s+[a-zA-Z0-9_]+/,
+        /^\s*def\s+[a-zA-Z0-9_]+/
+    ]),
+    // Go
+    '.go': new RegexParser([
+        /^\s*func\s+[a-zA-Z0-9_]+/,
+        /^\s*type\s+[a-zA-Z0-9_]+/
+    ]),
+    // Rust
+    '.rs': new RegexParser([
+        /^\s*fn\s+[a-zA-Z0-9_]+/,
+        /^\s*struct\s+[a-zA-Z0-9_]+/,
+        /^\s*enum\s+[a-zA-Z0-9_]+/,
+        /^\s*impl\s+[a-zA-Z0-9_]+/,
+        /^\s*trait\s+[a-zA-Z0-9_]+/
+    ])
+};
+
+const tsParser = new TsParser();
+
 export const generateRepoMap = async (rootDir: string = '.'): Promise<string> => {
   const fileMaps: FileMap[] = [];
-  // Initialize ts-morph project
-  const project = new Project({
-    compilerOptions: { target: ScriptTarget.ESNext, allowJs: true },
-    skipAddingFilesFromTsConfig: true,
-    useInMemoryFileSystem: true // Don't actually load files until we say so
-  });
 
   const stack = [rootDir];
   const validFiles: string[] = [];
@@ -54,27 +126,21 @@ export const generateRepoMap = async (rootDir: string = '.'): Promise<string> =>
       const ext = extname(filePath);
       const relPath = relative(rootDir, filePath);
 
-      if (TS_EXTENSIONS.has(ext)) {
-        try {
-          const content = await readFile(filePath, 'utf-8');
-          const sourceFile = project.createSourceFile(filePath, content, { overwrite: true });
-          const symbols: string[] = [];
+      let symbols: string[] = [];
 
-          sourceFile.getClasses().forEach((c) => symbols.push(`class ${c.getName()}`));
-          sourceFile.getFunctions().forEach((f) => symbols.push(`func ${f.getName()}`));
-          sourceFile.getInterfaces().forEach((i) => symbols.push(`interface ${i.getName()}`));
-          sourceFile.getTypeAliases().forEach((t) => symbols.push(`type ${t.getName()}`));
-          sourceFile.getVariableStatements().forEach((v) => {
-            v.getDeclarations().forEach((d) => symbols.push(`const ${d.getName()}`));
-          });
+      try {
+        const content = await readFile(filePath, 'utf-8');
 
-          return { path: relPath, symbols };
-        } catch (e) {
-          return null;
+        if (TS_EXTENSIONS.has(ext)) {
+            symbols = tsParser.parse(content, filePath);
+        } else if (PARSERS[ext]) {
+            symbols = PARSERS[ext].parse(content, filePath);
         }
-      } else {
-        return { path: relPath, symbols: [] };
+      } catch {
+         // ignore read errors
       }
+
+      return { path: relPath, symbols };
     })
   );
 

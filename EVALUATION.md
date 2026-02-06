@@ -22,8 +22,8 @@ We performed a live test with the prompt: *"Create a Python script that calculat
 | Feature | Simple-CLI | Aider | Cline |
 | :--- | :--- | :--- | :--- |
 | **Interface** | Terminal TUI | CLI / Chat | VS Code Extension |
-| **Context** | Basic (TS/JS symbols via `ts-morph`) | Advanced (Tree-sitter Repo Map) | Moderate |
-| **Editing** | JSON-based (Write/Replace) | Search/Replace Blocks (Diffs) | Diff-based |
+| **Context** | Advanced (Polyglot Regex/TS) | Advanced (Tree-sitter Repo Map) | Moderate |
+| **Editing** | Hybrid (JSON + Git Merge Diffs) | Search/Replace Blocks (Diffs) | Diff-based |
 | **Autonomy** | High (JIT Agents loop) | Medium (User-driven) | High |
 | **Speed** | ⚡ Very Fast | Moderate | Moderate |
 

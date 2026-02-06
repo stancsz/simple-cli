@@ -39,10 +39,17 @@ Don't settle for a generic assistant. When you use `--claw`, the system analyzes
 `simple --swarm tasks.json`
 Need to migrate 50 files? Don't do it one by one. Unleash a **parallel swarm of agents** to attack the problem simultaneously across your codebase.
 
-### 3. Self-Evolution 🧬
+### 3. Polyglot Context 🌍
+Simple-CLI now understands more than just TypeScript. It automatically scans and builds a symbol map for:
+*   TypeScript/JavaScript
+*   Python
+*   Go
+*   Rust
+
+### 4. Self-Evolution 🧬
 The agent isn't static. It can **write its own tools** in `skills/` or `tools/` and hot-reload them instantly. If it needs a tool to check DNS records, it builds it, uses it, and keeps it for next time.
 
-### 4. Ghost Tasks 👻
+### 5. Ghost Tasks 👻
 "Check for security patches every morning at 8 AM."
 Simple-CLI integrates with your OS (crontab/Task Scheduler) to run **autonomous background missions** while you sleep.
 
