@@ -4,6 +4,18 @@
  * Powered by @clack/prompts.
  */
 import 'dotenv/config';
+<<<<<<< HEAD
+import { text, isCancel, select } from '@clack/prompts';
+import pc from 'picocolors';
+import { getContextManager } from './context.js';
+import { createProvider } from './providers/index.js';
+import { createMultiProvider } from './providers/multi.js';
+import { loadTierConfig } from './router.js';
+import { getMCPManager } from './mcp/manager.js';
+import { readFileSync, statSync } from 'fs';
+import fs from 'fs';
+import { mkdir, writeFile } from 'fs/promises';
+=======
 import { intro, outro, text, spinner as clackSpinner, note, confirm as clackConfirm, isCancel, select } from '@clack/prompts';
 import pc from 'picocolors';
 import { ContextManager, getContextManager } from './context.js';
@@ -17,11 +29,23 @@ import { listSkills, setActiveSkill, getActiveSkill } from './skills.js';
 import { readFileSync, existsSync, statSync, appendFileSync } from 'fs';
 import fs from 'fs';
 import { readFile, writeFile, mkdir } from 'fs/promises';
+>>>>>>> origin/main
 import { resolve, join, dirname } from 'path';
 import { fileURLToPath } from 'url';
 import { runSwarm, parseSwarmArgs, printSwarmHelp } from './commands/swarm.js';
 import { runDeterministicOrganizer } from './tools/organizer.js';
+<<<<<<< HEAD
+
+import { SimpleCoreExecutor } from './executors/simple.js';
+import { CodexExecutor } from './executors/codex.js';
+import { GeminiExecutor } from './executors/gemini.js';
+import { ClaudeExecutor } from './executors/claude.js';
+import { AiderExecutor } from './executors/aider.js';
+import { Executor } from './executors/types.js';
+import { executeTool } from './executors/utils.js';
+=======
 import { jsonrepair } from 'jsonrepair';
+>>>>>>> origin/main
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -60,6 +84,14 @@ if (process.argv.includes('--help') || process.argv.includes('-h')) {
     --moe              Enable Mixture of Experts (multi-model)
     --swarm            Enable Swarm orchestration mode
     --claw "intent"    Enable OpenClaw JIT agent generation
+<<<<<<< HEAD
+    --deploy [tmpl]    Deploy a full agent company structure
+    --codex            Use OpenAI Codex CLI
+    --gemini           Use Google Gemini CLI
+    --claude           Use Claude Code CLI
+    --aider            Use Aider AI Pair Programmer
+=======
+>>>>>>> origin/main
     --debug            Enable debug logging
 
   ${pc.bold('Examples:')}
@@ -99,6 +131,8 @@ if (SERVER_MODE) {
   main().catch(console.error);
 }
 
+<<<<<<< HEAD
+=======
 function parseResponse(response: string) {
   // Try parsing as pure JSON first (for JSON mode)
   try {
@@ -173,6 +207,7 @@ async function executeTool(name: string, args: Record<string, unknown>, ctx: Con
 
 
 
+>>>>>>> origin/main
 async function main(): Promise<void> {
   // console.clear();
 
@@ -203,6 +238,57 @@ async function main(): Promise<void> {
     process.exit(0);
   }
 
+<<<<<<< HEAD
+  if (process.argv.includes('--deploy')) {
+    const { deployCompany, TEMPLATES } = await import('./commands/deploy.js');
+    const args = process.argv.slice(2);
+    const deployIndex = args.indexOf('--deploy');
+    const deployArgs = args.slice(deployIndex + 1).filter(a => !a.startsWith('-'));
+
+    let template = deployArgs[0];
+    let targetDir = deployArgs[1];
+
+    if (!template) {
+      if (NON_INTERACTIVE) {
+        console.error(pc.red('Error: Template name required in non-interactive mode'));
+        process.exit(1);
+      }
+      const choices = Object.entries(TEMPLATES).map(([key, config]) => ({
+        label: config.name,
+        value: key,
+        hint: config.description
+      }));
+
+      const selected = await select({
+        message: 'Select a company template to deploy:',
+        options: choices
+      });
+
+      if (isCancel(selected)) process.exit(0);
+      template = selected as string;
+    }
+
+    if (!targetDir) {
+       if (NON_INTERACTIVE) {
+          targetDir = './my-company'; // Default for non-interactive
+       } else {
+         const askedDir = await text({
+           message: 'Where should we deploy this company?',
+           placeholder: './my-company',
+           initialValue: './my-company'
+         });
+
+         if (isCancel(askedDir)) process.exit(0);
+         targetDir = askedDir.toString();
+       }
+    }
+
+    await deployCompany(template, targetDir);
+    process.exit(0);
+  }
+
+=======
+>>>>>>> origin/main
   if (process.argv.includes('--invoke') || process.argv.includes('--invoke-json')) {
     const isJson = process.argv.includes('--invoke-json');
     const idx = process.argv.indexOf(isJson ? '--invoke-json' : '--invoke');
@@ -283,6 +369,68 @@ async function main(): Promise<void> {
     }
   }
 
+<<<<<<< HEAD
+  const useCodex = process.argv.includes('--codex');
+  const useGemini = process.argv.includes('--gemini');
+  const useClaude = process.argv.includes('--claude');
+  const useAider = process.argv.includes('--aider');
+
+  let executor: Executor;
+  const ctx = getContextManager(targetDir);
+
+  if (useCodex) {
+    executor = new CodexExecutor();
+  } else if (useGemini) {
+    executor = new GeminiExecutor();
+  } else if (useClaude) {
+    executor = new ClaudeExecutor();
+  } else if (useAider) {
+    executor = new AiderExecutor();
+  } else {
+    // Simple Core Setup
+    if (!GHOST_MODE) {
+       console.log(`\n ${pc.bgCyan(pc.black(' SIMPLE-CLI '))} ${pc.dim(`v${VERSION}`)} ${pc.green('●')} ${pc.cyan(targetDir)}\n`);
+       console.log(`${pc.dim('○')} Initializing...`);
+    }
+
+    await ctx.initialize();
+    if (!GHOST_MODE) console.log(`${pc.green('●')} Ready.`);
+
+    const mcpManager = getMCPManager();
+    try {
+      const configs = await mcpManager.loadConfig();
+      if (configs.length > 0) await mcpManager.connectAll(configs);
+    } catch (error) {
+      if (DEBUG) console.error('MCP init error:', error);
+    }
+
+    const tierConfigs = MOE_MODE ? loadTierConfig() : null;
+    const multiProvider = tierConfigs ? createMultiProvider(tierConfigs) : null;
+    const singleProvider = !MOE_MODE ? createProvider() : null;
+
+    executor = new SimpleCoreExecutor(
+        singleProvider,
+        multiProvider,
+        tierConfigs,
+        mcpManager,
+        {
+          moe: MOE_MODE,
+          claw: CLAW_MODE,
+          ghost: GHOST_MODE,
+          yolo: YOLO_MODE,
+          debug: DEBUG,
+          nonInteractive: NON_INTERACTIVE,
+          clawIntent
+        }
+    );
+  }
+
+  await executor.execute({
+      targetDir,
+      initialPrompt: args.join(' '),
+      ctx
+  });
+=======
   if (!GHOST_MODE) {
     console.log(`\n ${pc.bgCyan(pc.black(' SIMPLE-CLI '))} ${pc.dim(`v${VERSION}`)} ${pc.green('●')} ${pc.cyan(targetDir)}\n`);
     console.log(`${pc.dim('○')} Initializing...`);
@@ -537,4 +685,5 @@ async function main(): Promise<void> {
     // No break! Continue the chat loop
     isFirstPrompt = false;
   }
+>>>>>>> origin/main
 }
