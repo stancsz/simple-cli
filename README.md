@@ -4,9 +4,10 @@
 
 # simple-cli ⚡
 
-**The Terminal-Native AI Partner. Lean. Local. Limitless.**
+**The Hive Mind for Your Terminal.**
 
-Stop pasting code into a browser. Start commanding a swarm directly from your terminal.
+Stop chatting. Start commanding.
+Unleash a sentient swarm on your codebase. No copy-pasting. No waiting. Just pure, autonomous execution.
 
 ```bash
 # Ignite
@@ -23,21 +24,21 @@ simple "Refactor the authentication layer in src/auth"
 
 ## Why Simple-CLI?
 
-Most AI tools are bloated extensions or heavy desktop apps. **Simple-CLI** is different. It lives where you live: in the shell. It is built for speed, autonomy, and raw power.
+Most AI tools are passive chatbots waiting for input. **Simple-CLI** is an **autonomous workforce** that lives in your shell. It is built for speed, massive scale, and self-evolution.
 
-It doesn't just "chat." It **executes**.
+It doesn't just "help." It **takes over**.
 
 ---
 
-## The Innovations 🚀
+## The Game Changers 🚀
 
-### 1. Just-in-Time (JIT) Intelligence 🧠
+### 1. JIT Agents: Infinite Personas 🧠
 `simple --claw "Analyze this database schema"`
-Don't settle for a generic assistant. When you use `--claw`, the system analyzes your intent and **spawns a specialized sub-agent** specifically architected for that task. It builds its own memory, strategy, and persona on the fly.
+Don't settle for a generic assistant. When you use `--claw`, the system **morphs**. It analyzes your intent and **spawns a specialized sub-agent** (e.g., "Senior PostgreSQL Architect") with a dedicated memory, strategy, and toolset architected specifically for that task.
 
-### 2. Agent Swarms 🐝
+### 2. Swarm Mode: Massive Parallelism 🐝
 `simple --swarm tasks.json`
-Need to migrate 50 files? Don't do it one by one. Unleash a **parallel swarm of agents** to attack the problem simultaneously across your codebase.
+One agent is a helper. A swarm is an army. Need to migrate 50 files? **Unleash the swarm.** Spin up parallel agents to attack the problem simultaneously across your codebase. Watch 10 hours of work finish in 10 minutes.
 
 ### 3. Polyglot Context 🌍
 Simple-CLI now understands more than just TypeScript. It automatically scans and builds a symbol map for:
@@ -46,16 +47,16 @@ Simple-CLI now understands more than just TypeScript. It automatically scans and
 *   Go
 *   Rust
 
-### 4. Self-Evolution 🧬
-The agent isn't static. It can **write its own tools** in `skills/` or `tools/` and hot-reload them instantly. If it needs a tool to check DNS records, it builds it, uses it, and keeps it for next time.
+### 4. Self-Evolution: Antifragile Intelligence 🧬
+The agent isn't static. It **writes its own tools**. If it needs to query a specific API or parse a weird log format, it codes the tool in Python or Node, saves it to `skills/`, and uses it immediately. It gets smarter and more capable with every command you run.
 
-### 5. Ghost Tasks 👻
+### 5. Ghost Tasks: Autonomous Missions 👻
 "Check for security patches every morning at 8 AM."
-Simple-CLI integrates with your OS (crontab/Task Scheduler) to run **autonomous background missions** while you sleep.
+Simple-CLI integrates deeply with your OS to run **autonomous background missions**. It audits your code, optimizes your DB, and cleans up your logs while you sleep.
 
 ---
 
-## Get Hooked: 3 Commands to Try
+## Witness the Power
 
 **The "Architect" Workflow:**
 ```bash
