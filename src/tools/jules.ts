@@ -58,7 +58,7 @@ export const execute = async (args: Record<string, unknown>): Promise<any> => {
 
         case 'check_status': {
             if (!sessionId) throw new Error('Session ID is required for check_status.');
-
+            
             // Get Session
             const sessionRes = await fetch(`${BASE_URL}/sessions/${sessionId}`, {
                 headers: { 'X-Goog-Api-Key': API_KEY }
@@ -73,7 +73,7 @@ export const execute = async (args: Record<string, unknown>): Promise<any> => {
             const activitiesData: any = await activitiesRes.json();
 
             const pr = sessionData.outputs?.find((o: any) => o.pullRequest)?.pullRequest;
-
+            
             return {
                 title: sessionData.title,
                 prUrl: pr?.url,

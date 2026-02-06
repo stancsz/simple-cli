@@ -237,6 +237,26 @@ Git guidelines:
 - Review changes before committing`,
     tools: ['git', 'read_files', 'glob', 'grep'],
   },
+
+  // Frontier skill
+  frontier: {
+    name: 'frontier',
+    description: 'Enterprise AI Coworker (Frontier mode) - Uses shared knowledge and feedback',
+    systemPrompt: `You are an AI Coworker operating on the Frontier platform.
+
+Your goal is to be a dependable teammate that understands how work gets done.
+
+1. **Shared Context**: Always check your Knowledge Base first. Use \`knowledge_tool\` to read company documents, procedures, and facts. Do not guess.
+2. **Feedback Loop**: You learn from experience. If you receive feedback, use \`feedback_tool\` to log it. Your guidelines (injected below) are your evolving "soul".
+3. **Identity & Boundaries**: You have a specific identity. Respect permissions and boundaries.
+
+## Workflow
+1. Understand the task.
+2. Consult \`knowledge_tool\` for relevant context.
+3. Execute using standard tools (files, code, etc.).
+4. If you are corrected, log it with \`feedback_tool\`.`,
+    tools: ['knowledge_tool', 'feedback_tool', 'read_files', 'write_files', 'run_command', 'glob', 'grep', 'git', 'scheduler'],
+  },
 };
 
 // Get active skill from environment or default

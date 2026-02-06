@@ -5,7 +5,7 @@
 
 import { Project, ScriptTarget } from 'ts-morph';
 import { readdir, stat, readFile } from 'fs/promises';
-import { join, extname, relative } from 'path';
+import { join, extname, relative, basename } from 'path';
 
 const IGNORED_DIRS = new Set(['node_modules', '.git', 'dist', 'build', '.next', 'coverage']);
 const TS_EXTENSIONS = new Set(['.ts', '.tsx', '.js', '.jsx']);
@@ -15,7 +15,39 @@ interface FileMap {
   symbols: string[];
 }
 
-export const generateRepoMap = async (rootDir: string = '.'): Promise<string> => {
+interface ScoredFile {
+  path: string;
+  score: number;
+}
+
+function computeScore(filePath: string, keywords: string[]): number {
+  if (!keywords || keywords.length === 0) return 0;
+
+  let score = 0;
+  const lowerPath = filePath.toLowerCase();
+  const filename = basename(filePath).toLowerCase();
+  const nameNoExt = filename.replace(/\.[^/.]+$/, "");
+
+  for (const keyword of keywords) {
+    const k = keyword.toLowerCase();
+
+    // Exact filename match (strongest signal)
+    if (nameNoExt === k) {
+      score += 10;
+    }
+    // Partial filename match
+    else if (filename.includes(k)) {
+      score += 5;
+    }
+    // Path match (weakest signal)
+    else if (lowerPath.includes(k)) {
+      score += 1;
+    }
+  }
+  return score;
+}
+
+export const generateRepoMap = async (rootDir: string = '.', keywords: string[] = []): Promise<string> => {
   const fileMaps: FileMap[] = [];
   // Initialize ts-morph project
   const project = new Project({
@@ -25,7 +57,7 @@ export const generateRepoMap = async (rootDir: string = '.'): Promise<string> =>
   });
 
   const stack = [rootDir];
-  const validFiles: string[] = [];
+  const allFiles: string[] = [];
 
   // 1. Walk directory to find files
   while (stack.length > 0) {
@@ -39,15 +71,28 @@ export const generateRepoMap = async (rootDir: string = '.'): Promise<string> =>
         if (entry.isDirectory()) {
           stack.push(fullPath);
         } else if (entry.isFile()) {
-          validFiles.push(fullPath);
+          allFiles.push(fullPath);
         }
       }
     } catch { /* ignore access errors */ }
   }
 
-  // 2. Process Files in parallel
-  // Limit to 50 files for now to avoid context explosion
-  const filesToProcess = validFiles.slice(0, 50);
+  // 2. Score and Sort Files
+  // Adaptive Mapping: prioritize files matching keywords
+  const scoredFiles: ScoredFile[] = allFiles.map(f => ({
+    path: f,
+    score: computeScore(relative(rootDir, f), keywords)
+  }));
+
+  // Sort by score desc, then by path length (shorter is usually more relevant/root), then alphabetical
+  scoredFiles.sort((a, b) => {
+    if (b.score !== a.score) return b.score - a.score;
+    if (a.path.length !== b.path.length) return a.path.length - b.path.length;
+    return a.path.localeCompare(b.path);
+  });
+
+  // Limit to 50 files
+  const filesToProcess = scoredFiles.slice(0, 50).map(sf => sf.path);
 
   const results = await Promise.all(
     filesToProcess.map(async (filePath) => {

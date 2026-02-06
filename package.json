@@ -45,12 +45,17 @@
     "@oclif/core": "^4.0.0",
     "@openai/codex": "^0.98.0",
     "@stan-chen/typellm": "^0.1.0",
+    "@types/cors": "^2.8.19",
+    "@types/express": "^5.0.6",
     "@types/node-fetch": "^2.6.13",
     "ai": "^6.0.67",
     "body-parser": "^1.20.4",
     "chalk": "^5.3.0",
     "chokidar": "^5.0.0",
+<<<<<<< HEAD
     "claude-code": "^1.0.0",
+=======
+>>>>>>> origin/main
     "cors": "^2.8.6",
     "diff": "^5.2.0",
     "dotenv": "^16.4.7",
