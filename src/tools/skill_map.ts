@@ -26,7 +26,7 @@ export const execute = async (args: Record<string, unknown>, context?: any): Pro
         manifest.skills.push({
             name: tool.name,
             description: tool.description,
-            parameters: tool.inputSchema?._def?.shape ? Object.keys(tool.inputSchema._def.shape) : [],
+            parameters: (tool.inputSchema as any)?._def?.shape ? Object.keys((tool.inputSchema as any)._def.shape) : [],
             source: tool.source || 'builtin'
         });
     }

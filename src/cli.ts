@@ -22,6 +22,7 @@ import { fileURLToPath } from 'url';
 import { runSwarm, parseSwarmArgs, printSwarmHelp } from './commands/swarm.js';
 import { runDeterministicOrganizer } from './tools/organizer.js';
 import { jsonrepair } from 'jsonrepair';
+import { ConsoleInterceptor, formatToolResult } from './lib/headless.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -29,17 +30,23 @@ const __dirname = dirname(__filename);
 // Deterministic organizer moved to src/tools/organizer.ts
 
 // CLI flags
+const HEADLESS_MODE = process.argv.includes('--headless');
 const MOE_MODE = process.argv.includes('--moe');
 const SWARM_MODE = process.argv.includes('--swarm');
 const SERVER_MODE = process.argv.includes('--server');
 const CLAW_MODE = process.argv.includes('--claw') || process.argv.includes('-claw');
 const GHOST_MODE = process.argv.includes('--ghost');
-const YOLO_MODE = process.argv.includes('--yolo') || CLAW_MODE || GHOST_MODE;
+const YOLO_MODE = process.argv.includes('--yolo') || CLAW_MODE || GHOST_MODE || HEADLESS_MODE;
 const DEBUG = process.argv.includes('--debug') || process.env.DEBUG === 'true';
 const VERSION = '0.2.2';
 
 // Non-interactive detection (tests and CI)
-const NON_INTERACTIVE = process.env.VITEST === 'true' || process.env.TEST === 'true' || !process.stdin.isTTY;
+const NON_INTERACTIVE = process.env.VITEST === 'true' || process.env.TEST === 'true' || !process.stdin.isTTY || HEADLESS_MODE;
+
+if (HEADLESS_MODE) {
+  const interceptor = new ConsoleInterceptor();
+  interceptor.activate();
+}
 // Handle --version and --help immediately
 if (process.argv.includes('--version') || process.argv.includes('-v')) {
   console.log(`Simple-CLI v${VERSION}`);
@@ -162,12 +169,31 @@ async function confirm(tool: string, args: Record<string, unknown>, ctx: Context
 
 async function executeTool(name: string, args: Record<string, unknown>, ctx: ContextManager): Promise<string> {
   const tool = ctx.getTools().get(name);
-  if (!tool) return `Error: Tool "${name}" not found`;
+  if (!tool) {
+    if (HEADLESS_MODE) {
+      return JSON.stringify(await formatToolResult(null, 'error', 0, `Tool "${name}" not found`));
+    }
+    return `Error: Tool "${name}" not found`;
+  }
+
+  const startTime = Date.now();
   try {
     const result = await tool.execute(args);
+    const duration = Date.now() - startTime;
+
+    if (HEADLESS_MODE) {
+      return JSON.stringify(await formatToolResult(result, 'success', duration));
+    }
+
     return typeof result === 'string' ? result : JSON.stringify(result, null, 2);
   } catch (error) {
-    return `Error: ${error instanceof Error ? error.message : error}`;
+    const duration = Date.now() - startTime;
+    const msg = error instanceof Error ? error.message : String(error);
+
+    if (HEADLESS_MODE) {
+      return JSON.stringify(await formatToolResult(null, 'error', duration, msg));
+    }
+    return `Error: ${msg}`;
   }
 }
 
