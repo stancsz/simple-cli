@@ -93,6 +93,7 @@ export class ContextManager {
   private tools: Map<string, Tool> = new Map();
   private repoMapCache: string = '';
   private repoMapTimestamp: number = 0;
+  private stagingMode: boolean = false;
 
   constructor(cwd?: string) {
     this.cwd = cwd || process.cwd();
@@ -415,6 +416,46 @@ export class ContextManager {
    */
   getCwd(): string {
     return this.cwd;
+  }
+
+  /**
+   * Enable or disable staging mode
+   */
+  setStagingMode(enabled: boolean): void {
+    this.stagingMode = enabled;
+  }
+
+  /**
+   * Check if staging mode is active
+   */
+  isStagingMode(): boolean {
+    return this.stagingMode;
+  }
+
+  /**
+   * Get the staging directory path
+   */
+  getStagingDir(): string {
+    return join(this.cwd, '.simple', 'staging');
+  }
+
+  /**
+   * Get the staged path for a file
+   */
+  getStagedPath(filePath: string): string {
+    const relPath = relative(this.cwd, resolve(this.cwd, filePath));
+    return resolve(this.getStagingDir(), relPath);
+  }
+
+  /**
+   * Get the staged path if it exists, otherwise the original path
+   */
+  getStagedOrOriginalPath(filePath: string): string {
+    const stagedPath = this.getStagedPath(filePath);
+    if (existsSync(stagedPath)) {
+      return stagedPath;
+    }
+    return resolve(this.cwd, filePath);
   }
 }
 

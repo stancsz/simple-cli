@@ -6,6 +6,7 @@
 import { readFile, writeFile, mkdir } from 'fs/promises';
 import { dirname, resolve } from 'path';
 import { z } from 'zod';
+import { getContextManager } from '../context.js';
 
 export const name = 'write_files';
 
@@ -37,26 +38,37 @@ interface WriteResult {
 export const execute = async (args: Record<string, unknown>): Promise<WriteResult[]> => {
   const parsed = schema.parse(args);
   const results: WriteResult[] = [];
+  const ctx = getContextManager();
+  const isStaging = ctx.isStagingMode();
 
   for (const file of parsed.files) {
     try {
+      let targetPath = file.path;
+      let readPath = file.path;
+
+      if (isStaging) {
+        targetPath = ctx.getStagedPath(file.path);
+        // For reading, we want the staged version if it exists, otherwise the original
+        readPath = ctx.getStagedOrOriginalPath(file.path);
+      }
+
       // Ensure directory exists
-      await mkdir(dirname(file.path), { recursive: true });
+      await mkdir(dirname(targetPath), { recursive: true });
 
       if (file.content !== undefined) {
         // Full file write
-        await writeFile(file.path, file.content, 'utf-8');
-        const absPath = resolve(file.path);
+        await writeFile(targetPath, file.content, 'utf-8');
+        const absPath = resolve(targetPath);
         results.push({
           path: file.path,
           success: true,
-          message: `File written successfully to ${absPath}`
+          message: `File written successfully to ${absPath}` + (isStaging ? ' (STAGED)' : '')
         });
       } else if (file.searchReplace && file.searchReplace.length > 0) {
         // Search/replace operations
-        let content = await readFile(file.path, 'utf-8');
+        let content = await readFile(readPath, 'utf-8');
         let changesApplied = 0;
-        const absPath = resolve(file.path);
+        const absPath = resolve(targetPath);
 
         for (const { search, replace } of file.searchReplace) {
           if (content.includes(search)) {
@@ -70,17 +82,17 @@ export const execute = async (args: Record<string, unknown>): Promise<WriteResul
         }
 
         if (changesApplied > 0) {
-          await writeFile(file.path, content, 'utf-8');
+          await writeFile(targetPath, content, 'utf-8');
           results.push({
             path: file.path,
             success: true,
-            message: `Applied ${changesApplied} search/replace operation(s) to ${absPath}`
+            message: `Applied ${changesApplied} search/replace operation(s) to ${absPath}` + (isStaging ? ' (STAGED)' : '')
           });
         } else {
           results.push({
             path: file.path,
             success: false,
-            message: `No matching search patterns found in ${absPath}`
+            message: `No matching search patterns found in ${readPath}`
           });
         }
       } else {
