@@ -7,7 +7,7 @@ import { Message } from '../context.js';
 import { EditBlock, applyFileEdits, parseEditBlocks, EditResult } from './editor.js';
 import { GitManager, generateCommitMessage } from './git.js';
 import * as ui from './ui.js';
-import type { TypeLLMResponse } from './typellm.js';
+import type { AnyLLMResponse } from './anyllm.js';
 
 export interface AgentConfig {
   maxReflections: number;
@@ -39,14 +39,14 @@ export interface ReflectionContext {
 /**
  * Parse LLM response into structured format
  */
-export function parseResponse(response: TypeLLMResponse | string): AgentResponse {
-  // Accept either a TypeLLMResponse object or a raw string (tests and some providers pass raw text)
+export function parseResponse(response: AnyLLMResponse | string): AgentResponse {
+  // Accept either a AnyLLMResponse object or a raw string (tests and some providers pass raw text)
   const raw = typeof response === 'string' ? response : (response.raw || '');
 
   // Extract edit blocks - Aider style blocks are within the raw text
   const editBlocks = parseEditBlocks(raw);
 
-  // If we were given a structured TypeLLMResponse, prefer its typed fields
+  // If we were given a structured AnyLLMResponse, prefer its typed fields
   if (typeof response !== 'string') {
     const thought = response.thought;
     let tool = response.tool || 'none';
@@ -171,7 +171,7 @@ Provide SEARCH/REPLACE blocks for the necessary changes.
 export class Agent {
   private config: AgentConfig;
   private git: GitManager;
-  private generateFn: (messages: Message[]) => Promise<TypeLLMResponse>;
+  private generateFn: (messages: Message[]) => Promise<AnyLLMResponse>;
   private executeTool: (name: string, args: Record<string, unknown>) => Promise<unknown>;
   private lintFn?: (file: string) => Promise<{ passed: boolean; output: string }>;
   private testFn?: () => Promise<{ passed: boolean; output: string }>;
@@ -179,7 +179,7 @@ export class Agent {
   constructor(options: {
     config: AgentConfig;
     git: GitManager;
-    generateFn: (messages: Message[]) => Promise<TypeLLMResponse>;
+    generateFn: (messages: Message[]) => Promise<AnyLLMResponse>;
     executeTool: (name: string, args: Record<string, unknown>) => Promise<unknown>;
     lintFn?: (file: string) => Promise<{ passed: boolean; output: string }>;
     testFn?: () => Promise<{ passed: boolean; output: string }>;
@@ -382,7 +382,7 @@ export class Agent {
  */
 export async function summarizeHistory(
   history: Message[],
-  generateFn: (messages: Message[]) => Promise<TypeLLMResponse>,
+  generateFn: (messages: Message[]) => Promise<AnyLLMResponse>,
   maxMessages: number = 10
 ): Promise<Message[]> {
   if (history.length <= maxMessages) {

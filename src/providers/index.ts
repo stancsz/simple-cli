@@ -2,7 +2,7 @@
  * Provider Bridge: Unified LLM interface via Vercel AI SDK
  * Support for OpenAI, Anthropic, Google (Gemini), and custom endpoints.
  */
-import { createTypeLLM, type TypeLLM as TypeLLMInstance, type TypeLLMConfig, type TypeLLMResponse } from '../lib/typellm.js';
+import { createAnyLLM, type AnyLLM as AnyLLMInstance, type AnyLLMConfig, type AnyLLMResponse } from '../lib/anyllm.js';
 
 export interface Message {
   role: 'user' | 'assistant' | 'system';
@@ -12,7 +12,7 @@ export interface Message {
 export interface Provider {
   name: string;
   model: string;
-  generateResponse: (systemPrompt: string, messages: Message[]) => Promise<TypeLLMResponse>;
+  generateResponse: (systemPrompt: string, messages: Message[]) => Promise<AnyLLMResponse>;
 }
 
 /**
@@ -26,10 +26,10 @@ export interface Provider {
  */
 
 /**
- * Creates a provider instance using TypeLLM
+ * Creates a provider instance using AnyLLM
  */
 export const createProviderForModel = (modelId: string): Provider => {
-  let providerType: 'openai' | 'google' | 'anthropic' | 'litellm' = 'openai';
+  let providerType: string = 'openai';
   let actualModel = modelId;
   let baseURL: string | undefined;
 
@@ -39,14 +39,14 @@ export const createProviderForModel = (modelId: string): Provider => {
     providerType = 'anthropic';
   } else if (modelId.startsWith('google:') || modelId.startsWith('gemini:')) {
     actualModel = modelId.split(':')[1] || modelId;
-    providerType = 'google';
+    providerType = 'gemini';
   } else if (modelId.startsWith('openai:')) {
     actualModel = modelId.split(':')[1] || modelId;
     providerType = 'openai';
   } else if (modelId.startsWith('claude') || (process.env.ANTHROPIC_API_KEY && !process.env.OPENAI_API_KEY)) {
     providerType = 'anthropic';
   } else if (modelId.startsWith('gemini') || (process.env.GEMINI_API_KEY && !process.env.OPENAI_API_KEY)) {
-    providerType = 'google';
+    providerType = 'gemini';
   } else if (process.env.LITELLM_BASE_URL) {
     providerType = 'litellm';
     baseURL = process.env.LITELLM_BASE_URL;
@@ -55,16 +55,16 @@ export const createProviderForModel = (modelId: string): Provider => {
   }
 
   // Final check for the Google key mapping
-  if (providerType === 'google' && process.env.GEMINI_API_KEY && !process.env.GOOGLE_GENERATIVE_AI_API_KEY) {
+  if (providerType === 'gemini' && process.env.GEMINI_API_KEY && !process.env.GOOGLE_GENERATIVE_AI_API_KEY) {
     process.env.GOOGLE_GENERATIVE_AI_API_KEY = process.env.GEMINI_API_KEY;
   }
 
-  const llm = createTypeLLM({
+  const llm = createAnyLLM({
     provider: providerType,
     model: actualModel,
     baseURL: baseURL,
     apiKey: providerType === 'openai' ? process.env.OPENAI_API_KEY :
-      providerType === 'google' ? process.env.GEMINI_API_KEY || process.env.GOOGLE_GENERATIVE_AI_API_KEY :
+      providerType === 'gemini' ? process.env.GEMINI_API_KEY || process.env.GOOGLE_GENERATIVE_AI_API_KEY :
         providerType === 'anthropic' ? process.env.ANTHROPIC_API_KEY :
           undefined,
     temperature: 0
@@ -73,13 +73,13 @@ export const createProviderForModel = (modelId: string): Provider => {
   return {
     name: providerType,
     model: actualModel,
-    generateResponse: async (systemPrompt: string, messages: Message[]): Promise<TypeLLMResponse> => {
+    generateResponse: async (systemPrompt: string, messages: Message[]): Promise<AnyLLMResponse> => {
       try {
         const response = await llm.generate(systemPrompt, messages);
-        if ((process.env.DEBUG === 'true') && response) console.log(`[DEBUG] TypeLLM Response: ${JSON.stringify(response).substring(0, 300)}...`);
+        if ((process.env.DEBUG === 'true') && response) console.log(`[DEBUG] AnyLLM Response: ${JSON.stringify(response).substring(0, 300)}...`);
         return response;
       } catch (e) {
-        const msg = `Error calling TypeLLM: ${e instanceof Error ? e.message : e}`;
+        const msg = `Error calling AnyLLM: ${e instanceof Error ? e.message : e}`;
         return {
           thought: 'Error occurred during generation',
           tool: 'none',
@@ -98,6 +98,6 @@ export const createProviderForModel = (modelId: string): Provider => {
 export const createProvider = (): Provider => {
   const isClaw = process.argv.includes('--claw') || process.argv.includes('-claw');
   const model = (isClaw ? process.env.CLAW_MODEL : null) || process.env.OPENAI_MODEL || process.env.GEMINI_MODEL || 'gpt-4o-mini';
-  console.log(`🤖 Using TypeLLM with model: ${model}`);
+  console.log(`🤖 Using AnyLLM with model: ${model}`);
   return createProviderForModel(model);
 };

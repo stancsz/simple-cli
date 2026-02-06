@@ -1,15 +1,15 @@
 /**
  * Tests for provider module
- * Tests the OpenAI SDK-based provider implementation
+ * Tests the AnyLLM-based provider implementation
  */
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 
-// Mock TypeLLM before importing providers
-vi.mock('../src/lib/typellm.js', () => {
+// Mock AnyLLM before importing providers
+vi.mock('../src/lib/anyllm.js', () => {
   const mockGenerate = vi.fn();
   return {
-    createTypeLLM: vi.fn().mockImplementation(() => ({
+    createAnyLLM: vi.fn().mockImplementation(() => ({
       generate: mockGenerate,
     })),
     __mockGenerate: mockGenerate
@@ -17,11 +17,11 @@ vi.mock('../src/lib/typellm.js', () => {
 });
 
 import { createProvider, createProviderForModel } from '../src/providers/index.js';
-import * as typellm from '../src/lib/typellm.js';
+import * as anyllm from '../src/lib/anyllm.js';
 
 // Get mock reference
 const getMockGenerate = () => {
-  return (typellm as any).__mockGenerate;
+  return (anyllm as any).__mockGenerate;
 };
 
 describe('providers', () => {
@@ -51,7 +51,7 @@ describe('providers', () => {
     expect(provider.model).toBe('deepseek-chat');
   });
 
-  it('should call OpenAI SDK with correct parameters', async () => {
+  it('should call AnyLLM with correct parameters', async () => {
     const mockGenerate = getMockGenerate();
     mockGenerate.mockResolvedValue({
       thought: 'thinking',
@@ -70,47 +70,6 @@ describe('providers', () => {
       'You are helpful',
       [{ role: 'user', content: 'Hi' }]
     );
-    // The previous test expected result to contain "Hello!".
-    // But provider.generateResponse returns TypeLLMResponse.
-    // In src/providers/index.ts:
-    // return response; // TypeLLMResponse
-
-    // Wait, the original test:
-    // expect(result).toContain('Hello!');
-    // If result is an object { thought, ... }, toContain check might fail if it's expecting a string?
-    // Or maybe generateResponse returned a string in previous version?
-
-    // Let's check src/providers/index.ts.
-    // generateResponse: ... Promise<TypeLLMResponse>
-
-    // If TypeLLMResponse is an object, `expect(result).toContain('Hello!')` checks if keys contain Hello! (if result is object)? No.
-    // Jest/Vitest: .toContain() on object? Usually check values?
-    // Or maybe result was a string?
-
-    // In previous version (using package), maybe generateResponse returned string?
-    // I updated src/providers/index.ts.
-    // It returns `response` which is `TypeLLMResponse` (object).
-
-    // The test `expect(result).toContain('Hello!')` will fail if result is { message: 'Hello!' }.
-    // It should be `expect(result.message).toBe('Hello!')` or similar.
-
-    // Wait, let's check what `generateResponse` returned before.
-    // "createTypeLLM" from package.
-    // The implementation of `generate` in package returns `TypeLLMResponse`.
-
-    // Maybe `provider.generateResponse` used to return string?
-    // Let's check `src/providers/index.ts` BEFORE my changes.
-    // I overwrote it.
-
-    // But the memory says: `generateResponse: (systemPrompt: string, messages: Message[]) => Promise<TypeLLMResponse>;` in interface.
-
-    // So the test must have been wrong or `toContain` works on object values?
-    // `expect({a: 1}).toContain(1)`? No.
-
-    // Ah, maybe the test was written for a different version?
-
-    // I will fix the test expectation to match `TypeLLMResponse`.
-
     expect(result.message).toBe('Hello!');
   });
 
@@ -125,11 +84,6 @@ describe('providers', () => {
 
     const provider = createProviderForModel('gpt-4o');
     const result = await provider.generateResponse('System', [{ role: 'user', content: 'Hi' }]);
-
-    // expect(result).toContain('""');
-    // This expects the result object to contain '""'? Unlikely.
-    // Maybe it expects `result.raw` or `result.message`?
-    // If message is empty string.
 
     expect(result.message).toBe('');
   });
@@ -188,11 +142,6 @@ describe('error handling', () => {
     const provider = createProviderForModel('gpt-4o');
     const result = await provider.generateResponse('System', [{ role: 'user', content: 'Hi' }]);
 
-    // expect(result).toContain('Error calling TypeLLM');
-    // Result is TypeLLMResponse.
-    // The implementation catches error and returns:
-    // { thought: 'Error...', message: 'Error calling TypeLLM: API Error', ... }
-
-    expect(result.message).toContain('Error calling TypeLLM');
+    expect(result.message).toContain('Error calling AnyLLM');
   });
 });
