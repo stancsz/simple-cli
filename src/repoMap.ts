@@ -5,7 +5,7 @@
 
 import { Project, ScriptTarget } from 'ts-morph';
 import { readdir, stat, readFile } from 'fs/promises';
-import { join, extname, relative } from 'path';
+import { join, extname, relative, resolve } from 'path';
 
 const IGNORED_DIRS = new Set(['node_modules', '.git', 'dist', 'build', '.next', 'coverage']);
 const TS_EXTENSIONS = new Set(['.ts', '.tsx', '.js', '.jsx']);
@@ -15,7 +15,11 @@ interface FileMap {
   symbols: string[];
 }
 
-export const generateRepoMap = async (rootDir: string = '.'): Promise<string> => {
+export const generateRepoMap = async (
+  rootDir: string = '.',
+  keywords: string[] = [],
+  activeFiles: Set<string> = new Set()
+): Promise<string> => {
   const fileMaps: FileMap[] = [];
   // Initialize ts-morph project
   const project = new Project({
@@ -45,7 +49,30 @@ export const generateRepoMap = async (rootDir: string = '.'): Promise<string> =>
     } catch { /* ignore access errors */ }
   }
 
-  // 2. Process Files in parallel
+  // 2. Filter and Prioritize Files
+  const scoreFile = (filePath: string): number => {
+    let score = 1;
+    const resolvedPath = resolve(filePath);
+
+    // High priority for active files
+    if (activeFiles.has(resolvedPath)) {
+      score += 100;
+    }
+
+    // Medium priority for keyword matches in path
+    const relPath = relative(rootDir, filePath).toLowerCase();
+    for (const kw of keywords) {
+      if (relPath.includes(kw.toLowerCase())) {
+        score += 10;
+        break;
+      }
+    }
+
+    return score;
+  };
+
+  validFiles.sort((a, b) => scoreFile(b) - scoreFile(a));
+
   // Limit to 50 files for now to avoid context explosion
   const filesToProcess = validFiles.slice(0, 50);
 

@@ -93,6 +93,7 @@ export class ContextManager {
   private tools: Map<string, Tool> = new Map();
   private repoMapCache: string = '';
   private repoMapTimestamp: number = 0;
+  private repoMapKeywords: string = '';
 
   constructor(cwd?: string) {
     this.cwd = cwd || process.cwd();
@@ -203,18 +204,58 @@ export class ContextManager {
   }
 
   /**
+   * Extract keywords from recent history
+   */
+  private extractKeywordsFromHistory(): string[] {
+    const STOP_WORDS = new Set([
+      'the', 'and', 'is', 'to', 'in', 'of', 'for', 'with', 'on', 'at', 'by', 'from', 'up', 'about', 'into', 'over', 'after',
+      'this', 'that', 'it', 'a', 'an', 'are', 'was', 'were', 'be', 'been', 'has', 'have', 'had', 'do', 'does', 'did',
+      'but', 'if', 'or', 'so', 'as', 'when', 'where', 'why', 'how', 'what', 'which', 'who', 'whom', 'whose',
+      'can', 'could', 'should', 'would', 'may', 'might', 'must', 'will', 'shall',
+      'i', 'you', 'he', 'she', 'we', 'they', 'me', 'him', 'her', 'us', 'them', 'my', 'your', 'his', 'our', 'their',
+      'use', 'using', 'used', 'make', 'making', 'made', 'create', 'creating', 'created', 'update', 'updating', 'updated',
+      'implement', 'implementing', 'implemented', 'fix', 'fixing', 'fixed', 'add', 'adding', 'added', 'remove', 'removing', 'removed',
+      'delete', 'deleting', 'deleted', 'change', 'changing', 'changed', 'modify', 'modifying', 'modified',
+      'file', 'files', 'code', 'function', 'class', 'method', 'variable', 'const', 'let', 'var', 'import', 'export',
+      'please', 'thanks', 'thank', 'hello', 'hi', 'hey', 'help'
+    ]);
+
+    const keywords = new Set<string>();
+    // Look at last 3 messages
+    const recentMessages = this.history.slice(-3);
+
+    for (const msg of recentMessages) {
+      // Simple tokenization: split by non-alphanumeric chars
+      const tokens = msg.content.toLowerCase().split(/[^a-z0-9_]+/);
+      for (const token of tokens) {
+        if (token.length > 2 && !STOP_WORDS.has(token) && !/^\d+$/.test(token)) {
+          keywords.add(token);
+        }
+      }
+    }
+
+    return Array.from(keywords);
+  }
+
+  /**
    * Refresh the repository map
    */
   async refreshRepoMap(): Promise<string> {
     const now = Date.now();
+    const keywords = this.extractKeywordsFromHistory();
+    const keywordStr = keywords.sort().join('|');
 
-    // Cache for 30 seconds
-    if (this.repoMapCache && now - this.repoMapTimestamp < 30000) {
+    // Cache for 30 seconds, but invalidate if keywords change significantly
+    // (Actually, invalidate if ANY keyword changes is safer for "Adaptive")
+    if (this.repoMapCache &&
+        now - this.repoMapTimestamp < 30000 &&
+        this.repoMapKeywords === keywordStr) {
       return this.repoMapCache;
     }
 
-    this.repoMapCache = await generateRepoMap(this.cwd);
+    this.repoMapCache = await generateRepoMap(this.cwd, keywords, this.activeFiles);
     this.repoMapTimestamp = now;
+    this.repoMapKeywords = keywordStr;
 
     return this.repoMapCache;
   }

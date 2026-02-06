@@ -8,7 +8,7 @@ import { join } from 'path';
 import type { Tool } from '../registry.js';
 
 export const inputSchema = z.object({
-    action: z.enum(['set_goal', 'update_status', 'log_reflection', 'get_summary', 'prune', 'link_files']),
+    action: z.enum(['set_goal', 'update_status', 'log_reflection', 'create_brief', 'get_summary', 'prune', 'link_files']),
     content: z.string().optional().describe('Text content for the action'),
     status: z.enum(['planning', 'executing', 'completed', 'failed']).optional().describe('Current mission status'),
     links: z.array(z.string()).optional().describe('Paths or IDs to link in the graph'),
@@ -74,6 +74,16 @@ export const execute = async (args: Record<string, unknown>, cwd: string = proce
                 await writeFile(join(reflectionsDir, fileName), content);
             }
             return { success: true, added: !!content };
+
+        case 'create_brief':
+            if (content) {
+                const memoryDir = join(cwd, '.simple/workdir/memory');
+                await mkdir(memoryDir, { recursive: true });
+                const briefPath = join(memoryDir, 'brief.md');
+                await writeFile(briefPath, content);
+                return { success: true, path: briefPath };
+            }
+            return { success: false, message: 'No content provided for brief.' };
 
         case 'link_files':
             if (links && links.length > 0) {
