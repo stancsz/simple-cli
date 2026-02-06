@@ -32,21 +32,21 @@ We performed a live test with the prompt: *"Create a Python script that calculat
 
 ## Improvements & Fixes Implemented
 
-During the evaluation, we identified and fixed two critical issues:
+During the evaluation, we identified and fixed several critical issues:
 
 1.  **Missing Dependency**: The local dependency `deps/TypeLLM` was missing/empty.
     *   **Fix**: Updated `package.json` to use the published `@stan-chen/typellm` package from NPM.
 2.  **Tooling Bug**: The `write_files` tool's search/replace functionality only replaced the *first* occurrence of a string.
     *   **Fix**: Updated `src/tools/write_files.ts` to use `replaceAll()` for global replacement, matching the stated intent.
+3.  **Enhanced Repo Map (Polyglot)**:
+    *   Refactored `src/repoMap.ts` to support generic `LanguageParser`.
+    *   Implemented `RegexParser` for Python, Go, and Rust, enabling symbol-aware context for these languages.
+4.  **Robust Editing (Git Merge Diffs)**:
+    *   Updated `src/tools/write_files.ts` to accept Git Merge Diff blocks (`<<<<<<< SEARCH` ... `>>>>>>> REPLACE`).
+    *   This provides a robust, whitespace-aware editing mechanism comparable to Aider.
 
 ## Recommendations for Future Improvement
 
-1.  **Enhanced Repo Map**:
-    *   Currently, `src/repoMap.ts` only parses symbols for TypeScript/JavaScript.
-    *   **Recommendation**: Integrate `web-tree-sitter` to generate symbol maps for Python, Go, Rust, etc., making it a true polyglot expert like Aider.
-2.  **Robust Editing**:
-    *   JSON-based search/replace is fragile if the model hallucinates whitespace.
-    *   **Recommendation**: Adopt Aider's "SEARCH/REPLACE" block format or implementing fuzzy matching for the search strings.
-3.  **Context Management**:
+1.  **Context Management**:
     *   The stress test failure indicated issues with large context.
     *   **Recommendation**: Implement a "sliding window" or "summary" strategy for long running tasks.
