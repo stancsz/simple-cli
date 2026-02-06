@@ -42,7 +42,6 @@
     "@clack/prompts": "^0.7.0",
     "@modelcontextprotocol/sdk": "^1.0.0",
     "@oclif/core": "^4.0.0",
-    "@stan-chen/typellm": "^0.1.0",
     "@types/cors": "^2.8.19",
     "@types/express": "^5.0.6",
     "@types/node-fetch": "^2.6.13",

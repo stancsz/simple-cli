@@ -5,7 +5,7 @@
 
 import { createProviderForModel, type Provider, type Message } from './index.js';
 import type { Tier, TierConfig } from '../router.js';
-import type { TypeLLMResponse } from '@stan-chen/typellm';
+import type { TypeLLMResponse } from '../lib/typellm.js';
 
 export interface MultiProvider {
   getProvider: (tier: Tier) => Provider;
