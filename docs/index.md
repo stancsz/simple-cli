@@ -4,37 +4,38 @@ title: Home
 nav_order: 1
 ---
 
-# Welcome to the Future of Terminal Coding ⚡
+# Welcome to the Post-Chat Era ⚡
 
-**Simple-CLI** is not just another wrapper around an LLM. It is a **autonomous swarm unit** designed to live in your shell.
+**Simple-CLI** destroys the paradigm of "chatting with an AI."
+It is an **autonomous swarm unit** designed to live, breathe, and execute in your shell.
 
 It replaces the friction of "Context Switch -> Browser -> Chat -> Copy -> Paste" with a single, powerful loop: **Command -> Execution.**
 
 ---
 
-## Why Simple-CLI?
+## The Philosophy: Less Talk, More Code
 
-We built this for developers who are tired of chat interfaces. We believe:
+We built this for developers who are tired of copy-pasting code blocks from a browser window.
 1.  **Terminals are Superior**: The command line is the fastest way to communicate with a computer.
 2.  **Agents should be Agile**: An agent shouldn't take 30 seconds to boot up. It should be instant.
-3.  **Code is Context**: You shouldn't have to explain your file structure. The agent should see it.
+3.  **Code is Context**: You shouldn't have to explain your file structure. The agent should see it, understand it, and manipulate it.
 
 ---
 
 ## The Innovations 🛠️
 
-### 🧠 Just-in-Time (JIT) Agency
-Most agents are generic. Simple-CLI is specific. When you run `simple --claw`, the system:
-1.  **Analyzes your intent**.
-2.  **Generates a persona** (e.g., "Senior React Performance Engineer").
+### 🧠 JIT Intelligence (Just-In-Time)
+Most agents are generic "Assistants". Simple-CLI is a shapeshifter. When you run `simple --claw`, the system:
+1.  **Analyzes your intent** ("Fix the broken build").
+2.  **Generates a persona** ("Senior CI/CD Reliability Engineer").
 3.  **Builds a specialized toolset** for that exact moment.
 4.  **Executes and vanishes.**
 
 ### 🐝 Swarm Architecture
-Why have one agent when you can have ten? Simple-CLI supports **Swarm Mode**, allowing you to spin up multiple isolated agent instances to tackle massive refactors or migrations in parallel.
+Why have one agent when you can have an army? Simple-CLI supports **Swarm Mode**, allowing you to spin up multiple isolated agent instances to tackle massive refactors, migrations, or audit tasks in parallel.
 
 ### 🧬 Self-Healing & Evolution
-Simple-CLI can write its own tools. If it encounters a problem it can't solve, it can write a Python script or a Node utility, save it to `skills/`, and use it immediately.
+Simple-CLI is **Antifragile**. It can write its own tools. If it encounters a problem it can't solve (e.g., "I need to decode this protobuf"), it writes a Python script or a Node utility, saves it to `skills/`, and uses it immediately.
 
 ---
 
