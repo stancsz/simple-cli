@@ -194,12 +194,16 @@ async function main(): Promise<void> {
   }
   if (process.argv.includes('--kill')) {
     const { killGhostTask } = await import('./claw/management.js');
+    const { killDaemon } = await import('./daemon.js');
     const id = process.argv[process.argv.indexOf('--kill') + 1];
     if (!id || id.startsWith('-')) {
       console.error(pc.red('Error: Task ID required for --kill'));
       process.exit(1);
     }
-    await killGhostTask(id);
+    const killed = await killDaemon(targetDir, id);
+    if (!killed) {
+      await killGhostTask(id);
+    }
     process.exit(0);
   }
 
@@ -238,6 +242,13 @@ async function main(): Promise<void> {
         args.shift();
       }
     } catch { /* ignored */ }
+  }
+
+  // Handle --daemon mode
+  if (process.argv.includes('--daemon')) {
+    const { startDaemon } = await import('./daemon.js');
+    await startDaemon(targetDir, process.argv);
+    process.exit(0);
   }
 
   // Handle --claw mode AFTER directory change
