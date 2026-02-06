@@ -108,6 +108,8 @@ function parseErrors(output: string, filePath: string): LintError[] {
     { regex: /File\s+"[^"]+",\s+line\s+(\d+)/gim, groups: [1, -1, -1] },
     // Generic line number: line 10: message
     { regex: /line\s+(\d+):\s*(.+)/gim, groups: [1, -1, 2] },
+    // Node.js style: file.js:10
+    { regex: new RegExp(`(?:${escapedFileName}|${escapedFilePath}):(\\d+)`, 'gm'), groups: [1, -1, -1] },
   ];
 
   // Also capture standalone error messages like "SyntaxError: ..."

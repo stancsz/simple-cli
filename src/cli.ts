@@ -22,6 +22,7 @@ import { fileURLToPath } from 'url';
 import { runSwarm, parseSwarmArgs, printSwarmHelp } from './commands/swarm.js';
 import { runDeterministicOrganizer } from './tools/organizer.js';
 import { jsonrepair } from 'jsonrepair';
+import { validateToolExecution } from './validation/safety.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -163,6 +164,17 @@ async function confirm(tool: string, args: Record<string, unknown>, ctx: Context
 async function executeTool(name: string, args: Record<string, unknown>, ctx: ContextManager): Promise<string> {
   const tool = ctx.getTools().get(name);
   if (!tool) return `Error: Tool "${name}" not found`;
+
+  // Logic Gate: Validation Layer
+  try {
+    const validation = await validateToolExecution(name, args, ctx);
+    if (!validation.valid) {
+      return `Safety Error: ${validation.error}`;
+    }
+  } catch (err) {
+    return `Safety Check Error: ${err instanceof Error ? err.message : err}`;
+  }
+
   try {
     const result = await tool.execute(args);
     return typeof result === 'string' ? result : JSON.stringify(result, null, 2);

@@ -34,6 +34,28 @@ interface WriteResult {
   message: string;
 }
 
+/**
+ * Apply search/replace operations to content
+ * Exported for use in validation layer
+ */
+export function applySearchReplace(content: string, searchReplace: { search: string; replace: string }[]): { content: string; changes: number } {
+  let newContent = content;
+  let changes = 0;
+
+  for (const { search, replace } of searchReplace) {
+    if (newContent.includes(search)) {
+      // Apply replacement to all occurrences
+      const replaced = newContent.replaceAll(search, replace);
+      if (replaced !== newContent) {
+        newContent = replaced;
+        changes++;
+      }
+    }
+  }
+
+  return { content: newContent, changes };
+}
+
 export const execute = async (args: Record<string, unknown>): Promise<WriteResult[]> => {
   const parsed = schema.parse(args);
   const results: WriteResult[] = [];
@@ -54,27 +76,16 @@ export const execute = async (args: Record<string, unknown>): Promise<WriteResul
         });
       } else if (file.searchReplace && file.searchReplace.length > 0) {
         // Search/replace operations
-        let content = await readFile(file.path, 'utf-8');
-        let changesApplied = 0;
+        const content = await readFile(file.path, 'utf-8');
+        const { content: newContent, changes } = applySearchReplace(content, file.searchReplace);
         const absPath = resolve(file.path);
 
-        for (const { search, replace } of file.searchReplace) {
-          if (content.includes(search)) {
-            // Apply replacement to all occurrences
-            const newContent = content.replaceAll(search, replace);
-            if (newContent !== content) {
-              content = newContent;
-              changesApplied++;
-            }
-          }
-        }
-
-        if (changesApplied > 0) {
-          await writeFile(file.path, content, 'utf-8');
+        if (changes > 0) {
+          await writeFile(file.path, newContent, 'utf-8');
           results.push({
             path: file.path,
             success: true,
-            message: `Applied ${changesApplied} search/replace operation(s) to ${absPath}`
+            message: `Applied ${changes} search/replace operation(s) to ${absPath}`
           });
         } else {
           results.push({
