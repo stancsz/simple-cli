@@ -357,7 +357,7 @@ export class ContextManager {
   /**
    * Build messages for LLM
    */
-  async buildMessages(userMessage: string): Promise<Message[]> {
+  async buildMessages(userMessage: string, maxTokens: number = 30000): Promise<Message[]> {
     const messages: Message[] = [];
 
     // System prompt
@@ -378,16 +378,34 @@ export class ContextManager {
       messages.push({ role: 'assistant', content: 'I have read the files. How can I help?' });
     }
 
-    // Conversation history
-    for (const msg of this.history) {
-      messages.push({ role: msg.role, content: msg.content });
+    // Calculate current token usage
+    let currentTokens = 0;
+    for (const msg of messages) {
+      currentTokens += countTokens(msg.content) + 4;
     }
 
-    // Current message with format reminder for JSON mode
-    const formatReminder = '\n\nCRITICAL: Respond with ONLY a JSON object. NO conversational text. No markdown wrappers. Use this format: {"thought": "...", "tool": "tool_name", "args": {...}}';
-    messages.push({ role: 'user', content: userMessage + formatReminder });
+    const finalUserMessage = { role: 'user' as const, content: userMessage };
+    currentTokens += countTokens(finalUserMessage.content) + 4;
 
-    return messages;
+    const availableTokens = maxTokens - currentTokens;
+
+    // Add history reversed, counting tokens
+    const historyMessages: Message[] = [];
+    let historyTokens = 0;
+
+    // Always try to keep the last 2 messages for continuity if possible
+    const reversedHistory = [...this.history].reverse();
+
+    for (const msg of reversedHistory) {
+        const msgTokens = countTokens(msg.content) + 4;
+        if (historyTokens + msgTokens > availableTokens) {
+            break;
+        }
+        historyTokens += msgTokens;
+        historyMessages.unshift(msg);
+    }
+
+    return [...messages, ...historyMessages, finalUserMessage];
   }
 
   /**

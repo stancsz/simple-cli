@@ -2,7 +2,7 @@
  * Provider Bridge: Unified LLM interface via Vercel AI SDK
  * Support for OpenAI, Anthropic, Google (Gemini), and custom endpoints.
  */
-import { createTypeLLM, type TypeLLM as TypeLLMInstance, type TypeLLMConfig, type TypeLLMResponse } from '@stan-chen/typellm';
+import { createTypeLLM, type TypeLLM as TypeLLMInstance, type TypeLLMConfig, type TypeLLMResponse } from '../lib/typellm.js';
 
 export interface Message {
   role: 'user' | 'assistant' | 'system';
@@ -20,7 +20,7 @@ export interface Provider {
  * - Uses strong system prompts with explicit JSON format examples
  * - Response parsing with jsonrepair (in cli.ts)
  * - Format reminders in user messages (in context.ts)
- * 
+ *
  * This approach works across ALL providers without hitting
  * provider-specific schema limitations (e.g., OpenAI's additionalProperties requirement)
  */

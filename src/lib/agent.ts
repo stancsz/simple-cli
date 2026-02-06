@@ -7,7 +7,7 @@ import { Message } from '../context.js';
 import { EditBlock, applyFileEdits, parseEditBlocks, EditResult } from './editor.js';
 import { GitManager, generateCommitMessage } from './git.js';
 import * as ui from './ui.js';
-import type { TypeLLMResponse } from '@stan-chen/typellm';
+import type { TypeLLMResponse } from './typellm.js';
 
 export interface AgentConfig {
   maxReflections: number;

@@ -12,7 +12,7 @@ import { writeFile, mkdir } from 'fs/promises';
 import { join } from 'path';
 import { runDeterministicOrganizer } from '../tools/organizer.js';
 import { jsonrepair } from 'jsonrepair';
-import type { TypeLLMResponse } from '@stan-chen/typellm';
+import type { TypeLLMResponse } from '../lib/typellm.js';
 import fs from 'fs';
 import { executeTool } from './utils.js';
 
@@ -29,6 +29,10 @@ export interface SimpleExecutorFlags {
 export class SimpleCoreExecutor implements Executor {
   name = 'simple-core';
   description = 'The classic Simple CLI executor';
+
+  // Loop detection state
+  private lastTool: { name: string; args: string } | null = null;
+  private repetitionCount: number = 0;
 
   constructor(
     private singleProvider: Provider | null,
@@ -183,29 +187,6 @@ export class SimpleCoreExecutor implements Executor {
 
       while (steps < 15) {
         const response = await this.generate(currentInput, ctx);
-        // Note: typeLLMResponse from generate might need parsing if it doesn't return parsed structure
-        // In cli.ts, generate calls singleProvider.generateResponse which returns TypeLLMResponse.
-        // But parseResponse is used inside the loop in cli.ts?
-        // Wait, cli.ts `generate` returns `TypeLLMResponse`.
-        // But `response` in loop is destructured: `{ thought, tool, args, message }`.
-        // `TypeLLMResponse` usually has these fields if using typed output.
-        // However, `cli.ts` defined `parseResponse` function but I don't see it being used inside `main()` loop!
-        // Ah, `generateResponse` likely returns the structured object.
-        // Let's re-read cli.ts carefully.
-
-        // In cli.ts:
-        // const response = await generate(currentInput);
-        // const { thought, tool, args, message } = response;
-
-        // So `response` IS structured. `parseResponse` in cli.ts seems unused or legacy?
-        // Wait, `parseResponse` IS defined in `cli.ts` but where is it called?
-        // I searched for `parseResponse` usage in `cli.ts` earlier.
-
-        // Let's check if I need to use it.
-        // If `response` comes from `singleProvider.generateResponse`, it depends on provider implementation.
-        // If I need to parse raw text, I might need it.
-        // But `generate` in `cli.ts` returns `TypeLLMResponse`.
-
         const { thought, tool, args, message } = response;
         const action = { tool: tool || 'none', args: args || {}, message: message || '' };
 
@@ -220,6 +201,25 @@ export class SimpleCoreExecutor implements Executor {
         if (thought) logMsg(`\n${pc.dim('💭')} ${pc.cyan(thought)}`);
 
         if (action.tool !== 'none') {
+            // Loop detection
+            const currentArgsStr = JSON.stringify(action.args);
+            if (this.lastTool && this.lastTool.name === action.tool && this.lastTool.args === currentArgsStr) {
+                this.repetitionCount++;
+            } else {
+                this.lastTool = { name: action.tool, args: currentArgsStr };
+                this.repetitionCount = 0;
+            }
+
+            if (this.repetitionCount >= 3) {
+                const warning = `Warning: You are repeating the same tool call (${action.tool}) with identical arguments. This loop has been detected and interrupted. Please reflect on why this is happening and change your approach.`;
+                logMsg(`\n${pc.yellow('⚠')} ${warning}`);
+                ctx.addMessage('user', warning);
+                // Skip execution, feed back warning
+                const assistantMsg = response.raw || JSON.stringify(response);
+                ctx.addMessage('assistant', assistantMsg);
+                continue;
+            }
+
           if (await this.confirm(action.tool, action.args || {}, ctx)) {
             logMsg(`${pc.yellow('⚙')} ${pc.dim(`Executing ${action.tool}...`)}`);
             const result = await executeTool(action.tool, action.args || {}, ctx);
