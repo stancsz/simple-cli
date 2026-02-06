@@ -65,6 +65,7 @@
     "simple-git": "^3.22.0",
     "ts-morph": "^22.0.0",
     "turndown": "^7.2.0",
+    "web-tree-sitter": "^0.26.5",
     "yaml": "^2.8.2",
     "zod": "^3.25.76"
   },
@@ -84,6 +85,7 @@
   "files": [
     "dist",
     "README.md",
-    "docs/assets/logo.jpeg"
+    "docs/assets/logo.jpeg",
+    "wasm"
   ]
 }

@@ -36,7 +36,6 @@ class Person:
       const repoMap = await generateRepoMap(testDir);
 
       expect(repoMap).toContain('test.py');
-      // Should find symbols (depends on ctags availability or fallback)
     });
 
     it('should include multiple file types', async () => {
@@ -108,8 +107,52 @@ def standalone_function():
       const repoMap = await generateRepoMap(testDir);
 
       expect(repoMap).toContain('module.py');
-      // Symbol extraction depends on ctags or fallback regex
-      // At minimum should have the file listed
+      expect(repoMap).toContain('MyClass (py)');
+      expect(repoMap).toContain('method (py)');
+      expect(repoMap).toContain('standalone_function (py)');
+    });
+
+    it('should extract Go symbols', async () => {
+      await writeFile(join(testDir, 'main.go'), `
+package main
+
+type MyStruct struct {}
+
+func main() {}
+
+func (m MyStruct) Method() {}
+`);
+      const repoMap = await generateRepoMap(testDir);
+      expect(repoMap).toContain('main.go');
+      expect(repoMap).toContain('MyStruct (go)');
+      expect(repoMap).toContain('main (go)');
+      expect(repoMap).toContain('Method (go)');
+    });
+
+    it('should extract Rust symbols', async () => {
+      await writeFile(join(testDir, 'lib.rs'), `
+struct MyStruct;
+
+fn helper() {}
+
+trait MyTrait {}
+`);
+      const repoMap = await generateRepoMap(testDir);
+      expect(repoMap).toContain('lib.rs');
+      expect(repoMap).toContain('MyStruct (rs)');
+      expect(repoMap).toContain('helper (rs)');
+      expect(repoMap).toContain('MyTrait (rs)');
+    });
+
+    it('should extract C symbols', async () => {
+      await writeFile(join(testDir, 'main.c'), `
+int main() { return 0; }
+void helper() {}
+`);
+      const repoMap = await generateRepoMap(testDir);
+      expect(repoMap).toContain('main.c');
+      expect(repoMap).toContain('main (c)');
+      expect(repoMap).toContain('helper (c)');
     });
 
     it('should extract TypeScript symbols', async () => {
@@ -134,6 +177,10 @@ export const VERSION = "1.0.0";
       const repoMap = await generateRepoMap(testDir);
 
       expect(repoMap).toContain('app.ts');
+      expect(repoMap).toContain('interface UserProps');
+      expect(repoMap).toContain('class User');
+      expect(repoMap).toContain('func greet');
+      expect(repoMap).toContain('const VERSION');
     });
 
     it('should extract JavaScript symbols', async () => {
@@ -154,6 +201,9 @@ const CONSTANT = 42;
       const repoMap = await generateRepoMap(testDir);
 
       expect(repoMap).toContain('utils.js');
+      expect(repoMap).toContain('class Calculator');
+      expect(repoMap).toContain('func helper');
+      expect(repoMap).toContain('const CONSTANT');
     });
   });
 
