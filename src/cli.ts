@@ -7,7 +7,7 @@ import 'dotenv/config';
 import { text, isCancel, select } from '@clack/prompts';
 import pc from 'picocolors';
 import { getContextManager } from './context.js';
-import { createProvider } from './providers/index.js';
+import { createProvider, createProviderForModel } from './providers/index.js';
 import { createMultiProvider } from './providers/multi.js';
 import { loadTierConfig } from './router.js';
 import { getMCPManager } from './mcp/manager.js';
@@ -20,9 +20,6 @@ import { runSwarm, parseSwarmArgs, printSwarmHelp } from './commands/swarm.js';
 import { runDeterministicOrganizer } from './tools/organizer.js';
 
 import { SimpleCoreExecutor } from './executors/simple.js';
-import { CodexExecutor } from './executors/codex.js';
-import { GeminiExecutor } from './executors/gemini.js';
-import { ClaudeExecutor } from './executors/claude.js';
 import { AiderExecutor } from './executors/aider.js';
 import { Executor } from './executors/types.js';
 import { executeTool } from './executors/utils.js';
@@ -65,9 +62,9 @@ if (process.argv.includes('--help') || process.argv.includes('-h')) {
     --swarm            Enable Swarm orchestration mode
     --claw "intent"    Enable OpenClaw JIT agent generation
     --deploy [tmpl]    Deploy a full agent company structure
-    --codex            Use OpenAI Codex CLI
-    --gemini           Use Google Gemini CLI
-    --claude           Use Claude Code CLI
+    --codex            Use OpenAI Codex (via any-llm)
+    --gemini           Use Google Gemini (via any-llm)
+    --claude           Use Claude (via any-llm)
     --aider            Use Aider AI Pair Programmer
     --simple           Use Simple Core Executor (explicit)
     --debug            Enable debug logging
@@ -269,14 +266,17 @@ async function main(): Promise<void> {
 
   const useGemini = process.argv.includes('--gemini');
   const useClaude = process.argv.includes('--claude');
+  const useCodex = process.argv.includes('--codex');
   const useAider = process.argv.includes('--aider');
-  const useSimple = process.argv.includes('--simple');
+  // const useSimple = process.argv.includes('--simple'); // Implied default now
 
   let executor: Executor;
   const ctx = getContextManager(targetDir);
 
-  if (useSimple) {
-    // Simple Core Setup
+  if (useAider) {
+      executor = new AiderExecutor();
+  } else {
+    // Simple Core Setup for everything else
     if (!GHOST_MODE) {
        console.log(`\n ${pc.bgCyan(pc.black(' SIMPLE-CLI '))} ${pc.dim(`v${VERSION}`)} ${pc.green('●')} ${pc.cyan(targetDir)}\n`);
        console.log(`${pc.dim('○')} Initializing...`);
@@ -295,7 +295,22 @@ async function main(): Promise<void> {
 
     const tierConfigs = MOE_MODE ? loadTierConfig() : null;
     const multiProvider = tierConfigs ? createMultiProvider(tierConfigs) : null;
-    const singleProvider = !MOE_MODE ? createProvider() : null;
+
+    // Determine provider based on flags
+    let singleProvider;
+    if (!MOE_MODE) {
+        if (useGemini) {
+            singleProvider = createProviderForModel('gemini:gemini-pro');
+        } else if (useClaude) {
+            singleProvider = createProviderForModel('anthropic:claude-3-opus-20240229');
+        } else if (useCodex) {
+            singleProvider = createProviderForModel('openai:gpt-3.5-turbo-instruct');
+        } else {
+            singleProvider = createProvider();
+        }
+    } else {
+        singleProvider = null;
+    }
 
     executor = new SimpleCoreExecutor(
         singleProvider,
@@ -312,15 +327,6 @@ async function main(): Promise<void> {
           clawIntent
         }
     );
-  } else if (useGemini) {
-    executor = new GeminiExecutor();
-  } else if (useClaude) {
-    executor = new ClaudeExecutor();
-  } else if (useAider) {
-    executor = new AiderExecutor();
-  } else {
-    // Default to CodexExecutor
-    executor = new CodexExecutor();
   }
 
   await executor.execute({

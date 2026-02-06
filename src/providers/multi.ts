@@ -5,11 +5,11 @@
 
 import { createProviderForModel, type Provider, type Message } from './index.js';
 import type { Tier, TierConfig } from '../router.js';
-import type { TypeLLMResponse } from '../lib/typellm.js';
+import type { AnyLLMResponse } from '../lib/anyllm.js';
 
 export interface MultiProvider {
   getProvider: (tier: Tier) => Provider;
-  generateWithTier: (tier: Tier, systemPrompt: string, messages: Message[]) => Promise<TypeLLMResponse>;
+  generateWithTier: (tier: Tier, systemPrompt: string, messages: Message[]) => Promise<AnyLLMResponse>;
 }
 
 // Create multi-provider system using LiteLLM
@@ -32,7 +32,7 @@ export const createMultiProvider = (tierConfigs: Map<Tier, TierConfig>): MultiPr
 
   return {
     getProvider,
-    generateWithTier: async (tier: Tier, systemPrompt: string, messages: Message[]): Promise<TypeLLMResponse> => {
+    generateWithTier: async (tier: Tier, systemPrompt: string, messages: Message[]): Promise<AnyLLMResponse> => {
       const provider = getProvider(tier);
       return provider.generateResponse(systemPrompt, messages);
     }

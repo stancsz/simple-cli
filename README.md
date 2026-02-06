@@ -99,6 +99,10 @@ Deploy Simple-CLI as an automated agent in your workflow:
 
 ## Installation
 
+**Prerequisites:**
+*   Python 3 installed
+*   `any-llm-sdk` installed (`pip install any-llm-sdk`)
+
 **From NPM (Recommended):**
 ```bash
 npm install -g @stan-chen/simple-cli

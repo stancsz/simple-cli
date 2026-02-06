@@ -12,7 +12,7 @@ import { getActiveSkill, setActiveSkill, listSkills } from '../skills.js';
 import { FileWatcher, createFileWatcher } from '../watcher.js';
 import { readFileSync, existsSync } from 'fs';
 import 'dotenv/config';
-import type { TypeLLMResponse } from '../lib/typellm.js';
+import type { AnyLLMResponse } from '../lib/anyllm.js';
 
 export default class Chat extends Command {
   static description = 'Start an interactive coding session';
@@ -111,7 +111,7 @@ export default class Chat extends Command {
     }
 
     // Generate function
-    const generate = async (messages: Message[]): Promise<TypeLLMResponse> => {
+    const generate = async (messages: Message[]): Promise<AnyLLMResponse> => {
       const fullPrompt = await ctx.buildSystemPrompt();
 
       const llmMessages = messages.map(m => ({ role: m.role, content: m.content }));

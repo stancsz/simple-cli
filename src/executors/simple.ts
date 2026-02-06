@@ -12,7 +12,7 @@ import { writeFile, mkdir } from 'fs/promises';
 import { join } from 'path';
 import { runDeterministicOrganizer } from '../tools/organizer.js';
 import { jsonrepair } from 'jsonrepair';
-import type { TypeLLMResponse } from '../lib/typellm.js';
+import type { AnyLLMResponse } from '../lib/anyllm.js';
 import fs from 'fs';
 import { executeTool } from './utils.js';
 
@@ -55,7 +55,7 @@ export class SimpleCoreExecutor implements Executor {
     return !isCancel(confirmed) && confirmed;
   }
 
-  private async generate(input: string, ctx: ContextManager): Promise<TypeLLMResponse> {
+  private async generate(input: string, ctx: ContextManager): Promise<AnyLLMResponse> {
     const history = ctx.getHistory();
     const fullPrompt = await ctx.buildSystemPrompt();
 
