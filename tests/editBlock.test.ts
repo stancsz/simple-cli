@@ -71,8 +71,8 @@ describe('editBlock', () => {
       expect(content).toBe('    line1\n    modified\n    line3');
     });
 
-    it('should replace only first occurrence', async () => {
-      const filePath = join(testDir, 'first_only.txt');
+    it('should replace all occurrences', async () => {
+      const filePath = join(testDir, 'all_occurrences.txt');
       await writeFile(filePath, 'foo bar foo baz foo');
 
       const result = await writeFilesExecute({
@@ -83,8 +83,8 @@ describe('editBlock', () => {
       });
 
       expect(result[0].success).toBe(true);
-      // Only first occurrence replaced
-      expect(await readFile(filePath, 'utf-8')).toBe('FOO bar foo baz foo');
+      // All occurrences replaced (as per EVALUATION.md fix)
+      expect(await readFile(filePath, 'utf-8')).toBe('FOO bar FOO baz FOO');
     });
 
     it('should handle multiline search/replace', async () => {
@@ -350,6 +350,74 @@ export const Component = ({ name }: Props) => {
 
       expect(result[0].success).toBe(true);
       expect(await readFile(filePath, 'utf-8')).toBe('deep content');
+    });
+  });
+
+  describe('git merge diff', () => {
+    it('should apply valid diff', async () => {
+      const filePath = join(testDir, 'diff.txt');
+      await writeFile(filePath, 'line1\nline2\nline3');
+
+      const diff = `<<<<<<< SEARCH
+line2
+=======
+modified
+>>>>>>> REPLACE`;
+
+      const result = await writeFilesExecute({
+        files: [{
+          path: filePath,
+          diff: diff
+        }]
+      });
+
+      expect(result[0].success).toBe(true);
+      expect(await readFile(filePath, 'utf-8')).toBe('line1\nmodified\nline3');
+    });
+
+    it('should fail if search block not found', async () => {
+      const filePath = join(testDir, 'diff_fail.txt');
+      await writeFile(filePath, 'line1\nline2\nline3');
+
+      const diff = `<<<<<<< SEARCH
+line4
+=======
+modified
+>>>>>>> REPLACE`;
+
+      const result = await writeFilesExecute({
+        files: [{
+          path: filePath,
+          diff: diff
+        }]
+      });
+
+      expect(result[0].success).toBe(false);
+      expect(result[0].message).toContain('Could not find exact match');
+      expect(await readFile(filePath, 'utf-8')).toBe('line1\nline2\nline3');
+    });
+
+    it('should handle multiline blocks', async () => {
+      const filePath = join(testDir, 'multiline_diff.txt');
+      await writeFile(filePath, 'line1\nline2\nline3\nline4');
+
+      const diff = `<<<<<<< SEARCH
+line2
+line3
+=======
+modified
+block
+>>>>>>> REPLACE`;
+
+      const result = await writeFilesExecute({
+        files: [{
+          path: filePath,
+          diff: diff
+        }]
+      });
+
+      expect(result[0].success).toBe(true);
+      expect(await readFile(filePath, 'utf-8')).toBe('line1\nmodified\nblock\nline4');
     });
   });
 });

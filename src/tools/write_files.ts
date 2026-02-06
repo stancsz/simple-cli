@@ -9,7 +9,7 @@ import { z } from 'zod';
 
 export const name = 'write_files';
 
-export const description = 'Write or modify files. ALWAYS provide an array of objects in the "files" parameter, even for a single file. Each object must have "path" and either "content" (for full write) or "searchReplace" (for edits).';
+export const description = 'Write or modify files. ALWAYS provide an array of objects in the "files" parameter, even for a single file. Each object must have "path" and either "content" (for full write), "searchReplace" (simple edits), or "diff" (Git Merge Diff format).';
 
 export const permission = 'write' as const;
 
@@ -19,7 +19,8 @@ const FileWriteSchema = z.object({
   searchReplace: z.array(z.object({
     search: z.string().describe('Text to search for'),
     replace: z.string().describe('Text to replace with')
-  })).optional().describe('Array of search/replace operations for targeted edits')
+  })).optional().describe('Array of search/replace operations for targeted edits'),
+  diff: z.string().optional().describe('Git Merge Diff format string containing <<<<<<< SEARCH, =======, and >>>>>>> REPLACE blocks')
 });
 
 export const schema = z.object({
@@ -32,6 +33,70 @@ interface WriteResult {
   path: string;
   success: boolean;
   message: string;
+}
+
+const SEARCH_MARKER = '<<<<<<< SEARCH';
+const DIVIDER_MARKER = '=======';
+const REPLACE_MARKER = '>>>>>>> REPLACE';
+
+async function applyGitDiff(content: string, diff: string): Promise<{ success: boolean; content: string; message?: string }> {
+  const lines = diff.split('\n');
+  let currentContent = content;
+  let lineIdx = 0;
+  let editsApplied = 0;
+
+  while (lineIdx < lines.length) {
+    const line = lines[lineIdx];
+
+    if (line.trim() === SEARCH_MARKER) {
+      lineIdx++;
+      const searchLines: string[] = [];
+      const replaceLines: string[] = [];
+
+      // Parse SEARCH block
+      while (lineIdx < lines.length && lines[lineIdx].trim() !== DIVIDER_MARKER) {
+        searchLines.push(lines[lineIdx]);
+        lineIdx++;
+      }
+
+      if (lineIdx >= lines.length) {
+         return { success: false, content: currentContent, message: 'Unexpected end of diff: missing ======= marker' };
+      }
+      lineIdx++; // Skip DIVIDER
+
+      // Parse REPLACE block
+      while (lineIdx < lines.length && lines[lineIdx].trim() !== REPLACE_MARKER) {
+        replaceLines.push(lines[lineIdx]);
+        lineIdx++;
+      }
+
+      if (lineIdx >= lines.length) {
+         return { success: false, content: currentContent, message: 'Unexpected end of diff: missing >>>>>>> REPLACE marker' };
+      }
+
+      const searchBlock = searchLines.join('\n');
+      const replaceBlock = replaceLines.join('\n');
+
+      if (currentContent.includes(searchBlock)) {
+        currentContent = currentContent.replace(searchBlock, replaceBlock);
+        editsApplied++;
+      } else {
+        return {
+            success: false,
+            content: currentContent,
+            message: `Could not find exact match for search block:\n${searchBlock.slice(0, 100)}...`
+        };
+      }
+    } else {
+      lineIdx++;
+    }
+  }
+
+  if (editsApplied === 0) {
+     return { success: false, content: currentContent, message: 'No diff blocks found or applied' };
+  }
+
+  return { success: true, content: currentContent };
 }
 
 export const execute = async (args: Record<string, unknown>): Promise<WriteResult[]> => {
@@ -52,6 +117,33 @@ export const execute = async (args: Record<string, unknown>): Promise<WriteResul
           success: true,
           message: `File written successfully to ${absPath}`
         });
+      } else if (file.diff !== undefined) {
+        // Git Merge Diff
+        try {
+            const content = await readFile(file.path, 'utf-8');
+            const result = await applyGitDiff(content, file.diff);
+
+            if (result.success) {
+                await writeFile(file.path, result.content, 'utf-8');
+                results.push({
+                    path: file.path,
+                    success: true,
+                    message: `Applied diff successfully to ${resolve(file.path)}`
+                });
+            } else {
+                results.push({
+                    path: file.path,
+                    success: false,
+                    message: `Failed to apply diff: ${result.message}`
+                });
+            }
+        } catch (err) {
+             results.push({
+                path: file.path,
+                success: false,
+                message: `Error applying diff: ${err instanceof Error ? err.message : String(err)}`
+            });
+        }
       } else if (file.searchReplace && file.searchReplace.length > 0) {
         // Search/replace operations
         let content = await readFile(file.path, 'utf-8');
@@ -87,7 +179,7 @@ export const execute = async (args: Record<string, unknown>): Promise<WriteResul
         results.push({
           path: file.path,
           success: false,
-          message: 'No content or searchReplace provided'
+          message: 'No content, diff, or searchReplace provided'
         });
       }
     } catch (error) {

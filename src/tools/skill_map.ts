@@ -23,12 +23,10 @@ export const execute = async (args: Record<string, unknown>, context?: any): Pro
     };
 
     for (const tool of tools.values()) {
-        // Accessing Zod schema shape safely requires checking the type, but for simple schemas this works or we default to empty.
-        const shape = (tool.inputSchema as any)?._def?.shape ? (tool.inputSchema as any)._def.shape() : {};
         manifest.skills.push({
             name: tool.name,
             description: tool.description,
-            parameters: Object.keys(shape),
+            parameters: tool.inputSchema?._def?.shape ? Object.keys(tool.inputSchema._def.shape) : [],
             source: tool.source || 'builtin'
         });
     }
