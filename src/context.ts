@@ -100,6 +100,41 @@ export class ContextManager {
   }
 
   /**
+   * Extract keywords from recent conversation history
+   */
+  extractKeywords(history: Message[]): string[] {
+    if (history.length === 0) return [];
+
+    // Look at last 3 messages
+    const recentMessages = history.slice(-3);
+    const text = recentMessages.map(m => m.content).join(' ').toLowerCase();
+
+    // Basic stop words
+    const stopWords = new Set([
+      'the', 'a', 'an', 'and', 'or', 'but', 'is', 'are', 'was', 'were',
+      'to', 'for', 'of', 'in', 'on', 'at', 'by', 'with', 'from', 'about',
+      'i', 'you', 'he', 'she', 'it', 'we', 'they', 'my', 'your', 'his', 'her', 'its', 'our', 'their',
+      'this', 'that', 'these', 'those', 'here', 'there', 'what', 'where', 'when', 'who', 'how', 'why',
+      'can', 'could', 'will', 'would', 'should', 'do', 'does', 'did', 'done', 'have', 'has', 'had',
+      'be', 'been', 'being', 'not', 'no', 'yes', 'please', 'thanks', 'thank', 'hello', 'hi',
+      'tool', 'use', 'using', 'run', 'running', 'execute', 'executing', 'call', 'calling',
+      'file', 'files', 'folder', 'directory', 'code', 'function', 'class', 'method'
+    ]);
+
+    // Extract words (simple regex)
+    const words = text.match(/[a-z0-9_-]+/g) || [];
+
+    const uniqueKeywords = new Set<string>();
+    for (const word of words) {
+      if (word.length > 2 && !stopWords.has(word)) {
+        uniqueKeywords.add(word);
+      }
+    }
+
+    return Array.from(uniqueKeywords);
+  }
+
+  /**
    * Initialize the context manager
    */
   async initialize(): Promise<void> {
