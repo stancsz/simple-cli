@@ -83,6 +83,6 @@
   "files": [
     "dist",
     "README.md",
-    "docs/assets/logo.jpeg"
+    "assets/logo.jpeg"
   ]
 }
