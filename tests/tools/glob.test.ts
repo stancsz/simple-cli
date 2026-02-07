@@ -7,13 +7,16 @@ import { writeFile, mkdir, rm } from 'fs/promises';
 import { join } from 'path';
 import { tmpdir } from 'os';
 
-import { execute, tool } from '../../src/tools/glob.js';
+import { listFiles } from '../../src/builtins.js';
+
+const { execute } = listFiles;
+const tool = listFiles;
 
 describe('glob tool', () => {
   let testDir: string;
 
   beforeEach(async () => {
-    testDir = join(tmpdir(), `simple-cli-glob-test-${Date.now()}`);
+    testDir = join(tmpdir(), `simple-cli-glob-test-${Date.now()}-${Math.random()}`);
     await mkdir(testDir, { recursive: true });
   });
 
@@ -23,11 +26,7 @@ describe('glob tool', () => {
 
   describe('tool definition', () => {
     it('should have correct name', () => {
-      expect(tool.name).toBe('glob');
-    });
-
-    it('should have correct permission', () => {
-      expect(tool.permission).toBe('read');
+      expect(tool.name).toBe('list_files');
     });
   });
 
@@ -37,7 +36,7 @@ describe('glob tool', () => {
       await writeFile(join(testDir, 'file2.ts'), '');
       await writeFile(join(testDir, 'file3.js'), '');
 
-      const result = await execute({ pattern: '*.ts', cwd: testDir });
+      const result = await execute({ pattern: '*.ts', path: testDir, ignore: [], includeDirectories: false });
 
       expect(result.matches).toContain('file1.ts');
       expect(result.matches).toContain('file2.ts');
@@ -48,7 +47,7 @@ describe('glob tool', () => {
       await writeFile(join(testDir, 'a.txt'), '');
       await writeFile(join(testDir, 'b.txt'), '');
 
-      const result = await execute({ pattern: '*', cwd: testDir });
+      const result = await execute({ pattern: '*', path: testDir, ignore: [], includeDirectories: false });
 
       expect(result.matches).toContain('a.txt');
       expect(result.matches).toContain('b.txt');
@@ -59,7 +58,7 @@ describe('glob tool', () => {
       await writeFile(join(testDir, 'file2.txt'), '');
       await writeFile(join(testDir, 'file10.txt'), '');
 
-      const result = await execute({ pattern: 'file?.txt', cwd: testDir });
+      const result = await execute({ pattern: 'file?.txt', path: testDir, ignore: [], includeDirectories: false });
 
       expect(result.matches).toContain('file1.txt');
       expect(result.matches).toContain('file2.txt');
@@ -76,11 +75,11 @@ describe('glob tool', () => {
       await writeFile(join(testDir, 'sub1', 'sub1.ts'), '');
       await writeFile(join(testDir, 'sub2', 'nested', 'deep.ts'), '');
 
-      const result = await execute({ pattern: '**/*.ts', cwd: testDir });
+      const result = await execute({ pattern: '**/*.ts', path: testDir, ignore: [], includeDirectories: false });
 
       expect(result.matches).toContain('root.ts');
-      expect(result.matches.some(m => m.includes('sub1.ts'))).toBe(true);
-      expect(result.matches.some(m => m.includes('deep.ts'))).toBe(true);
+      expect(result.matches.some((m: string) => m.includes('sub1.ts'))).toBe(true);
+      expect(result.matches.some((m: string) => m.includes('deep.ts'))).toBe(true);
     });
 
     it('should match specific subdirectory', async () => {
@@ -90,10 +89,10 @@ describe('glob tool', () => {
       await writeFile(join(testDir, 'src', 'main.ts'), '');
       await writeFile(join(testDir, 'tests', 'test.ts'), '');
 
-      const result = await execute({ pattern: 'src/*.ts', cwd: testDir });
+      const result = await execute({ pattern: 'src/*.ts', path: testDir, ignore: [], includeDirectories: false });
 
-      expect(result.matches.some(m => m.includes('main.ts'))).toBe(true);
-      expect(result.matches.some(m => m.includes('test.ts'))).toBe(false);
+      expect(result.matches.some((m: string) => m.includes('main.ts'))).toBe(true);
+      expect(result.matches.some((m: string) => m.includes('test.ts'))).toBe(false);
     });
   });
 
@@ -103,10 +102,10 @@ describe('glob tool', () => {
       await writeFile(join(testDir, 'node_modules', 'pkg', 'index.js'), '');
       await writeFile(join(testDir, 'app.js'), '');
 
-      const result = await execute({ pattern: '**/*.js', cwd: testDir });
+      const result = await execute({ pattern: '**/*.js', path: testDir, ignore: ['**/node_modules/**', '**/.git/**'], includeDirectories: false });
 
       expect(result.matches).toContain('app.js');
-      expect(result.matches.some(m => m.includes('node_modules'))).toBe(false);
+      expect(result.matches.some((m: string) => m.includes('node_modules'))).toBe(false);
     });
 
     it('should ignore .git by default', async () => {
@@ -114,10 +113,10 @@ describe('glob tool', () => {
       await writeFile(join(testDir, '.git', 'config'), '');
       await writeFile(join(testDir, 'src.txt'), '');
 
-      const result = await execute({ pattern: '**/*', cwd: testDir });
+      const result = await execute({ pattern: '**/*', path: testDir, ignore: ['**/node_modules/**', '**/.git/**'], includeDirectories: false });
 
       expect(result.matches).toContain('src.txt');
-      expect(result.matches.some(m => m.includes('.git'))).toBe(false);
+      expect(result.matches.some((m: string) => m.includes('.git'))).toBe(false);
     });
 
     it('should apply custom ignore patterns', async () => {
@@ -127,12 +126,13 @@ describe('glob tool', () => {
 
       const result = await execute({
         pattern: '**/*.js',
-        cwd: testDir,
+        path: testDir,
         ignore: ['dist'],
+        includeDirectories: false
       });
 
       expect(result.matches).toContain('src.js');
-      expect(result.matches.some(m => m.includes('dist'))).toBe(false);
+      expect(result.matches.some((m: string) => m.includes('dist'))).toBe(false);
     });
   });
 
@@ -144,8 +144,10 @@ describe('glob tool', () => {
 
       const result = await execute({
         pattern: '*.txt',
-        cwd: testDir,
+        path: testDir,
         maxResults: 5,
+        ignore: [],
+        includeDirectories: false
       });
 
       expect(result.matches.length).toBe(5);
@@ -158,8 +160,10 @@ describe('glob tool', () => {
 
       const result = await execute({
         pattern: '*.txt',
-        cwd: testDir,
+        path: testDir,
         maxResults: 100,
+        ignore: [],
+        includeDirectories: false
       });
 
       expect(result.count).toBe(2);
@@ -174,8 +178,9 @@ describe('glob tool', () => {
 
       const result = await execute({
         pattern: '*',
-        cwd: testDir,
+        path: testDir,
         includeDirectories: false,
+        ignore: []
       });
 
       expect(result.matches).toContain('file.txt');
@@ -188,8 +193,9 @@ describe('glob tool', () => {
 
       const result = await execute({
         pattern: '*',
-        cwd: testDir,
+        path: testDir,
         includeDirectories: true,
+        ignore: []
       });
 
       expect(result.matches).toContain('file.txt');
@@ -201,7 +207,7 @@ describe('glob tool', () => {
     it('should return empty array when no matches', async () => {
       await writeFile(join(testDir, 'file.txt'), '');
 
-      const result = await execute({ pattern: '*.js', cwd: testDir });
+      const result = await execute({ pattern: '*.js', path: testDir, ignore: [], includeDirectories: false });
 
       expect(result.matches).toEqual([]);
       expect(result.count).toBe(0);

@@ -7,13 +7,17 @@ import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { writeFile, mkdir, rm } from 'fs/promises';
 import { join } from 'path';
 import { tmpdir } from 'os';
-import { execute, schema } from '../../src/tools/read_files.js';
+import { readFiles } from '../../src/builtins.js';
+
+const { execute, inputSchema: schema } = readFiles;
 
 describe('read_files', () => {
   let testDir: string;
 
   beforeEach(async () => {
-    testDir = join(tmpdir(), `simple-cli-test-${Date.now()}`);
+    // Ensure tmpdir exists (it should, but just in case)
+    await mkdir(tmpdir(), { recursive: true });
+    testDir = join(tmpdir(), `simple-cli-test-${Date.now()}-${Math.random().toString(36).substring(7)}`);
     await mkdir(testDir, { recursive: true });
   });
 
@@ -56,7 +60,7 @@ describe('read_files', () => {
     expect(result[0].path).toBe(filePath);
     expect(result[0].content).toBeUndefined();
     expect(result[0].error).toBeDefined();
-    expect(result[0].error).toContain('ENOENT');
+    expect(result[0].error).toContain('File not found');
   });
 
   it('should read files with different encodings', async () => {
@@ -64,7 +68,8 @@ describe('read_files', () => {
     const content = 'Hello 世界 🌍';
     await writeFile(filePath, content, 'utf-8');
 
-    const result = await execute({ paths: [filePath], encoding: 'utf-8' });
+    // Tool doesn't support encoding param anymore, defaults to utf-8 which handles this fine
+    const result = await execute({ paths: [filePath] });
 
     expect(result[0].content).toBe(content);
   });

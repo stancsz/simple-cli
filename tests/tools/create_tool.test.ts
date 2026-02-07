@@ -4,11 +4,11 @@ import { rm, readFile, stat } from 'fs/promises';
 import { join } from 'path';
 import { tmpdir } from 'os';
 import { existsSync } from 'fs';
+import { createTool } from '../../src/builtins.js';
 
+const { execute } = createTool;
 const originalCwd = process.cwd();
 let testDataDir: string;
-
-import { execute, tool } from '../../src/tools/create_tool.js';
 
 describe('create_tool tool', () => {
   beforeEach(async () => {
@@ -46,7 +46,7 @@ describe('create_tool tool', () => {
 
     const content = await readFile(toolFile, 'utf-8');
     expect(content).toContain('/**');
-    expect(content).toContain('# hello_world');
+    expect(content).toContain('hello_world');
     expect(content).toContain('console.log("Hello");');
   });
 

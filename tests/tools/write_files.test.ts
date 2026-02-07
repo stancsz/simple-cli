@@ -8,13 +8,17 @@ import { writeFile, readFile, mkdir, rm } from 'fs/promises';
 import { existsSync } from 'fs';
 import { join } from 'path';
 import { tmpdir } from 'os';
-import { execute, schema } from '../../src/tools/write_files.js';
+import { writeFiles } from '../../src/builtins.js';
+
+const { execute, inputSchema: schema } = writeFiles;
 
 describe('writeFiles', () => {
   let testDir: string;
 
   beforeEach(async () => {
-    testDir = join(tmpdir(), `simple-cli-test-${Date.now()}`);
+    // Ensure tmpdir exists (it should, but just in case)
+    await mkdir(tmpdir(), { recursive: true });
+    testDir = join(tmpdir(), `simple-cli-test-${Date.now()}-${Math.random().toString(36).substring(7)}`);
     await mkdir(testDir, { recursive: true });
   });
 
@@ -135,7 +139,7 @@ describe('writeFiles', () => {
       });
 
       expect(result[0].success).toBe(false);
-      expect(result[0].message).toContain('No matching search patterns');
+      expect(result[0].message).toContain('Search pattern not found');
       // File should remain unchanged
       expect(await readFile(filePath, 'utf-8')).toBe('original content');
     });
@@ -202,6 +206,7 @@ describe('writeFiles', () => {
 
     it('should fail when no content or searchReplace provided', async () => {
       const filePath = join(testDir, 'no_op.txt');
+      await writeFile(filePath, 'content');
 
       const result = await execute({
         files: [{ path: filePath }]

@@ -74,6 +74,9 @@ export class Engine {
         await this.mcp.init();
         (await this.mcp.getTools()).forEach(t => this.registry.tools.set(t.name, t as any));
 
+        // Ensure tools are loaded for the context cwd
+        await this.registry.loadProjectTools(ctx.cwd);
+
         while (true) {
             if (!input) {
                 const res = await text({ message: pc.cyan('Chat') });
@@ -105,6 +108,13 @@ export class Engine {
                     console.log(pc.yellow(`⚙ Executing ${tool}...`));
                     try {
                         const result = await t.execute(args);
+
+                        // Reload tools if create_tool was used
+                        if (tool === 'create_tool') {
+                            await this.registry.loadProjectTools(ctx.cwd);
+                            console.log(pc.magenta('🔄 Tools reloaded.'));
+                        }
+
                         ctx.history.push({ role: 'assistant', content: JSON.stringify(response) });
                         ctx.history.push({ role: 'user', content: `Result: ${JSON.stringify(result)}` });
 
@@ -120,7 +130,7 @@ export class Engine {
                             console.log(pc.blue(`📝 Learning stored: ${reflection.message}`));
                         }
 
-                        input = 'Continue.';
+                        input = 'The previous tool execution was successful. Proceed with the next step.';
                         continue;
                     } catch (e: any) {
                         ctx.history.push({ role: 'user', content: `Error: ${e.message}` });

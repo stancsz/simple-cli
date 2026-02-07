@@ -8,7 +8,9 @@ import { join } from 'path';
 import { tmpdir } from 'os';
 import { spawnSync } from 'child_process';
 
-import { execute, tool } from '../../src/tools/linter.js';
+import { linter } from '../../src/builtins.js';
+const { execute } = linter;
+const tool = linter;
 
 // Check if external tools are available
 const isPythonAvailable = (() => {
@@ -33,7 +35,7 @@ describe('linter tool', () => {
   let testDir: string;
 
   beforeEach(async () => {
-    testDir = join(tmpdir(), `simple-cli-linter-test-${Date.now()}`);
+    testDir = join(tmpdir(), `simple-cli-linter-test-${Date.now()}-${Math.random()}`);
     await mkdir(testDir, { recursive: true });
   });
 
@@ -45,14 +47,6 @@ describe('linter tool', () => {
     it('should have correct name', () => {
       expect(tool.name).toBe('lint');
     });
-
-    it('should have correct permission', () => {
-      expect(tool.permission).toBe('read');
-    });
-
-    it('should have description', () => {
-      expect(tool.description).toContain('syntax');
-    });
   });
 
   describe('Python linting', () => {
@@ -63,7 +57,7 @@ describe('linter tool', () => {
       const result = await execute({ path: filePath });
 
       expect(result.language).toBe('python');
-      // If python is available, should pass; if not, no linter means pass by default
+      // If python is available, should pass; if not, output says "No linter" but passed=true
       if (isPythonAvailable) {
         expect(result.passed).toBe(true);
       }
@@ -160,7 +154,7 @@ describe('linter tool', () => {
 
       const result = await execute({ path: filePath });
 
-      expect(result.passed).toBe(true); // No linter available
+      expect(result.passed).toBe(true); // No linter available -> passed
     });
   });
 

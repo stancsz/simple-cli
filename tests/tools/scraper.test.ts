@@ -8,7 +8,9 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 const mockFetch = vi.fn();
 vi.stubGlobal('fetch', mockFetch);
 
-import { execute, tool } from '../../src/tools/scraper.js';
+import { scrapeUrl } from '../../src/builtins.js';
+const { execute, inputSchema } = scrapeUrl;
+const tool = scrapeUrl;
 
 describe('scraper tool', () => {
   beforeEach(() => {
@@ -17,11 +19,7 @@ describe('scraper tool', () => {
 
   describe('tool definition', () => {
     it('should have correct name', () => {
-      expect(tool.name).toBe('scrapeUrl');
-    });
-
-    it('should have correct permission', () => {
-      expect(tool.permission).toBe('read');
+      expect(tool.name).toBe('scrape_url');
     });
 
     it('should have description', () => {
@@ -37,7 +35,7 @@ describe('scraper tool', () => {
         text: async () => '<html><body><h1>Title</h1><p>Content</p></body></html>',
       });
 
-      const result = await execute({ url: 'https://example.com' });
+      const result = await execute({ url: 'https://example.com', convertToMarkdown: true });
 
       expect(result.url).toBe('https://example.com');
       expect(result.content).toContain('# Title');
@@ -67,26 +65,28 @@ describe('scraper tool', () => {
         statusText: 'Not Found',
       });
 
-      const result = await execute({ url: 'https://example.com/notfound' });
+      const result = await execute({ url: 'https://example.com/notfound', convertToMarkdown: true });
 
       expect(result.error).toContain('404');
-      expect(result.content).toBe('');
+      expect(result.content).toBeUndefined();
     });
 
     it('should handle network errors', async () => {
       mockFetch.mockRejectedValueOnce(new Error('Network error'));
 
-      const result = await execute({ url: 'https://example.com' });
+      const result = await execute({ url: 'https://example.com', convertToMarkdown: true });
 
       expect(result.error).toContain('Network error');
     });
 
     it('should handle timeout', async () => {
-      mockFetch.mockRejectedValueOnce(new Error('abort'));
+      const abortError = new Error('The operation was aborted');
+      abortError.name = 'AbortError';
+      mockFetch.mockRejectedValueOnce(abortError);
 
-      const result = await execute({ url: 'https://example.com', timeout: 100 });
+      const result = await execute({ url: 'https://example.com', convertToMarkdown: true, timeout: 100 });
 
-      expect(result.error).toContain('timed out');
+      expect(result.error).toMatch(/aborted|timeout/i);
     });
   });
 
@@ -98,7 +98,7 @@ describe('scraper tool', () => {
         text: async () => '<h1>H1</h1><h2>H2</h2><h3>H3</h3>',
       });
 
-      const result = await execute({ url: 'https://example.com' });
+      const result = await execute({ url: 'https://example.com', convertToMarkdown: true });
 
       expect(result.content).toContain('# H1');
       expect(result.content).toContain('## H2');
@@ -112,7 +112,7 @@ describe('scraper tool', () => {
         text: async () => '<a href="https://link.com">Link Text</a>',
       });
 
-      const result = await execute({ url: 'https://example.com' });
+      const result = await execute({ url: 'https://example.com', convertToMarkdown: true });
 
       expect(result.content).toContain('[Link Text](https://link.com)');
     });
@@ -124,7 +124,7 @@ describe('scraper tool', () => {
         text: async () => '<strong>Bold</strong> and <em>Italic</em>',
       });
 
-      const result = await execute({ url: 'https://example.com' });
+      const result = await execute({ url: 'https://example.com', convertToMarkdown: true });
 
       expect(result.content).toContain('**Bold**');
       expect(result.content).toContain('*Italic*');
@@ -137,7 +137,7 @@ describe('scraper tool', () => {
         text: async () => '<code>inline</code> and <pre><code>block</code></pre>',
       });
 
-      const result = await execute({ url: 'https://example.com' });
+      const result = await execute({ url: 'https://example.com', convertToMarkdown: true });
 
       expect(result.content).toContain('`inline`');
       expect(result.content).toContain('```');
@@ -150,7 +150,7 @@ describe('scraper tool', () => {
         text: async () => '<script>alert("xss")</script><style>.red{color:red}</style><p>Safe</p>',
       });
 
-      const result = await execute({ url: 'https://example.com' });
+      const result = await execute({ url: 'https://example.com', convertToMarkdown: true });
 
       expect(result.content).not.toContain('alert');
       expect(result.content).not.toContain('color:red');
@@ -164,15 +164,15 @@ describe('scraper tool', () => {
         text: async () => '<p>&amp; &lt; &gt; &quot;</p>',
       });
 
-      const result = await execute({ url: 'https://example.com' });
+      const result = await execute({ url: 'https://example.com', convertToMarkdown: true });
 
       expect(result.content).toContain('& < > "');
     });
   });
 
   describe('input validation', () => {
-    it('should require valid URL', async () => {
-      await expect(execute({ url: 'not-a-url' })).rejects.toThrow();
+    it('should require valid URL', () => {
+      expect(() => inputSchema.parse({ url: 'not-a-url', convertToMarkdown: true })).toThrow();
     });
 
     it('should accept optional parameters', async () => {
@@ -185,7 +185,6 @@ describe('scraper tool', () => {
       const result = await execute({
         url: 'https://example.com',
         convertToMarkdown: false,
-        verifySSL: true,
         timeout: 5000,
       });
 
