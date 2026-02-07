@@ -12,7 +12,6 @@ import { getMCPManager } from './mcp/manager.js';
 import { readFileSync, statSync } from 'fs';
 import { resolve, join, dirname } from 'path';
 import { fileURLToPath } from 'url';
-import { runDeterministicOrganizer } from './tools/organizer.js';
 
 import { SimpleCoreExecutor } from './executors/simple.js';
 import { executeTool } from './executors/utils.js';

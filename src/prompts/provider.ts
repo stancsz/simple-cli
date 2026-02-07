@@ -3,7 +3,7 @@
  * Supports built-in defaults, project-specific overrides, and modular personas.
  */
 
-import { readFileSync, existsSync, readdirSync } from 'fs';
+import { readFileSync, existsSync, readdirSync, statSync } from 'fs';
 import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
 import { homedir } from 'os';
@@ -20,10 +20,9 @@ export class PromptProvider {
     /**
      * Builds the full system prompt by composing multiple layers:
      * 1. Built-in system instructions (src/prompts/defaults)
-     * 2. Global user overrides (~/.simple/prompts)
-     * 3. Project-specific prompts (.simple/prompts)
+     * 2. Global user overrides (~/.agent/AGENT.md)
+     * 3. Project-specific context (.agent/*.md)
      * 4. Current skill instructions
-     * 5. Local project rules (AGENT.md)
      */
     async getSystemPrompt(options: PromptOptions): Promise<string> {
         const parts: string[] = [];
@@ -34,16 +33,26 @@ export class PromptProvider {
             parts.push(...this.loadFromDirectory(builtInDir));
         }
 
-        // 2. Global user rules (~/.simple/AGENT.md)
-        const globalRulesPath = join(homedir(), '.simple', 'AGENT.md');
+        // 2. Global user rules (~/.agent/AGENT.md)
+        const globalRulesPath = join(homedir(), '.agent', 'AGENT.md');
         if (existsSync(globalRulesPath)) {
             parts.push('\n## Global Rules\n' + readFileSync(globalRulesPath, 'utf-8'));
         }
 
-        // 3. Project rules (AGENT.md)
-        const rules = this.loadProjectRules(options.cwd);
-        if (rules) {
-            parts.push('\n## Project Rules\n' + rules);
+        // 3. Project Context (.agent folder)
+        const agentDir = join(options.cwd, '.agent');
+        if (existsSync(agentDir) && statSync(agentDir).isDirectory()) {
+             // Load all markdown files from .agent/
+             const agentFiles = this.loadFromDirectory(agentDir);
+             if (agentFiles.length > 0) {
+                 parts.push('\n## Project Context\n' + agentFiles.join('\n\n'));
+             }
+        } else {
+             // Fallback: Check for AGENT.md or .cursorrules in root
+             const rules = this.loadProjectRules(options.cwd);
+             if (rules) {
+                 parts.push('\n## Project Rules\n' + rules);
+             }
         }
 
         // 4. Skill-specific prompt (Dynamic based on @skill)
@@ -59,7 +68,10 @@ export class PromptProvider {
             return readdirSync(dir)
                 .filter(f => f.endsWith('.md') || f.endsWith('.mdc'))
                 .sort() // Ensure deterministic order
-                .map(f => readFileSync(join(dir, f), 'utf-8'));
+                .map(f => {
+                    const content = readFileSync(join(dir, f), 'utf-8');
+                    return `### ${f}\n${content}`;
+                });
         } catch {
             return [];
         }
@@ -67,11 +79,7 @@ export class PromptProvider {
 
     private loadProjectRules(cwd: string): string | null {
         const commonPaths = [
-            '.simple/workdir/AGENT.md',
-            '.simple/AGENT.md',
-            '.agent/AGENT.md',
             'AGENT.md',
-            '.agent.md',
             '.cursorrules',
             '.aider/agent.md'
         ];

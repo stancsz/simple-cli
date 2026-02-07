@@ -318,7 +318,7 @@ async function loadToolsFromDir(dir: string, source: 'builtin' | 'project'): Pro
 
 // Load all tools from the tools directory
 export const loadTools = async (): Promise<Map<string, Tool>> => {
-  const customDirs = ['skills', 'scripts', 'tools', '.simple-cli/tools', '.simple/tools'];
+  const customDirs = ['skills', 'scripts', 'tools', '.agent/tools'];
   const builtinTools = await loadToolsFromDir(TOOLS_DIR, 'builtin');
 
   const allProjectTools = new Map<string, Tool>();
@@ -355,10 +355,10 @@ export const loadTools = async (): Promise<Map<string, Tool>> => {
     }
   }
 
-  // Global Simple-CLI Tools (~/.simple/tools)
-  const globalSimpleDir = join(home, '.simple', 'tools');
-  const simpleTools = await loadToolsFromDir(globalSimpleDir, 'project');
-  for (const [name, tool] of simpleTools) {
+  // Global Agent Tools (~/.agent/tools)
+  const globalAgentDir = join(home, '.agent', 'tools');
+  const agentTools = await loadToolsFromDir(globalAgentDir, 'project');
+  for (const [name, tool] of agentTools) {
     if (!allProjectTools.has(name)) {
       allProjectTools.set(name, tool);
     }

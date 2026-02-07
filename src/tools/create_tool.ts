@@ -1,7 +1,7 @@
 /**
  * Tool: create_tool
  * Saves a script as a reusable tool for future sessions.
- * Supports local (.simple/tools) and global (~/.simple/tools) scopes.
+ * Supports local (.agent/tools) and global (~/.agent/tools) scopes.
  */
 import { readFile, writeFile, mkdir } from 'fs/promises';
 import { join, basename, extname, resolve } from 'path';
@@ -19,7 +19,7 @@ export const inputSchema = z.object({
   name: z.string().describe('Name of the tool (snake_case preferred).'),
   description: z.string().describe('Description of what the tool does.'),
   usage: z.string().describe('Usage instructions or examples.'),
-  scope: z.enum(['local', 'global']).optional().default('local').describe('Scope of the tool: "local" (project .simple/tools) or "global" (~/.simple/tools). Defaults to local.'),
+  scope: z.enum(['local', 'global']).optional().default('local').describe('Scope of the tool: "local" (project .agent/tools) or "global" (~/.agent/tools). Defaults to local.'),
   parameters: z.record(z.object({
     type: z.string().describe('Type of the parameter (string, number, boolean, etc.)'),
     description: z.string().describe('Description of the parameter')
@@ -93,9 +93,9 @@ export const execute = async (args: Record<string, unknown>): Promise<string> =>
   let toolsDir = '';
   if (scope === 'global') {
       const home = homedir();
-      toolsDir = join(home, '.simple', 'tools');
+      toolsDir = join(home, '.agent', 'tools');
   } else {
-      toolsDir = join(cwd, '.simple', 'tools');
+      toolsDir = join(cwd, '.agent', 'tools');
   }
 
   await mkdir(toolsDir, { recursive: true });

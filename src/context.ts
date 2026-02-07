@@ -5,9 +5,8 @@
  */
 
 import { readFile } from 'fs/promises';
-import { existsSync, readdirSync, readFileSync } from 'fs';
-import { join, relative, resolve, dirname } from 'path';
-import { homedir } from 'os';
+import { existsSync } from 'fs';
+import { relative, resolve } from 'path';
 import { generateRepoMap } from './repoMap.js';
 import { getActiveSkill, type Skill } from './skills.js';
 import { loadAllTools, getToolDefinitions, type Tool } from './registry.js';
@@ -298,57 +297,6 @@ export class ContextManager {
       if (repoMap.split('\n').length > 50) {
         parts.push('... (truncated)');
       }
-    }
-
-    // Inject Host Memory
-    const hostMemoryPath = join(homedir(), '.simple', 'memory.json');
-    if (existsSync(hostMemoryPath)) {
-      try {
-        const memoryContent = readFileSync(hostMemoryPath, 'utf-8');
-        const memory = JSON.parse(memoryContent);
-
-        let memoryText = '\n## Host Memory (Persistent Context)\n';
-        let hasMemory = false;
-
-        if (memory.user_facts && memory.user_facts.length > 0) {
-          memoryText += '\nUser Facts:\n' + memory.user_facts.map((f: string) => `- ${f}`).join('\n');
-          hasMemory = true;
-        }
-        if (memory.persona_evolution && memory.persona_evolution.length > 0) {
-           memoryText += '\n\nPersona Evolution:\n' + memory.persona_evolution.map((f: string) => `- ${f}`).join('\n');
-           hasMemory = true;
-        }
-
-        // Also project facts if relevant
-        if (memory.project_facts && memory.project_facts[this.cwd]) {
-             memoryText += '\n\nProject Facts:\n' + memory.project_facts[this.cwd].map((f: string) => `- ${f}`).join('\n');
-             hasMemory = true;
-        }
-
-        if (hasMemory) {
-          parts.push(memoryText);
-        }
-      } catch { /* ignore */ }
-    }
-
-    // Inject Learned Guidelines (Frontier Mode - Feedback Loop)
-    const guidelinesPath = join(homedir(), '.simple', 'guidelines.md');
-    if (existsSync(guidelinesPath)) {
-      try {
-        const guidelines = readFileSync(guidelinesPath, 'utf-8');
-        if (guidelines.trim().length > 0) {
-          parts.push('\n\n## Learned Guidelines (Feedback Loop)\nThese are rules you have learned from past feedback. Follow them strictly:\n' + guidelines);
-        }
-      } catch { /* ignore */ }
-    }
-
-    // CLAW MODE: Inject JIT Agent Persona
-    const agentFile = resolve(this.cwd, '.simple', 'workdir', 'AGENT.md');
-    if ((process.argv.includes('--claw') || process.argv.includes('-claw')) && existsSync(agentFile)) {
-      try {
-        const agentPersona = readFileSync(agentFile, 'utf-8');
-        parts.push('\n\n' + agentPersona);
-      } catch { /* ignore read errors */ }
     }
 
     return parts.join('\n');
