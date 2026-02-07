@@ -2,26 +2,36 @@
  * Tests for memory tool
  */
 
-import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { rm } from 'fs/promises';
 import { join } from 'path';
 import { tmpdir } from 'os';
 
-// Set up test data directory before importing
-const testDataDir = join(tmpdir(), `simple-cli-memory-test-${Date.now()}`);
-process.env.SIMPLE_CLI_DATA_DIR = testDataDir;
+// Override CWD for tests to isolate project memory
+const originalCwd = process.cwd();
+let testDataDir: string;
+
+// Since the tool uses process.cwd(), we can't easily mock it without impacting everything.
+// But we can rely on the fact that it writes to .simple/ inside cwd.
+// We will change cwd for the test.
 
 import { execute, tool } from '../../src/tools/memory.js';
 
 describe('memory tool', () => {
   beforeEach(async () => {
-    // Clear the memory before each test
-    await execute({ operation: 'clear', namespace: 'all' });
+    // Create unique temp dir for each test
+    testDataDir = join(tmpdir(), `simple-cli-memory-test-${Date.now()}-${Math.random()}`);
+    await import('fs/promises').then(fs => fs.mkdir(testDataDir, { recursive: true }));
+    process.chdir(testDataDir);
   });
 
   afterEach(async () => {
+    // Cleanup
+    process.chdir(originalCwd);
     try {
-      await rm(testDataDir, { recursive: true, force: true });
+      if (testDataDir) {
+        await rm(testDataDir, { recursive: true, force: true });
+      }
     } catch {}
   });
 
@@ -35,241 +45,86 @@ describe('memory tool', () => {
     });
   });
 
-  describe('set operation', () => {
+  describe('kv store operations', () => {
     it('should store a value', async () => {
       const result = await execute({
-        operation: 'set',
+        action: 'kv_set',
         key: 'test-key',
-        value: 'test-value',
+        content: 'test-value',
       });
 
-      expect(result.success).toBe(true);
-      expect(result.data).toEqual({ key: 'test-key', stored: true });
-    });
-
-    it('should require key', async () => {
-      const result = await execute({
-        operation: 'set',
-        value: 'test-value',
-      });
-
-      expect(result.success).toBe(false);
-      expect(result.error).toContain('Key');
-    });
-
-    it('should require value', async () => {
-      const result = await execute({
-        operation: 'set',
-        key: 'test-key',
-      });
-
-      expect(result.success).toBe(false);
-      expect(result.error).toContain('value');
-    });
-  });
-
-  describe('get operation', () => {
-    it('should retrieve stored value', async () => {
-      await execute({
-        operation: 'set',
-        key: 'get-test',
-        value: 'stored-value',
-      });
-
-      const result = await execute({
-        operation: 'get',
-        key: 'get-test',
-      });
-
-      expect(result.success).toBe(true);
-      expect((result.data as any).value).toBe('stored-value');
-    });
-
-    it('should return null for non-existent key', async () => {
-      const result = await execute({
-        operation: 'get',
-        key: 'non-existent',
-      });
-
-      expect(result.success).toBe(true);
-      expect(result.data).toBeNull();
-    });
-
-    it('should require key', async () => {
-      const result = await execute({
-        operation: 'get',
-      });
-
-      expect(result.success).toBe(false);
-    });
-  });
-
-  describe('delete operation', () => {
-    it('should delete stored value', async () => {
-      await execute({
-        operation: 'set',
-        key: 'delete-test',
-        value: 'to-delete',
-      });
-
-      const deleteResult = await execute({
-        operation: 'delete',
-        key: 'delete-test',
-      });
-
-      expect(deleteResult.success).toBe(true);
-      expect((deleteResult.data as any).deleted).toBe(true);
+      expect(result).toContain('KV set: test-key = test-value');
 
       const getResult = await execute({
-        operation: 'get',
-        key: 'delete-test',
+          action: 'kv_get',
+          key: 'test-key'
       });
-
-      expect(getResult.data).toBeNull();
+      expect(getResult).toBe('Value: test-value');
     });
 
-    it('should handle non-existent key', async () => {
-      const result = await execute({
-        operation: 'delete',
-        key: 'non-existent',
-      });
+    it('should require key for set', async () => {
+      await expect(execute({
+        action: 'kv_set',
+        content: 'test-value',
+      })).rejects.toThrow(); // Zod or manual check
+    });
 
-      expect(result.success).toBe(true);
-      expect((result.data as any).deleted).toBe(false);
+    it('should list keys', async () => {
+      await execute({ action: 'kv_set', key: 'k1', content: 'v1' });
+      await execute({ action: 'kv_set', key: 'k2', content: 'v2' });
+
+      const result = await execute({ action: 'kv_list' });
+      expect(result).toContain('k1');
+      expect(result).toContain('k2');
+    });
+
+    it('should delete key', async () => {
+        await execute({ action: 'kv_set', key: 'k1', content: 'v1' });
+        const res = await execute({ action: 'kv_delete', key: 'k1' });
+        expect(res).toContain('Deleted key: k1');
+
+        const check = await execute({ action: 'kv_get', key: 'k1' });
+        expect(check).toBe('Key not found');
     });
   });
 
-  describe('list operation', () => {
-    it('should list stored entries', async () => {
-      await execute({ operation: 'set', key: 'key1', value: 'value1' });
-      await execute({ operation: 'set', key: 'key2', value: 'value2' });
+  describe('facts operations', () => {
+    it('should learn project fact', async () => {
+        const res = await execute({ action: 'learn_fact', content: 'Project uses TypeScript', category: 'project' });
+        expect(res).toContain('Learned project fact');
 
-      const result = await execute({ operation: 'list' });
-
-      expect(result.success).toBe(true);
-      expect((result.data as any).count).toBe(2);
-      expect((result.data as any).entries.length).toBe(2);
+        const recall = await execute({ action: 'recall', content: 'TypeScript' });
+        expect(recall).toContain('[Project] Project uses TypeScript');
     });
 
-    it('should return empty list when no entries', async () => {
-      const result = await execute({ operation: 'list' });
+    it('should forget fact', async () => {
+        await execute({ action: 'learn_fact', content: 'To be forgotten', category: 'project' });
+        const res = await execute({ action: 'forget_fact', content: 'forgotten' });
+        expect(res).toContain('Forgot facts containing "forgotten"');
 
-      expect(result.success).toBe(true);
-      expect((result.data as any).count).toBe(0);
-    });
-
-    it('should filter by namespace', async () => {
-      await execute({ operation: 'set', key: 'key1', value: 'v1', namespace: 'ns1' });
-      await execute({ operation: 'set', key: 'key2', value: 'v2', namespace: 'ns2' });
-
-      const result = await execute({ operation: 'list', namespace: 'ns1' });
-
-      expect((result.data as any).count).toBe(1);
+        const recall = await execute({ action: 'recall', content: 'forgotten' });
+        expect(recall).toContain('No memories found');
     });
   });
 
-  describe('search operation', () => {
-    it('should search by key', async () => {
-      await execute({ operation: 'set', key: 'project-alpha', value: 'v1' });
-      await execute({ operation: 'set', key: 'project-beta', value: 'v2' });
-      await execute({ operation: 'set', key: 'other', value: 'v3' });
+  describe('patterns operations', () => {
+      it('should add and search patterns', async () => {
+          await execute({ action: 'add_pattern', content: 'Use Zod for validation' });
+          const res = await execute({ action: 'search_patterns', content: 'Zod' });
+          expect(res).toContain('Use Zod for validation');
+      });
+  });
 
-      const result = await execute({
-        operation: 'search',
-        query: 'project',
+  describe('mission operations', () => {
+      it('should set mission goal', async () => {
+          const res = await execute({ action: 'mission_set', content: 'Refactor code', status: 'planning' });
+          expect(res).toContain('Mission goal set: "Refactor code"');
       });
 
-      expect(result.success).toBe(true);
-      expect((result.data as any).count).toBe(2);
-    });
-
-    it('should search by value', async () => {
-      await execute({ operation: 'set', key: 'key1', value: 'contains searchterm here' });
-      await execute({ operation: 'set', key: 'key2', value: 'no match' });
-
-      const result = await execute({
-        operation: 'search',
-        query: 'searchterm',
+      it('should update mission', async () => {
+          await execute({ action: 'mission_set', content: 'Goal' });
+          const res = await execute({ action: 'mission_update', status: 'executing', content: 'Started work' });
+          expect(res).toContain('Mission updated. Status: executing');
       });
-
-      expect((result.data as any).count).toBe(1);
-    });
-
-    it('should be case insensitive', async () => {
-      await execute({ operation: 'set', key: 'KEY', value: 'VALUE' });
-
-      const result = await execute({
-        operation: 'search',
-        query: 'key',
-      });
-
-      expect((result.data as any).count).toBe(1);
-    });
-
-    it('should require query', async () => {
-      const result = await execute({ operation: 'search' });
-
-      expect(result.success).toBe(false);
-    });
-  });
-
-  describe('clear operation', () => {
-    it('should clear namespace', async () => {
-      await execute({ operation: 'set', key: 'key1', value: 'v1', namespace: 'ns' });
-      await execute({ operation: 'set', key: 'key2', value: 'v2', namespace: 'ns' });
-      await execute({ operation: 'set', key: 'key3', value: 'v3', namespace: 'other' });
-
-      const result = await execute({ operation: 'clear', namespace: 'ns' });
-
-      expect(result.success).toBe(true);
-      expect((result.data as any).cleared).toBe(2);
-
-      const listResult = await execute({ operation: 'list', namespace: 'other' });
-      expect((listResult.data as any).count).toBe(1);
-    });
-
-    it('should clear all namespaces', async () => {
-      await execute({ operation: 'set', key: 'k1', value: 'v1', namespace: 'ns1' });
-      await execute({ operation: 'set', key: 'k2', value: 'v2', namespace: 'ns2' });
-
-      const result = await execute({ operation: 'clear', namespace: 'all' });
-
-      expect(result.success).toBe(true);
-    });
-  });
-
-  describe('namespaces', () => {
-    it('should isolate namespaces', async () => {
-      await execute({ operation: 'set', key: 'key', value: 'v1', namespace: 'ns1' });
-      await execute({ operation: 'set', key: 'key', value: 'v2', namespace: 'ns2' });
-
-      const result1 = await execute({ operation: 'get', key: 'key', namespace: 'ns1' });
-      const result2 = await execute({ operation: 'get', key: 'key', namespace: 'ns2' });
-
-      expect((result1.data as any).value).toBe('v1');
-      expect((result2.data as any).value).toBe('v2');
-    });
-
-    it('should use default namespace', async () => {
-      await execute({ operation: 'set', key: 'key', value: 'default-value' });
-
-      const result = await execute({ operation: 'list', namespace: 'default' });
-
-      expect((result.data as any).count).toBe(1);
-    });
-  });
-
-  describe('timestamps', () => {
-    it('should record timestamp on set', async () => {
-      const before = Date.now();
-
-      await execute({ operation: 'set', key: 'ts-test', value: 'value' });
-
-      const result = await execute({ operation: 'get', key: 'ts-test' });
-      const timestamp = (result.data as any).timestamp;
-
-      expect(timestamp).toBeGreaterThanOrEqual(before);
-      expect(timestamp).toBeLessThanOrEqual(Date.now());
-    });
   });
 });

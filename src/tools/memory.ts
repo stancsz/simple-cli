@@ -1,268 +1,308 @@
 /**
- * Memory Tool - Persistent context and memory management
- * Based on GeminiCLI's memoryTool.ts
+ * Memory Tool - Unified Persistent Memory Management
+ * Consolidates functionality from host, claw_brain, knowledge, and memory tools.
  */
 
 import { z } from 'zod';
 import { readFile, writeFile, mkdir } from 'fs/promises';
 import { existsSync } from 'fs';
 import { join, dirname } from 'path';
+import { homedir } from 'os';
 import type { Tool } from '../registry.js';
 
-// Input schema
+// --- Storage Paths ---
+const GLOBAL_MEMORY_PATH = join(homedir(), '.simple', 'memory.json');
+
+function getProjectMemoryPath() {
+  return join(process.cwd(), '.simple', 'project_memory.json');
+}
+
+function getMissionPath() {
+  return join(process.cwd(), '.simple', 'mission.json');
+}
+
+function getKVPath() {
+  return join(process.cwd(), '.simple', 'kv.json');
+}
+
+// --- Types ---
+
+interface GlobalMemory {
+  user_facts: string[];
+  persona_evolution: string[];
+  meta: { last_run: number; interaction_count: number };
+}
+
+interface ProjectMemory {
+  facts: string[];
+  patterns: string[]; // Technical patterns/knowledge
+  meta: { last_updated: number };
+}
+
+interface MissionState {
+  goal: string;
+  status: 'planning' | 'executing' | 'completed' | 'failed';
+  reflections: string[];
+  last_updated: number;
+}
+
+interface KVStore {
+  entries: Record<string, any>;
+}
+
+// --- Helper Functions ---
+
+async function loadGlobalMemory(): Promise<GlobalMemory> {
+  if (!existsSync(GLOBAL_MEMORY_PATH)) {
+    return { user_facts: [], persona_evolution: [], meta: { last_run: Date.now(), interaction_count: 0 } };
+  }
+  try {
+    return JSON.parse(await readFile(GLOBAL_MEMORY_PATH, 'utf-8'));
+  } catch {
+    return { user_facts: [], persona_evolution: [], meta: { last_run: Date.now(), interaction_count: 0 } };
+  }
+}
+
+async function saveGlobalMemory(data: GlobalMemory) {
+  await mkdir(dirname(GLOBAL_MEMORY_PATH), { recursive: true });
+  data.meta.last_run = Date.now();
+  await writeFile(GLOBAL_MEMORY_PATH, JSON.stringify(data, null, 2));
+}
+
+async function loadProjectMemory(): Promise<ProjectMemory> {
+  const path = getProjectMemoryPath();
+  if (!existsSync(path)) {
+    return { facts: [], patterns: [], meta: { last_updated: Date.now() } };
+  }
+  try {
+    return JSON.parse(await readFile(path, 'utf-8'));
+  } catch {
+    return { facts: [], patterns: [], meta: { last_updated: Date.now() } };
+  }
+}
+
+async function saveProjectMemory(data: ProjectMemory) {
+  const path = getProjectMemoryPath();
+  await mkdir(dirname(path), { recursive: true });
+  data.meta.last_updated = Date.now();
+  await writeFile(path, JSON.stringify(data, null, 2));
+}
+
+async function loadMission(): Promise<MissionState> {
+  const path = getMissionPath();
+  if (!existsSync(path)) {
+    return { goal: 'Unknown', status: 'planning', reflections: [], last_updated: Date.now() };
+  }
+  try {
+    return JSON.parse(await readFile(path, 'utf-8'));
+  } catch {
+    return { goal: 'Unknown', status: 'planning', reflections: [], last_updated: Date.now() };
+  }
+}
+
+async function saveMission(data: MissionState) {
+  const path = getMissionPath();
+  await mkdir(dirname(path), { recursive: true });
+  data.last_updated = Date.now();
+  await writeFile(path, JSON.stringify(data, null, 2));
+}
+
+async function loadKV(): Promise<KVStore> {
+  const path = getKVPath();
+  if (!existsSync(path)) {
+    return { entries: {} };
+  }
+  try {
+    return JSON.parse(await readFile(path, 'utf-8'));
+  } catch {
+    return { entries: {} };
+  }
+}
+
+async function saveKV(data: KVStore) {
+  const path = getKVPath();
+  await mkdir(dirname(path), { recursive: true });
+  await writeFile(path, JSON.stringify(data, null, 2));
+}
+
+// --- Tool Definition ---
+
 export const inputSchema = z.object({
-  operation: z.enum(['get', 'set', 'delete', 'list', 'search', 'clear']).describe('Memory operation'),
-  key: z.string().optional().describe('Memory key'),
-  value: z.string().optional().describe('Value to store'),
-  query: z.string().optional().describe('Search query'),
-  namespace: z.string().optional().default('default').describe('Memory namespace'),
+  action: z.enum([
+    'learn_fact', 'forget_fact', 'recall', // Global/Project Facts
+    'add_pattern', 'search_patterns',      // Project Patterns (Knowledge)
+    'mission_set', 'mission_update', 'mission_reflect', // Mission State
+    'kv_set', 'kv_get', 'kv_list', 'kv_delete' // Key-Value Store
+  ]).describe('Action to perform'),
+
+  content: z.string().optional().describe('Content for facts, patterns, mission reflections, or KV value'),
+  key: z.string().optional().describe('Key for KV operations or specific fact identification'),
+  category: z.enum(['user', 'project', 'persona']).optional().default('project').describe('Category for facts (user=global, project=local)'),
+  status: z.enum(['planning', 'executing', 'completed', 'failed']).optional().describe('Status for mission update'),
 });
 
 type MemoryInput = z.infer<typeof inputSchema>;
 
-interface MemoryEntry {
-  key: string;
-  value: string;
-  timestamp: number;
-  namespace: string;
-  metadata?: Record<string, unknown>;
-}
+export const execute = async (args: Record<string, unknown>): Promise<any> => {
+  const { action, content, key, category, status } = inputSchema.parse(args);
 
-interface MemoryStore {
-  version: number;
-  entries: Record<string, MemoryEntry>;
-}
-
-// Get memory file path
-function getMemoryPath(): string {
-  const baseDir = process.env.SIMPLE_CLI_DATA_DIR ||
-    join(process.env.HOME || '', '.config', 'simplecli');
-  return join(baseDir, 'memory.json');
-}
-
-// Load memory store
-async function loadMemory(): Promise<MemoryStore> {
-  const path = getMemoryPath();
-
-  if (!existsSync(path)) {
-    return { version: 1, entries: {} };
-  }
-
-  try {
-    const content = await readFile(path, 'utf-8');
-    return JSON.parse(content);
-  } catch {
-    return { version: 1, entries: {} };
-  }
-}
-
-// Save memory store
-async function saveMemory(store: MemoryStore): Promise<void> {
-  const path = getMemoryPath();
-
-  // Ensure directory exists
-  await mkdir(dirname(path), { recursive: true });
-
-  await writeFile(path, JSON.stringify(store, null, 2));
-}
-
-// Generate unique key
-function generateKey(namespace: string, key: string): string {
-  return `${namespace}:${key}`;
-}
-
-// Execute memory operation
-export async function execute(input: MemoryInput): Promise<{
-  operation: string;
-  success: boolean;
-  data?: unknown;
-  error?: string;
-}> {
-  const { operation, key, value, query, namespace } = inputSchema.parse(input);
-  const store = await loadMemory();
-
-  try {
-    switch (operation) {
-      case 'get': {
-        if (!key) {
-          return {
-            operation,
-            success: false,
-            error: 'Key required for get operation',
-          };
+  switch (action) {
+    // --- Facts (Global & Project) ---
+    case 'learn_fact': {
+      if (!content) throw new Error('Content required for learn_fact');
+      if (category === 'user' || category === 'persona') {
+        const mem = await loadGlobalMemory();
+        const list = category === 'user' ? mem.user_facts : mem.persona_evolution;
+        if (!list.includes(content)) {
+          list.push(content);
+          mem.meta.interaction_count++; // simple increment
+          await saveGlobalMemory(mem);
+          return `Learned global ${category} fact: "${content}"`;
         }
-        const fullKey = generateKey(namespace, key);
-        const entry = store.entries[fullKey];
-
-        if (!entry) {
-          return {
-            operation,
-            success: true,
-            data: null,
-          };
+        return `Already knew global ${category} fact: "${content}"`;
+      } else {
+        const mem = await loadProjectMemory();
+        if (!mem.facts.includes(content)) {
+          mem.facts.push(content);
+          await saveProjectMemory(mem);
+          return `Learned project fact: "${content}"`;
         }
-
-        return {
-          operation,
-          success: true,
-          data: {
-            key: entry.key,
-            value: entry.value,
-            timestamp: entry.timestamp,
-          },
-        };
+        return `Already knew project fact: "${content}"`;
       }
-
-      case 'set': {
-        if (!key || value === undefined) {
-          return {
-            operation,
-            success: false,
-            error: 'Key and value required for set operation',
-          };
-        }
-        const fullKey = generateKey(namespace, key);
-
-        store.entries[fullKey] = {
-          key,
-          value,
-          timestamp: Date.now(),
-          namespace,
-        };
-
-        await saveMemory(store);
-
-        return {
-          operation,
-          success: true,
-          data: { key, stored: true },
-        };
-      }
-
-      case 'delete': {
-        if (!key) {
-          return {
-            operation,
-            success: false,
-            error: 'Key required for delete operation',
-          };
-        }
-        const fullKey = generateKey(namespace, key);
-        const existed = fullKey in store.entries;
-        delete store.entries[fullKey];
-
-        await saveMemory(store);
-
-        return {
-          operation,
-          success: true,
-          data: { key, deleted: existed },
-        };
-      }
-
-      case 'list': {
-        const entries = Object.values(store.entries)
-          .filter(e => e.namespace === namespace)
-          .map(e => ({
-            key: e.key,
-            timestamp: e.timestamp,
-            preview: e.value.slice(0, 100) + (e.value.length > 100 ? '...' : ''),
-          }))
-          .sort((a, b) => b.timestamp - a.timestamp);
-
-        return {
-          operation,
-          success: true,
-          data: {
-            namespace,
-            count: entries.length,
-            entries,
-          },
-        };
-      }
-
-      case 'search': {
-        if (!query) {
-          return {
-            operation,
-            success: false,
-            error: 'Query required for search operation',
-          };
-        }
-
-        const queryLower = query.toLowerCase();
-        const matches = Object.values(store.entries)
-          .filter(e =>
-            e.key.toLowerCase().includes(queryLower) ||
-            e.value.toLowerCase().includes(queryLower)
-          )
-          .map(e => ({
-            key: e.key,
-            namespace: e.namespace,
-            timestamp: e.timestamp,
-            preview: e.value.slice(0, 100) + (e.value.length > 100 ? '...' : ''),
-          }))
-          .slice(0, 20);
-
-        return {
-          operation,
-          success: true,
-          data: {
-            query,
-            count: matches.length,
-            matches,
-          },
-        };
-      }
-
-      case 'clear': {
-        const beforeCount = Object.keys(store.entries).length;
-
-        if (namespace === 'all') {
-          store.entries = {};
-        } else {
-          for (const [k, entry] of Object.entries(store.entries)) {
-            if (entry.namespace === namespace) {
-              delete store.entries[k];
-            }
-          }
-        }
-
-        await saveMemory(store);
-
-        const afterCount = Object.keys(store.entries).length;
-
-        return {
-          operation,
-          success: true,
-          data: {
-            namespace,
-            cleared: beforeCount - afterCount,
-          },
-        };
-      }
-
-      default:
-        return {
-          operation,
-          success: false,
-          error: `Unknown operation: ${operation}`,
-        };
     }
-  } catch (error) {
-    return {
-      operation,
-      success: false,
-      error: error instanceof Error ? error.message : String(error),
-    };
-  }
-}
 
-// Tool definition
+    case 'forget_fact': {
+       if (!content) throw new Error('Content (text to match) required for forget_fact');
+       let deleted = false;
+
+       // Try global first
+       const globalMem = await loadGlobalMemory();
+       const initialUser = globalMem.user_facts.length;
+       globalMem.user_facts = globalMem.user_facts.filter(f => !f.includes(content));
+       if (globalMem.user_facts.length < initialUser) deleted = true;
+
+       const initialPersona = globalMem.persona_evolution.length;
+       globalMem.persona_evolution = globalMem.persona_evolution.filter(f => !f.includes(content));
+       if (globalMem.persona_evolution.length < initialPersona) deleted = true;
+
+       if (deleted) await saveGlobalMemory(globalMem);
+
+       // Try project
+       const projectMem = await loadProjectMemory();
+       const initialProject = projectMem.facts.length;
+       projectMem.facts = projectMem.facts.filter(f => !f.includes(content));
+       if (projectMem.facts.length < initialProject) {
+           deleted = true;
+           await saveProjectMemory(projectMem);
+       }
+
+       return deleted ? `Forgot facts containing "${content}"` : `No facts found containing "${content}"`;
+    }
+
+    case 'recall': {
+        const globalMem = await loadGlobalMemory();
+        const projectMem = await loadProjectMemory();
+        const query = (content || '').toLowerCase();
+
+        const results = [
+            ...globalMem.user_facts.filter(f => f.toLowerCase().includes(query)).map(f => `[User] ${f}`),
+            ...globalMem.persona_evolution.filter(f => f.toLowerCase().includes(query)).map(f => `[Persona] ${f}`),
+            ...projectMem.facts.filter(f => f.toLowerCase().includes(query)).map(f => `[Project] ${f}`),
+            ...projectMem.patterns.filter(f => f.toLowerCase().includes(query)).map(f => `[Pattern] ${f}`)
+        ];
+
+        if (results.length === 0) return `No memories found matching "${query}"`;
+        return `Recalled:\n- ${results.join('\n- ')}`;
+    }
+
+    // --- Patterns (Knowledge) ---
+    case 'add_pattern': {
+        if (!content) throw new Error('Content required for add_pattern');
+        const mem = await loadProjectMemory();
+        if (!mem.patterns.includes(content)) {
+            mem.patterns.push(content);
+            await saveProjectMemory(mem);
+            return `Added technical pattern: "${content}"`;
+        }
+        return `Pattern already exists: "${content}"`;
+    }
+
+    case 'search_patterns': {
+        const mem = await loadProjectMemory();
+        const query = (content || '').toLowerCase();
+        const matches = mem.patterns.filter(p => p.toLowerCase().includes(query));
+        return matches.length > 0 ? `Found patterns:\n- ${matches.join('\n- ')}` : 'No patterns found.';
+    }
+
+    // --- Mission ---
+    case 'mission_set': {
+        if (!content) throw new Error('Content (goal) required for mission_set');
+        const mission = await loadMission();
+        mission.goal = content;
+        mission.status = status || 'planning';
+        await saveMission(mission);
+        return `Mission goal set: "${content}" (Status: ${mission.status})`;
+    }
+
+    case 'mission_update': {
+        const mission = await loadMission();
+        if (status) mission.status = status;
+        if (content) mission.reflections.push(`[Update] ${content}`);
+        await saveMission(mission);
+        return `Mission updated. Status: ${mission.status}`;
+    }
+
+    case 'mission_reflect': {
+        if (!content) throw new Error('Content (reflection) required for mission_reflect');
+        const mission = await loadMission();
+        mission.reflections.push(content);
+        // Keep last 50
+        if (mission.reflections.length > 50) mission.reflections.shift();
+        await saveMission(mission);
+        return 'Reflection logged.';
+    }
+
+    // --- KV Store ---
+    case 'kv_set': {
+        if (!key || content === undefined) throw new Error('Key and Content required for kv_set');
+        const store = await loadKV();
+        store.entries[key] = content;
+        await saveKV(store);
+        return `KV set: ${key} = ${content}`;
+    }
+
+    case 'kv_get': {
+        if (!key) throw new Error('Key required for kv_get');
+        const store = await loadKV();
+        const val = store.entries[key];
+        return val !== undefined ? `Value: ${val}` : 'Key not found';
+    }
+
+    case 'kv_list': {
+        const store = await loadKV();
+        return `Keys: ${Object.keys(store.entries).join(', ')}`;
+    }
+
+    case 'kv_delete': {
+        if (!key) throw new Error('Key required for kv_delete');
+        const store = await loadKV();
+        if (key in store.entries) {
+            delete store.entries[key];
+            await saveKV(store);
+            return `Deleted key: ${key}`;
+        }
+        return `Key not found: ${key}`;
+    }
+
+    default:
+      throw new Error(`Unknown action: ${action}`);
+  }
+};
+
 export const tool: Tool = {
   name: 'memory',
-  description: 'Store and retrieve persistent memory/context. Operations: get, set, delete, list, search, clear',
+  description: 'Unified Persistent Memory Tool. Manages global facts, project knowledge, mission state, and key-value storage.',
   inputSchema,
   permission: 'write',
-  execute: async (args) => execute(args as MemoryInput),
+  execute: async (args) => execute(args as Record<string, unknown>),
 };
