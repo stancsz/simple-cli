@@ -60,7 +60,12 @@ async function runClaw(intent: string): Promise<string> {
     console.log(`\n    [DEBUG] Running claw with intent: ${intent}`);
     return new Promise((resolve, reject) => {
         const cliProcess = spawn(process.execPath, [cliPath, DEMO_DIR, '-claw', intent, '--yolo'], {
-            env: { ...process.env, CLAW_MODEL: 'gemini-3-flash-preview', DEBUG: 'true' }
+            env: {
+                ...process.env,
+                CLAW_MODEL: 'gemini-3-flash-preview',
+                DEBUG: 'true',
+                CLAW_WORKSPACE: process.env.CLAW_WORKSPACE || join(process.cwd(), 'examples/full-agent/.agent')
+            }
         });
 
         let stdout = '';
