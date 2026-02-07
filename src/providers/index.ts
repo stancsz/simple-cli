@@ -16,16 +16,6 @@ export interface Provider {
 }
 
 /**
- * Structured output strategy:
- * - Uses strong system prompts with explicit JSON format examples
- * - Response parsing with jsonrepair (in cli.ts)
- * - Format reminders in user messages (in context.ts)
- *
- * This approach works across ALL providers without hitting
- * provider-specific schema limitations (e.g., OpenAI's additionalProperties requirement)
- */
-
-/**
  * Creates a provider instance using AnyLLM
  */
 export const createProviderForModel = (modelId: string): Provider => {
@@ -96,8 +86,7 @@ export const createProviderForModel = (modelId: string): Provider => {
  * Creates the default provider
  */
 export const createProvider = (): Provider => {
-  const isClaw = process.argv.includes('--claw') || process.argv.includes('-claw');
-  const model = (isClaw ? process.env.CLAW_MODEL : null) || process.env.OPENAI_MODEL || process.env.GEMINI_MODEL || 'gpt-4o-mini';
+  const model = process.env.OPENAI_MODEL || process.env.GEMINI_MODEL || 'gpt-5-mini'; // Default to simple
   console.log(`🤖 Using AnyLLM with model: ${model}`);
   return createProviderForModel(model);
 };

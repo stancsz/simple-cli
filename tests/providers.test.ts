@@ -96,14 +96,6 @@ describe('createProvider', () => {
     const provider = createProvider();
     expect(provider.model).toBe('gpt-5-mini');
   });
-
-  it('should use CLAW_MODEL if in claw mode', () => {
-    process.argv.push('--claw');
-    process.env.CLAW_MODEL = 'claude-3-opus';
-    const provider = createProvider();
-    expect(provider.model).toBe('claude-3-opus');
-    process.argv.pop();
-  });
 });
 
 describe('conversation handling', () => {
