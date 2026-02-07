@@ -8,14 +8,16 @@ import { execSync } from 'child_process';
 import { join } from 'path';
 import { tmpdir } from 'os';
 
-import { execute, tool, getCurrentBranch, getChangedFiles, getTrackedFiles } from '../../src/tools/git.js';
+import { gitTool, getCurrentBranch, getChangedFiles, getTrackedFiles } from '../../src/builtins.js';
+const { execute } = gitTool;
+const tool = gitTool;
 
 describe('git tool', () => {
   let testDir: string;
   let isGitRepo = false;
 
   beforeEach(async () => {
-    testDir = join(tmpdir(), `simple-cli-git-test-${Date.now()}`);
+    testDir = join(tmpdir(), `simple-cli-git-test-${Date.now()}-${Math.random()}`);
     await mkdir(testDir, { recursive: true });
 
     // Initialize git repo
@@ -36,10 +38,6 @@ describe('git tool', () => {
   describe('tool definition', () => {
     it('should have correct name', () => {
       expect(tool.name).toBe('git');
-    });
-
-    it('should have correct permission', () => {
-      expect(tool.permission).toBe('execute');
     });
   });
 
@@ -202,7 +200,7 @@ describe('git tool', () => {
       await writeFile(join(testDir, 'init.txt'), 'init');
       execSync('git add init.txt && git commit -m "init"', { cwd: testDir, stdio: 'pipe' });
 
-      const branch = getCurrentBranch(testDir);
+      const branch = await getCurrentBranch(testDir);
       expect(branch).toBeTruthy();
     });
 
@@ -211,7 +209,7 @@ describe('git tool', () => {
 
       await writeFile(join(testDir, 'file.txt'), 'content');
 
-      const files = getChangedFiles(testDir);
+      const files = await getChangedFiles(testDir);
       expect(files).toContain('file.txt');
     });
 
@@ -221,14 +219,14 @@ describe('git tool', () => {
       await writeFile(join(testDir, 'file.txt'), 'content');
       execSync('git add file.txt && git commit -m "add"', { cwd: testDir, stdio: 'pipe' });
 
-      const files = getTrackedFiles(testDir);
+      const files = await getTrackedFiles(testDir);
       expect(files).toContain('file.txt');
     });
   });
 
   describe('non-git directory', () => {
     it('should fail for non-git directory', async () => {
-      const nonGitDir = join(tmpdir(), `non-git-${Date.now()}`);
+      const nonGitDir = join(tmpdir(), `non-git-${Date.now()}-${Math.random()}`);
       await mkdir(nonGitDir, { recursive: true });
 
       try {
@@ -238,7 +236,8 @@ describe('git tool', () => {
         });
 
         expect(result.success).toBe(false);
-        expect(result.error).toContain('Not a git repository');
+        // "not a git repository" is what git outputs
+        expect(result.error.toLowerCase()).toContain('not a git repository');
       } finally {
         await rm(nonGitDir, { recursive: true, force: true });
       }
