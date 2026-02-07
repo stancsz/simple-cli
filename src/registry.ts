@@ -318,7 +318,7 @@ async function loadToolsFromDir(dir: string, source: 'builtin' | 'project'): Pro
 
 // Load all tools from the tools directory
 export const loadTools = async (): Promise<Map<string, Tool>> => {
-  const customDirs = ['skills', 'scripts', 'tools', '.simple-cli/tools'];
+  const customDirs = ['skills', 'scripts', 'tools', '.simple-cli/tools', '.simple/tools'];
   const builtinTools = await loadToolsFromDir(TOOLS_DIR, 'builtin');
 
   const allProjectTools = new Map<string, Tool>();

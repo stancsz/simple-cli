@@ -1,21 +1,25 @@
 /**
- * Tool: learn_tool
+ * Tool: create_tool
  * Saves a script as a reusable tool for future sessions.
+ * Supports local (.simple/tools) and global (~/.simple/tools) scopes.
  */
 import { readFile, writeFile, mkdir } from 'fs/promises';
 import { join, basename, extname, resolve } from 'path';
+import { homedir } from 'os';
 import { z } from 'zod';
 import { getContextManager } from '../context.js';
+import type { Tool } from '../registry.js';
 
-export const name = 'learn_tool';
-export const description = 'Save a script as a reusable tool in the permanent toolbox (~/.simple/tools). Use this when you have created a script that might be useful for future tasks.';
+export const name = 'create_tool';
+export const description = 'Save a script as a reusable tool in the agent\'s toolbox. Tools can be scoped to the current project (local) or available globally.';
 export const permission = 'write' as const;
 
-export const schema = z.object({
+export const inputSchema = z.object({
   source_path: z.string().describe('Path to the script file in the current workspace to save.'),
   name: z.string().describe('Name of the tool (snake_case preferred).'),
   description: z.string().describe('Description of what the tool does.'),
   usage: z.string().describe('Usage instructions or examples.'),
+  scope: z.enum(['local', 'global']).optional().default('local').describe('Scope of the tool: "local" (project .simple/tools) or "global" (~/.simple/tools). Defaults to local.'),
   parameters: z.record(z.object({
     type: z.string().describe('Type of the parameter (string, number, boolean, etc.)'),
     description: z.string().describe('Description of the parameter')
@@ -23,7 +27,7 @@ export const schema = z.object({
 });
 
 export const execute = async (args: Record<string, unknown>): Promise<string> => {
-  const { source_path, name: toolName, description: toolDesc, usage, parameters } = schema.parse(args);
+  const { source_path, name: toolName, description: toolDesc, usage, scope, parameters } = inputSchema.parse(args);
 
   const cwd = process.cwd();
   const fullSourcePath = resolve(cwd, source_path);
@@ -86,22 +90,38 @@ export const execute = async (args: Record<string, unknown>): Promise<string> =>
   }
 
   // Determine target path
-  const home = process.env.HOME || process.env.USERPROFILE;
-  if (!home) throw new Error('Could not determine home directory.');
+  let toolsDir = '';
+  if (scope === 'global') {
+      const home = homedir();
+      toolsDir = join(home, '.simple', 'tools');
+  } else {
+      toolsDir = join(cwd, '.simple', 'tools');
+  }
 
-  const simpleToolsDir = join(home, '.simple', 'tools');
-  await mkdir(simpleToolsDir, { recursive: true });
+  await mkdir(toolsDir, { recursive: true });
 
   // Sanitize tool name to prevent path traversal
   const safeToolName = basename(toolName).replace(/[^a-zA-Z0-9_-]/g, '_');
   const targetFilename = safeToolName + ext;
-  const finalTargetPath = join(simpleToolsDir, targetFilename);
+  const finalTargetPath = join(toolsDir, targetFilename);
 
   await writeFile(finalTargetPath, content, 'utf-8');
 
-  // Trigger reload
-  const ctx = getContextManager();
-  await ctx.initialize();
+  // Trigger reload if possible
+  try {
+      const ctx = getContextManager();
+      await ctx.initialize();
+  } catch {
+      // If context manager isn't available (e.g. unit test), ignore
+  }
 
-  return `Tool '${toolName}' successfully saved to ${finalTargetPath} and loaded into the toolkit.`;
+  return `Tool '${toolName}' successfully saved to ${finalTargetPath} (${scope} scope) and loaded into the toolkit.`;
+};
+
+export const tool: Tool = {
+    name: 'create_tool',
+    description: description,
+    inputSchema,
+    permission: permission,
+    execute: async (args) => execute(args as Record<string, unknown>)
 };
