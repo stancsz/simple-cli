@@ -4,10 +4,9 @@
 
 # simple-cli ⚡
 
-**The Hive Mind for Your Terminal.**
+**The Terminal-Native AI Partner. Lean. Local. Limitless.**
 
-Stop chatting. Start commanding.
-Unleash a sentient swarm on your codebase. No copy-pasting. No waiting. Just pure, autonomous execution.
+Stop pasting code into a browser. Start commanding a swarm directly from your terminal.
 
 ```bash
 # Ignite
@@ -24,32 +23,63 @@ simple "Refactor the authentication layer in src/auth"
 
 ## Why Simple-CLI?
 
-Most AI tools are passive chatbots waiting for input. **Simple-CLI** is an **autonomous workforce** that lives in your shell. It is built for speed, massive scale, and self-evolution.
+Most AI tools are bloated extensions or heavy desktop apps. **Simple-CLI** is different. It lives where you live: in the shell. It is built for speed, autonomy, and raw power.
 
-It doesn't just "help." It **takes over**.
+It doesn't just "chat." It **executes**.
 
 ---
 
-## The Game Changers 🚀
+## The Innovations 🚀
 
-### 1. JIT Agents: Infinite Personas 🧠
+### 1. Just-in-Time (JIT) Intelligence 🧠
 `simple --claw "Analyze this database schema"`
-Don't settle for a generic assistant. When you use `--claw`, the system **morphs**. It analyzes your intent and **spawns a specialized sub-agent** (e.g., "Senior PostgreSQL Architect") with a dedicated memory, strategy, and toolset architected specifically for that task.
+Don't settle for a generic assistant. When you use `--claw`, the system analyzes your intent and **spawns a specialized sub-agent** specifically architected for that task. It builds its own memory, strategy, and persona on the fly.
 
-### 2. Swarm Mode: Massive Parallelism 🐝
+### 2. Agent Swarms 🐝
 `simple --swarm tasks.json`
-One agent is a helper. A swarm is an army. Need to migrate 50 files? **Unleash the swarm.** Spin up parallel agents to attack the problem simultaneously across your codebase. Watch 10 hours of work finish in 10 minutes.
+Need to migrate 50 files? Don't do it one by one. Unleash a **parallel swarm of agents** to attack the problem simultaneously across your codebase.
 
-### 3. Self-Evolution: Antifragile Intelligence 🧬
+### 3. Polyglot Context 🌍
+Simple-CLI now understands more than just TypeScript. It automatically scans and builds a symbol map for:
+*   TypeScript/JavaScript
+*   Python
+*   Go
+*   Rust
+
+### 4. Self-Evolution: Antifragile Intelligence 🧬
 The agent isn't static. It **writes its own tools**. If it needs to query a specific API or parse a weird log format, it codes the tool in Python or Node, saves it to `skills/`, and uses it immediately. It gets smarter and more capable with every command you run.
 
-### 4. Ghost Tasks: Autonomous Missions 👻
+### 5. Ghost Tasks: Autonomous Missions 👻
 "Check for security patches every morning at 8 AM."
-Simple-CLI integrates deeply with your OS to run **autonomous background missions**. It audits your code, optimizes your DB, and cleans up your logs while you sleep.
+Simple-CLI integrates with your OS (crontab/Task Scheduler) to run **autonomous background missions** while you sleep.
+
+### 6. Dynamic Model Routing 🔀
+`simple "Refactor the login system"`
+The system now intelligently acts as a **Dynamic Model Router**. It analyzes your intent and automatically selects the best LLM for the job:
+
+*   **Scripting & Code Gen** -> Uses **Simple-CLI** with **OpenAI Codex** (GPT-3.5/4) for speed and precision.
+*   **Creative & Explanations** -> Uses **Simple-CLI** with **Google Gemini** for fast, fluent responses.
+*   **Complex Reasoning** -> Uses **Simple-CLI** with **Claude 3 Opus** for deep architectural analysis.
+
+No more manual flag switching. Just state your intent.
 
 ---
 
-## Witness the Power
+## 🔬 Real-World Case Studies
+
+**Case Study 1: Architectural Analysis**
+> User: "Explain how to refactor the entire authentication module to use OAuth2."
+> **Router Decision:** `model: anthropic:claude-3-opus`
+> **Result:** The agent recognized the complexity and architectural nature of the request, automatically selecting Claude's large context window for superior reasoning.
+
+**Case Study 2: Rapid Scripting**
+> User: "Write a python script to parse this CSV and plot a graph."
+> **Router Decision:** `model: openai:gpt-3.5-turbo-instruct`
+> **Result:** The agent chose the lightweight Codex models to instantly generate and verify the script without overhead.
+
+---
+
+## Get Hooked: 3 Commands to Try
 
 **The "Architect" Workflow:**
 ```bash
@@ -92,6 +122,10 @@ Deploy Simple-CLI as an automated agent in your workflow:
 ---
 
 ## Installation
+
+**Prerequisites:**
+*   Python 3 installed
+*   `any-llm-sdk` installed (`pip install any-llm-sdk`)
 
 **From NPM (Recommended):**
 ```bash

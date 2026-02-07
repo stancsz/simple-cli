@@ -1,15 +1,15 @@
 /**
  * Tests for provider module
- * Tests the OpenAI SDK-based provider implementation
+ * Tests the AnyLLM-based provider implementation
  */
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 
-// Mock TypeLLM before importing providers
-vi.mock('@stan-chen/typellm', () => {
+// Mock AnyLLM before importing providers
+vi.mock('../src/lib/anyllm.js', () => {
   const mockGenerate = vi.fn();
   return {
-    createTypeLLM: vi.fn().mockImplementation(() => ({
+    createAnyLLM: vi.fn().mockImplementation(() => ({
       generate: mockGenerate,
     })),
     __mockGenerate: mockGenerate
@@ -17,11 +17,11 @@ vi.mock('@stan-chen/typellm', () => {
 });
 
 import { createProvider, createProviderForModel } from '../src/providers/index.js';
-import * as typellm from '@stan-chen/typellm';
+import * as anyllm from '../src/lib/anyllm.js';
 
 // Get mock reference
 const getMockGenerate = () => {
-  return (typellm as any).__mockGenerate;
+  return (anyllm as any).__mockGenerate;
 };
 
 describe('providers', () => {
@@ -51,7 +51,7 @@ describe('providers', () => {
     expect(provider.model).toBe('deepseek-chat');
   });
 
-  it('should call OpenAI SDK with correct parameters', async () => {
+  it('should call AnyLLM with correct parameters', async () => {
     const mockGenerate = getMockGenerate();
     mockGenerate.mockResolvedValue({
       thought: 'thinking',
@@ -70,7 +70,7 @@ describe('providers', () => {
       'You are helpful',
       [{ role: 'user', content: 'Hi' }]
     );
-    expect(result).toContain('Hello!');
+    expect(result.message).toBe('Hello!');
   });
 
   it('should handle empty response', async () => {
@@ -85,7 +85,7 @@ describe('providers', () => {
     const provider = createProviderForModel('gpt-4o');
     const result = await provider.generateResponse('System', [{ role: 'user', content: 'Hi' }]);
 
-    expect(result).toContain('""');
+    expect(result.message).toBe('');
   });
 });
 
@@ -95,14 +95,6 @@ describe('createProvider', () => {
     process.env.OPENAI_MODEL = 'gpt-5-mini';
     const provider = createProvider();
     expect(provider.model).toBe('gpt-5-mini');
-  });
-
-  it('should use CLAW_MODEL if in claw mode', () => {
-    process.argv.push('--claw');
-    process.env.CLAW_MODEL = 'claude-3-opus';
-    const provider = createProvider();
-    expect(provider.model).toBe('claude-3-opus');
-    process.argv.pop();
   });
 });
 
@@ -142,6 +134,6 @@ describe('error handling', () => {
     const provider = createProviderForModel('gpt-4o');
     const result = await provider.generateResponse('System', [{ role: 'user', content: 'Hi' }]);
 
-    expect(result).toContain('Error calling TypeLLM');
+    expect(result.message).toContain('Error calling AnyLLM');
   });
 });

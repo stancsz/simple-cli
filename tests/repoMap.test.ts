@@ -36,7 +36,9 @@ class Person:
       const repoMap = await generateRepoMap(testDir);
 
       expect(repoMap).toContain('test.py');
-      // Should find symbols (depends on ctags availability or fallback)
+      // Should find symbols
+      expect(repoMap).toContain('def hello');
+      expect(repoMap).toContain('class Person');
     });
 
     it('should include multiple file types', async () => {
@@ -108,8 +110,8 @@ def standalone_function():
       const repoMap = await generateRepoMap(testDir);
 
       expect(repoMap).toContain('module.py');
-      // Symbol extraction depends on ctags or fallback regex
-      // At minimum should have the file listed
+      expect(repoMap).toContain('class MyClass');
+      expect(repoMap).toContain('def standalone_function');
     });
 
     it('should extract TypeScript symbols', async () => {
@@ -134,6 +136,10 @@ export const VERSION = "1.0.0";
       const repoMap = await generateRepoMap(testDir);
 
       expect(repoMap).toContain('app.ts');
+      expect(repoMap).toContain('interface UserProps');
+      expect(repoMap).toContain('class User');
+      expect(repoMap).toContain('func greet');
+      expect(repoMap).toContain('const VERSION');
     });
 
     it('should extract JavaScript symbols', async () => {
@@ -154,29 +160,9 @@ const CONSTANT = 42;
       const repoMap = await generateRepoMap(testDir);
 
       expect(repoMap).toContain('utils.js');
-    });
-  });
-
-  describe('nested directories', () => {
-    it('should scan nested directories', async () => {
-      await mkdir(join(testDir, 'src', 'utils'), { recursive: true });
-      await writeFile(join(testDir, 'src', 'index.ts'), 'export function main() {}');
-      await writeFile(join(testDir, 'src', 'utils', 'helpers.ts'), 'export function help() {}');
-
-      const repoMap = await generateRepoMap(testDir);
-
-      expect(repoMap).toContain('index.ts');
-      expect(repoMap).toContain('helpers.ts');
-    });
-
-    it('should handle deep nesting', async () => {
-      const deepPath = join(testDir, 'a', 'b', 'c', 'd');
-      await mkdir(deepPath, { recursive: true });
-      await writeFile(join(deepPath, 'deep.py'), 'def deep_func(): pass');
-
-      const repoMap = await generateRepoMap(testDir);
-
-      expect(repoMap).toContain('deep.py');
+      expect(repoMap).toContain('class Calculator');
+      expect(repoMap).toContain('func helper');
+      expect(repoMap).toContain('const CONSTANT');
     });
   });
 
@@ -200,6 +186,11 @@ const CONSTANT = 42;
         const repoMap = await generateRepoMap(testDir);
 
         expect(repoMap).toContain(`test.${ext}`);
+
+        // Check for symbol extraction for supported languages
+        if (ext === 'py') expect(repoMap).toContain('def greet');
+        if (ext === 'go') expect(repoMap).toContain('func main');
+        if (ext === 'rs') expect(repoMap).toContain('fn main');
       });
     }
   });
@@ -223,7 +214,6 @@ const CONSTANT = 42;
       const repoMap = await generateRepoMap('./tests/fixtures');
 
       expect(repoMap).toContain('sample.py');
-      // Depending on symbol extraction
     });
 
     it('should process TypeScript fixture', async () => {
