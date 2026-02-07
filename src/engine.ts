@@ -7,10 +7,10 @@ import { text, isCancel } from '@clack/prompts';
 import { createLLM } from './llm.js';
 import { MCP } from './mcp.js';
 import { LearningManager } from './learnings.js';
+import { Skill } from './skills.js';
 
 export interface Message { role: 'user' | 'assistant' | 'system'; content: string; }
 export interface Tool { name: string; description: string; execute: (args: any) => Promise<any>; }
-export interface Skill { name: string; systemPrompt: string; }
 
 async function getRepoMap(cwd: string) {
     const files: string[] = [];
