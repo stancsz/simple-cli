@@ -6,6 +6,7 @@ import pc from 'picocolors';
 import { text, isCancel } from '@clack/prompts';
 import { createLLM } from './llm.js';
 import { MCP } from './mcp.js';
+import { LearningManager } from './learnings.js';
 
 export interface Message { role: 'user' | 'assistant' | 'system'; content: string; }
 export interface Tool { name: string; description: string; execute: (args: any) => Promise<any>; }
@@ -61,9 +62,14 @@ export class Registry {
 }
 
 export class Engine {
-    constructor(private llm: any, private registry: Registry, private mcp: MCP) { }
+    private learningManager: LearningManager;
+
+    constructor(private llm: any, private registry: Registry, private mcp: MCP) {
+        this.learningManager = new LearningManager(process.cwd());
+    }
 
     async run(ctx: Context, initialPrompt?: string) {
+        await this.learningManager.load();
         let input = initialPrompt;
         await this.mcp.init();
         (await this.mcp.getTools()).forEach(t => this.registry.tools.set(t.name, t as any));
@@ -76,7 +82,19 @@ export class Engine {
             }
 
             ctx.history.push({ role: 'user', content: input });
-            const response = await this.llm.generate(await ctx.buildPrompt(this.registry.tools), ctx.history);
+
+            // RAG: Inject learnings
+            let prompt = await ctx.buildPrompt(this.registry.tools);
+            const userHistory = ctx.history.filter(m => m.role === 'user' && !['Continue.', 'Fix the error.'].includes(m.content));
+            const lastUserMsg = userHistory[userHistory.length - 1]?.content || '';
+            const query = (input && !['Continue.', 'Fix the error.'].includes(input)) ? input : lastUserMsg;
+
+            const learnings = await this.learningManager.search(query);
+            if (learnings.length > 0) {
+                prompt += `\n\n## Past Learnings\n${learnings.map(l => `- ${l}`).join('\n')}`;
+            }
+
+            const response = await this.llm.generate(prompt, ctx.history);
             const { thought, tool, args, message } = response;
 
             if (thought) console.log(pc.dim(`💭 ${thought}`));
@@ -89,6 +107,19 @@ export class Engine {
                         const result = await t.execute(args);
                         ctx.history.push({ role: 'assistant', content: JSON.stringify(response) });
                         ctx.history.push({ role: 'user', content: `Result: ${JSON.stringify(result)}` });
+
+                        // Reflection: Learning loop
+                        const reflectPrompt = "Analyze the previous tool execution. What went well? What failed? Summarize as a concise learning point for future reference.";
+                        const reflection = await this.llm.generate(reflectPrompt, [...ctx.history, { role: 'user', content: reflectPrompt }]);
+                        if (reflection.message) {
+                            // Find the relevant task description
+                            const userHistory = ctx.history.filter(m => m.role === 'user' && !['Continue.', 'Fix the error.'].includes(m.content));
+                            const task = (input && !['Continue.', 'Fix the error.'].includes(input)) ? input : (userHistory[userHistory.length - 1]?.content || 'Task');
+
+                            await this.learningManager.add(task, reflection.message);
+                            console.log(pc.blue(`📝 Learning stored: ${reflection.message}`));
+                        }
+
                         input = 'Continue.';
                         continue;
                     } catch (e: any) {
