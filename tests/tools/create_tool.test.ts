@@ -41,7 +41,7 @@ describe('create_tool tool', () => {
 
     expect(result).toContain('successfully saved');
 
-    const toolFile = join(testDataDir, '.simple', 'tools', 'hello_world.js');
+    const toolFile = join(testDataDir, '.agent', 'tools', 'hello_world.js');
     expect(existsSync(toolFile)).toBe(true);
 
     const content = await readFile(toolFile, 'utf-8');
@@ -62,7 +62,7 @@ describe('create_tool tool', () => {
           scope: 'local'
       });
 
-      const toolFile = join(testDataDir, '.simple', 'tools', 'py_hello.py');
+      const toolFile = join(testDataDir, '.agent', 'tools', 'py_hello.py');
       expect(existsSync(toolFile)).toBe(true);
       const content = await readFile(toolFile, 'utf-8');
       expect(content).toContain('"""');

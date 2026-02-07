@@ -14,7 +14,7 @@ interface DaemonEntry {
 
 export async function startDaemon(targetDir: string, argv: string[]) {
     // 1. Prepare paths
-    const workdir = path.join(targetDir, '.simple', 'workdir');
+    const workdir = path.join(targetDir, '.agent', 'workdir');
     const logDir = path.join(workdir, 'logs');
     const daemonFile = path.join(workdir, DAEMON_FILE);
 
@@ -80,7 +80,7 @@ export async function startDaemon(targetDir: string, argv: string[]) {
 }
 
 export async function killDaemon(targetDir: string, idOrPid: string): Promise<boolean> {
-    const workdir = path.join(targetDir, '.simple', 'workdir');
+    const workdir = path.join(targetDir, '.agent', 'workdir');
     const daemonFile = path.join(workdir, DAEMON_FILE);
 
     if (!fs.existsSync(daemonFile)) {

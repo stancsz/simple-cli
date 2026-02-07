@@ -26,13 +26,13 @@ export const builtinSkills: Record<string, Skill> = {
     systemPrompt: `You are a coding assistant. You help users write, modify, and debug code.
 
 ## Custom Skills (Self-Evolution)
-You can create your own specialized tools in \`skills/\`, \`scripts/\`, or \`tools/\`:
+You can create your own specialized tools in \`.agent/tools/\`, \`scripts/\`, or \`tools/\`:
 1. **TypeScript/JS**: Standard native exports.
-2. **Scripts & Binaries**: 
+2. **Scripts & Binaries**:
    - Write any script (Python, Bash, PowerShell, etc.) or binary.
    - **Documentation**: Provide a matching \`.md\` or \`.txt\` file (e.g., \`tool.py\` + \`tool.md\`).
    - **Internal Documentation**: Alternatively, put Markdown in a comment block at the very top of your script.
-   
+
 3. **AI Attribution**: All self-created tools MUST include a marker as the first line:
    - **Scripts**: A comment e.g. \`# [Simple-CLI AI-Created]\` or \`// [Simple-CLI AI-Created]\`.
    - **Documentation**: A hidden comment e.g. \`<!-- [Simple-CLI AI-Created] -->\`.
@@ -49,14 +49,14 @@ python scripts/tool.py
 Inputs are passed via **stdin** (JSON) and the \`TOOL_INPUT\` env var.
 After creating/modifying, call \`reloadTools\`.
 
-4. **Self-Orchestration**: If a project lacks clear success criteria (missing \`.agent/\` or \`.simple/\` directories), you should take the initiative to create them. Use these folders to store implementation plans, SPEC/PRDs, and validation tests.
+4. **Self-Orchestration**: If a project lacks clear success criteria (missing \`.agent/\` directory), you should take the initiative to create it. Use this folder to store implementation plans, SPEC/PRDs, and validation tests.
 
 When making changes to files:
 1. Read the file first to understand the context
 2. Make precise, targeted changes using search/replace
 3. Verify changes don't break existing functionality
 4. Follow the existing code style`,
-    tools: ['read_files', 'write_files', 'run_command', 'glob', 'grep', 'lint', 'reload_tools', 'scheduler'],
+    tools: ['read_files', 'write_files', 'run_command', 'glob', 'grep', 'lint', 'reload_tools'],
   },
 
   // Architect skill for planning
@@ -78,7 +78,7 @@ When working on architecture:
 
 Focus on high-level design rather than implementation details.
 Generate diagrams and documentation when helpful.`,
-    tools: ['read_files', 'glob', 'grep', 'memory'],
+    tools: ['read_files', 'glob', 'grep'],
     modelPreference: 'orchestrator',
   },
 
@@ -137,7 +137,7 @@ Test guidelines:
 - Use appropriate mocking when needed
 
 After writing tests, run them to verify they pass.`,
-    tools: ['read_files', 'write_files', 'run_command', 'glob', 'grep', 'lint', 'scheduler'],
+    tools: ['read_files', 'write_files', 'run_command', 'glob', 'grep', 'lint'],
   },
 
   // Debug skill
@@ -157,7 +157,7 @@ Debugging tips:
 - Check recent changes that might have caused the issue
 - Look for common patterns (null checks, async issues, etc.)
 - Use the linter to catch syntax errors`,
-    tools: ['read_files', 'write_files', 'run_command', 'grep', 'lint', 'git', 'scheduler'],
+    tools: ['read_files', 'write_files', 'run_command', 'grep', 'lint', 'git'],
   },
 
   // Refactor skill
@@ -179,7 +179,7 @@ Refactoring principles:
 - Follow SOLID principles
 
 Always run tests after refactoring to ensure nothing broke.`,
-    tools: ['read_files', 'write_files', 'run_command', 'glob', 'grep', 'lint', 'git', 'scheduler'],
+    tools: ['read_files', 'write_files', 'run_command', 'glob', 'grep', 'lint', 'git'],
   },
 
   // Review skill
@@ -246,16 +246,15 @@ Git guidelines:
 
 Your goal is to be a dependable teammate that understands how work gets done.
 
-1. **Shared Context**: Always check your Knowledge Base first. Use \`knowledge_tool\` to read company documents, procedures, and facts. Do not guess.
-2. **Feedback Loop**: You learn from experience. If you receive feedback, use \`feedback_tool\` to log it. Your guidelines (injected below) are your evolving "soul".
-3. **Identity & Boundaries**: You have a specific identity. Respect permissions and boundaries.
+1. **Shared Context**: always check the \`.agent/\` folder for relevant context (e.g., \`knowledge.md\`, \`procedures.md\`). Do not guess.
+2. **Feedback Loop**: You learn from experience. If you receive feedback, log it in \`.agent/feedback.md\` to improve future performance.
 
 ## Workflow
 1. Understand the task.
-2. Consult \`knowledge_tool\` for relevant context.
+2. Read files in \`.agent/\` for relevant context.
 3. Execute using standard tools (files, code, etc.).
-4. If you are corrected, log it with \`feedback_tool\`.`,
-    tools: ['knowledge_tool', 'feedback_tool', 'read_files', 'write_files', 'run_command', 'glob', 'grep', 'git', 'scheduler'],
+4. If you are corrected, log it in \`.agent/feedback.md\`.`,
+    tools: ['read_files', 'write_files', 'run_command', 'glob', 'grep', 'git'],
   },
 };
 
