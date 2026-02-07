@@ -1,6 +1,6 @@
 import sys
 import json
-import any_llm
+import litellm
 import os
 
 def main():
@@ -28,9 +28,15 @@ def main():
             elif provider in ['google', 'gemini']:
                 api_key = os.environ.get('GOOGLE_API_KEY') or os.environ.get('GEMINI_API_KEY') or os.environ.get('GOOGLE_GENERATIVE_AI_API_KEY')
 
+        # litellm expects model in format "provider/model" or just "model" if provider is implicit
+        # The request comes split.
+        if provider and model:
+            full_model = f"{provider}/{model}" if provider not in model else model
+        else:
+            full_model = model
+
         kwargs = {
-            "model": model,
-            "provider": provider,
+            "model": full_model,
             "messages": messages,
             "api_key": api_key
         }
@@ -40,8 +46,8 @@ def main():
         if max_tokens is not None:
             kwargs["max_tokens"] = max_tokens
 
-        # Call any_llm
-        response = any_llm.completion(**kwargs)
+        # Call litellm
+        response = litellm.completion(**kwargs)
 
         # Extract content
         content = response.choices[0].message.content

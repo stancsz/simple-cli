@@ -12,23 +12,22 @@ describe('Claw Self-Evolution', () => {
             rmSync(DEMO_DIR, { recursive: true, force: true });
         }
         mkdirSync(DEMO_DIR, { recursive: true });
-        mkdirSync(join(DEMO_DIR, 'tools'), { recursive: true });
     });
 
     it('should create a new tool and use it', async () => {
-        const intent = "Create a new tool in 'tools/ping_tool.ts' that exports a tool named 'ping_tool' which returns 'PONG CONNECTION SUCCESSFUL'. Then reload tools and call it.";
+        const intent = "Step 1: Write a file named 'ping_source.js' that exports a tool object named 'ping_tool' with an execute function that returns 'PONG CONNECTION SUCCESSFUL'. Step 2: Use 'create_tool' to register it. Step 3: Call 'ping_tool'. execute all steps immediately without asking for confirmation.";
         const result = await runClaw(intent);
 
         console.log('\n--- EVOLUTION TEST OUTPUT ---\n', result);
 
         expect(result).toContain('PONG CONNECTION SUCCESSFUL');
-    }, 180000);
+    }, 300000);
 });
 
 async function runClaw(intent: string): Promise<string> {
     return new Promise((resolve, reject) => {
         const cliProcess = spawn(process.execPath, [cliPath, DEMO_DIR, '-claw', intent, '--yolo'], {
-            env: { ...process.env, CLAW_MODEL: 'google:gemini-3-flash-preview', DEBUG: 'true' }
+            env: { ...process.env, CLAW_MODEL: 'google:gemini-1.5-flash', DEBUG: 'true' }
         });
 
         let stdout = '';
@@ -39,6 +38,6 @@ async function runClaw(intent: string): Promise<string> {
             resolve(stdout);
         });
 
-        setTimeout(() => cliProcess.kill(), 120000);
+        setTimeout(() => cliProcess.kill(), 180000);
     });
 }

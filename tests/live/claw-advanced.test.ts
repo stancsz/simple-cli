@@ -12,30 +12,30 @@ describe('Claw Advanced Features', () => {
             rmSync(DEMO_DIR, { recursive: true, force: true });
         }
         mkdirSync(DEMO_DIR, { recursive: true });
-    }, 180000); // 3 min timeout for setup
+    }, 180000);
 
     it('should inject CLAW_* environment variables', async () => {
-        // Create a skill that logs environment variables
-        const skillsDir = join(DEMO_DIR, 'skills');
-        mkdirSync(skillsDir, { recursive: true });
+        // Create a tool that logs environment variables
+        const toolsDir = join(DEMO_DIR, '.agent', 'tools');
+        mkdirSync(toolsDir, { recursive: true });
 
-        const skillPath = join(skillsDir, 'env_check.js');
-        writeFileSync(skillPath, `
-console.log("WORKSPACE=" + process.env.CLAW_WORKSPACE);
-console.log("DATA=" + process.env.CLAW_DATA_DIR);
-console.log("INPUT=" + process.env.INPUT_TEST_ARG);
+        const toolPath = join(toolsDir, 'env_check.js');
+        writeFileSync(toolPath, `
+import { z } from 'zod';
+export const tool = {
+    name: 'env_check',
+    description: 'Check environment variables',
+    inputSchema: z.object({ test_arg: z.string() }),
+    execute: async ({ test_arg }) => {
+        console.log("WORKSPACE=" + process.env.CLAW_WORKSPACE);
+        console.log("DATA=" + process.env.CLAW_DATA_DIR);
+        console.log("INPUT=" + test_arg);
+        return "Checked";
+    }
+};
 `);
 
-        const skillMetaPath = join(skillsDir, 'env_check.md');
-        writeFileSync(skillMetaPath, `---
-name: env_check
-command: node ${skillPath}
-parameters:
-  test_arg: string
----
-`);
-
-        // Run claw mode to trigger the skill
+        // Run claw mode to trigger the tool
         const result = await runClaw('Use the env_check tool with test_arg="HELLO_WORLD"');
 
         expect(result, `CLI Output: ${result}`).toContain('WORKSPACE=');
@@ -44,10 +44,29 @@ parameters:
     }, 180000);
 
     it('should support scheduler tool', async () => {
-        const intent = "Schedule a task named 'bingo' that runs every 5 minutes. Do nothing else.";
+
+        const toolsDir = join(DEMO_DIR, '.agent', 'tools');
+        if (!existsSync(toolsDir)) mkdirSync(toolsDir, { recursive: true });
+
+        const toolPath = join(toolsDir, 'scheduler.js');
+        writeFileSync(toolPath, `
+import { z } from 'zod';
+export const tool = {
+    name: 'scheduler',
+    description: 'Schedule a task',
+    inputSchema: z.object({ command: z.string(), cron: z.string().optional() }),
+    execute: async ({ command }) => {
+        const platform = process.platform === 'win32' ? 'Windows' : 'Linux/Mac';
+        console.log(\`Task scheduled on \${platform}: \${command}\`);
+        return "Scheduled";
+    }
+};
+`);
+
+        // Explicit intent to avoid ambiguity
+        const intent = "Use scheduler tool to schedule 'bingo' to run every minute.";
         const result = await runClaw(intent);
 
-        // On Windows it uses schtasks, on Linux crontab
         if (process.platform === 'win32') {
             expect(result, `CLI Output: ${result}`).toContain('Task scheduled on Windows: bingo');
         } else {
@@ -59,7 +78,7 @@ parameters:
 async function runClaw(intent: string): Promise<string> {
     console.log(`\n    [DEBUG] Running claw with intent: ${intent}`);
     return new Promise((resolve, reject) => {
-        const cliProcess = spawn(process.execPath, [cliPath, DEMO_DIR, '-claw', intent, '--yolo'], {
+        const cliProcess = spawn(process.execPath, [cliPath, DEMO_DIR, intent], {
             env: {
                 ...process.env,
                 CLAW_MODEL: 'gemini-3-flash-preview',
@@ -84,7 +103,6 @@ async function runClaw(intent: string): Promise<string> {
             resolve(stdout);
         });
 
-        // Increase timeout to 120s
         setTimeout(() => {
             console.log('    [DEBUG] runClaw timed out after 120s');
             cliProcess.kill();

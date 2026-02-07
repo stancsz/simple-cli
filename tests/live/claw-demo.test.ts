@@ -57,7 +57,8 @@ describe('Claw Mode Demo - File Organization', () => {
     async function runClaw(intent: string) {
         return new Promise<void>((resolve, reject) => {
             const entryTs = join(process.cwd(), 'src', 'cli.ts');
-            const cliProcess = spawn(process.execPath, ['--loader', 'ts-node/esm', entryTs, DEMO_DIR, '-claw', intent, '--yolo'], {
+            // Ensure args match new cli.ts logic: directory first, then intent
+            const cliProcess = spawn(process.execPath, ['--loader', 'ts-node/esm', entryTs, DEMO_DIR, intent], {
                 env: {
                     ...process.env,
                     COLUMNS: '100',
@@ -71,7 +72,7 @@ describe('Claw Mode Demo - File Organization', () => {
             const timeout = setTimeout(() => {
                 cliProcess.kill();
                 resolve(); // Consider timeout as finished for demo
-            }, 120000); // 2 minutes per pass for slower models
+            }, 180000); // 3 minutes per pass for slower models
 
             cliProcess.on('close', (code) => {
                 clearTimeout(timeout);
@@ -86,7 +87,8 @@ describe('Claw Mode Demo - File Organization', () => {
     }
 
     it('should generate JIT agent and organize files in batches', async () => {
-        const intent = 'Scan my Downloads folder. Sort images (jpg, png) into /Photos, docs (pdf, docx) into /Documents, and installers (exe, msi) into /Trash. If you find a receipt, extract the total and log it to Expenses.csv before moving the file.';
+        // Updated intent to be "Scan the current directory" instead of "Downloads folder" to avoid confusion
+        const intent = 'Scan the current directory. Sort images (jpg, png) into /Photos, docs (pdf, docx) into /Documents, and installers (exe, msi) into /Trash. If you find a receipt, extract the total and append it to Expenses.csv (read existing file first to preserve history) before moving the file.';
 
         console.log('\n🧬 Starting Claw Mode Demo Phase 1...');
         await runClaw(intent);
