@@ -8,6 +8,25 @@
 
 Simple-CLI is an autonomous agent that lives within your project. It uses a `.agent` folder to manage its context, skills, memory, and tools, keeping your project clean and self-contained.
 
+## TUI Preview
+
+```
+  /\_/\
+ ( o.o )
+  > ^ <
+
+ SIMPLE-CLI  v0.4.0
+
+? Chat › Refactor the login logic
+
+💭 Analyzing authentication flow...
+⚙ Executing listFiles...
+💭 Found auth.ts, reading content...
+⚙ Executing readFiles...
+
+🤖 I've updated the login logic in src/auth.ts to use async/await.
+```
+
 ## 🧠 The `.agent` Folder
 
 The heart of the agent is the `.agent` directory in your project root. This is where the agent's brain lives.
