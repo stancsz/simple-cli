@@ -40,7 +40,14 @@ export class Context {
 
     async buildPrompt(tools: Map<string, Tool>) {
         const repoMap = await getRepoMap(this.cwd);
-        const toolDefs = Array.from(tools.values()).map(t => `- ${t.name}: ${t.description}`).join('\n');
+        const toolDefs = Array.from(tools.values()).map(t => {
+            const schema = (t as any).inputSchema;
+            if (schema && schema.shape) {
+                const args = Object.keys(schema.shape).join(', ');
+                return `- ${t.name}(${args}): ${t.description}`;
+            }
+            return `- ${t.name}: ${t.description}`;
+        }).join('\n');
         return `${this.skill.systemPrompt}\n\n## Tools\n${toolDefs}\n\n## Repository\n${repoMap}\n\n## Active Files\n${Array.from(this.activeFiles).map(f => relative(this.cwd, f)).join(', ')}`;
     }
 }
@@ -119,19 +126,35 @@ export class Engine {
                         ctx.history.push({ role: 'assistant', content: JSON.stringify(response) });
                         ctx.history.push({ role: 'user', content: `Result: ${JSON.stringify(result)}` });
 
-                        // Reflection: Learning loop
-                        const reflectPrompt = "Analyze the previous tool execution. What went well? What failed? Summarize as a concise learning point for future reference.";
-                        const reflection = await this.llm.generate(reflectPrompt, [...ctx.history, { role: 'user', content: reflectPrompt }]);
-                        if (reflection.message) {
-                            // Find the relevant task description
-                            const userHistory = ctx.history.filter(m => m.role === 'user' && !['Continue.', 'Fix the error.'].includes(m.content));
-                            const task = (input && !['Continue.', 'Fix the error.'].includes(input)) ? input : (userHistory[userHistory.length - 1]?.content || 'Task');
+                        // --- Supervisor Loop (QA & Reflection) ---
+                        // "Principal Skinner" enters the room
+                        console.log(pc.cyan(`\n[Supervisor] Verifying work from ${tool}...`));
 
-                            await this.learningManager.add(task, reflection.message);
-                            console.log(pc.blue(`📝 Learning stored: ${reflection.message}`));
+                        let qaPrompt = `Analyze the result of the tool execution: ${JSON.stringify(result)}. Did it satisfy the user's request: "${input || userHistory.pop()?.content}"? If specific files were mentioned (like flask app), check if they exist or look correct based on the tool output.`;
+
+                        // If it was a delegation, be stricter
+                        if (tool === 'delegate_cli') {
+                            qaPrompt += " Since this was delegated to an external CLI, be extra critical. Does the output explicitly confirm file creation?";
                         }
 
-                        input = 'The previous tool execution was successful. Proceed with the next step.';
+                        const qaCheck = await this.llm.generate(qaPrompt, [...ctx.history, { role: 'user', content: qaPrompt }]);
+                        console.log(pc.cyan(`[Supervisor] ${qaCheck.message || qaCheck.thought}`));
+
+                        if (qaCheck.message && qaCheck.message.toLowerCase().includes('fail')) {
+                            console.log(pc.red('[Supervisor] QA FAILED. Asking for retry...'));
+                            input = "The previous attempt failed. Please retry or fix the issue.";
+                        } else {
+                            console.log(pc.green('[Supervisor] QA PASSED. Work verified.'));
+
+                            // Store learning ONLY if QA passed
+                            const reflectPrompt = "Summarize the successful strategy used here as a concise learning point.";
+                            const reflection = await this.llm.generate(reflectPrompt, [...ctx.history, { role: 'user', content: reflectPrompt }]);
+                            if (reflection.message) {
+                                await this.learningManager.add(input || 'Task', reflection.message);
+                            }
+                        }
+
+                        input = 'The tool execution was verified. Proceed.';
                         continue;
                     } catch (e: any) {
                         ctx.history.push({ role: 'user', content: `Error: ${e.message}` });

@@ -1,12 +1,14 @@
-<p align="center">
-  <img src="assets/logo.jpeg" alt="Simple-CLI Logo" width="160"/>
-</p>
+# Simple CLI
+**A lightweight meta-orchestrator for AI coding agents.**
 
-# Simple-CLI ⚡
+Simple-CLI doesn't try to reinvent the wheel. Instead of implementing complex coding logic internally, it acts as a streamlined interface that orchestrates official, powerful CLI tools:
 
-**The Project-Native AI Partner. Clean. Context-Aware. Autonomous.**
+- **OpenAI Codex CLI** (`@openai/codex`)
+- **Anthropic Claude Code** (`@anthropic-ai/claude-code`)
+- **Gemini CLI** (`gemini-chat-cli`)
+- **GitHub Copilot CLI** (`@github/copilot`)
 
-Simple-CLI is an autonomous agent that lives within your project. It uses a `.agent` folder to manage its context, skills, memory, and tools, keeping your project clean and self-contained.
+It keeps your workflow simple by providing a unified entry point while offloading the heavy lifting to the best-in-class specialized agents.
 
 ## TUI Preview
 

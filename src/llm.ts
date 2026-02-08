@@ -23,12 +23,33 @@ export class LLM {
 
     async generate(system: string, history: any[]): Promise<LLMResponse> {
         let lastError: Error | null = null;
+        const lastUserMessage = history.filter(m => m.role === 'user').pop()?.content || '';
 
         for (const config of this.configs) {
             try {
                 const providerName = config.provider.toLowerCase();
-                const modelName = config.model;
 
+                // --- Meta-Orchestrator Delegation (Ralph Mode) ---
+                if (['codex', 'gemini', 'claude'].includes(providerName)) {
+                    console.log(`\n[Ralph] I found an expert for this! specialized agent: ${providerName} CLI...`);
+
+                    // We return a TOOL call. This ensures the Engine sees an action was taken,
+                    // triggers the execution (which we will define in builtins), and then
+                    // triggers the QA/Reflection loop.
+                    return {
+                        thought: `Task is complex. Delegating to specialized agent: ${providerName}.`,
+                        tool: 'delegate_cli',
+                        args: {
+                            cli: providerName,
+                            task: lastUserMessage
+                        },
+                        message: '', // No message yet, the tool output will provide it
+                        raw: ''
+                    };
+                }
+
+                // --- Fallback: Internal API Logic ---
+                const modelName = config.model;
                 let model: any;
                 const apiKey = config.apiKey || this.getEnvKey(providerName);
 
@@ -37,7 +58,7 @@ export class LLM {
                 } else if (providerName === 'anthropic') {
                     model = createAnthropic({ apiKey });
                     model = model(modelName);
-                } else if (providerName === 'google' || providerName === 'gemini') {
+                } else if (providerName === 'google' || providerName === 'gemini') { // This handles the API fallback if CLI isn't meant
                     model = createGoogleGenerativeAI({ apiKey });
                     model = model(modelName);
                 } else {
