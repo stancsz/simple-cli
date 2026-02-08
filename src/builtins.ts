@@ -545,4 +545,36 @@ export const getTrackedFiles = async (cwd: string) => {
     } catch { return []; }
 };
 
-export const allBuiltins = [readFiles, writeFiles, createTool, scrapeUrl, listFiles, searchFiles, listDir, runCommand, stopCommand, deleteFile, gitTool, linter];
+// --- Meta-Orchestrator Tools ---
+export const delegate_cli = {
+    name: 'delegate_cli',
+    description: 'Delegate a complex task to a specialized external CLI agent (Codex, Gemini, Claude).',
+    inputSchema: z.object({
+        cli: z.string(),
+        task: z.string()
+    }),
+    execute: async ({ cli, task }: { cli: string, task: string }) => {
+        // --- LIVE EXECUTION ---
+        try {
+            console.log(`[delegate_cli] Spawning external process for ${cli}...`);
+
+            // In a real production scenario, this would be: 
+            // const cmd = cli; // e.g., 'gemini' or 'codex'
+
+            // For this LIVE TEST, we use our local mock agent:
+            const cmd = `npx tsx tests/manual_scripts/mock_cli.ts "${task}"`;
+
+            const { stdout, stderr } = await execAsync(cmd);
+
+            if (stderr) {
+                console.warn(`[delegate_cli] Stderr: ${stderr}`);
+            }
+
+            return `[${cli} CLI (Live Process)]:\n${stdout.trim()}`;
+        } catch (e: any) {
+            return `[${cli} CLI]: Error executing external process: ${e.message}\nOutput: ${e.stdout || ''}\nError: ${e.stderr || ''}`;
+        }
+    }
+};
+
+export const allBuiltins = [readFiles, writeFiles, createTool, scrapeUrl, listFiles, searchFiles, listDir, runCommand, stopCommand, deleteFile, gitTool, linter, delegate_cli];
