@@ -16,6 +16,15 @@ Simple-CLI is an autonomous agent that lives within your project. It uses a `.ag
   > ^ <
 
  SIMPLE-CLI  v0.4.0
+
+? Chat › Refactor the login logic
+
+💭 Analyzing authentication flow...
+⚙ Executing listFiles...
+💭 Found auth.ts, reading content...
+⚙ Executing readFiles...
+
+🤖 I've updated the login logic in src/auth.ts to use async/await.
 ```
 
 ## 🧠 The `.agent` Folder
