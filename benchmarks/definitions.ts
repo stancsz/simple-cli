@@ -11,10 +11,7 @@ export const benchmarks: Benchmark[] = [
                 name: 'List Files',
                 prompt: 'List all files in the current directory.',
                 verify: (cwd, output) => {
-                    // Check if output contains ls output or file list
-                    // Since the directory is empty initially (or contains created files), this is trivial.
-                    // We'll add a setup step to create some files.
-                    return true;
+                    return output.includes('test1.txt') && output.includes('test2.txt');
                 },
                 setup: (cwd) => {
                     writeFileSync(join(cwd, 'test1.txt'), 'content');

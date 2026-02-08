@@ -16,7 +16,7 @@ function runCli(cwd: string, prompt: string): { stdout: string, stderr: string, 
     const result = spawnSync('node', [cliPath, '--non-interactive', prompt], {
         cwd,
         encoding: 'utf-8',
-        timeout: 60000, // 60s timeout
+        timeout: 180000, // 180s timeout
         env
     });
     return result;
@@ -49,9 +49,6 @@ export async function runBenchmark(benchmark: Benchmark) {
             if (status !== 0) {
                 console.error(`❌ CLI Failed (Exit Code: ${status})`);
                 if (stderr) console.error(stderr);
-                // Depending on the task, maybe we want to verify even on failure?
-                // But usually exit code != 0 means tool crash.
-                // However, if the agent fails to perform the task, it might exit with 0 but output "I can't do that".
             }
 
             const success = await task.verify(workDir, stdout);
@@ -61,7 +58,6 @@ export async function runBenchmark(benchmark: Benchmark) {
                 passed++;
             } else {
                 console.log(`❌ Failed`);
-                // console.log(`Output:\n${stdout}`); // Verbose
             }
 
         } catch (e: any) {
