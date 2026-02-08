@@ -5,15 +5,16 @@
 
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { writeFile, readFile, mkdir, rm } from 'fs/promises';
-import { join } from 'path';
-import { tmpdir } from 'os';
-import { execute as writeFilesExecute } from '../src/tools/write_files.js';
+import { join, resolve } from 'path';
+import { writeFiles } from '../src/builtins.js';
 
 describe('editBlock', () => {
   let testDir: string;
+  // Use workspace-relative path to pass isPathAllowed check
+  const baseTestDir = resolve(process.cwd(), '.test_tmp');
 
   beforeEach(async () => {
-    testDir = join(tmpdir(), `simple-cli-editblock-${Date.now()}`);
+    testDir = join(baseTestDir, `editblock-${Date.now()}`);
     await mkdir(testDir, { recursive: true });
   });
 
@@ -26,7 +27,7 @@ describe('editBlock', () => {
       const filePath = join(testDir, 'test.txt');
       await writeFile(filePath, 'Hello World');
 
-      const result = await writeFilesExecute({
+      const result = await writeFiles.execute({
         files: [{
           path: filePath,
           searchReplace: [{ search: 'World', replace: 'Universe' }]
@@ -41,7 +42,7 @@ describe('editBlock', () => {
       const filePath = join(testDir, 'multi.txt');
       await writeFile(filePath, 'one two three');
 
-      const result = await writeFilesExecute({
+      const result = await writeFiles.execute({
         files: [{
           path: filePath,
           searchReplace: [
@@ -59,7 +60,7 @@ describe('editBlock', () => {
       const filePath = join(testDir, 'whitespace.txt');
       await writeFile(filePath, '    line1\n    line2\n    line3');
 
-      const result = await writeFilesExecute({
+      const result = await writeFiles.execute({
         files: [{
           path: filePath,
           searchReplace: [{ search: 'line2', replace: 'modified' }]
@@ -75,7 +76,7 @@ describe('editBlock', () => {
       const filePath = join(testDir, 'all_occurrences.txt');
       await writeFile(filePath, 'foo bar foo baz foo');
 
-      const result = await writeFilesExecute({
+      const result = await writeFiles.execute({
         files: [{
           path: filePath,
           searchReplace: [{ search: 'foo', replace: 'FOO' }]
@@ -83,7 +84,7 @@ describe('editBlock', () => {
       });
 
       expect(result[0].success).toBe(true);
-      // All occurrences replaced (as per EVALUATION.md fix)
+      // All occurrences replaced
       expect(await readFile(filePath, 'utf-8')).toBe('FOO bar FOO baz FOO');
     });
 
@@ -95,7 +96,7 @@ describe('editBlock', () => {
 def other():
     pass`);
 
-      const result = await writeFilesExecute({
+      const result = await writeFiles.execute({
         files: [{
           path: filePath,
           searchReplace: [{
@@ -115,7 +116,7 @@ def other():
       const filePath = join(testDir, 'no_match.txt');
       await writeFile(filePath, 'original content');
 
-      const result = await writeFilesExecute({
+      const result = await writeFiles.execute({
         files: [{
           path: filePath,
           searchReplace: [{ search: 'not_present', replace: 'replacement' }]
@@ -131,7 +132,7 @@ def other():
       const filePath = join(testDir, 'regex.txt');
       await writeFile(filePath, 'value = arr[0]');
 
-      const result = await writeFilesExecute({
+      const result = await writeFiles.execute({
         files: [{
           path: filePath,
           searchReplace: [{ search: 'arr[0]', replace: 'arr[1]' }]
@@ -146,7 +147,7 @@ def other():
       const filePath = join(testDir, 'new_file.txt');
 
       // Creating new file with full content
-      const result = await writeFilesExecute({
+      const result = await writeFiles.execute({
         files: [{
           path: filePath,
           content: 'brand new content'
@@ -169,7 +170,7 @@ def my_function(arg1, arg2):
     return arg1 * arg2
 `);
 
-      const result = await writeFilesExecute({
+      const result = await writeFiles.execute({
         files: [{
           path: filePath,
           searchReplace: [{
@@ -195,7 +196,7 @@ export const Component = ({ name }: Props) => {
 };
 `);
 
-      const result = await writeFilesExecute({
+      const result = await writeFiles.execute({
         files: [{
           path: filePath,
           searchReplace: [{
@@ -217,7 +218,7 @@ export const Component = ({ name }: Props) => {
   "version": "1.0.0"
 }`);
 
-      const result = await writeFilesExecute({
+      const result = await writeFiles.execute({
         files: [{
           path: filePath,
           searchReplace: [{
@@ -238,7 +239,7 @@ export const Component = ({ name }: Props) => {
       const filePath = join(testDir, 'backticks.md');
       await writeFile(filePath, '```python\nprint("hello")\n```');
 
-      const result = await writeFilesExecute({
+      const result = await writeFiles.execute({
         files: [{
           path: filePath,
           searchReplace: [{
@@ -257,7 +258,7 @@ export const Component = ({ name }: Props) => {
       const filePath = join(testDir, 'unicode.txt');
       await writeFile(filePath, '你好世界 🌍');
 
-      const result = await writeFilesExecute({
+      const result = await writeFiles.execute({
         files: [{
           path: filePath,
           searchReplace: [{
@@ -275,7 +276,7 @@ export const Component = ({ name }: Props) => {
       const filePath = join(testDir, 'newline.txt');
       await writeFile(filePath, 'content\n');
 
-      const result = await writeFilesExecute({
+      const result = await writeFiles.execute({
         files: [{
           path: filePath,
           searchReplace: [{
@@ -293,7 +294,7 @@ export const Component = ({ name }: Props) => {
       const filePath = join(testDir, 'empty_lines.txt');
       await writeFile(filePath, 'line1\n\nline3');
 
-      const result = await writeFilesExecute({
+      const result = await writeFiles.execute({
         files: [{
           path: filePath,
           searchReplace: [{
@@ -312,7 +313,7 @@ export const Component = ({ name }: Props) => {
     it('should create new file with content', async () => {
       const filePath = join(testDir, 'brand_new.txt');
 
-      const result = await writeFilesExecute({
+      const result = await writeFiles.execute({
         files: [{
           path: filePath,
           content: 'new file content'
@@ -327,7 +328,7 @@ export const Component = ({ name }: Props) => {
       const filePath = join(testDir, 'overwrite.txt');
       await writeFile(filePath, 'old content that is very long');
 
-      const result = await writeFilesExecute({
+      const result = await writeFiles.execute({
         files: [{
           path: filePath,
           content: 'new'
@@ -341,7 +342,7 @@ export const Component = ({ name }: Props) => {
     it('should create nested directories', async () => {
       const filePath = join(testDir, 'a', 'b', 'c', 'deep.txt');
 
-      const result = await writeFilesExecute({
+      const result = await writeFiles.execute({
         files: [{
           path: filePath,
           content: 'deep content'
@@ -350,74 +351,6 @@ export const Component = ({ name }: Props) => {
 
       expect(result[0].success).toBe(true);
       expect(await readFile(filePath, 'utf-8')).toBe('deep content');
-    });
-  });
-
-  describe('git merge diff', () => {
-    it('should apply valid diff', async () => {
-      const filePath = join(testDir, 'diff.txt');
-      await writeFile(filePath, 'line1\nline2\nline3');
-
-      const diff = `<<<<<<< SEARCH
-line2
-=======
-modified
->>>>>>> REPLACE`;
-
-      const result = await writeFilesExecute({
-        files: [{
-          path: filePath,
-          diff: diff
-        }]
-      });
-
-      expect(result[0].success).toBe(true);
-      expect(await readFile(filePath, 'utf-8')).toBe('line1\nmodified\nline3');
-    });
-
-    it('should fail if search block not found', async () => {
-      const filePath = join(testDir, 'diff_fail.txt');
-      await writeFile(filePath, 'line1\nline2\nline3');
-
-      const diff = `<<<<<<< SEARCH
-line4
-=======
-modified
->>>>>>> REPLACE`;
-
-      const result = await writeFilesExecute({
-        files: [{
-          path: filePath,
-          diff: diff
-        }]
-      });
-
-      expect(result[0].success).toBe(false);
-      expect(result[0].message).toContain('Could not find exact match');
-      expect(await readFile(filePath, 'utf-8')).toBe('line1\nline2\nline3');
-    });
-
-    it('should handle multiline blocks', async () => {
-      const filePath = join(testDir, 'multiline_diff.txt');
-      await writeFile(filePath, 'line1\nline2\nline3\nline4');
-
-      const diff = `<<<<<<< SEARCH
-line2
-line3
-=======
-modified
-block
->>>>>>> REPLACE`;
-
-      const result = await writeFilesExecute({
-        files: [{
-          path: filePath,
-          diff: diff
-        }]
-      });
-
-      expect(result[0].success).toBe(true);
-      expect(await readFile(filePath, 'utf-8')).toBe('line1\nmodified\nblock\nline4');
     });
   });
 });

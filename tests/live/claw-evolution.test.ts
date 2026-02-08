@@ -15,7 +15,8 @@ describe('Claw Self-Evolution', () => {
     });
 
     it('should create a new tool and use it', async () => {
-        const intent = "Step 1: Write a file named 'ping_source.js' that exports a tool object named 'ping_tool' with an execute function that returns 'PONG CONNECTION SUCCESSFUL'. Step 2: Use 'create_tool' to register it. Step 3: Call 'ping_tool'. execute all steps immediately without asking for confirmation.";
+        // Explicitly request ESM syntax and `export const tool` to match Registry loader expectations.
+        const intent = "Step 1: Write a file named 'ping_source.js' that exports a tool object (using ESM `export const tool = { name: 'ping_tool', ... }`) with an execute function that returns 'PONG CONNECTION SUCCESSFUL'. Step 2: Use 'create_tool' to register it. Step 3: Call 'ping_tool'. execute all steps immediately without asking for confirmation.";
         const result = await runClaw(intent);
 
         console.log('\n--- EVOLUTION TEST OUTPUT ---\n', result);
