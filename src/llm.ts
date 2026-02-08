@@ -1,10 +1,8 @@
-import { spawn } from 'child_process';
-import { dirname, join } from 'path';
-import { fileURLToPath } from 'url';
+import { generateText } from 'ai';
+import { createOpenAI } from '@ai-sdk/openai';
+import { createAnthropic } from '@ai-sdk/anthropic';
+import { createGoogleGenerativeAI } from '@ai-sdk/google';
 import { jsonrepair } from 'jsonrepair';
-import fs from 'fs';
-
-const __dirname = dirname(fileURLToPath(import.meta.url));
 
 export interface LLMResponse {
     thought: string;
@@ -14,52 +12,65 @@ export interface LLMResponse {
     raw: string;
 }
 
+export type LLMConfig = { provider: string; model: string; apiKey?: string };
+
 export class LLM {
-    constructor(private config: { provider: string; model: string; apiKey?: string }) { }
+    private configs: LLMConfig[];
+
+    constructor(config: LLMConfig | LLMConfig[]) {
+        this.configs = Array.isArray(config) ? config : [config];
+    }
 
     async generate(system: string, history: any[]): Promise<LLMResponse> {
-        const payload = {
-            ...this.config,
-            messages: [{ role: 'system', content: system }, ...history],
-            api_key: this.config.apiKey || process.env.OPENAI_API_KEY || process.env.GEMINI_API_KEY || process.env.ANTHROPIC_API_KEY
-        };
+        let lastError: Error | null = null;
 
-        return new Promise((resolve, reject) => {
-            // Find python bridge
-            let py = join(__dirname, 'anyllm.py');
-            if (!fs.existsSync(py)) py = join(process.cwd(), 'src/lib/anyllm.py'); // Fallback
+        for (const config of this.configs) {
+            try {
+                const providerName = config.provider.toLowerCase();
+                const modelName = config.model;
 
-            // Try to find a working python command
-            const getPyCmd = () => {
-                const isWin = process.platform === 'win32';
-                // On Windows, preferred is 'python' or 'py' if they aren't store aliases
-                // On Linux/Mac, preferred is 'python3'
-                return isWin ? 'python' : 'python3';
-            };
+                let model: any;
+                const apiKey = config.apiKey || this.getEnvKey(providerName);
 
-            const child = spawn(getPyCmd(), [py]);
-            let out = '';
-            let err = '';
+                if (providerName === 'openai') {
+                    model = createOpenAI({ apiKey })(modelName);
+                } else if (providerName === 'anthropic') {
+                    model = createAnthropic({ apiKey });
+                    model = model(modelName);
+                } else if (providerName === 'google' || providerName === 'gemini') {
+                    model = createGoogleGenerativeAI({ apiKey });
+                    model = model(modelName);
+                } else {
+                    continue; // Skip unsupported
+                }
 
-            child.stdout.on('data', d => out += d);
-            child.stderr.on('data', d => err += d);
-            child.on('close', code => {
-                if (code !== 0) return reject(new Error(err));
-                try {
-                    const res = JSON.parse(out);
-                    if (res.error) return reject(new Error(res.error));
-                    resolve(this.parse(res.content));
-                } catch (e) { reject(e); }
-            });
+                const { text } = await generateText({
+                    model,
+                    system,
+                    messages: history as any,
+                });
 
-            child.stdin.write(JSON.stringify(payload));
-            child.stdin.end();
-        });
+                return this.parse(text);
+            } catch (e: any) {
+                lastError = e;
+                console.warn(`[LLM] Provider ${config.provider}:${config.model} failed, trying next...`);
+            }
+        }
+
+        throw new Error(`All LLM providers failed. Last error: ${lastError?.message}`);
+    }
+
+    private getEnvKey(providerName: string): string | undefined {
+        if (providerName === 'openai') return process.env.OPENAI_API_KEY;
+        if (providerName === 'anthropic') return process.env.ANTHROPIC_API_KEY;
+        if (providerName === 'google' || providerName === 'gemini') return process.env.GOOGLE_API_KEY || process.env.GEMINI_API_KEY;
+        return undefined;
     }
 
     private parse(raw: string): LLMResponse {
         try {
-            const repaired = jsonrepair(raw.trim().match(/\{[\s\S]*\}/)?.[0] || raw);
+            const jsonPart = raw.trim().match(/\{[\s\S]*\}/)?.[0] || raw;
+            const repaired = jsonrepair(jsonPart);
             const p = JSON.parse(repaired);
             return {
                 thought: p.thought || '',
@@ -75,7 +86,26 @@ export class LLM {
 }
 
 export const createLLM = (model?: string) => {
+    // Primary model
     const m = model || process.env.MODEL || 'openai:gpt-5.2-codex';
     const [p, n] = m.includes(':') ? m.split(':') : ['openai', m];
-    return new LLM({ provider: p, model: n });
+
+    // Define Failover Chain
+    const configs: LLMConfig[] = [{ provider: p, model: n }];
+
+    // Add fallbacks if they aren't the primary
+    const fallbacks: LLMConfig[] = [
+        { provider: 'anthropic', model: 'claude-3-7-sonnet-latest' },
+        { provider: 'google', model: 'gemini-2.0-flash-001' },
+        { provider: 'openai', model: 'gpt-4o' }
+    ];
+
+    for (const f of fallbacks) {
+        // Prevent duplicate provider/model combinations
+        if (!(f.provider === p && f.model === n)) {
+            configs.push(f);
+        }
+    }
+
+    return new LLM(configs);
 };

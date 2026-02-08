@@ -69,3 +69,4 @@ AGENT.md
 tmp*
 tmp_*/
 scraper_screenshots/
+.agent/
