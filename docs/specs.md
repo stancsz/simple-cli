@@ -219,6 +219,15 @@ The agent has the ability to extend its own capabilities by creating new tools o
     5.  **Hot Reload**: The `Registry` detects the new file and dynamically imports it. The `md5` tool becomes immediately available in the next prompt cycle.
 *   **Usage**: The agent effectively remembers this tool exists because `Registry.loadProjectTools` scans default directories on every initialization.
 
+### 6.4 Tool Discovery & Reusability
+To maintain a lean and efficient system, the agent adheres to a "Discovery First" protocol.
+
+*   **Search Protocol**: Before calling `create_tool`, the agent MUST search the existing **Tool Registry** and **RAG Memory** for similar functionality.
+*   **Modular-First Principle**: When creating tools, the agent is encouraged to build **generic, parametrizable scripts** rather than hardcoded, task-specific ones.
+    *   *Bad tool*: `clean_my_desktop_today.ts`
+    *   *Good tool*: `folder_organizer.ts` with args for target directory and file-type rules.
+*   **Indexing**: Every new tool MUST include a human-readable `description` and `usage` example. This metadata is indexed by the Claw to ensure it can be retrieved by future Molts.
+
 ---
 
 ## 7. Autonomous Scheduling & Maintenance
