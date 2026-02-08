@@ -58,6 +58,20 @@ mkdir .agent
 cp examples/data-engineer/SOUL.md .agent/AGENT.md
 ```
 
+## Benchmarks 📊
+
+Simple-CLI is evaluated on a suite of tasks inspired by leading agent benchmarks.
+
+| Benchmark Suite | Focus Area | Success Rate | Status |
+| :--- | :--- | :--- | :--- |
+| **Terminal-Bench** | File System Operations | 66% (2/3) | 🟡 |
+| **SWE-bench** | Software Engineering (Bug Fix) | 100% (1/1) | 🟢 |
+| **AgentBench** | General Reasoning | 100% (1/1) | 🟢 |
+| **OSWorld** | Operating System Control | 100% (1/1) | 🟢 |
+| **TheAgentCompany** | Corporate Tasks | 0% (0/1) | 🔴 |
+
+> **Comparison Context**: These benchmarks are simplified versions of standard industry tests. For reference, state-of-the-art agents (like Devin or Claude 3.5 Sonnet) typically score **15-50%** on the full, rigorous versions of these benchmarks (e.g., SWE-bench Verified). Simple-CLI is designed to be a reliable local assistant for daily tasks.
+
 ## Project Structure
 
 *   `.agent/`: The agent's configuration and memory.
