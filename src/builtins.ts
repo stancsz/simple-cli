@@ -1,12 +1,40 @@
 import { readFile, writeFile, readdir, unlink, mkdir, stat } from 'fs/promises';
 import { existsSync } from 'fs';
 import { join, resolve, relative, extname } from 'path';
-import { exec } from 'child_process';
+import { exec, spawn, execSync, ChildProcess } from 'child_process';
 import { promisify } from 'util';
 import { z } from 'zod';
 import glob from 'fast-glob';
 
 const execAsync = promisify(exec);
+const activeProcesses: ChildProcess[] = [];
+
+export const cleanupProcesses = () => {
+    for (const proc of activeProcesses) {
+        if (!proc.killed && proc.pid) {
+            if (process.platform === 'win32') {
+                try {
+                    execSync(`taskkill /F /T /PID ${proc.pid}`);
+                } catch {
+                    proc.kill('SIGTERM');
+                }
+            } else {
+                proc.kill('SIGTERM');
+            }
+        }
+    }
+};
+
+// Handle cleanup on exit
+process.on('exit', cleanupProcesses);
+process.on('SIGINT', () => {
+    cleanupProcesses();
+    process.exit();
+});
+process.on('SIGTERM', () => {
+    cleanupProcesses();
+    process.exit();
+});
 
 export const readFiles = {
     name: 'read_files',
@@ -15,13 +43,13 @@ export const readFiles = {
     execute: async (args: any) => {
         let paths = args.paths;
         if (!paths) {
-             if (args.path) paths = [args.path];
-             else if (args.file) paths = [args.file];
-             else if (args.filename) paths = [args.filename];
+            if (args.path) paths = [args.path];
+            else if (args.file) paths = [args.file];
+            else if (args.filename) paths = [args.filename];
         }
 
         if (!paths || !Array.isArray(paths)) {
-             return [{ error: "Invalid arguments: 'paths' array is required." }];
+            return [{ error: "Invalid arguments: 'paths' array is required." }];
         }
 
         const results = [];
@@ -80,8 +108,8 @@ export const writeFiles = {
 
             try {
                 if (!f.path) {
-                     results.push({ success: false, message: 'File path missing' });
-                     continue;
+                    results.push({ success: false, message: 'File path missing' });
+                    continue;
                 }
                 const dir = resolve(f.path, '..');
                 if (!existsSync(dir)) {
@@ -93,13 +121,13 @@ export const writeFiles = {
                     results.push({ path: f.path, success: true });
                 } else if (f.searchReplace) {
                     if (!existsSync(f.path)) {
-                         results.push({ path: f.path, success: false, message: `File not found: ${f.path}` });
-                         continue;
+                        results.push({ path: f.path, success: false, message: `File not found: ${f.path}` });
+                        continue;
                     }
                     let content = await readFile(f.path, 'utf-8');
                     for (const { search, replace } of f.searchReplace) {
                         if (!content.includes(search)) {
-                             throw new Error(`Search pattern not found in ${f.path}: "${search}"`);
+                            throw new Error(`Search pattern not found in ${f.path}: "${search}"`);
                         }
                         content = content.split(search).join(replace);
                     }
@@ -178,20 +206,20 @@ export const scrapeUrl = {
 
             if (convertToMarkdown && type.includes('text/html')) {
                 content = content
-                  .replace(/<script\b[^>]*>[\s\S]*?<\/script>/gmi, "")
-                  .replace(/<style\b[^>]*>[\s\S]*?<\/style>/gmi, "")
-                  .replace(/<pre><code[^>]*>([\s\S]*?)<\/code><\/pre>/gi, '```\n$1\n```\n')
-                  .replace(/<h1[^>]*>(.*?)<\/h1>/gi, '# $1\n')
-                  .replace(/<h2[^>]*>(.*?)<\/h2>/gi, '## $1\n')
-                  .replace(/<h3[^>]*>(.*?)<\/h3>/gi, '### $1\n')
-                  .replace(/<p[^>]*>(.*?)<\/p>/gi, '$1\n\n')
-                  .replace(/<a[^>]*href="([^"]*)"[^>]*>(.*?)<\/a>/gi, '[$2]($1)')
-                  .replace(/<strong[^>]*>(.*?)<\/strong>/gi, '**$1**')
-                  .replace(/<em[^>]*>(.*?)<\/em>/gi, '*$1*')
-                  .replace(/<code[^>]*>(.*?)<\/code>/gi, '`$1`')
-                  .replace(/<[^>]+>/g, '')
-                  .replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&amp;/g, '&').replace(/&quot;/g, '"')
-                  .trim();
+                    .replace(/<script\b[^>]*>[\s\S]*?<\/script>/gmi, "")
+                    .replace(/<style\b[^>]*>[\s\S]*?<\/style>/gmi, "")
+                    .replace(/<pre><code[^>]*>([\s\S]*?)<\/code><\/pre>/gi, '```\n$1\n```\n')
+                    .replace(/<h1[^>]*>(.*?)<\/h1>/gi, '# $1\n')
+                    .replace(/<h2[^>]*>(.*?)<\/h2>/gi, '## $1\n')
+                    .replace(/<h3[^>]*>(.*?)<\/h3>/gi, '### $1\n')
+                    .replace(/<p[^>]*>(.*?)<\/p>/gi, '$1\n\n')
+                    .replace(/<a[^>]*href="([^"]*)"[^>]*>(.*?)<\/a>/gi, '[$2]($1)')
+                    .replace(/<strong[^>]*>(.*?)<\/strong>/gi, '**$1**')
+                    .replace(/<em[^>]*>(.*?)<\/em>/gi, '*$1*')
+                    .replace(/<code[^>]*>(.*?)<\/code>/gi, '`$1`')
+                    .replace(/<[^>]+>/g, '')
+                    .replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&amp;/g, '&').replace(/&quot;/g, '"')
+                    .trim();
             }
             return { url, content, contentType: type };
         } catch (e: any) {
@@ -249,7 +277,7 @@ export const searchFiles = {
             if (stats.isFile()) {
                 files = [path];
             } else {
-                 files = await glob(globPattern, {
+                files = await glob(globPattern, {
                     cwd: path,
                     ignore: ['**/node_modules/**', '**/.git/**'],
                     onlyFiles: true,
@@ -320,10 +348,10 @@ export const searchFiles = {
         }
 
         return {
-             matches: matches,
-             count: filesOnly ? matchedFiles.size : matches.length,
-             files: Array.from(matchedFiles),
-             truncated: !!truncated
+            matches: matches,
+            count: filesOnly ? matchedFiles.size : matches.length,
+            files: Array.from(matchedFiles),
+            truncated: !!truncated
         };
     }
 };
@@ -340,9 +368,28 @@ export const listDir = {
 
 export const runCommand = {
     name: 'run_command',
-    description: 'Run a shell command',
-    inputSchema: z.object({ command: z.string(), timeout: z.number().optional() }),
-    execute: async ({ command, timeout }: { command: string, timeout?: number }) => {
+    description: 'Run a shell command. Use background: true for servers or long-running tasks.',
+    inputSchema: z.object({
+        command: z.string(),
+        timeout: z.number().optional(),
+        background: z.boolean().default(false).describe('Run command in background and return immediately')
+    }),
+    execute: async ({ command, timeout, background }: { command: string, timeout?: number, background: boolean }) => {
+        if (background) {
+            const child = spawn(command, {
+                shell: true,
+                detached: true,
+                stdio: 'ignore'
+            });
+            child.unref();
+            activeProcesses.push(child);
+            return {
+                message: `Started background process: ${command}`,
+                pid: child.pid,
+                success: true
+            };
+        }
+
         try {
             const { stdout, stderr } = await execAsync(command, { timeout });
             return { stdout, stderr, exitCode: 0, timedOut: false };
@@ -355,6 +402,29 @@ export const runCommand = {
                 exitCode: e.code || 1,
                 timedOut
             };
+        }
+    }
+};
+
+export const stopCommand = {
+    name: 'stop_command',
+    description: 'Stop a background process by its PID',
+    inputSchema: z.object({ pid: z.number() }),
+    execute: async ({ pid }: { pid: number }) => {
+        if (process.platform === 'win32') {
+            try {
+                await execAsync(`taskkill /F /T /PID ${pid}`);
+                return `Successfully stopped process ${pid}`;
+            } catch (e: any) {
+                return `Error stopping process ${pid}: ${e.message}`;
+            }
+        } else {
+            try {
+                process.kill(pid, 'SIGTERM');
+                return `Sent SIGTERM to process ${pid}`;
+            } catch (e: any) {
+                return `Error stopping process ${pid}: ${e.message}`;
+            }
         }
     }
 };
@@ -386,12 +456,12 @@ export const gitTool = {
     }),
     execute: async ({ operation, cwd, files, message }: { operation: string, cwd: string, files?: string[], message?: string }) => {
         const run = async (cmd: string) => {
-             try {
-                 const { stdout } = await execAsync(cmd, { cwd });
-                 return { success: true, output: stdout.trim() };
-             } catch (e: any) {
-                 return { success: false, error: e.message };
-             }
+            try {
+                const { stdout } = await execAsync(cmd, { cwd });
+                return { success: true, output: stdout.trim() };
+            } catch (e: any) {
+                return { success: false, error: e.message };
+            }
         };
 
         if (operation === 'status') {
@@ -475,4 +545,4 @@ export const getTrackedFiles = async (cwd: string) => {
     } catch { return []; }
 };
 
-export const allBuiltins = [readFiles, writeFiles, createTool, scrapeUrl, listFiles, searchFiles, listDir, runCommand, deleteFile, gitTool, linter];
+export const allBuiltins = [readFiles, writeFiles, createTool, scrapeUrl, listFiles, searchFiles, listDir, runCommand, stopCommand, deleteFile, gitTool, linter];
