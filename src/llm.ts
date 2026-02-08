@@ -29,7 +29,15 @@ export class LLM {
             let py = join(__dirname, 'anyllm.py');
             if (!fs.existsSync(py)) py = join(process.cwd(), 'src/lib/anyllm.py'); // Fallback
 
-            const child = spawn('python3', [py]);
+            // Try to find a working python command
+            const getPyCmd = () => {
+                const isWin = process.platform === 'win32';
+                // On Windows, preferred is 'python' or 'py' if they aren't store aliases
+                // On Linux/Mac, preferred is 'python3'
+                return isWin ? 'python' : 'python3';
+            };
+
+            const child = spawn(getPyCmd(), [py]);
             let out = '';
             let err = '';
 
