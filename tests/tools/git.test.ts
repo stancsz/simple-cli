@@ -17,7 +17,7 @@ describe('git tool', () => {
   let isGitRepo = false;
 
   beforeEach(async () => {
-    testDir = join(tmpdir(), `simple-cli-git-test-${Date.now()}-${Math.random()}`);
+    testDir = join(process.cwd(), '.test_tmp', `simple-cli-git-test-${Date.now()}-${Math.random()}`);
     await mkdir(testDir, { recursive: true });
 
     // Initialize git repo
@@ -225,7 +225,7 @@ describe('git tool', () => {
   });
 
   describe('non-git directory', () => {
-    it('should fail for non-git directory', async () => {
+    it('should fail for non-git directory (outside workspace)', async () => {
       const nonGitDir = join(tmpdir(), `non-git-${Date.now()}-${Math.random()}`);
       await mkdir(nonGitDir, { recursive: true });
 
@@ -236,8 +236,8 @@ describe('git tool', () => {
         });
 
         expect(result.success).toBe(false);
-        // "not a git repository" is what git outputs
-        expect(result.error.toLowerCase()).toContain('not a git repository');
+        // Now it should fail due to access denied
+        expect(result.error).toContain('Access denied');
       } finally {
         await rm(nonGitDir, { recursive: true, force: true });
       }

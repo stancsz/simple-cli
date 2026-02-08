@@ -8,14 +8,15 @@ import { writeFile, readFile, mkdir, rm, stat } from 'fs/promises';
 import { existsSync } from 'fs';
 import { join } from 'path';
 import { tmpdir } from 'os';
-import { execute as readFilesExecute } from '../src/tools/read_files.js';
-import { execute as writeFilesExecute } from '../src/tools/write_files.js';
+import { readFiles, writeFiles } from '../src/builtins.js';
+const readFilesExecute = readFiles.execute;
+const writeFilesExecute = writeFiles.execute;
 
 describe('fileOperations', () => {
   let testDir: string;
 
   beforeEach(async () => {
-    testDir = join(tmpdir(), `simple-cli-files-${Date.now()}`);
+    testDir = join(process.cwd(), '.test_tmp', `simple-cli-files-${Date.now()}`);
     await mkdir(testDir, { recursive: true });
   });
 

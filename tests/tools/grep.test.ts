@@ -24,7 +24,7 @@ describe('grep tool', () => {
   let testDir: string;
 
   beforeEach(async () => {
-    testDir = join(tmpdir(), `simple-cli-grep-test-${Date.now()}-${Math.random()}`);
+    testDir = join(process.cwd(), '.test_tmp', `simple-cli-grep-test-${Date.now()}-${Math.random()}`);
     await mkdir(testDir, { recursive: true });
   });
 
