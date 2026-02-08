@@ -13,18 +13,18 @@ This specification serves as the primary source of truth for the implementation,
 
 The architecture is driven by a duality of persistence and impermanence.
 
-### 2.1 Clawbot (The Constant)
-The **Clawbot** is the backbone of the system. It represents **Persistence**.
+### 2.1 Claw (The Constant)
+The **Claw** is the backbone of the system. It represents **Persistence**.
 *   **Role**: To "claw" onto state, identity, and knowledge across time.
 *   **Behavior**: It runs as the main Meta-Orchestrator engine. It manages the long-term memory (`learnings.json`), the schedule (Cron), and the tool registry.
 *   **Characteristics**: Efficient, low-latency, stateful. It does not "die" between tasks.
 
-### 2.2 Moltbot (The Variant)
-The **Moltbot** is the arm of the system. It represents **Evolution**.
+### 2.2 Molt (The Variant)
+The **Molt** is the arm of the system. It represents **Evolution**.
 *   **Role**: To execute high-intensity, specialized tasks and then "shed" (molt) its skin.
 *   **Behavior**: Spun up Just-In-Time (JIT) via `delegate_cli`. It receives a specific context, creates necessary temporary tools, executes the work, and then terminates.
 *   **Characteristics**: Ephemeral, resource-intensive, disposable.
-*   **The Shedding**: When a Moltbot dies, it MUST transfer its valuable output (artifacts, new tools, learnings) back to the Clawbot. The "skin" (temp files, process memory) is discarded to keep the system clean.
+*   **The Shedding**: When a Molt dies, it MUST transfer its valuable output (artifacts, new tools, learnings) back to the Claw. The "skin" (temp files, process memory) is discarded to keep the system clean.
 
 ---
 
@@ -46,27 +46,27 @@ The **Moltbot** is the arm of the system. It represents **Evolution**.
 ```mermaid
 sequenceDiagram
     participant User
-    participant Clawbot(Orchestrator)
+    participant Claw(Orchestrator)
     participant Scheduler
     participant Memory(RAG)
-    participant Moltbot(Delegate)
+    participant Molt(Delegate)
     participant Supervisor
 
-    User->>Clawbot(Orchestrator): "Clean my downloads daily"
-    Clawbot(Orchestrator)->>Scheduler: schedule_task("0 9 * * *", "Clean downloads")
+    User->>Claw(Orchestrator): "Clean my downloads daily"
+    Claw(Orchestrator)->>Scheduler: schedule_task("0 9 * * *", "Clean downloads")
     Scheduler->>Scheduler: [Waiting for Trigger]
     
     loop Daily at 9:00 AM
-        Scheduler->>Clawbot(Orchestrator): Wake Up & Execute("Clean downloads")
-        Clawbot(Orchestrator)->>Memory(RAG): Search("Clean downloads")
-        Memory(RAG)-->>Clawbot(Orchestrator): [Relevant Learnings/Tools]
-        Clawbot(Orchestrator)->>Moltbot(Delegate): execute_tool("clean_downloads_script")
-        Moltbot(Delegate)-->>Clawbot(Orchestrator): Result (The Shedding)
-        Clawbot(Orchestrator)->>Supervisor: Verify(Result)
+        Scheduler->>Claw(Orchestrator): Wake Up & Execute("Clean downloads")
+        Claw(Orchestrator)->>Memory(RAG): Search("Clean downloads")
+        Memory(RAG)-->>Claw(Orchestrator): [Relevant Learnings/Tools]
+        Claw(Orchestrator)->>Molt(Delegate): execute_tool("clean_downloads_script")
+        Molt(Delegate)-->>Claw(Orchestrator): Result (The Shedding)
+        Claw(Orchestrator)->>Supervisor: Verify(Result)
         
         alt Verification Passed
-            Supervisor-->>Clawbot(Orchestrator): Success
-            Clawbot(Orchestrator)->>User: [Optional Notification]
+            Supervisor-->>Claw(Orchestrator): Success
+            Claw(Orchestrator)->>User: [Optional Notification]
         end
     end
 ```
@@ -257,10 +257,10 @@ To move towards AGI-like behavior, the system must not just *learn* but *rewrite
 *   **Goal**: If the agent realizes its `learnings.json` lookup is inefficient, it can write a new vector-based adapter and hot-swap it.
 
 ### 8.2 "Dreaming" (Offline Simulation)
-*   **Concept**: When idle (no user tasks), the Clawbot enters a simulation state.
+*   **Concept**: When idle (no user tasks), the Claw enters a simulation state.
 *   **Activity**:
     1.  Replays past failures from `logs/`.
-    2.  Spins up Moltbots to retry those failures with new strategies.
+    2.  Spins up Molts to retry those failures with new strategies.
     3.  If a new strategy works, it updates `learnings.json`.
 *   **Benefit**: The agent improves while the user sleeps.
 
