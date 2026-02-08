@@ -86,7 +86,7 @@ export class Engine {
 
         while (true) {
             if (!input) {
-                if (!options.interactive) break;
+                if (!options.interactive || !process.stdout.isTTY) break;
                 const res = await text({ message: pc.cyan('Chat') });
                 if (isCancel(res)) break;
                 input = res as string;
