@@ -3,7 +3,7 @@ import { existsSync } from 'fs';
 import { join, relative, resolve } from 'path';
 import { pathToFileURL } from 'url';
 import pc from 'picocolors';
-import { text, isCancel } from '@clack/prompts';
+import { text, isCancel, log, spinner } from '@clack/prompts';
 import { createLLM } from './llm.js';
 import { MCP } from './mcp.js';
 import { LearningManager } from './learnings.js';
@@ -108,19 +108,23 @@ export class Engine {
             const response = await this.llm.generate(prompt, ctx.history);
             const { thought, tool, args, message } = response;
 
-            if (thought) console.log(pc.dim(`💭 ${thought}`));
+            if (thought) log.info(pc.dim(thought));
 
             if (tool && tool !== 'none') {
                 const t = this.registry.tools.get(tool);
                 if (t) {
-                    console.log(pc.yellow(`⚙ Executing ${tool}...`));
+                    const s = spinner();
+                    s.start(`Executing ${tool}...`);
+                    let toolExecuted = false;
                     try {
                         const result = await t.execute(args);
+                        s.stop(`Executed ${tool}`);
+                        toolExecuted = true;
 
                         // Reload tools if create_tool was used
                         if (tool === 'create_tool') {
                             await this.registry.loadProjectTools(ctx.cwd);
-                            console.log(pc.magenta('🔄 Tools reloaded.'));
+                            log.success('Tools reloaded.');
                         }
 
                         ctx.history.push({ role: 'assistant', content: JSON.stringify(response) });
@@ -128,7 +132,7 @@ export class Engine {
 
                         // --- Supervisor Loop (QA & Reflection) ---
                         // "Principal Skinner" enters the room
-                        console.log(pc.cyan(`\n[Supervisor] Verifying work from ${tool}...`));
+                        log.step(`[Supervisor] Verifying work from ${tool}...`);
 
                         let qaPrompt = `Analyze the result of the tool execution: ${JSON.stringify(result)}. Did it satisfy the user's request: "${input || userHistory.pop()?.content}"? If specific files were mentioned (like flask app), check if they exist or look correct based on the tool output.`;
 
@@ -138,13 +142,13 @@ export class Engine {
                         }
 
                         const qaCheck = await this.llm.generate(qaPrompt, [...ctx.history, { role: 'user', content: qaPrompt }]);
-                        console.log(pc.cyan(`[Supervisor] ${qaCheck.message || qaCheck.thought}`));
+                        log.step(`[Supervisor] ${qaCheck.message || qaCheck.thought}`);
 
                         if (qaCheck.message && qaCheck.message.toLowerCase().includes('fail')) {
-                            console.log(pc.red('[Supervisor] QA FAILED. Asking for retry...'));
+                            log.error('[Supervisor] QA FAILED. Asking for retry...');
                             input = "The previous attempt failed. Please retry or fix the issue.";
                         } else {
-                            console.log(pc.green('[Supervisor] QA PASSED. Work verified.'));
+                            log.success('[Supervisor] QA PASSED. Work verified.');
 
                             // Store learning ONLY if QA passed
                             const reflectPrompt = "Summarize the successful strategy used here as a concise learning point.";
@@ -157,6 +161,9 @@ export class Engine {
                         input = 'The tool execution was verified. Proceed.';
                         continue;
                     } catch (e: any) {
+                        if (!toolExecuted) s.stop(`Error executing ${tool}`);
+                        else log.error(`Error during verification: ${e.message}`);
+
                         ctx.history.push({ role: 'user', content: `Error: ${e.message}` });
                         input = 'Fix the error.';
                         continue;
@@ -164,7 +171,12 @@ export class Engine {
                 }
             }
 
-            console.log(`\n${pc.green('🤖')} ${message || response.raw}\n`);
+            if (message || response.raw) {
+                console.log();
+                console.log(pc.blue('Agent:'));
+                console.log(message || response.raw);
+                console.log();
+            }
             ctx.history.push({ role: 'assistant', content: message || response.raw });
             input = undefined;
         }

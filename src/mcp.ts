@@ -2,6 +2,7 @@ import { Client } from '@modelcontextprotocol/sdk/client/index.js';
 import { StdioClientTransport } from '@modelcontextprotocol/sdk/client/stdio.js';
 import { existsSync, readFileSync } from 'fs';
 import { join } from 'path';
+import { log } from '@clack/prompts';
 
 export class MCP {
     private clients: Map<string, Client> = new Map();
@@ -23,9 +24,9 @@ export class MCP {
                 });
                 await client.connect(transport);
                 this.clients.set(name, client);
-                console.log(`✓ Connected to MCP: ${name}`);
+                log.success(`Connected to MCP: ${name}`);
             } catch (e) {
-                console.error(`✗ Failed to connect to MCP ${name}:`, e);
+                log.error(`Failed to connect to MCP ${name}: ${e}`);
             }
         }
     }
