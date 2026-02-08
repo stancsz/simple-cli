@@ -156,8 +156,10 @@ export class Scheduler {
             task.lastRun = Date.now();
             if (!success) {
                 task.failureCount++;
-                // Spec: "If a task fails ... 3 times in a row, the Audit process will flagged it."
-                // For now, we just track it.
+                if (task.failureCount >= 3) {
+                    task.enabled = false;
+                    console.warn(`[Scheduler] Task '${task.description}' (${task.id}) has failed 3 times in a row. Auto-disabling (forgetting) it.`);
+                }
             } else {
                 task.failureCount = 0;
             }
