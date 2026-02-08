@@ -13,9 +13,14 @@ async function main() {
 
   // Handle optional directory argument
   let cwd = process.cwd();
+  let interactive = true;
   const remainingArgs = [];
 
   for (const arg of args) {
+      if (arg === '--non-interactive') {
+          interactive = false;
+          continue;
+      }
       if (!arg.startsWith('-')) {
           try {
               if (statSync(arg).isDirectory()) {
@@ -43,7 +48,7 @@ async function main() {
 
   console.log(`\n ${pc.bgCyan(pc.black(' SIMPLE-CLI '))} ${pc.dim('v0.4.0')}\n`);
 
-  await engine.run(ctx, prompt || undefined);
+  await engine.run(ctx, prompt || undefined, { interactive });
 }
 
 main().catch(console.error);

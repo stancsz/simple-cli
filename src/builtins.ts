@@ -12,7 +12,18 @@ export const readFiles = {
     name: 'read_files',
     description: 'Read contents of one or more files',
     inputSchema: z.object({ paths: z.array(z.string()) }),
-    execute: async ({ paths }: { paths: string[] }) => {
+    execute: async (args: any) => {
+        let paths = args.paths;
+        if (!paths) {
+             if (args.path) paths = [args.path];
+             else if (args.file) paths = [args.file];
+             else if (args.filename) paths = [args.filename];
+        }
+
+        if (!paths || !Array.isArray(paths)) {
+             return [{ error: "Invalid arguments: 'paths' array is required." }];
+        }
+
         const results = [];
         for (const p of paths) {
             try {
@@ -43,10 +54,35 @@ export const writeFiles = {
             })).optional()
         }))
     }),
-    execute: async ({ files }: { files: { path: string, content?: string, searchReplace?: { search: string, replace: string }[] }[] }) => {
+    execute: async (args: any) => {
+        let files = args.files;
+        // Fallback: if agent passed single file attributes directly
+        if (!files) {
+            if (args.path) files = [args];
+            else if (args.file) files = [{ ...args, path: args.file }];
+            else if (args.filename) files = [{ ...args, path: args.filename }];
+        } else if (typeof files === 'object' && !Array.isArray(files)) {
+            // Handle dictionary format: { "file.txt": { content: "..." } }
+            files = Object.entries(files).map(([key, val]: [string, any]) => ({
+                path: key,
+                ...val
+            }));
+        }
+
+        if (!files || !Array.isArray(files)) {
+            throw new Error(`Invalid arguments for write_files: ${JSON.stringify(args)}`);
+        }
+
         const results = [];
         for (const f of files) {
+            // Fix: Map 'name' to 'path' if path is missing (common hallucination)
+            if (!f.path && f.name) f.path = f.name;
+
             try {
+                if (!f.path) {
+                     results.push({ success: false, message: 'File path missing' });
+                     continue;
+                }
                 const dir = resolve(f.path, '..');
                 if (!existsSync(dir)) {
                     await mkdir(dir, { recursive: true });
@@ -327,12 +363,15 @@ export const deleteFile = {
     name: 'delete_file',
     description: 'Delete a file',
     inputSchema: z.object({ path: z.string() }),
-    execute: async ({ path }: { path: string }) => {
+    execute: async (args: any) => {
+        const path = args.path || args.file || args.filename;
+        if (!path) return "Error: 'path' argument required";
+
         if (existsSync(path)) {
             await unlink(path);
             return `Deleted ${path}`;
         }
-        return 'File not found';
+        return `File not found: ${path}`;
     }
 };
 
