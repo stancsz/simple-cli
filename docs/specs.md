@@ -1,4 +1,3 @@
-
 # Technical Specification for Simple-CLI (Meta-Orchestrator)
 
 ## 1. System Overview
@@ -9,75 +8,56 @@ This specification serves as the primary source of truth for the implementation,
 
 ---
 
-## 2. Philosophy: The Claw & The Molt
+## 2. Architecture
 
-The architecture is driven by a duality of persistence and impermanence.
+### 2.1 Core Components
 
-### 2.1 Claw (The Constant)
-The **Claw** is the backbone of the system. It represents **Persistence**.
-*   **Role**: To "claw" onto state, identity, and knowledge across time.
-*   **Behavior**: It runs as the main Meta-Orchestrator engine. It manages the long-term memory (`learnings.json`), the schedule (Cron), and the tool registry.
-*   **Characteristics**: Efficient, low-latency, stateful. It does not "die" between tasks.
-
-### 2.2 Molt (The Variant)
-The **Molt** is the arm of the system. It represents **Evolution**.
-*   **Role**: To execute high-intensity, specialized tasks and then "shed" (molt) its skin.
-*   **Behavior**: Spun up Just-In-Time (JIT) via `delegate_cli`. It receives a specific context, creates necessary temporary tools, executes the work, and then terminates.
-*   **Characteristics**: Ephemeral, resource-intensive, disposable.
-*   **The Shedding**: When a Molt dies, it MUST transfer its valuable output (artifacts, new tools, learnings) back to the Claw. The "skin" (temp files, process memory) is discarded to keep the system clean.
-
----
-
-## 3. Architecture
-
-### 3.1 Core Components
-
-1.  **Orchestrator Engine (`Engine`)**: The main event loop that processes user input, maintains context, and decides which tool or agent to invoke.
+1.  **Orchestrator Engine**: The main event loop that processes user input, maintains context, and decides which tool or agent to invoke. This is the persistent, stateful core of the system.
 2.  **Supervisor Layer**: A validation loop that reviews the output of tools and delegated agents against the user's original request.
     *   **Role**: Quality Assurance (QA).
     *   **Action**: Approve (continue) or Reject (retry with feedback).
 3.  **Tool Registry**: Manages internal tools (FileSystem, Git) and dynamic MCP tools.
 4.  **Delegate Router**: Handles the spawning and communication with external CLI agents.
 5.  **Learning Manager**: A specialized component for persisting successful strategies and recalling them in future contexts.
-6.  **Scheduler (New)**: A cron-like subsystem for managing autonomous, recurring tasks.
+6.  **Scheduler**: A cron-like subsystem for managing autonomous, recurring tasks.
 
-### 3.2 Data Flow
+### 2.2 Data Flow
 
 ```mermaid
 sequenceDiagram
     participant User
-    participant Claw(Orchestrator)
+    participant Orchestrator
     participant Scheduler
     participant Memory(RAG)
-    participant Molt(Delegate)
+    participant DelegateAgent
     participant Supervisor
 
-    User->>Claw(Orchestrator): "Clean my downloads daily"
-    Claw(Orchestrator)->>Scheduler: schedule_task("0 9 * * *", "Clean downloads")
+    User->>Orchestrator: "Clean my downloads daily"
+    Orchestrator->>Scheduler: schedule_task("0 9 * * *", "Clean downloads")
     Scheduler->>Scheduler: [Waiting for Trigger]
     
     loop Daily at 9:00 AM
-        Scheduler->>Claw(Orchestrator): Wake Up & Execute("Clean downloads")
-        Claw(Orchestrator)->>Memory(RAG): Search("Clean downloads")
-        Memory(RAG)-->>Claw(Orchestrator): [Relevant Learnings/Tools]
-        Claw(Orchestrator)->>Molt(Delegate): execute_tool("clean_downloads_script")
-        Molt(Delegate)-->>Claw(Orchestrator): Result (The Shedding)
-        Claw(Orchestrator)->>Supervisor: Verify(Result)
+        Scheduler->>Orchestrator: Wake Up & Execute("Clean downloads")
+        Orchestrator->>Memory(RAG): Search("Clean downloads")
+        Memory(RAG)-->>Orchestrator: [Relevant Learnings/Tools]
+        Orchestrator->>DelegateAgent: execute_tool("clean_downloads_script")
+        DelegateAgent-->>Orchestrator: Result (Artifacts)
+        Orchestrator->>Supervisor: Verify(Result)
         
         alt Verification Passed
-            Supervisor-->>Claw(Orchestrator): Success
-            Claw(Orchestrator)->>User: [Optional Notification]
+            Supervisor-->>Orchestrator: Success
+            Orchestrator->>User: [Optional Notification]
         end
     end
 ```
 
 ---
 
-## 4. Configuration Schema
+## 3. Configuration Schema
 
 The system is configured via `mcp.json` or `.agent/config.json`.
 
-### 4.1 `mcp.json` Structure
+### 3.1 `mcp.json` Structure
 
 ```json
 {
@@ -119,9 +99,9 @@ The system is configured via `mcp.json` or `.agent/config.json`.
 
 ---
 
-## 5. Protocols & Interfaces
+## 4. Protocols & Interfaces
 
-### 5.1 Delegation Protocol (`delegate_cli`)
+### 4.1 Delegation Protocol (`delegate_cli`)
 
 The communication between the Orchestrator and Sub-Agents relies on standard I/O streams.
 
@@ -152,7 +132,7 @@ If the agent supports structured output, it should output a JSON object on the l
 }
 ```
 
-### 5.2 Tool Definitions
+### 4.2 Tool Definitions
 
 #### `delegate_cli`
 *   **Description**: Delegate a complex task to a specialized external CLI agent.
@@ -161,7 +141,7 @@ If the agent supports structured output, it should output a JSON object on the l
     *   `task` (string): The natural language instruction for the agent.
     *   `context_files` (array<string>, optional): List of files to prioritize in the sub-agent's context.
 
-#### `schedule_task` (New)
+#### `schedule_task`
 *   **Description**: Register a recurring task to be executed by the agent autonomously.
 *   **Parameters**:
     *   `cron` (string): Standard cron expression (e.g., "0 9 * * *").
@@ -180,9 +160,9 @@ If the agent supports structured output, it should output a JSON object on the l
 
 ---
 
-## 6. Memory & Self-Evolution
+## 5. Memory & Self-Evolution
 
-### 6.1 Learning Memory (RAG)
+### 5.1 Learning Memory (RAG)
 The system employs a simple RAG (Retrieval-Augmented Generation) mechanism to "learn" from its experiences.
 
 *   **Storage Location**: `.agent/learnings.json`
@@ -198,7 +178,7 @@ The system employs a simple RAG (Retrieval-Augmented Generation) mechanism to "l
 *   **Write Trigger**: When the Supervisor **PASSES** a task, it triggers a "Reflection" step. The LLM summarizes *why* the attempt was successful. This summary is committed to `learnings.json`.
 *   **Read Trigger**: At the start of every turn, the engine searches `learnings.json` for keywords matching the current request. Relevant reflections are injected into the context window under `## Past Learnings`.
 
-### 6.2 The "Reflective" Loop
+### 5.2 The "Reflective" Loop
 Learning is more than just data storage; it requires active contemplation.
 
 *   **Behavior**:
@@ -207,7 +187,7 @@ Learning is more than just data storage; it requires active contemplation.
     3.  It distills the specific (files, variable names) into the abstract (concepts, strategies).
     4.  **Example**: Instead of "I fixed `auth.ts` by adding a try-catch", it stores "General Strategy: Wrap external API calls in try-catch blocks to prevent crashes."
 
-### 6.3 Dynamic Tool Creation
+### 5.3 Dynamic Tool Creation
 The agent has the ability to extend its own capabilities by creating new tools on the fly.
 
 *   **Tool**: `create_tool`
@@ -219,20 +199,20 @@ The agent has the ability to extend its own capabilities by creating new tools o
     5.  **Hot Reload**: The `Registry` detects the new file and dynamically imports it. The `md5` tool becomes immediately available in the next prompt cycle.
 *   **Usage**: The agent effectively remembers this tool exists because `Registry.loadProjectTools` scans default directories on every initialization.
 
-### 6.4 Tool Discovery & Reusability
+### 5.4 Tool Discovery & Reusability
 To maintain a lean and efficient system, the agent adheres to a "Discovery First" protocol.
 
 *   **Search Protocol**: Before calling `create_tool`, the agent MUST search the existing **Tool Registry** and **RAG Memory** for similar functionality.
 *   **Modular-First Principle**: When creating tools, the agent is encouraged to build **generic, parametrizable scripts** rather than hardcoded, task-specific ones.
     *   *Bad tool*: `clean_my_desktop_today.ts`
     *   *Good tool*: `folder_organizer.ts` with args for target directory and file-type rules.
-*   **Indexing**: Every new tool MUST include a human-readable `description` and `usage` example. This metadata is indexed by the Claw to ensure it can be retrieved by future Molts.
+*   **Indexing**: Every new tool MUST include a human-readable `description` and `usage` example. This metadata is indexed by the Orchestrator to ensure it can be retrieved by future Delegates.
 
 ---
 
-## 7. Autonomous Scheduling & Maintenance
+## 6. Autonomous Scheduling & Maintenance
 
-### 7.1 The "Thinking" Schedule
+### 6.1 The "Thinking" Schedule
 The agent is not just reactive; it can proactively manage its environment through the Scheduler.
 
 *   **Goal**: Enable "Set and Forget" autonomy.
@@ -242,7 +222,7 @@ The agent is not just reactive; it can proactively manage its environment throug
     3.  **Scheduling**: Agent calls `schedule_task` with cron `"0 17 * * 5"` and prompt `"Run organize_desktop tool"`.
     4.  **Execution**: On Friday at 5 PM, the system wakes up (if running as a daemon) or checks pending tasks on next boot, and executes the prompt.
 
-### 7.2 Self-Maintenance (Relevance Checks)
+### 6.2 Self-Maintenance (Relevance Checks)
 To prevent "zombie tasks" (tasks that are no longer useful), the Scheduler includes a built-in "Relevance Audit".
 
 *   **Mechanism**:
@@ -256,36 +236,36 @@ To prevent "zombie tasks" (tasks that are no longer useful), the Scheduler inclu
 
 ---
 
-## 8. Path to AGI: The "Recursive Self-Improvement" Protocol
+## 7. Path to AGI: The "Recursive Self-Improvement" Protocol
 
 To move towards AGI-like behavior, the system must not just *learn* but *rewrite itself*.
 
-### 8.1 The "Core Update" Mechanism
+### 7.1 The "Core Update" Mechanism
 *   **Concept**: The agent should be able to read its own source code (`src/engine.ts`, `src/builtins.ts`) and propose architectural improvements.
 *   **Safety**: Updates to the Core Logic require a **Dual-Verification** (Supervisor + Human Approval).
 *   **Goal**: If the agent realizes its `learnings.json` lookup is inefficient, it can write a new vector-based adapter and hot-swap it.
 
-### 8.2 "Dreaming" (Offline Simulation)
-*   **Concept**: When idle (no user tasks), the Claw enters a simulation state.
+### 7.2 "Dreaming" (Offline Simulation)
+*   **Concept**: When idle (no user tasks), the Orchestrator enters a simulation state.
 *   **Activity**:
     1.  Replays past failures from `logs/`.
-    2.  Spins up Molts to retry those failures with new strategies.
+    2.  Spins up Delegate Agents to retry those failures with new strategies.
     3.  If a new strategy works, it updates `learnings.json`.
 *   **Benefit**: The agent improves while the user sleeps.
 
 ---
 
-## 9. Specification-Driven Development (SDD) Guidelines
+## 8. Specification-Driven Development (SDD) Guidelines
 
 To ensure high reliability, the system strictly follows SDD.
 
-### 9.1 The "Spec First" Rule
+### 8.1 The "Spec First" Rule
 Before ANY complex code generation, the agent MUST:
 1.  **Read the Spec**: Consult this document or project-specific specs in `docs/`.
 2.  **Generate a Plan**: Create a `implementation_plan.md` if the task is >1 file.
 3.  **Define Tests**: Write a test case that fails *before* writing the implementation.
 
-### 9.2 Test-Driven Execution (TDD)
+### 8.2 Test-Driven Execution (TDD)
 1.  **Scaffold**: Create the interface/types.
 2.  **Test**: Write a strict unit test asserting behavior.
 3.  **Implement**: Write the code to pass the test.
@@ -295,22 +275,22 @@ Before ANY complex code generation, the agent MUST:
 
 ---
 
-## 10. Error Handling & Resilience
+## 9. Error Handling & Resilience
 
-### 10.1 Sub-process Management
+### 9.1 Sub-process Management
 *   **Timeouts**: Each delegated task has a default timeout (e.g., 5 minutes). If exceeded, the process is sent `SIGTERM`.
 *   **Zombies**: On Orchestrator exit, all child processes (agents, MCP servers) MUST be killed.
 *   **Stderr Capture**: `stderr` is buffered. If the process exits with non-zero code, `stderr` is presented as the error message to the Supervisor for analysis.
 
-### 10.2 Hallucination Checks
+### 9.2 Hallucination Checks
 *   **File Existence**: If an agent claims to have created `foo.ts`, the Supervisor MUST explicitly check `fs.existsSync('foo.ts')`.
 *   **Syntax Check**: If code was written, run a linter/parser (e.g., `tsc --noEmit`) to verify validity before accepting.
 
 ---
 
-## 11. Security & Autonomy Configurations
+## 10. Security & Autonomy Configurations
 
-### 11.1 Permission Modes
+### 10.1 Permission Modes
 To balance safety with autonomy, the system supports configurable permission levels in `mcp.json`.
 
 *   **`yoloMode`** (Boolean, Default: `false`)
@@ -327,13 +307,13 @@ To balance safety with autonomy, the system supports configurable permission lev
     *   **Use Case**: Preventing the bot from getting stuck during long running tasks or overnight operations.
     *   **Safety**: Only applies to "Standard" risk actions. "Critical" actions (like `rm -rf /`) should still block indefinitely unless `yoloMode` is true.
 
-### 11.2 Secret Management
+### 10.2 Secret Management
 *   **Secrets**: Secrets are passed via environment variables, never command-line arguments.
 *   **Sandboxing**: (Future) Delegated agents should run in a containerized environment (Docker) to prevent system-wide damage.
 
 ---
 
-## 12. Development Roadmap
+## 11. Development Roadmap
 
 1.  **Phase 1 (Current)**: Basics. `delegate_cli` works with `stdout`. MCP servers supported. Simple `learnings.json` RAG.
 2.  **Phase 2**: Structured Communication. Implement JSON schema for agent-to-agent talk.
@@ -343,25 +323,25 @@ To balance safety with autonomy, the system supports configurable permission lev
 
 ---
 
-## 13. Design & Desktop Orchestration (Computer Use)
+## 12. Design & Desktop Orchestration (Computer Use)
 
 To enable "human-like" interaction with the desktop and complex design tasks, the Meta-Orchestrator extends beyond the terminal into the **Visual & Interaction Layer**.
 
-### 13.1 The Vision-Action Loop
+### 12.1 The Vision-Action Loop
 *   **Concept**: Combining high-level reasoning with visual perception and precise action.
 *   **Components**:
     1.  **Visual Perception**: Use of LVLMs (Large Vision-Language Models) to interpret screenshots.
     2.  **Action Driver**: A toolset for simulating mouse and keyboard events (e.g., RobotJS, PyAutoGUI, or native browser drivers).
     3.  **Coordinate Mapping**: Translating semantic instructions ("Click the Login button") into pixel coordinates.
 
-### 13.2 Designer Agent (The Visual Specialist)
-*   **Role**: A specialized Molt agent that focuses on UI/UX, brand consistency, and aesthetic quality.
+### 12.2 Designer Agent (The Visual Specialist)
+*   **Role**: A specialized Delegate Agent that focuses on UI/UX, brand consistency, and aesthetic quality.
 *   **Directives**:
     *   Can "see" the current state of a web app or desktop app.
     *   Performs visual regression testing (comparing current pixels against "design intent").
     *   Manipulates styling (CSS/Figma) and validates the result via live preview.
 
-### 13.3 Technology Landscape & Comparison
+### 12.3 Technology Landscape & Comparison
 
 To maximize versatility, the system does **not** rely on a single implementation. Instead, it supports a modular "Desktop Backend" protocol, allowing it to route tasks to the most appropriate provider.
 
@@ -372,7 +352,7 @@ To maximize versatility, the system does **not** rely on a single implementation
 | **Setup Effort** | High (Requires Executor) | Low (Managed) | Medium (Docker-based) |
 | **Best Logic** | Complex Cross-App | High-Autonomy Research | Form-heavy Automation |
 
-### 13.4 Strategic Architecture: High Leverage Moves
+### 12.4 Strategic Architecture: High Leverage Moves
 
 We reject "Tool-Centric Optimization" (hardcoding to one provider) in favor of a robust, leveraged architecture.
 
@@ -392,11 +372,30 @@ The fallacy is selecting a single API (e.g., locking into Claude's coordinate sy
     *   **Research**: Enable **Skyvern** or **OpenAI Operator** for autonomous, multi-step research tasks.
 *   **Agentic Permission Layer**: The bottleneck is **security**. Use a "Human-in-the-Loop" (HITL) proxy that intercepts MCP tool calls for "Sign-off" before execution preventing catastrophic OS actions (e.g., `rm -rf /`).
 
-### 13.5 Design Aesthetics & Visual Excellence
+### 12.5 Design Aesthetics & Visual Excellence
 *   **Requirement**: All artifacts produced by the Designer Agent MUST adhere to modern aesthetic standards (vibrant colors, clean typography, responsive layouts).
 *   **Validation**: The Supervisor layer includes a **Visual Quality Gate** that rejects "basic" or "MVP-styled" designs in favor of premium-feeling interfaces.
 
 ---
 
-## 14. Conclusion
-Simple-CLI is designed to be the "Claw" that holds the world and the "Molt" that evolves to meet it. By integrating code, state, and visual interaction, it moves closer to a truly autonomous AGI assistant.
+## 13. Conclusion
+Simple-CLI is designed to be the Orchestrator that holds the world and the Delegate Agent that evolves to meet it. By integrating code, state, and visual interaction, it moves closer to a truly autonomous AGI assistant.
+
+---
+
+## Appendix A: Philosophical Metaphors
+
+The architecture is conceptually driven by a duality of persistence and impermanence, referred to internally as "The Claw & The Molt".
+
+### The Claw (Persistence)
+The **Claw** represents the **Orchestrator**.
+*   **Role**: To "claw" onto state, identity, and knowledge across time.
+*   **Behavior**: It manages the long-term memory (`learnings.json`), the schedule (Cron), and the tool registry.
+*   **Characteristics**: Efficient, low-latency, stateful. It does not "die" between tasks.
+
+### The Molt (Evolution)
+The **Molt** represents the **Delegate Agents**.
+*   **Role**: To execute high-intensity, specialized tasks and then "shed" (molt) its skin.
+*   **Behavior**: Spun up Just-In-Time (JIT). It receives a specific context, creates necessary temporary tools, executes the work, and then terminates.
+*   **Characteristics**: Ephemeral, resource-intensive, disposable.
+*   **The Shedding**: When a Molt dies, it MUST transfer its valuable output (artifacts, new tools, learnings) back to the Claw. The "skin" (temp files, process memory) is discarded to keep the system clean.
