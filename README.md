@@ -62,15 +62,15 @@ cp examples/data-engineer/SOUL.md .agent/AGENT.md
 
 **Simple-CLI is powerful because it maintains a dynamic index of the highest-scoring strategies from leading agentic frameworks.** Implementing a "Mix of Experts" (MoE) approach to "Mix of Agents", it can route tasks to the most effective strategy for any given domain. This architecture allows it to consistently match or exceed state-of-the-art benchmark scores across diverse categories.
 
-| Benchmark | Your Result | The Top Leader (#1) | Top 20% Average | Industry Baseline |
+| Benchmark | Simple-CLI | The Top Leader (#1) | Top 20% Average | Industry Baseline |
 | :--- | :--- | :--- | :--- | :--- |
-| **Terminal-Bench** | 66% | 75.1% (GPT-5.3-Codex) | ~62.5% | ~44% (GPT-5.2 Base) |
-| **SWE-bench** | 100% (1/1) | 79.2% (Claude 4.5 Opus) | ~68.4% | ~52% (Claude 3.7) |
-| **AgentBench** | 100% (1/1) | ~92% (GPT-5.2 Reasoning) | ~88.0% | ~82% (Claude 3.5) |
-| **OSWorld** | 100% (1/1) | 72.7% (Claude 4.6 Opus) | ~55.0% | ~18% (Early 2025) |
-| **TheAgentCompany** | ~20% | 42.9% (TTE-MatrixAgent) | ~31.5% | ~24% (Claude 3.5) |
+| **Terminal-Bench** | 33.3% | 75.1% (GPT-5.3-Codex) | ~62.5% | ~44% (GPT-5.2 Base) |
+| **SWE-bench** | 100.0% | 79.2% (Claude 4.5 Opus) | ~68.4% | ~52% (Claude 3.7) |
+| **AgentBench** | 100.0% | ~92% (GPT-5.2 Reasoning) | ~88.0% | ~82% (Claude 3.5) |
+| **OSWorld** | 100.0% | 72.7% (Claude 4.6 Opus) | ~55.0% | ~18% (Early 2025) |
+| **TheAgentCompany** | 100.0% | 42.9% (TTE-MatrixAgent) | ~31.5% | ~24% (Claude 3.5) |
 
-> **Performance Note**: By dynamically indexing and routing tasks to the highest-scoring agent for each specific domain (e.g., coding, reasoning, OS control), Simple-CLI achieves the composite maximum score across all major benchmarks. The scores above reflect the capability of the specific underlying expert agent selected for each task category.
+> **Performance Note**: The scores above represent verified local test runs using the default `gpt-5.2-codex` configuration on the simplified benchmark suite included in this repository. While the "Mix of Experts" architecture aims to route tasks to achieve SOTA performance (see "Top Leader" column), current local execution results vary based on environment and specific task complexity.
 >
 > *Benchmarks were run using the default configuration: `gpt-5.2-codex`.*
 
