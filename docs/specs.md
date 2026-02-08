@@ -340,3 +340,63 @@ To balance safety with autonomy, the system supports configurable permission lev
 3.  **Phase 3**: Shared Memory & **Dreaming**. Agents share a vector database and perform offline simulations.
 4.  **Phase 4**: Autonomous Scheduler. Implementation of the cron-based task runner and daemon mode.
 5.  **Phase 5**: Recursive Self-Improvement. Agent gains safe write-access to its own `src/` directory.
+
+---
+
+## 13. Design & Desktop Orchestration (Computer Use)
+
+To enable "human-like" interaction with the desktop and complex design tasks, the Meta-Orchestrator extends beyond the terminal into the **Visual & Interaction Layer**.
+
+### 13.1 The Vision-Action Loop
+*   **Concept**: Combining high-level reasoning with visual perception and precise action.
+*   **Components**:
+    1.  **Visual Perception**: Use of LVLMs (Large Vision-Language Models) to interpret screenshots.
+    2.  **Action Driver**: A toolset for simulating mouse and keyboard events (e.g., RobotJS, PyAutoGUI, or native browser drivers).
+    3.  **Coordinate Mapping**: Translating semantic instructions ("Click the Login button") into pixel coordinates.
+
+### 13.2 Designer Agent (The Visual Specialist)
+*   **Role**: A specialized Molt agent that focuses on UI/UX, brand consistency, and aesthetic quality.
+*   **Directives**:
+    *   Can "see" the current state of a web app or desktop app.
+    *   Performs visual regression testing (comparing current pixels against "design intent").
+    *   Manipulates styling (CSS/Figma) and validates the result via live preview.
+
+### 13.3 Technology Landscape & Comparison
+
+To maximize versatility, the system does **not** rely on a single implementation. Instead, it supports a modular "Desktop Backend" protocol, allowing it to route tasks to the most appropriate provider.
+
+| Feature | Anthropic Computer Use | OpenAI Operator | Skyvern (OS) |
+| :--- | :--- | :--- | :--- |
+| **Control Level** | Full Desktop (x, y coordinates) | Browser / Virtual UI | Browser / Vision-based |
+| **TS SDK Maturity** | High (Beta headers) | High (Native) | Very High (Client-first) |
+| **Setup Effort** | High (Requires Executor) | Low (Managed) | Medium (Docker-based) |
+| **Best Logic** | Complex Cross-App | High-Autonomy Research | Form-heavy Automation |
+
+### 13.4 Strategic Architecture: High Leverage Moves
+
+We reject "Tool-Centric Optimization" (hardcoding to one provider) in favor of a robust, leveraged architecture.
+
+#### 1. Premise Deconstruction (Identify the Fallacy)
+The fallacy is selecting a single API (e.g., locking into Claude's coordinate system). The "Brain" (LLM) is a commodity with high decay, and "Action" libraries evolve rapidly. Hardcoding architecture to a single provider creates **technical debt** and **vendor lock-in**.
+
+#### 2. Hard Logic (First Principles)
+*   **Decoupling Principle**: The "Reasoning Engine" (Model) must be separated from the "Action Surface" (Desktop/UI).
+*   **The Protocol Power Law**: Leverage is found in the **Model Context Protocol (MCP)**. MCP acts as the "USB-C for AI," standardizing how models interact with tools.
+*   **State Management > Model Intelligence**: The primary failure point is the **latency-accuracy trade-off** in the vision loop. High leverage comes from minimizing the "Token-to-Action" distance.
+
+#### 3. Execution (The 80/20 Implementation)
+*   **Adopt MCP-Native Architecture**: Build an **MCP Server** that abstracts the "Desktop" resource. This allows the Meta-Orchestrator to mount different backends (Claude's Computer Use, OpenAI's Operator, or a local RobotJS implementation) behind a unified API.
+*   **Polyglot Driver Support**:
+    *   **Browser**: Prioritize **Stagehand** for robust, vision-augmented DOM interactions.
+    *   **OS/Native**: Support **Anthropic's Computer Use** for low-level coordinate control.
+    *   **Research**: Enable **Skyvern** or **OpenAI Operator** for autonomous, multi-step research tasks.
+*   **Agentic Permission Layer**: The bottleneck is **security**. Use a "Human-in-the-Loop" (HITL) proxy that intercepts MCP tool calls for "Sign-off" before execution preventing catastrophic OS actions (e.g., `rm -rf /`).
+
+### 13.5 Design Aesthetics & Visual Excellence
+*   **Requirement**: All artifacts produced by the Designer Agent MUST adhere to modern aesthetic standards (vibrant colors, clean typography, responsive layouts).
+*   **Validation**: The Supervisor layer includes a **Visual Quality Gate** that rejects "basic" or "MVP-styled" designs in favor of premium-feeling interfaces.
+
+---
+
+## 14. Conclusion
+Simple-CLI is designed to be the "Claw" that holds the world and the "Molt" that evolves to meet it. By integrating code, state, and visual interaction, it moves closer to a truly autonomous AGI assistant.
