@@ -5,6 +5,7 @@ import { exec, spawn, execSync, ChildProcess } from 'child_process';
 import { promisify } from 'util';
 import { z } from 'zod';
 import glob from 'fast-glob';
+import { Scheduler } from './scheduler.js';
 
 const execAsync = promisify(exec);
 const activeProcesses: ChildProcess[] = [];
@@ -577,4 +578,23 @@ export const delegate_cli = {
     }
 };
 
-export const allBuiltins = [readFiles, writeFiles, createTool, scrapeUrl, listFiles, searchFiles, listDir, runCommand, stopCommand, deleteFile, gitTool, linter, delegate_cli];
+export const schedule_task = {
+    name: 'schedule_task',
+    description: 'Register a recurring task to be executed by the agent autonomously.',
+    inputSchema: z.object({
+        cron: z.string().describe('Standard cron expression (e.g. "0 9 * * *")'),
+        prompt: z.string().describe('The instruction to execute'),
+        description: z.string().describe('Human-readable description')
+    }),
+    execute: async ({ cron, prompt, description }: { cron: string, prompt: string, description: string }) => {
+        try {
+            const scheduler = Scheduler.getInstance();
+            const id = await scheduler.scheduleTask(cron, prompt, description);
+            return `Task scheduled successfully with ID: ${id}`;
+        } catch (e: any) {
+            return `Failed to schedule task: ${e.message}`;
+        }
+    }
+};
+
+export const allBuiltins = [readFiles, writeFiles, createTool, scrapeUrl, listFiles, searchFiles, listDir, runCommand, stopCommand, deleteFile, gitTool, linter, delegate_cli, schedule_task];
