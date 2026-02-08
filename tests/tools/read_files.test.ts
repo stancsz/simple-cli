@@ -15,9 +15,8 @@ describe('read_files', () => {
   let testDir: string;
 
   beforeEach(async () => {
-    // Ensure tmpdir exists (it should, but just in case)
-    await mkdir(tmpdir(), { recursive: true });
-    testDir = join(tmpdir(), `simple-cli-test-${Date.now()}-${Math.random().toString(36).substring(7)}`);
+    // Use a directory inside the workspace to pass security checks
+    testDir = join(process.cwd(), '.test_tmp', `simple-cli-test-${Date.now()}-${Math.random().toString(36).substring(7)}`);
     await mkdir(testDir, { recursive: true });
   });
 

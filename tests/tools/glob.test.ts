@@ -16,7 +16,7 @@ describe('glob tool', () => {
   let testDir: string;
 
   beforeEach(async () => {
-    testDir = join(tmpdir(), `simple-cli-glob-test-${Date.now()}-${Math.random()}`);
+    testDir = join(process.cwd(), '.test_tmp', `simple-cli-glob-test-${Date.now()}-${Math.random()}`);
     await mkdir(testDir, { recursive: true });
   });
 

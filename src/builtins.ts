@@ -1,6 +1,6 @@
 import { readFile, writeFile, readdir, unlink, mkdir, stat } from 'fs/promises';
 import { existsSync } from 'fs';
-import { join, resolve, relative, extname } from 'path';
+import { join, resolve, relative, extname, isAbsolute } from 'path';
 import { exec, spawn, execSync, ChildProcess } from 'child_process';
 import { promisify } from 'util';
 import { z } from 'zod';
@@ -38,6 +38,14 @@ process.on('SIGTERM', () => {
     process.exit();
 });
 
+// Helper function to validate path is within allowed workspace
+const isPathAllowed = (p: string): boolean => {
+    const resolvedPath = resolve(p);
+    const workspaceRoot = resolve(process.cwd());
+    const relativePath = relative(workspaceRoot, resolvedPath);
+    return !relativePath.startsWith('..') && !isAbsolute(relativePath);
+};
+
 export const readFiles = {
     name: 'read_files',
     description: 'Read contents of one or more files',
@@ -57,6 +65,10 @@ export const readFiles = {
         const results = [];
         for (const p of paths) {
             try {
+                if (!isPathAllowed(p)) {
+                    results.push({ path: p, error: "Access denied: Path is outside the allowed workspace." });
+                    continue;
+                }
                 if (existsSync(p)) {
                     const content = await readFile(p, 'utf-8');
                     results.push({ path: p, content });
@@ -113,6 +125,12 @@ export const writeFiles = {
                     results.push({ success: false, message: 'File path missing' });
                     continue;
                 }
+
+                if (!isPathAllowed(f.path)) {
+                    results.push({ path: f.path, success: false, message: "Access denied: Path is outside the allowed workspace." });
+                    continue;
+                }
+
                 const dir = resolve(f.path, '..');
                 if (!existsSync(dir)) {
                     await mkdir(dir, { recursive: true });
@@ -157,6 +175,7 @@ export const createTool = {
         scope: z.enum(['local', 'global']).default('local')
     }),
     execute: async ({ source_path, name, description, usage, scope }: { source_path: string, name: string, description: string, usage: string, scope: string }) => {
+        if (!isPathAllowed(source_path)) return `Access denied: Path is outside the allowed workspace.`;
         if (!existsSync(source_path)) return `Source file not found: ${source_path}`;
 
         const ext = extname(source_path);
@@ -255,6 +274,15 @@ export const listFiles = {
         maxResults: z.number().optional()
     }),
     execute: async ({ pattern, path, ignore, includeDirectories, maxResults }: { pattern: string, path: string, ignore: string[], includeDirectories: boolean, maxResults?: number }) => {
+        if (!isPathAllowed(path)) {
+            return {
+                matches: [],
+                count: 0,
+                truncated: false,
+                error: "Access denied: Path is outside the allowed workspace."
+            };
+        }
+
         const files = await glob(pattern, {
             cwd: path,
             ignore: ignore,
@@ -287,6 +315,10 @@ export const searchFiles = {
         filesOnly: z.boolean().default(false)
     }),
     execute: async ({ pattern, path, glob: globPattern, ignoreCase, contextLines, maxResults, filesOnly }: { pattern: string, path: string, glob: string, ignoreCase: boolean, contextLines: number, maxResults?: number, filesOnly: boolean }) => {
+        if (!isPathAllowed(path)) {
+            return { matches: [], count: 0, truncated: false, error: "Access denied: Path is outside the allowed workspace." };
+        }
+
         let files: string[] = [];
         try {
             const stats = await stat(path);
@@ -377,6 +409,8 @@ export const listDir = {
     description: 'List contents of a directory',
     inputSchema: z.object({ path: z.string().default('.') }),
     execute: async ({ path }: { path: string }) => {
+        if (!isPathAllowed(path)) return "Access denied: Path is outside the allowed workspace.";
+
         const items = await readdir(path, { withFileTypes: true });
         return items.map(i => ({ name: i.name, isDir: i.isDirectory() }));
     }
@@ -453,6 +487,8 @@ export const deleteFile = {
         const path = args.path || args.file || args.filename;
         if (!path) return "Error: 'path' argument required";
 
+        if (!isPathAllowed(path)) return "Access denied: Path is outside the allowed workspace.";
+
         if (existsSync(path)) {
             await unlink(path);
             return `Deleted ${path}`;
@@ -471,6 +507,8 @@ export const gitTool = {
         message: z.string().optional()
     }),
     execute: async ({ operation, cwd, files, message }: { operation: string, cwd: string, files?: string[], message?: string }) => {
+        if (!isPathAllowed(cwd)) return { success: false, error: "Access denied: Path is outside the allowed workspace." };
+
         const run = async (cmd: string) => {
             try {
                 const { stdout } = await execAsync(cmd, { cwd });
@@ -509,6 +547,8 @@ export const linter = {
     description: 'Lint a file',
     inputSchema: z.object({ path: z.string() }),
     execute: async ({ path }: { path: string }) => {
+        if (!isPathAllowed(path)) return { passed: false, errors: [{ message: 'Access denied: Path is outside the allowed workspace.' }] };
+
         if (!existsSync(path)) return { passed: false, errors: [{ message: 'File not found' }] };
         const ext = extname(path);
         let cmd = '';
@@ -590,6 +630,10 @@ export const delegate_cli = {
             // Handle file arguments for agents that don't support stdin or use --file flags
             if (!agent.supports_stdin && context_files && context_files.length > 0) {
                  for (const file of context_files) {
+                     if (!isPathAllowed(file)) {
+                         console.warn(`[delegate_cli] Skipped restricted file: ${file}`);
+                         continue;
+                     }
                      const flag = agent.context_flag !== undefined ? agent.context_flag : '--file';
                      if (flag) {
                          cmdArgs.push(flag, file);
@@ -610,6 +654,10 @@ export const delegate_cli = {
                  // Format: --- filename ---\n content \n ---
                  let context = "";
                  for (const file of context_files) {
+                     if (!isPathAllowed(file)) {
+                         console.warn(`[delegate_cli] Skipped restricted file: ${file}`);
+                         continue;
+                     }
                      if (existsSync(file)) {
                          const content = await readFile(file, 'utf-8');
                          context += `--- ${file} ---\n${content}\n\n`;
