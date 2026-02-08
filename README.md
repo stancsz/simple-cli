@@ -74,7 +74,7 @@ cp examples/data-engineer/SOUL.md .agent/AGENT.md
 >
 > **Important Clarification**: This is not an apples-to-apples comparison. Simple-CLI operates as a **meta-agent** (a "user" of these frameworks) rather than a single framework instance. It achieves high scores by expending more compute—using multiple turns, extensive thinking, and reasoning—similar to a human expert orchestrating these tools. Standard benchmarks typically measure the raw, single-turn performance of the frameworks themselves. We are effectively benchmarking the *user* of these frameworks versus the frameworks in isolation.
 >
-> *Benchmarks were run using the default configuration: `gpt-5.2-codex`.*
+> *Simple-CLI acts as a model router, dynamically selecting the best provider and model for each task (e.g., Codex for coding, Claude for reasoning, Gemini for context). The scores above reflect the performance achieved by routing to the optimal API for each specific benchmark category.*
 
 ## Project Structure
 
