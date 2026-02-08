@@ -90,25 +90,6 @@ try {
 	/* ignore if child_process shape differs */
 }
 
-// As a last-resort triage aid, intercept EventEmitter 'error' emits globally
-try {
-	const events = require('events');
-	const origEmitEvt = events.EventEmitter.prototype.emit;
-	if (!events.EventEmitter.prototype.__patched_for_vitest__) {
-		events.EventEmitter.prototype.__patched_for_vitest__ = true;
-		events.EventEmitter.prototype.emit = function (event: string, ...args: any[]) {
-			try {
-				if (event === 'error') {
-					try { appendLog('EventEmitter.error: ' + (args[0] && args[0].stack ? args[0].stack : String(args[0]))); } catch { }
-					// swallow to avoid process crash during triage; tests should be fixed to handle errors
-					return true;
-				}
-			} catch (e) { /* best effort */ }
-			return origEmitEvt.call(this, event, ...args);
-		};
-	}
-} catch (e) { /* ignore */ }
-
 // Capture recent stderr writes to help triage worker crashes
 try {
 	const origStderrWrite = process.stderr.write.bind(process.stderr) as any;
