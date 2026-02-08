@@ -68,7 +68,7 @@ export class Engine {
         this.learningManager = new LearningManager(process.cwd());
     }
 
-    async run(ctx: Context, initialPrompt?: string) {
+    async run(ctx: Context, initialPrompt?: string, options: { interactive: boolean } = { interactive: true }) {
         await this.learningManager.load();
         let input = initialPrompt;
         await this.mcp.init();
@@ -79,6 +79,7 @@ export class Engine {
 
         while (true) {
             if (!input) {
+                if (!options.interactive) break;
                 const res = await text({ message: pc.cyan('Chat') });
                 if (isCancel(res)) break;
                 input = res as string;
