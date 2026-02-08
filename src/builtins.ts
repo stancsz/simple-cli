@@ -6,6 +6,7 @@ import { promisify } from 'util';
 import { z } from 'zod';
 import glob from 'fast-glob';
 import { Scheduler } from './scheduler.js';
+import { loadConfig } from './config.js';
 
 const execAsync = promisify(exec);
 const activeProcesses: ChildProcess[] = [];
@@ -158,20 +159,34 @@ export const createTool = {
     execute: async ({ source_path, name, description, usage, scope }: { source_path: string, name: string, description: string, usage: string, scope: string }) => {
         if (!existsSync(source_path)) return `Source file not found: ${source_path}`;
 
-        const content = await readFile(source_path, 'utf-8');
         const ext = extname(source_path);
         const filename = `${name}${ext}`;
+        const targetDir = scope === 'global'
+            ? join(process.env.HOME || process.cwd(), '.agent', 'tools')
+            : join(process.cwd(), '.agent', 'tools');
 
+        // Check for existing tools
+        if (existsSync(join(targetDir, filename))) {
+            return `Error: Tool '${name}' already exists at ${join(targetDir, filename)}. Please use a different name or delete the existing tool.`;
+        }
+
+        // Check for similar names (simple containment)
+        if (existsSync(targetDir)) {
+            const existing = await readdir(targetDir);
+            const similar = existing.find(f => f.startsWith(name) || name.startsWith(f.split('.')[0]));
+            if (similar) {
+                // Warning only, allow creation but notify
+                console.warn(`Warning: A similar tool '${similar}' already exists.`);
+            }
+        }
+
+        const content = await readFile(source_path, 'utf-8');
         let header = '';
         if (ext === '.js' || ext === '.ts') {
             header = `/**\n * ${name}\n * ${description}\n * Usage: ${usage}\n */\n\n`;
         } else if (ext === '.py') {
             header = `"""\n${name}\n${description}\nUsage: ${usage}\n"""\n\n`;
         }
-
-        const targetDir = scope === 'global'
-            ? join(process.env.HOME || process.cwd(), '.agent', 'tools')
-            : join(process.cwd(), '.agent', 'tools');
 
         await mkdir(targetDir, { recursive: true });
         const targetPath = join(targetDir, filename);
@@ -552,28 +567,82 @@ export const delegate_cli = {
     description: 'Delegate a complex task to a specialized external CLI agent (Codex, Gemini, Claude).',
     inputSchema: z.object({
         cli: z.string(),
-        task: z.string()
+        task: z.string(),
+        context_files: z.array(z.string()).optional()
     }),
-    execute: async ({ cli, task }: { cli: string, task: string }) => {
-        // --- LIVE EXECUTION ---
+    execute: async ({ cli, task, context_files }: { cli: string, task: string, context_files?: string[] }) => {
         try {
             console.log(`[delegate_cli] Spawning external process for ${cli}...`);
+            const config = await loadConfig();
 
-            // In a real production scenario, this would be: 
-            // const cmd = cli; // e.g., 'gemini' or 'codex'
-
-            // For this LIVE TEST, we use our local mock agent:
-            const cmd = `npx tsx tests/manual_scripts/mock_cli.ts "${task}"`;
-
-            const { stdout, stderr } = await execAsync(cmd);
-
-            if (stderr) {
-                console.warn(`[delegate_cli] Stderr: ${stderr}`);
+            // Default to mock if no config for this agent
+            if (!config.agents || !config.agents[cli]) {
+                console.warn(`[delegate_cli] No configuration found for '${cli}'. Falling back to mock.`);
+                const cmd = `npx tsx tests/manual_scripts/mock_cli.ts "${task}"`;
+                const { stdout, stderr } = await execAsync(cmd);
+                if (stderr) console.warn(`[delegate_cli] Stderr: ${stderr}`);
+                return `[${cli} CLI (Mock)]:\n${stdout.trim()}`;
             }
 
-            return `[${cli} CLI (Live Process)]:\n${stdout.trim()}`;
+            const agent = config.agents[cli];
+            const cmdArgs = [...(agent.args || []), task];
+
+            // Handle file arguments for agents that don't support stdin or use --file flags
+            if (!agent.supports_stdin && context_files && context_files.length > 0) {
+                 for (const file of context_files) {
+                     const flag = agent.context_flag !== undefined ? agent.context_flag : '--file';
+                     if (flag) {
+                         cmdArgs.push(flag, file);
+                     } else {
+                         cmdArgs.push(file);
+                     }
+                 }
+            }
+
+            const child = spawn(agent.command, cmdArgs, {
+                env: { ...process.env, ...agent.env },
+                shell: false // Use false for safer arg handling, unless command relies on shell features
+            });
+
+            // Handle Stdin Context Injection
+            if (agent.supports_stdin && context_files && context_files.length > 0) {
+                 // Read files and pipe to stdin
+                 // Format: --- filename ---\n content \n ---
+                 let context = "";
+                 for (const file of context_files) {
+                     if (existsSync(file)) {
+                         const content = await readFile(file, 'utf-8');
+                         context += `--- ${file} ---\n${content}\n\n`;
+                     }
+                 }
+                 child.stdin.write(context);
+                 child.stdin.end();
+            } else {
+                 child.stdin.end();
+            }
+
+            let stdout = '';
+            let stderr = '';
+
+            child.stdout.on('data', d => stdout += d.toString());
+            child.stderr.on('data', d => stderr += d.toString());
+
+            return new Promise((resolve, reject) => {
+                child.on('close', code => {
+                    if (stderr) console.warn(`[delegate_cli] Stderr: ${stderr}`);
+                    if (code === 0) {
+                        resolve(`[${cli} CLI]:\n${stdout.trim()}`);
+                    } else {
+                        resolve(`[${cli} CLI] Process exited with code ${code}.\nOutput: ${stdout}\nError: ${stderr}`);
+                    }
+                });
+                child.on('error', (err) => {
+                    resolve(`[${cli} CLI] Failed to start process: ${err.message}`);
+                });
+            });
+
         } catch (e: any) {
-            return `[${cli} CLI]: Error executing external process: ${e.message}\nOutput: ${e.stdout || ''}\nError: ${e.stderr || ''}`;
+            return `[${cli} CLI]: Error executing external process: ${e.message}`;
         }
     }
 };
