@@ -8,6 +8,7 @@ import { MCP } from './mcp.js';
 import { getActiveSkill } from './skills.js';
 import { showBanner } from './tui.js';
 import { Scheduler } from './scheduler.js';
+import { log, outro } from '@clack/prompts';
 
 async function main() {
   const args = process.argv.slice(2);
@@ -56,48 +57,48 @@ async function main() {
   const processDueTasks = async () => {
       const dueTasks = await scheduler.getDueTasks();
       if (dueTasks.length > 0) {
-          console.log(`⏰ Found ${dueTasks.length} scheduled tasks due.`);
+          log.info(`Found ${dueTasks.length} scheduled tasks due.`);
           for (const task of dueTasks) {
-              console.log(`Running task: ${task.description} (${task.cron})`);
+              log.step(`Running task: ${task.description} (${task.cron})`);
               // Use a fresh context for each task
               const taskCtx = new Context(cwd, await getActiveSkill(cwd));
               try {
                   // Run non-interactively
                   await engine.run(taskCtx, task.prompt, { interactive: false });
                   await scheduler.markTaskRun(task.id, true);
-                  console.log(`Task ${task.id} completed.`);
+                  log.success(`Task ${task.id} completed.`);
               } catch (e: any) {
-                  console.error(`Task ${task.id} failed: ${e.message}`);
+                  log.error(`Task ${task.id} failed: ${e.message}`);
                   await scheduler.markTaskRun(task.id, false);
               }
           }
-          console.log('All scheduled tasks processed.');
+          log.info('All scheduled tasks processed.');
       }
   };
 
   if (daemon) {
-      console.log('Running in daemon mode. Checking for tasks every 60s...');
       showBanner();
+      log.info('Running in daemon mode. Checking for tasks every 60s...');
 
       while (true) {
           try {
               await processDueTasks();
-          } catch (e) {
-              console.error('Error in daemon loop:', e);
+          } catch (e: any) {
+              log.error(`Error in daemon loop: ${e.message}`);
           }
           // Sleep for 60 seconds
           await new Promise(resolve => setTimeout(resolve, 60000));
       }
   } else {
+      showBanner();
       // Standard run: check tasks once, then interactive
       await processDueTasks();
 
       const skill = await getActiveSkill(cwd);
       const ctx = new Context(cwd, skill);
 
-      showBanner();
-
       await engine.run(ctx, prompt || undefined, { interactive });
+      outro('Session finished.');
   }
 }
 
