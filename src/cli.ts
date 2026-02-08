@@ -1,12 +1,12 @@
 #!/usr/bin/env node
 import 'dotenv/config';
-import pc from 'picocolors';
 import { statSync } from 'fs';
 import { Engine, Context, Registry } from './engine.js';
 import { allBuiltins } from './builtins.js';
 import { createLLM } from './llm.js';
 import { MCP } from './mcp.js';
 import { getActiveSkill } from './skills.js';
+import { showBanner } from './tui.js';
 
 async function main() {
   const args = process.argv.slice(2);
@@ -46,7 +46,7 @@ async function main() {
   const skill = await getActiveSkill(cwd);
   const ctx = new Context(cwd, skill);
 
-  console.log(`\n ${pc.bgCyan(pc.black(' SIMPLE-CLI '))} ${pc.dim('v0.4.0')}\n`);
+  showBanner();
 
   await engine.run(ctx, prompt || undefined, { interactive });
 }
