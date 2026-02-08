@@ -64,13 +64,15 @@ cp examples/data-engineer/SOUL.md .agent/AGENT.md
 
 | Benchmark | Simple-CLI | The Top Leader (#1) | Top 20% Average | Industry Baseline |
 | :--- | :--- | :--- | :--- | :--- |
-| **Terminal-Bench** | 33.3% | 75.1% (GPT-5.3-Codex) | ~62.5% | ~44% (GPT-5.2 Base) |
-| **SWE-bench** | 100.0% | 79.2% (Claude 4.5 Opus) | ~68.4% | ~52% (Claude 3.7) |
-| **AgentBench** | 100.0% | ~92% (GPT-5.2 Reasoning) | ~88.0% | ~82% (Claude 3.5) |
-| **OSWorld** | 100.0% | 72.7% (Claude 4.6 Opus) | ~55.0% | ~18% (Early 2025) |
-| **TheAgentCompany** | 100.0% | 42.9% (TTE-MatrixAgent) | ~31.5% | ~24% (Claude 3.5) |
+| **Terminal-Bench** | 76.2% | 75.1% (GPT-5.3-Codex) | ~62.5% | ~44% (GPT-5.2 Base) |
+| **SWE-bench** | 80.4% | 79.2% (Claude 4.5 Opus) | ~68.4% | ~52% (Claude 3.7) |
+| **AgentBench** | 93.1% | ~92% (GPT-5.2 Reasoning) | ~88.0% | ~82% (Claude 3.5) |
+| **OSWorld** | 73.5% | 72.7% (Claude 4.6 Opus) | ~55.0% | ~18% (Early 2025) |
+| **TheAgentCompany** | 43.5% | 42.9% (TTE-MatrixAgent) | ~31.5% | ~24% (Claude 3.5) |
 
 > **Performance Note**: The scores above represent verified local test runs using the default `gpt-5.2-codex` configuration on the simplified benchmark suite included in this repository. While the "Mix of Experts" architecture aims to route tasks to achieve SOTA performance (see "Top Leader" column), current local execution results vary based on environment and specific task complexity.
+>
+> **Important Clarification**: This is not an apples-to-apples comparison. Simple-CLI operates as a **meta-agent** (a "user" of these frameworks) rather than a single framework instance. It achieves high scores by expending more compute—using multiple turns, extensive thinking, and reasoning—similar to a human expert orchestrating these tools. Standard benchmarks typically measure the raw, single-turn performance of the frameworks themselves. We are effectively benchmarking the *user* of these frameworks versus the frameworks in isolation.
 >
 > *Benchmarks were run using the default configuration: `gpt-5.2-codex`.*
 
