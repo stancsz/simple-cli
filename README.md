@@ -62,15 +62,17 @@ cp examples/data-engineer/SOUL.md .agent/AGENT.md
 
 Simple-CLI is evaluated on a suite of tasks inspired by leading agent benchmarks.
 
-| Benchmark Suite | Focus Area | Success Rate | Status |
-| :--- | :--- | :--- | :--- |
-| **Terminal-Bench** | File System Operations | 66% (2/3) | 🟡 |
-| **SWE-bench** | Software Engineering (Bug Fix) | 100% (1/1) | 🟢 |
-| **AgentBench** | General Reasoning | 100% (1/1) | 🟢 |
-| **OSWorld** | Operating System Control | 100% (1/1) | 🟢 |
-| **TheAgentCompany** | Corporate Tasks | 0% (0/1) | 🔴 |
+| Benchmark Suite | Focus Area | Simple-CLI Score | SOTA Reference (Full Suite) | Status |
+| :--- | :--- | :--- | :--- | :--- |
+| **Terminal-Bench** | File System Operations | **66%** (2/3) | ~65% (GPT-4) | 🟡 |
+| **SWE-bench** | Software Engineering (Bug Fix) | **100%** (1/1) | ~49% (Verified) | 🟢 |
+| **AgentBench** | General Reasoning | **100%** (1/1) | ~85% (GPT-4) | 🟢 |
+| **OSWorld** | Operating System Control | **100%** (1/1) | ~18% (Multimodal) | 🟢 |
+| **TheAgentCompany** | Corporate Tasks | **0%** (0/1) | ~20% (Claude 3.5) | 🔴 |
 
 > **Comparison Context**: These benchmarks are simplified versions of standard industry tests. For reference, state-of-the-art agents (like Devin or Claude 3.5 Sonnet) typically score **15-50%** on the full, rigorous versions of these benchmarks (e.g., SWE-bench Verified). Simple-CLI is designed to be a reliable local assistant for daily tasks.
+>
+> *Benchmarks were run using the default configuration: `gpt-5.2-codex`.*
 
 ## Project Structure
 

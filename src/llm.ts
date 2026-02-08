@@ -67,7 +67,7 @@ export class LLM {
 }
 
 export const createLLM = (model?: string) => {
-    const m = model || process.env.MODEL || 'openai:gpt-4o';
+    const m = model || process.env.MODEL || 'openai:gpt-5.2-codex';
     const [p, n] = m.includes(':') ? m.split(':') : ['openai', m];
     return new LLM({ provider: p, model: n });
 };
