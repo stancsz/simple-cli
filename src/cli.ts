@@ -6,6 +6,7 @@ import { Engine, Context, Registry } from './engine.js';
 import { allBuiltins } from './builtins.js';
 import { createLLM } from './llm.js';
 import { MCP } from './mcp.js';
+import { getActiveSkill } from './skills.js';
 
 async function main() {
   const args = process.argv.slice(2);
@@ -37,30 +38,8 @@ async function main() {
   const provider = createLLM();
   const engine = new Engine(provider, registry, mcp);
 
-  const defaultSkill = {
-    name: 'code',
-    systemPrompt: `You are a helpful coding assistant. Use tools to solve tasks.
-You must output your response in JSON format.
-The JSON should have the following structure:
-{
-  "thought": "Your reasoning here",
-  "tool": "tool_name",
-  "args": { "arg_name": "value" }
-}
-If you don't need to use a tool, use "tool": "none" and provide a "message".
-{
-  "thought": "Reasoning",
-  "tool": "none",
-  "message": "Response to user"
-}
-Important:
-- If a task requires multiple steps, perform them one by one.
-- Do not ask for confirmation if you have enough information to proceed.
-- When writing to files that might exist (like logs), read them first and append to them if necessary, unless instructed to overwrite.
-`
-  };
-
-  const ctx = new Context(cwd, defaultSkill);
+  const skill = await getActiveSkill(cwd);
+  const ctx = new Context(cwd, skill);
 
   console.log(`\n ${pc.bgCyan(pc.black(' SIMPLE-CLI '))} ${pc.dim('v0.4.0')}\n`);
 

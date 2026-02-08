@@ -4,17 +4,25 @@
 
 # Simple-CLI ⚡
 
-**The Terminal-Native AI Partner. Lean. Local. Limitless.**
+**The Project-Native AI Partner. Clean. Context-Aware. Autonomous.**
 
-Simple-CLI is an all-in-one autonomous agent designed to be your synthetic human colleague. It manages sessions, memories, and self-reflection to execute tasks with 99% autonomy.
+Simple-CLI is an autonomous agent that lives within your project. It uses a `.agent` folder to manage its context, skills, memory, and tools, keeping your project clean and self-contained.
+
+## 🧠 The `.agent` Folder
+
+The heart of the agent is the `.agent` directory in your project root. This is where the agent's brain lives.
+
+*   **`AGENT.md`**: Defines the agent's persona, strategy, and instructions. This is the "Soul" of your agent.
+*   **`tools/`**: Custom scripts and tools that the agent creates or uses.
+*   **`learnings.json`**: The agent's long-term memory and reflections.
 
 ## Key Features
 
-1.  **AnyLLM Integration**: Seamlessly switch between OpenAI Codex, Google Gemini, Anthropic Claude, and more.
-2.  **Autonomous Agent**: Manages its own state, reflects on failures, and adapts its strategy.
-3.  **Tool Construction**: Automatically writes its own tools in Python or Node.js and remembers them for future use.
-4.  **Internet Capable**: Browses the web to find documentation, download tools, or debug issues when it gets stuck.
-5.  **Synthetic Colleague**: "Give me a report on today's stock market everyday" - it understands intent and executes like a human.
+1.  **Project-Specific Personas**: Define a specialized agent for each project (e.g., "Debug Scheduler", "Data Engineer") using `AGENT.md`.
+2.  **Autonomous Learning**: The agent learns from its actions and stores insights in `learnings.json`.
+3.  **Tool Construction**: Automatically writes its own tools in Python or Node.js and saves them to `.agent/tools/`.
+4.  **Clean Context Management**: No hidden global state. Everything is local to your project.
+5.  **Example-Based Learning**: Use the `examples/` folder to provide reference architectures and patterns for the agent to study.
 
 ## Installation
 
@@ -25,30 +33,36 @@ export OPENAI_API_KEY="..." # Or ANTHROPIC_API_KEY, GEMINI_API_KEY
 
 ## Usage
 
-**General Task:**
-```bash
-simple "Refactor the authentication layer in src/auth"
+**1. Initialize an Agent**
+Create a `.agent/AGENT.md` file in your project root:
+
+```markdown
+# My Project Agent
+
+You are an expert in this project's architecture.
+Your goal is to maintain code quality and ensure high test coverage.
 ```
 
-**Autonomous Research:**
+**2. Run the Agent**
 ```bash
-simple "Search the web for the latest SvelteKit breaking changes and summarize them"
+simple "Refactor the authentication layer"
 ```
 
-**Persona Mode:**
-Use specialized personas for specific roles (Data Engineer, QA, etc.).
-See [examples/](examples/) for available personas.
+The agent will load the persona from `.agent/AGENT.md`, use tools from `.agent/tools/`, and learn from `examples/`.
+
+**3. Use Built-in Examples**
+Explore `examples/` for pre-defined personas. To use one, you can copy its configuration:
 
 ```bash
-export CLAW_WORKSPACE=$(pwd)/examples/data-engineer
-simple --claw "Optimize the ETL pipeline"
+mkdir .agent
+cp examples/data-engineer/SOUL.md .agent/AGENT.md
 ```
 
 ## Project Structure
 
-*   `src/`: Core logic and AnyLLM bridge.
-*   `.simple/`: Local agent state (memory, learnings).
-*   `examples/`: Pre-defined personas (SOULs).
+*   `.agent/`: The agent's configuration and memory.
+*   `examples/`: Reference personas and patterns.
+*   `src/`: Core logic.
 
 ---
 MIT © [Stan Chen](https://github.com/stancsz)
