@@ -12,10 +12,11 @@
 
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import { execSync, spawn } from 'child_process';
-import { mkdirSync, writeFileSync, existsSync, rmSync, readFileSync, readdirSync } from 'fs';
+import { mkdirSync, writeFileSync, existsSync, rmSync, readFileSync, readdirSync, appendFileSync } from 'fs';
 import { join } from 'path';
 
 const DEMO_DIR = join(process.cwd(), 'demo_downloads');
+const LOG_FILE = join(process.cwd(), 'docs/feedbacks/claw-demo.log.md');
 const TIMEOUT = 300000; // 5 minutes for double run with potentially slow LLMs
 
 describe('Claw Mode Demo - File Organization', () => {
@@ -55,18 +56,30 @@ describe('Claw Mode Demo - File Organization', () => {
     });
 
     async function runClaw(intent: string) {
+        appendFileSync(LOG_FILE, `\n\n## Intent: ${intent}\n\n`);
+
         return new Promise<void>((resolve, reject) => {
             const entryTs = join(process.cwd(), 'src', 'cli.ts');
             // Ensure args match new cli.ts logic: directory first, then intent
             const cliProcess = spawn(process.execPath, ['--loader', 'ts-node/esm', entryTs, DEMO_DIR, intent], {
                 env: {
                     ...process.env,
+                    MODEL: 'openai:gpt-4o',
                     COLUMNS: '100',
                     LINES: '24',
                     TS_NODE_TRANSPILE_ONLY: '1',
                     CLAW_WORKSPACE: process.env.CLAW_WORKSPACE || join(process.cwd(), 'examples/full-agent/.agent')
                 },
-                stdio: 'inherit' // Enable for debugging
+                stdio: 'pipe'
+            });
+
+            cliProcess.stdout.on('data', (data) => {
+                process.stdout.write(data);
+                appendFileSync(LOG_FILE, data);
+            });
+            cliProcess.stderr.on('data', (data) => {
+                process.stderr.write(data);
+                appendFileSync(LOG_FILE, data);
             });
 
             const timeout = setTimeout(() => {
@@ -88,7 +101,7 @@ describe('Claw Mode Demo - File Organization', () => {
 
     it('should generate JIT agent and organize files in batches', async () => {
         // Updated intent to be "Scan the current directory" instead of "Downloads folder" to avoid confusion
-        const intent = 'Scan the current directory. Sort images (jpg, png) into /Photos, docs (pdf, docx) into /Documents, and installers (exe, msi) into /Trash. If you find a receipt, extract the total and append it to Expenses.csv (read existing file first to preserve history) before moving the file.';
+        const intent = 'Scan the current directory. Sort images (jpg, png) into /Photos, docs (pdf, docx) into /Documents, and installers (exe, msi) into /Trash. If you find a receipt, extract the total and append it to Expenses.csv (read existing file first to preserve history) before moving the file. Execute the first step immediately. Perform one action at a time. Do not batch tool calls.';
 
         console.log('\n🧬 Starting Claw Mode Demo Phase 1...');
         await runClaw(intent);

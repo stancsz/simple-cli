@@ -1,10 +1,11 @@
 import { describe, it, expect, beforeAll } from 'vitest';
 import { spawn } from 'child_process';
 import { resolve, join } from 'path';
-import { mkdirSync, existsSync, rmSync, readFileSync } from 'fs';
+import { mkdirSync, existsSync, rmSync, readFileSync, appendFileSync } from 'fs';
 
 const DEMO_DIR = resolve('./test_claw_evolution');
 const cliPath = resolve('./dist/cli.js');
+const LOG_FILE = resolve('./docs/feedbacks/claw-evolution.log.md');
 
 describe('Claw Self-Evolution', () => {
     beforeAll(() => {
@@ -26,14 +27,24 @@ describe('Claw Self-Evolution', () => {
 });
 
 async function runClaw(intent: string): Promise<string> {
+    appendFileSync(LOG_FILE, `\n\n## Intent: ${intent}\n\n`);
+
     return new Promise((resolve, reject) => {
         const cliProcess = spawn(process.execPath, [cliPath, DEMO_DIR, '-claw', intent, '--yolo'], {
-            env: { ...process.env, CLAW_MODEL: 'google:gemini-1.5-flash', DEBUG: 'true' }
+            env: { ...process.env, MODEL: 'openai:gpt-4o', DEBUG: 'true' }
         });
 
         let stdout = '';
-        cliProcess.stdout.on('data', (data) => stdout += data.toString());
-        cliProcess.stderr.on('data', (data) => stdout += data.toString());
+        cliProcess.stdout.on('data', (data) => {
+            const chunk = data.toString();
+            stdout += chunk;
+            appendFileSync(LOG_FILE, chunk);
+        });
+        cliProcess.stderr.on('data', (data) => {
+            const chunk = data.toString();
+            stdout += chunk;
+            appendFileSync(LOG_FILE, chunk);
+        });
 
         cliProcess.on('close', (code) => {
             resolve(stdout);
