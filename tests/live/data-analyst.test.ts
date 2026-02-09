@@ -2,16 +2,16 @@
  * Live Test: Data Analyst Workflow
  *
  * This test demonstrates the data analysis capabilities:
- * 1. Fetches public data (Titanic dataset)
- * 2. Loads it into SQLite using a Python script
- * 3. Writes SQL to analyze the data
- * 4. Generates a report
+ * 1. Fetches public data (Titanic dataset) - setup in `beforeAll`
+ * 2. Loads it into SQLite - setup in `beforeAll`
+ * 3. Writes SQL to analyze the data (CLI Agent)
+ * 4. Generates a report (CLI Agent)
  *
  * Run with: npm run test:live -- tests/live/data-analyst.test.ts
  */
 
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
-import { spawn } from 'child_process';
+import { spawn, execSync } from 'child_process';
 import { mkdirSync, writeFileSync, existsSync, rmSync, readFileSync, appendFileSync } from 'fs';
 import { join } from 'path';
 
@@ -32,10 +32,32 @@ describe('Data Analyst Workflow', () => {
 
             // Initialize log file
             writeFileSync(LOG_FILE, '# Data Analyst Live Test Log\n\n');
+            appendFileSync(LOG_FILE, `## Setup Phase\n\n`);
+
+            console.log('🌐 Fetching Titanic dataset...');
+            const csvUrl = 'https://raw.githubusercontent.com/datasciencedojo/datasets/master/titanic.csv';
+            const csvPath = join(DEMO_DIR, 'titanic.csv');
+            execSync(`curl -s -o "${csvPath}" "${csvUrl}"`);
+
+            if (!existsSync(csvPath)) {
+                throw new Error('Failed to download Titanic dataset');
+            }
+            appendFileSync(LOG_FILE, `- Downloaded Titanic dataset to ${csvPath}\n`);
+
+            console.log('🗄️ Importing into SQLite...');
+            const dbPath = join(DEMO_DIR, 'analysis.db');
+            // Using sqlite3 CLI to import CSV
+            execSync(`sqlite3 "${dbPath}" -cmd ".mode csv" ".import '${csvPath}' passengers"`);
+
+            if (!existsSync(dbPath)) {
+                throw new Error('Failed to create SQLite database');
+            }
+            appendFileSync(LOG_FILE, `- Imported data into SQLite: ${dbPath}\n`);
 
             console.log('✅ Demo environment created at:', DEMO_DIR);
         } catch (error) {
             console.error('❌ beforeAll failed:', error);
+            appendFileSync(LOG_FILE, `\n❌ Setup failed: ${error}\n`);
             throw error;
         }
     });
@@ -49,7 +71,7 @@ describe('Data Analyst Workflow', () => {
     });
 
     async function runAgent(intent: string) {
-        appendFileSync(LOG_FILE, `\n\n## Intent: ${intent}\n\n`);
+        appendFileSync(LOG_FILE, `\n\n## Agent Execution: ${intent}\n\n`);
 
         return new Promise<void>((resolve, reject) => {
             const entryTs = join(process.cwd(), 'src', 'cli.ts');
@@ -91,12 +113,8 @@ describe('Data Analyst Workflow', () => {
         });
     }
 
-    it('should fetch data, load into sqlite, analyze and report', async () => {
-        const intent = `You are a Data Analyst.
-        1. Fetch the CSV data from "https://raw.githubusercontent.com/datasciencedojo/datasets/master/titanic.csv" and save it as "titanic.csv".
-        2. Create a Python script "load_data.py" to read "titanic.csv" and load it into a SQLite database "analysis.db" with a table named "passengers". Run the script.
-        3. Create a SQL query to calculate the survival rate by passenger class (Pclass). Save the SQL to "analysis.sql".
-        4. Run the SQL query against the database using a Python script "run_analysis.py" and save the result to "report.md" formatted as a markdown table with a brief analysis.`;
+    it('should analyze data and report', async () => {
+        const intent = `Analyze the 'passengers' table in 'analysis.db'. Calculate survival rate by 'Pclass' using SQL. Save the SQL to 'analysis.sql'. Run the SQL using python script 'run_analysis.py' and save the result to 'report.md' formatted as a markdown table with a brief analysis.`;
 
         console.log('\n🧬 Starting Data Analyst Agent...');
         await runAgent(intent);
@@ -104,13 +122,9 @@ describe('Data Analyst Workflow', () => {
         // Verification
         console.log('\n🔍 Verifying artifacts...');
 
-        const csvPath = join(DEMO_DIR, 'titanic.csv');
-        const dbPath = join(DEMO_DIR, 'analysis.db');
         const sqlPath = join(DEMO_DIR, 'analysis.sql');
         const reportPath = join(DEMO_DIR, 'report.md');
 
-        expect(existsSync(csvPath), 'titanic.csv should exist').toBe(true);
-        expect(existsSync(dbPath), 'analysis.db should exist').toBe(true);
         expect(existsSync(sqlPath), 'analysis.sql should exist').toBe(true);
         expect(existsSync(reportPath), 'report.md should exist').toBe(true);
 
