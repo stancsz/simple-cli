@@ -1,7 +1,7 @@
 # 🚀 Simple-CLI: The AI Meta-Orchestrator
 **Turn your terminal into an autonomous software development agency.**
 
-![License](https://img.shields.io/badge/license-MIT-blue.svg) ![Version](https://img.shields.io/badge/version-0.5.0-green.svg)
+![License](https://img.shields.io/badge/license-MIT-blue.svg) ![Version](https://img.shields.io/badge/version-0.5.0-green.svg) ![NPM Downloads](https://img.shields.io/npm/dw/@stan-chen/simple-cli)
 
 Simple-CLI is not just another coding assistant. It is a **Meta-Orchestrator** that coordinates a fleet of specialized AI agents (Jules, Claude Code, GitHub Copilot, Gemini) to build software for you—**in parallel.**
 
