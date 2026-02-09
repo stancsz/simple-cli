@@ -24,14 +24,14 @@ The suite includes tasks inspired by:
 To run all benchmarks:
 
 ```bash
-npx tsx benchmarks/runner.ts
+npx tsx tests/benchmarks/runner.ts
 ```
 
 This will execute each task in a temporary directory and report Pass/Fail status.
 
 ## Adding New Benchmarks
 
-1.  Open `benchmarks/definitions.ts`.
+1.  Open `tests/benchmarks/definitions.ts`.
 2.  Add a new `Benchmark` object to the `benchmarks` array.
 3.  Define tasks with:
     -   `name`: Task name.
