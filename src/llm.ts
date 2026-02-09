@@ -75,7 +75,8 @@ export class LLM {
                 return this.parse(text);
             } catch (e: any) {
                 lastError = e;
-                console.warn(`[LLM] Provider ${config.provider}:${config.model} failed, trying next...`);
+                console.warn(`[LLM] Provider ${config.provider}:${config.model} failed: ${e.message}`);
+                console.warn(`[LLM] Trying next...`);
             }
         }
 

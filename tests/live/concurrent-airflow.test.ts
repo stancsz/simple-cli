@@ -37,7 +37,7 @@ describe('Concurrent Airflow Pipeline Test', () => {
                 worker: {
                     command: process.execPath,
                     args: ['--loader', 'ts-node/esm', cliPath, '--non-interactive', '--'],
-                    env: { MODEL: process.env.MODEL || 'openai:gpt-3.5-turbo' },
+                    env: { MODEL: process.env.MODEL || 'openai:gpt-5-mini' },
                     supports_stdin: false
                 }
             }
@@ -66,7 +66,9 @@ The tasks are:
 3. Create a python script 'airflow_dag.py' that defines an Airflow DAG 'finance_ingestion' with two tasks: 'fetch' (BashOperator running fetch_data.py) and 'load' (BashOperator running load_data.py).
 
 After delegating these tasks, use 'check_task_status' in a loop to wait until they are all completed.
-Once all are completed, verify the files exist.
+Do NOT retry the delegation if the status is 'running'. Just wait and check again.
+Do NOT create the files yourself unless the worker fails.
+Once all tasks are completed, verify the files exist.
 If everything is good, say "PIPELINE SETUP COMPLETE".
 `;
 
@@ -80,7 +82,7 @@ If everything is good, say "PIPELINE SETUP COMPLETE".
             const cliProcess = spawn(process.execPath, ['--loader', 'ts-node/esm', entryTs, TEST_DIR, prompt], {
                 env: {
                     ...process.env,
-                    MODEL: process.env.MODEL || 'openai:gpt-3.5-turbo',
+                    MODEL: process.env.MODEL || 'openai:gpt-5-mini',
                 },
                 stdio: 'pipe'
             });
