@@ -13,20 +13,24 @@ It keeps your workflow simple by providing a unified entry point while offloadin
 ## TUI Preview
 
 ```
-  /\_/\
- ( o.o )
-  > ^ <
-
- SIMPLE-CLI  v0.4.0
+ SIMPLE-CLI v0.4.0
 
 ? Chat › Refactor the login logic
 
-💭 Analyzing authentication flow...
-⚙ Executing listFiles...
-💭 Found auth.ts, reading content...
-⚙ Executing readFiles...
+◇  Analyzing authentication flow...
 
-🤖 I've updated the login logic in src/auth.ts to use async/await.
+◇  Executing listFiles
+
+◇  Found auth.ts, reading content...
+
+◇  Executing readFiles
+
+◆  [Supervisor] Verifying work from readFiles...
+
+◇  [Supervisor] QA PASSED. Work verified.
+
+Agent:
+I've updated the login logic in src/auth.ts to use async/await.
 ```
 
 ## 🧠 The `.agent` Folder
