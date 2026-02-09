@@ -92,7 +92,7 @@ async function main() {
         }
     } catch (e: any) {
         if (e.code === 'ERR_MODULE_NOT_FOUND') {
-            console.error("benchmarks/definitions.js not found. Please create it first.");
+            console.error("tests/benchmarks/definitions.js not found. Please create it first.");
         } else {
             console.error(e);
         }
