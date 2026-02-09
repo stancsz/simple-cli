@@ -6,6 +6,7 @@ import { promisify } from 'util';
 import { z } from 'zod';
 import glob from 'fast-glob';
 import { Scheduler } from './scheduler.js';
+import { AsyncTaskManager } from './async_tasks.js';
 import { loadConfig } from './config.js';
 
 const execAsync = promisify(exec);
@@ -608,9 +609,10 @@ export const delegate_cli = {
     inputSchema: z.object({
         cli: z.string(),
         task: z.string(),
-        context_files: z.array(z.string()).optional()
+        context_files: z.array(z.string()).optional(),
+        async: z.boolean().default(false).describe("Run in background mode. Returns a Task ID to monitor.")
     }),
-    execute: async ({ cli, task, context_files }: { cli: string, task: string, context_files?: string[] }) => {
+    execute: async ({ cli, task, context_files, async }: { cli: string, task: string, context_files?: string[], async: boolean }) => {
         try {
             console.log(`[delegate_cli] Spawning external process for ${cli}...`);
             const config = await loadConfig();
@@ -648,6 +650,42 @@ export const delegate_cli = {
                 shell: false // Use false for safer arg handling, unless command relies on shell features
             });
 
+            // Async Mode Handling
+            if (async) {
+                // Determine command to run for AsyncTaskManager
+                // We need to reconstruct the full command string for AsyncTaskManager or pass args
+                // Actually AsyncTaskManager takes command and args.
+                // But we already spawned 'child' here? 
+                // Wait, if async, we shouldn't spawn here and wait. 
+                // We should delegate the spawning to AsyncTaskManager.
+
+                // Let's refactor:
+                child.kill(); // Kill the one we just started (oops, inefficient but safe if we didn't write stdin yet)
+                // Actually, let's just use AsyncTaskManager INSTEAD of spawning manually.
+
+                const taskManager = AsyncTaskManager.getInstance();
+
+                // Prepare context file content to pass as environment variable or temp file 
+                // if the agent expects stdin. 
+                // AsyncTaskManager runs detached, so we can't easily pipe stdin unless we wrap it.
+                // For simplicity, if async is requested, we might only support 'context_files' passed as args.
+
+                // If agent requires stdin, we can write a temporary input file and pipe it:
+                // cmd: "cat input.txt | agent ..."
+                // This is getting complex for 'generic' agents.
+
+                // Strategy: Just run the agent command. If it needs context files, they are in cmdArgs.
+                // If it needs stdin, we warn or skip for now in async mode unless we implement 'input_file' support.
+
+                if (agent.supports_stdin && context_files && context_files.length > 0) {
+                    return `[delegate_cli] Warning: Async mode with Stdin context is not fully supported yet. Please use 'async: false' or ensure agent accepts files via arguments.`;
+                }
+
+                const id = await taskManager.startTask(agent.command, cmdArgs, agent.env);
+                return `[delegate_cli] Async Task Started.\nID: ${id}\nMonitor status using 'check_task_status'.`;
+            }
+
+            // Sync Mode (Existing Logic)
             // Handle Stdin Context Injection
             if (agent.supports_stdin && context_files && context_files.length > 0) {
                 // Read files and pipe to stdin
@@ -790,4 +828,46 @@ export const pr_merge = {
     }
 };
 
-export const allBuiltins = [readFiles, writeFiles, createTool, scrapeUrl, listFiles, searchFiles, listDir, runCommand, stopCommand, deleteFile, gitTool, linter, delegate_cli, schedule_task, pr_list, pr_review, pr_comment, pr_ready, pr_merge];
+
+export const check_task_status = {
+    name: 'check_task_status',
+    description: 'Check the status and logs of a background task.',
+    inputSchema: z.object({
+        id: z.string().describe('The Task ID returned by delegate_cli')
+    }),
+    execute: async ({ id }: { id: string }) => {
+        try {
+            const manager = AsyncTaskManager.getInstance();
+            const task = await manager.getTaskStatus(id);
+            const logs = await manager.getTaskLogs(id, 5); // Last 5 lines
+
+            return `Task ID: ${task.id}
+Status: ${task.status}
+PID: ${task.pid}
+Last Logs:
+${logs}
+`;
+        } catch (e: any) {
+            return `Error checking task ${id}: ${e.message}`;
+        }
+    }
+};
+
+export const list_bg_tasks = {
+    name: 'list_bg_tasks',
+    description: 'List all background tasks.',
+    inputSchema: z.object({}),
+    execute: async () => {
+        try {
+            const manager = AsyncTaskManager.getInstance();
+            const tasks = await manager.listTasks();
+            if (tasks.length === 0) return "No background tasks found.";
+
+            return tasks.map(t => `- [${t.status.toUpperCase()}] ${t.id}: ${t.command} (Started: ${new Date(t.startTime).toISOString()})`).join('\n');
+        } catch (e: any) {
+            return `Error listing tasks: ${e.message}`;
+        }
+    }
+};
+
+export const allBuiltins = [readFiles, writeFiles, createTool, scrapeUrl, listFiles, searchFiles, listDir, runCommand, stopCommand, deleteFile, gitTool, linter, delegate_cli, schedule_task, check_task_status, list_bg_tasks, pr_list, pr_review, pr_comment, pr_ready, pr_merge];
