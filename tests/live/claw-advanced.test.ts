@@ -1,10 +1,11 @@
 import { describe, it, expect, beforeAll } from 'vitest';
 import { spawn } from 'child_process';
 import { resolve, join } from 'path';
-import { writeFileSync, mkdirSync, existsSync, readFileSync, rmSync } from 'fs';
+import { writeFileSync, mkdirSync, existsSync, readFileSync, rmSync, appendFileSync } from 'fs';
 
 const DEMO_DIR = resolve('./test_claw_advanced');
 const cliPath = resolve('./dist/cli.js');
+const LOG_FILE = resolve('./docs/feedbacks/claw-advanced.log.md');
 
 describe('Claw Advanced Features', () => {
     beforeAll(() => {
@@ -77,11 +78,13 @@ export const tool = {
 
 async function runClaw(intent: string): Promise<string> {
     console.log(`\n    [DEBUG] Running claw with intent: ${intent}`);
+    appendFileSync(LOG_FILE, `\n\n## Intent: ${intent}\n\n`);
+
     return new Promise((resolve, reject) => {
         const cliProcess = spawn(process.execPath, [cliPath, DEMO_DIR, intent], {
             env: {
                 ...process.env,
-                CLAW_MODEL: 'gemini-3-flash-preview',
+                MODEL: 'openai:gpt-4o',
                 DEBUG: 'true',
                 CLAW_WORKSPACE: process.env.CLAW_WORKSPACE || join(process.cwd(), 'examples/full-agent/.agent')
             }
@@ -91,11 +94,13 @@ async function runClaw(intent: string): Promise<string> {
         cliProcess.stdout.on('data', (data) => {
             const chunk = data.toString();
             stdout += chunk;
+            appendFileSync(LOG_FILE, chunk);
             if (process.env.DEBUG_TEST) console.log(chunk);
         });
         cliProcess.stderr.on('data', (data) => {
             const chunk = data.toString();
             stdout += chunk;
+            appendFileSync(LOG_FILE, chunk);
             if (process.env.DEBUG_TEST) console.log(chunk);
         });
 

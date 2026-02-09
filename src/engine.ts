@@ -106,69 +106,82 @@ export class Engine {
             }
 
             const response = await this.llm.generate(prompt, ctx.history);
-            const { thought, tool, args, message } = response;
+            const { thought, tool, args, message, tools } = response;
 
             if (thought) log.info(pc.dim(thought));
 
-            if (tool && tool !== 'none') {
-                const t = this.registry.tools.get(tool);
-                if (t) {
-                    const s = spinner();
-                    s.start(`Executing ${tool}...`);
-                    let toolExecuted = false;
-                    try {
-                        const result = await t.execute(args);
-                        s.stop(`Executed ${tool}`);
-                        toolExecuted = true;
+            // Determine execution list
+            const executionList = tools && tools.length > 0
+                ? tools
+                : (tool && tool !== 'none' ? [{ tool, args }] : []);
 
-                        // Reload tools if create_tool was used
-                        if (tool === 'create_tool') {
-                            await this.registry.loadProjectTools(ctx.cwd);
-                            log.success('Tools reloaded.');
-                        }
+            if (executionList.length > 0) {
+                let allExecuted = true;
+                for (const item of executionList) {
+                    const tName = item.tool;
+                    const tArgs = item.args;
+                    const t = this.registry.tools.get(tName);
 
-                        ctx.history.push({ role: 'assistant', content: JSON.stringify(response) });
-                        ctx.history.push({ role: 'user', content: `Result: ${JSON.stringify(result)}` });
+                    if (t) {
+                        const s = spinner();
+                        s.start(`Executing ${tName}...`);
+                        let toolExecuted = false;
+                        try {
+                            const result = await t.execute(tArgs);
+                            s.stop(`Executed ${tName}`);
+                            toolExecuted = true;
 
-                        // --- Supervisor Loop (QA & Reflection) ---
-                        // "Principal Skinner" enters the room
-                        log.step(`[Supervisor] Verifying work from ${tool}...`);
-
-                        let qaPrompt = `Analyze the result of the tool execution: ${JSON.stringify(result)}. Did it satisfy the user's request: "${input || userHistory.pop()?.content}"? If specific files were mentioned (like flask app), check if they exist or look correct based on the tool output.`;
-
-                        // If it was a delegation, be stricter
-                        if (tool === 'delegate_cli') {
-                            qaPrompt += " Since this was delegated to an external CLI, be extra critical. Does the output explicitly confirm file creation?";
-                        }
-
-                        const qaCheck = await this.llm.generate(qaPrompt, [...ctx.history, { role: 'user', content: qaPrompt }]);
-                        log.step(`[Supervisor] ${qaCheck.message || qaCheck.thought}`);
-
-                        if (qaCheck.message && qaCheck.message.toLowerCase().includes('fail')) {
-                            log.error('[Supervisor] QA FAILED. Asking for retry...');
-                            input = "The previous attempt failed. Please retry or fix the issue.";
-                        } else {
-                            log.success('[Supervisor] QA PASSED. Work verified.');
-
-                            // Store learning ONLY if QA passed
-                            const reflectPrompt = "Summarize the successful strategy used here as a concise learning point.";
-                            const reflection = await this.llm.generate(reflectPrompt, [...ctx.history, { role: 'user', content: reflectPrompt }]);
-                            if (reflection.message) {
-                                await this.learningManager.add(input || 'Task', reflection.message);
+                            // Reload tools if create_tool was used
+                            if (tName === 'create_tool') {
+                                await this.registry.loadProjectTools(ctx.cwd);
+                                log.success('Tools reloaded.');
                             }
+
+                            // Add individual tool execution to history to keep context updated
+                            // We mock a single tool response for history consistency
+                            ctx.history.push({
+                                role: 'assistant',
+                                content: JSON.stringify({ thought: '', tool: tName, args: tArgs })
+                            });
+                            ctx.history.push({ role: 'user', content: `Result: ${JSON.stringify(result)}` });
+
+                            // --- Supervisor Loop (QA & Reflection) ---
+                            log.step(`[Supervisor] Verifying work from ${tName}...`);
+
+                            let qaPrompt = `Analyze the result of the tool execution: ${JSON.stringify(result)}. Did it satisfy the user's request: "${input || userHistory.pop()?.content}"? If specific files were mentioned (like flask app), check if they exist or look correct based on the tool output.`;
+
+                            if (tName === 'delegate_cli') {
+                                qaPrompt += " Since this was delegated to an external CLI, be extra critical. Does the output explicitly confirm file creation?";
+                            }
+
+                            const qaCheck = await this.llm.generate(qaPrompt, [...ctx.history, { role: 'user', content: qaPrompt }]);
+                            log.step(`[Supervisor] ${qaCheck.message || qaCheck.thought}`);
+
+                            if (qaCheck.message && qaCheck.message.toLowerCase().includes('fail')) {
+                                log.error(`[Supervisor] QA FAILED for ${tName}. Asking for retry...`);
+                                input = "The previous attempt failed. Please retry or fix the issue.";
+                                allExecuted = false;
+                                break; // Stop batch execution on failure
+                            } else {
+                                log.success('[Supervisor] QA PASSED. Work verified.');
+                                // Optional: Learnings can be aggregated or skipped for batch to save tokens/time
+                            }
+                        } catch (e: any) {
+                            if (!toolExecuted) s.stop(`Error executing ${tName}`);
+                            else log.error(`Error during verification: ${e.message}`);
+
+                            ctx.history.push({ role: 'user', content: `Error executing ${tName}: ${e.message}` });
+                            input = 'Fix the error.';
+                            allExecuted = false;
+                            break;
                         }
-
-                        input = 'The tool execution was verified. Proceed.';
-                        continue;
-                    } catch (e: any) {
-                        if (!toolExecuted) s.stop(`Error executing ${tool}`);
-                        else log.error(`Error during verification: ${e.message}`);
-
-                        ctx.history.push({ role: 'user', content: `Error: ${e.message}` });
-                        input = 'Fix the error.';
-                        continue;
                     }
                 }
+
+                if (allExecuted) {
+                     input = 'The tool executions were verified. Proceed.';
+                }
+                continue;
             }
 
             if (message || response.raw) {

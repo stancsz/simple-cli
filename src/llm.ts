@@ -10,6 +10,7 @@ export interface LLMResponse {
     args: any;
     message?: string;
     raw: string;
+    tools?: { tool: string; args: any }[];
 }
 
 export type LLMConfig = { provider: string; model: string; apiKey?: string };
@@ -89,20 +90,89 @@ export class LLM {
     }
 
     private parse(raw: string): LLMResponse {
-        try {
-            const jsonPart = raw.trim().match(/\{[\s\S]*\}/)?.[0] || raw;
-            const repaired = jsonrepair(jsonPart);
-            const p = JSON.parse(repaired);
-            return {
-                thought: p.thought || '',
-                tool: (p.tool || p.command || 'none').toLowerCase(),
-                args: p.args || p.parameters || {},
-                message: p.message || '',
-                raw
-            };
-        } catch {
-            return { thought: '', tool: 'none', args: {}, message: raw, raw };
+        const tools: { tool: string; args: any }[] = [];
+        let thought = '';
+        let message = '';
+        const rawTrimmed = raw.trim();
+
+        // 1. Attempt to extract multiple JSON objects
+        let braceBalance = 0;
+        let startIndex = -1;
+        let inString = false;
+        let escape = false;
+
+        for (let i = 0; i < rawTrimmed.length; i++) {
+            const char = rawTrimmed[i];
+
+            if (inString) {
+                if (escape) {
+                    escape = false;
+                } else if (char === '\\') {
+                    escape = true;
+                } else if (char === '"') {
+                    inString = false;
+                }
+                continue;
+            }
+
+            if (char === '"') {
+                inString = true;
+            } else if (char === '{') {
+                if (braceBalance === 0) {
+                    startIndex = i;
+                }
+                braceBalance++;
+            } else if (char === '}') {
+                braceBalance--;
+                if (braceBalance === 0 && startIndex !== -1) {
+                    const jsonStr = rawTrimmed.substring(startIndex, i + 1);
+                    try {
+                        const repaired = jsonrepair(jsonStr);
+                        const obj = JSON.parse(repaired);
+
+                        // Extract tool call
+                        if (obj.tool && obj.tool !== 'none') {
+                            tools.push({ tool: obj.tool.toLowerCase(), args: obj.args || obj.parameters || {} });
+                        }
+
+                        // Aggregate thought and message
+                        if (obj.thought) thought += (thought ? '\n' : '') + obj.thought;
+                        if (obj.message) message += (message ? '\n' : '') + obj.message;
+
+                    } catch (e) {
+                        // Ignore malformed blocks inside mixed content
+                    }
+                    startIndex = -1;
+                }
+            }
         }
+
+        // 2. Fallback: If no tools found via loop, try single block extraction (legacy behavior)
+        if (tools.length === 0) {
+            try {
+                const jsonPart = rawTrimmed.match(/\{[\s\S]*\}/)?.[0] || rawTrimmed;
+                const repaired = jsonrepair(jsonPart);
+                const p = JSON.parse(repaired);
+                return {
+                    thought: p.thought || '',
+                    tool: (p.tool || p.command || 'none').toLowerCase(),
+                    args: p.args || p.parameters || {},
+                    message: p.message || '',
+                    raw
+                };
+            } catch {
+                return { thought: '', tool: 'none', args: {}, message: raw, raw };
+            }
+        }
+
+        return {
+            thought: thought.trim(),
+            tool: tools[0]?.tool || 'none',
+            args: tools[0]?.args || {},
+            message: message.trim(),
+            raw,
+            tools
+        };
     }
 }
 
