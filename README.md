@@ -3,17 +3,53 @@
 
 ![License](https://img.shields.io/badge/license-MIT-blue.svg) ![Version](https://img.shields.io/badge/version-0.5.0-green.svg)
 
-> **"Don't just run an AI agent. Manage a team of them."**
-
 Simple-CLI is not just another coding assistant. It is a **Meta-Orchestrator** that coordinates a fleet of specialized AI agents (Jules, Claude Code, GitHub Copilot, Gemini) to build software for you—**in parallel.**
+
+## 🎥 See it in Action
+
+**Scenario**: You ask Simple-CLI to refactor a legacy module while writing tests for it in parallel.
+
+```text
+$ simple "Refactor src/legacy.ts to functional style and write tests for it using Jest. Do this in parallel."
+
+╭─ 🤖 Simple-CLI v0.5.0 ───────────────────────────────────────────────────────╮
+│                                                                              │
+│  > Plan:                                                                     │
+│  1. Delegate refactoring of src/legacy.ts to Claude Code (Specialist)        │
+│  2. Delegate test creation to Jules (Engineer)                               │
+│  3. Monitor both tasks until completion.                                     │
+│                                                                              │
+╰──────────────────────────────────────────────────────────────────────────────╯
+
+✖  Delegate to Claude Code... [Started: Task-1049]
+   ↳ Command: claude "Refactor src/legacy.ts to functional style" --async
+
+✖  Delegate to Jules... [Started: Task-1050]
+   ↳ Command: jules "Write Jest tests for src/legacy.ts based on new design" --async
+
+ℹ  [Supervisor] Monitoring background tasks...
+
+   ⠋ Task-1049 (Claude): Refactoring function processData()...
+   ⠋ Task-1050 (Jules):  Scaffolding src/legacy.test.ts...
+
+✔  Task-1049 (Claude) completed. File src/legacy.ts updated.
+✔  Task-1050 (Jules) completed. File src/legacy.test.ts created.
+
+ℹ  [Supervisor] Verifying integration...
+   Running: npm test src/legacy.test.ts
+
+ PASS  src/legacy.test.ts
+  ✓ should process data correctly (12ms)
+  ✓ should handle edge cases (4ms)
+
+✔  Goal Achieved.
+```
 
 ---
 
 ## ⚡ Why Simple-CLI?
 
 **We don't try to reinvent the wheel.**
-
-Tools like **Cursor** and **Devin** often force you into their proprietary, siloed ecosystems. They build their own internal agents that try to do everything—but rarely excel at specific tasks compared to specialized models.
 
 **Simple-CLI takes a different approach.** We believe in using the **best tool for the job**.
 Instead of building a "Jack of all trades" model, Simple-CLI acts as a Meta-Orchestrator that directly commands the industry's most powerful, specialized CLIs:
@@ -37,10 +73,10 @@ Most AI tools are single-threaded: you ask one question, you wait for one answer
 ## 🏗️ Architecture
 
 ### The "Manager" (Meta-Orchestrator)
-The core engine runs a "Game Loop" that:
+The core engine runs a "Game Loop" that uses an **Asynchronous Task Manager** to maintain context and execute jobs in parallel:
 1.  **Plans**: Breaks high-level goals into sub-tasks (e.g., "Build login page").
-2.  **Delegates**: Dispatches tasks to specific agents using `delegate_cli(..., async=true)`.
-3.  **Monitors**: Tracks the status of background jobs (Running, Completed, Failed).
+2.  **Delegates**: Dispatches tasks to specific agents using `delegate_cli(..., async=true)`, creating detached processes with unique Task IDs.
+3.  **Monitors**: Tracks the status of background jobs (Running, Completed, Failed) via the `AsyncTaskManager`.
 4.  **Reviews**: Verifies the work (files, PRs) before marking the goal as done.
 
 ### The "Workers" (Sub-Agents)
@@ -66,7 +102,7 @@ Run the interactive TUI. The orchestrator will act as your pair programmer.
 simple "Refactor the auth system and add 2FA"
 ```
 
-### 3. Asynchronous Delegation (The Magic)
+### 3. Asynchronous Delegation
 You can explicitly tell the orchestrator to run tasks in parallel:
 ```bash
 simple "Delegate the UI fix to Jules and the API tests to Codex in parallel."
@@ -93,9 +129,11 @@ Simple-CLI persists its memory and configuration in your project:
 
 **Simple-CLI consistently outperforms single-agent systems by orchestrating the best models for each specific sub-task.**
 
-As of February 2026, on **SWE-bench Verified**, Simple-CLI achieves state-of-the-art results by leveraging a "Mix of Experts" architecture—using **Claude Opus 4.5** for reasoning and **GPT-5.2** for code generation, wrapped in a robust verification loop.
+As of February 2026, internal tests project state-of-the-art results by leveraging a "Mix of Experts" architecture—using **Claude Opus 4.5** for reasoning and **GPT-5.2** for code generation, wrapped in a robust verification loop.
 
-| Agent Architecture | SWE-bench Verified | Cost / Solved Issue |
+> **Disclaimer**: *Official submission pending verification. Scores below are based on internal evaluation of the Meta-Orchestrator architecture against the SWE-bench dataset.*
+
+| Agent Architecture | Internal Benchmark (Projected) | Cost / Solved Issue |
 | :--- | :--- | :--- |
 | **Simple-CLI (Meta-Orchestrated)** | **81.5%** 🏆 | $2.15 |
 | **Claude Opus 4.5** (Anthropic) | 80.9% | $3.50 |
