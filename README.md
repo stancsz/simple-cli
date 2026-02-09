@@ -45,6 +45,17 @@ The heart of the agent is the `.agent` directory in your project root. This is w
 4.  **Clean Context Management**: No hidden global state. Everything is local to your project.
 5.  **Example-Based Learning**: Use the `examples/` folder to provide reference architectures and patterns for the agent to study.
 
+## Meta-Orchestration & Task Delegation
+
+Simple-CLI employs a **centralized orchestrator pattern** to manage task delegation and ensure conflict-free execution.
+
+### How It Works
+
+1.  **Single-Threaded Control Loop**: The core `Engine` operates on a single execution thread. It assesses the user's request and determines the optimal strategy (e.g., using a built-in tool or delegating to a specialized external agent).
+2.  **Synchronous Delegation (The "Global Lock")**: When a task is delegated (e.g., via `delegate_cli` to `Claude Code` or `OpenAI Codex`), the meta-orchestrator **pauses its own execution loop** and awaits the completion of the sub-agent's task. This acts as an effective **global lock** on the project state.
+3.  **Conflict Avoidance**: By ensuring that only one agent—either the meta-orchestrator or a delegated sub-agent—is active at any given moment, Simple-CLI prevents race conditions and conflicting file modifications. The sub-agent has exclusive access to the codebase during its execution window.
+4.  **Verification & Reflection**: Once the sub-agent returns control, the meta-orchestrator resumes, verifying the output (the "Supervisor" step) and reflecting on the result before proceeding to the next task.
+
 ## Installation
 
 ```bash
