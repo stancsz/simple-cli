@@ -629,18 +629,18 @@ export const delegate_cli = {
 
             // Handle file arguments for agents that don't support stdin or use --file flags
             if (!agent.supports_stdin && context_files && context_files.length > 0) {
-                 for (const file of context_files) {
-                     if (!isPathAllowed(file)) {
-                         console.warn(`[delegate_cli] Skipped restricted file: ${file}`);
-                         continue;
-                     }
-                     const flag = agent.context_flag !== undefined ? agent.context_flag : '--file';
-                     if (flag) {
-                         cmdArgs.push(flag, file);
-                     } else {
-                         cmdArgs.push(file);
-                     }
-                 }
+                for (const file of context_files) {
+                    if (!isPathAllowed(file)) {
+                        console.warn(`[delegate_cli] Skipped restricted file: ${file}`);
+                        continue;
+                    }
+                    const flag = agent.context_flag !== undefined ? agent.context_flag : '--file';
+                    if (flag) {
+                        cmdArgs.push(flag, file);
+                    } else {
+                        cmdArgs.push(file);
+                    }
+                }
             }
 
             const child = spawn(agent.command, cmdArgs, {
@@ -650,23 +650,23 @@ export const delegate_cli = {
 
             // Handle Stdin Context Injection
             if (agent.supports_stdin && context_files && context_files.length > 0) {
-                 // Read files and pipe to stdin
-                 // Format: --- filename ---\n content \n ---
-                 let context = "";
-                 for (const file of context_files) {
-                     if (!isPathAllowed(file)) {
-                         console.warn(`[delegate_cli] Skipped restricted file: ${file}`);
-                         continue;
-                     }
-                     if (existsSync(file)) {
-                         const content = await readFile(file, 'utf-8');
-                         context += `--- ${file} ---\n${content}\n\n`;
-                     }
-                 }
-                 child.stdin.write(context);
-                 child.stdin.end();
+                // Read files and pipe to stdin
+                // Format: --- filename ---\n content \n ---
+                let context = "";
+                for (const file of context_files) {
+                    if (!isPathAllowed(file)) {
+                        console.warn(`[delegate_cli] Skipped restricted file: ${file}`);
+                        continue;
+                    }
+                    if (existsSync(file)) {
+                        const content = await readFile(file, 'utf-8');
+                        context += `--- ${file} ---\n${content}\n\n`;
+                    }
+                }
+                child.stdin.write(context);
+                child.stdin.end();
             } else {
-                 child.stdin.end();
+                child.stdin.end();
             }
 
             let stdout = '';
@@ -714,4 +714,80 @@ export const schedule_task = {
     }
 };
 
-export const allBuiltins = [readFiles, writeFiles, createTool, scrapeUrl, listFiles, searchFiles, listDir, runCommand, stopCommand, deleteFile, gitTool, linter, delegate_cli, schedule_task];
+export const pr_list = {
+    name: 'pr_list',
+    description: 'List open pull requests',
+    inputSchema: z.object({ limit: z.number().default(10) }),
+    execute: async ({ limit }: { limit: number }) => {
+        try {
+            const { stdout } = await execAsync(`gh pr list --limit ${limit}`);
+            return stdout.trim() || 'No open PRs found.';
+        } catch (e: any) {
+            return `Error listing PRs: ${e.message}`;
+        }
+    }
+};
+
+export const pr_review = {
+    name: 'pr_review',
+    description: 'Get the diff/details of a PR',
+    inputSchema: z.object({ pr_number: z.number() }),
+    execute: async ({ pr_number }: { pr_number: number }) => {
+        try {
+            const { stdout } = await execAsync(`gh pr diff ${pr_number}`);
+            return stdout.trim();
+        } catch (e: any) {
+            return `Error reviewing PR ${pr_number}: ${e.message}`;
+        }
+    }
+};
+
+export const pr_comment = {
+    name: 'pr_comment',
+    description: 'Add a comment to a PR (e.g., to instruct Jules to fix something).',
+    inputSchema: z.object({
+        pr_number: z.number(),
+        body: z.string()
+    }),
+    execute: async ({ pr_number, body }: { pr_number: number, body: string }) => {
+        try {
+            await execAsync(`gh pr comment ${pr_number} --body "${body}"`);
+            return `Commented on PR ${pr_number}: "${body}"`;
+        } catch (e: any) {
+            return `Error commenting on PR ${pr_number}: ${e.message}`;
+        }
+    }
+};
+
+export const pr_ready = {
+    name: 'pr_ready',
+    description: 'Mark a Draft PR as Ready for Review',
+    inputSchema: z.object({ pr_number: z.number() }),
+    execute: async ({ pr_number }: { pr_number: number }) => {
+        try {
+            await execAsync(`gh pr ready ${pr_number}`);
+            return `PR ${pr_number} marked as Ready for Review`;
+        } catch (e: any) {
+            return `Error marking PR ${pr_number} as ready: ${e.message}`;
+        }
+    }
+};
+
+export const pr_merge = {
+    name: 'pr_merge',
+    description: 'Merge a pull request',
+    inputSchema: z.object({
+        pr_number: z.number(),
+        method: z.enum(['merge', 'squash', 'rebase']).default('merge')
+    }),
+    execute: async ({ pr_number, method }: { pr_number: number, method: string }) => {
+        try {
+            await execAsync(`gh pr merge ${pr_number} --${method} --delete-branch`);
+            return `Successfully merged PR ${pr_number}`;
+        } catch (e: any) {
+            return `Error merging PR ${pr_number}: ${e.message}`;
+        }
+    }
+};
+
+export const allBuiltins = [readFiles, writeFiles, createTool, scrapeUrl, listFiles, searchFiles, listDir, runCommand, stopCommand, deleteFile, gitTool, linter, delegate_cli, schedule_task, pr_list, pr_review, pr_comment, pr_ready, pr_merge];
