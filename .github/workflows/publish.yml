@@ -54,7 +54,7 @@ jobs:
           fi
 
           # Now bump the patch version (e.g. 0.2.7 -> 0.2.8) and create the tag
-          npm version patch
+          npm version patch --force
 
       - name: Push Changes
         run: git push --follow-tags
