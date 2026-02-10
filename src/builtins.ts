@@ -425,7 +425,7 @@ export const runCommand = {
         timeout: z.number().optional(),
         background: z.boolean().default(false).describe('Run command in background and return immediately')
     }),
-    execute: async ({ command, timeout, background }: { command: string, timeout?: number, background: boolean }) => {
+    execute: async ({ command, timeout, background }: { command: string, timeout?: number, background: boolean }, options?: { signal?: AbortSignal }) => {
         if (background) {
             const child = spawn(command, {
                 shell: true,
@@ -442,9 +442,10 @@ export const runCommand = {
         }
 
         try {
-            const { stdout, stderr } = await execAsync(command, { timeout });
+            const { stdout, stderr } = await execAsync(command, { timeout, signal: options?.signal });
             return { stdout, stderr, exitCode: 0, timedOut: false };
         } catch (e: any) {
+            if (options?.signal?.aborted) throw e;
             const timedOut = e.killed && e.signal === 'SIGTERM';
             return {
                 error: e.message,

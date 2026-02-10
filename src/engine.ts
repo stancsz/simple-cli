@@ -2,6 +2,7 @@ import { readFile, writeFile, readdir } from 'fs/promises';
 import { existsSync } from 'fs';
 import { join, relative, resolve } from 'path';
 import { pathToFileURL } from 'url';
+import readline from 'readline';
 import pc from 'picocolors';
 import { text, isCancel, log, spinner } from '@clack/prompts';
 import { createLLM } from './llm.js';
@@ -10,7 +11,7 @@ import { LearningManager } from './learnings.js';
 import { Skill } from './skills.js';
 
 export interface Message { role: 'user' | 'assistant' | 'system'; content: string; }
-export interface Tool { name: string; description: string; execute: (args: any) => Promise<any>; }
+export interface Tool { name: string; description: string; execute: (args: any, options?: { signal?: AbortSignal }) => Promise<any>; }
 
 async function getRepoMap(cwd: string) {
     const files: string[] = [];
@@ -84,6 +85,10 @@ export class Engine {
         // Ensure tools are loaded for the context cwd
         await this.registry.loadProjectTools(ctx.cwd);
 
+        if (process.stdin.isTTY) {
+             readline.emitKeypressEvents(process.stdin);
+        }
+
         while (true) {
             if (!input) {
                 if (!options.interactive || !process.stdout.isTTY) break;
@@ -94,104 +99,148 @@ export class Engine {
 
             ctx.history.push({ role: 'user', content: input });
 
-            // RAG: Inject learnings
-            let prompt = await ctx.buildPrompt(this.registry.tools);
-            const userHistory = ctx.history.filter(m => m.role === 'user' && !['Continue.', 'Fix the error.'].includes(m.content));
-            const lastUserMsg = userHistory[userHistory.length - 1]?.content || '';
-            const query = (input && !['Continue.', 'Fix the error.'].includes(input)) ? input : lastUserMsg;
+            const controller = new AbortController();
+            const signal = controller.signal;
+            let aborted = false;
 
-            const learnings = await this.learningManager.search(query);
-            if (learnings.length > 0) {
-                prompt += `\n\n## Past Learnings\n${learnings.map(l => `- ${l}`).join('\n')}`;
+            const onKeypress = (str: string, key: any) => {
+                if (key.name === 'escape') {
+                    log.warn('Interrupted by user.');
+                    aborted = true;
+                    controller.abort();
+                }
+            };
+
+            if (process.stdin.isTTY) {
+                process.stdin.setRawMode(true);
+                process.stdin.on('keypress', onKeypress);
             }
 
-            const response = await this.llm.generate(prompt, ctx.history);
-            const { thought, tool, args, message, tools } = response;
+            try {
+                // RAG: Inject learnings
+                let prompt = await ctx.buildPrompt(this.registry.tools);
+                const userHistory = ctx.history.filter(m => m.role === 'user' && !['Continue.', 'Fix the error.'].includes(m.content));
+                const lastUserMsg = userHistory[userHistory.length - 1]?.content || '';
+                const query = (input && !['Continue.', 'Fix the error.'].includes(input)) ? input : lastUserMsg;
 
-            if (thought) log.info(pc.dim(thought));
+                const learnings = await this.learningManager.search(query);
+                if (learnings.length > 0) {
+                    prompt += `\n\n## Past Learnings\n${learnings.map(l => `- ${l}`).join('\n')}`;
+                }
 
-            // Determine execution list
-            const executionList = tools && tools.length > 0
-                ? tools
-                : (tool && tool !== 'none' ? [{ tool, args }] : []);
+                // Pass signal to LLM
+                const response = await this.llm.generate(prompt, ctx.history, signal);
+                const { thought, tool, args, message, tools } = response;
 
-            if (executionList.length > 0) {
-                let allExecuted = true;
-                for (const item of executionList) {
-                    const tName = item.tool;
-                    const tArgs = item.args;
-                    const t = this.registry.tools.get(tName);
+                if (thought) log.info(pc.dim(thought));
 
-                    if (t) {
-                        const s = spinner();
-                        s.start(`Executing ${tName}...`);
-                        let toolExecuted = false;
-                        try {
-                            const result = await t.execute(tArgs);
-                            s.stop(`Executed ${tName}`);
-                            toolExecuted = true;
+                // Determine execution list
+                const executionList = tools && tools.length > 0
+                    ? tools
+                    : (tool && tool !== 'none' ? [{ tool, args }] : []);
 
-                            // Reload tools if create_tool was used
-                            if (tName === 'create_tool') {
-                                await this.registry.loadProjectTools(ctx.cwd);
-                                log.success('Tools reloaded.');
-                            }
+                if (executionList.length > 0) {
+                    let allExecuted = true;
+                    for (const item of executionList) {
+                        if (signal.aborted) break;
 
-                            // Add individual tool execution to history to keep context updated
-                            // We mock a single tool response for history consistency
-                            ctx.history.push({
-                                role: 'assistant',
-                                content: JSON.stringify({ thought: '', tool: tName, args: tArgs })
-                            });
-                            ctx.history.push({ role: 'user', content: `Result: ${JSON.stringify(result)}` });
+                        const tName = item.tool;
+                        const tArgs = item.args;
+                        const t = this.registry.tools.get(tName);
 
-                            // --- Supervisor Loop (QA & Reflection) ---
-                            log.step(`[Supervisor] Verifying work from ${tName}...`);
+                        if (t) {
+                            const s = spinner();
+                            s.start(`Executing ${tName}...`);
+                            let toolExecuted = false;
+                            try {
+                                const result = await t.execute(tArgs, { signal });
+                                s.stop(`Executed ${tName}`);
+                                toolExecuted = true;
 
-                            let qaPrompt = `Analyze the result of the tool execution: ${JSON.stringify(result)}. Did it satisfy the user's request: "${input || userHistory.pop()?.content}"? If specific files were mentioned (like flask app), check if they exist or look correct based on the tool output.`;
+                                // Reload tools if create_tool was used
+                                if (tName === 'create_tool') {
+                                    await this.registry.loadProjectTools(ctx.cwd);
+                                    log.success('Tools reloaded.');
+                                }
 
-                            if (tName === 'delegate_cli') {
-                                qaPrompt += " Since this was delegated to an external CLI, be extra critical. Does the output explicitly confirm file creation?";
-                            }
+                                // Add individual tool execution to history to keep context updated
+                                // We mock a single tool response for history consistency
+                                ctx.history.push({
+                                    role: 'assistant',
+                                    content: JSON.stringify({ thought: '', tool: tName, args: tArgs })
+                                });
+                                ctx.history.push({ role: 'user', content: `Result: ${JSON.stringify(result)}` });
 
-                            const qaCheck = await this.llm.generate(qaPrompt, [...ctx.history, { role: 'user', content: qaPrompt }]);
-                            log.step(`[Supervisor] ${qaCheck.message || qaCheck.thought}`);
+                                // --- Supervisor Loop (QA & Reflection) ---
+                                log.step(`[Supervisor] Verifying work from ${tName}...`);
 
-                            if (qaCheck.message && qaCheck.message.toLowerCase().includes('fail')) {
-                                log.error(`[Supervisor] QA FAILED for ${tName}. Asking for retry...`);
-                                input = "The previous attempt failed. Please retry or fix the issue.";
+                                let qaPrompt = `Analyze the result of the tool execution: ${JSON.stringify(result)}. Did it satisfy the user's request: "${input || userHistory.pop()?.content}"? If specific files were mentioned (like flask app), check if they exist or look correct based on the tool output.`;
+
+                                if (tName === 'delegate_cli') {
+                                    qaPrompt += " Since this was delegated to an external CLI, be extra critical. Does the output explicitly confirm file creation?";
+                                }
+
+                                const qaCheck = await this.llm.generate(qaPrompt, [...ctx.history, { role: 'user', content: qaPrompt }], signal);
+                                log.step(`[Supervisor] ${qaCheck.message || qaCheck.thought}`);
+
+                                if (qaCheck.message && qaCheck.message.toLowerCase().includes('fail')) {
+                                    log.error(`[Supervisor] QA FAILED for ${tName}. Asking for retry...`);
+                                    input = "The previous attempt failed. Please retry or fix the issue.";
+                                    allExecuted = false;
+                                    break; // Stop batch execution on failure
+                                } else {
+                                    log.success('[Supervisor] QA PASSED. Work verified.');
+                                    // Optional: Learnings can be aggregated or skipped for batch to save tokens/time
+                                }
+                            } catch (e: any) {
+                                if (signal.aborted) throw e; // Re-throw if it was an abort
+                                if (!toolExecuted) s.stop(`Error executing ${tName}`);
+                                else log.error(`Error during verification: ${e.message}`);
+
+                                ctx.history.push({ role: 'user', content: `Error executing ${tName}: ${e.message}` });
+                                input = 'Fix the error.';
                                 allExecuted = false;
-                                break; // Stop batch execution on failure
-                            } else {
-                                log.success('[Supervisor] QA PASSED. Work verified.');
-                                // Optional: Learnings can be aggregated or skipped for batch to save tokens/time
+                                break;
                             }
-                        } catch (e: any) {
-                            if (!toolExecuted) s.stop(`Error executing ${tName}`);
-                            else log.error(`Error during verification: ${e.message}`);
-
-                            ctx.history.push({ role: 'user', content: `Error executing ${tName}: ${e.message}` });
-                            input = 'Fix the error.';
-                            allExecuted = false;
-                            break;
                         }
                     }
+
+                    if (signal.aborted) {
+                        input = undefined;
+                        continue;
+                    }
+
+                    if (allExecuted) {
+                         input = 'The tool executions were verified. Proceed.';
+                    }
+                    continue;
                 }
 
-                if (allExecuted) {
-                     input = 'The tool executions were verified. Proceed.';
+                if (message || response.raw) {
+                    console.log();
+                    console.log(pc.blue('Agent:'));
+                    console.log(message || response.raw);
+                    console.log();
                 }
-                continue;
-            }
+                ctx.history.push({ role: 'assistant', content: message || response.raw });
+                input = undefined;
 
-            if (message || response.raw) {
-                console.log();
-                console.log(pc.blue('Agent:'));
-                console.log(message || response.raw);
-                console.log();
+            } catch (e: any) {
+                if (aborted || signal.aborted || e.name === 'AbortError') {
+                    // Already logged interruption or will just loop back
+                    input = undefined;
+                    continue;
+                }
+                // Log actual errors
+                log.error(`Error: ${e.message}`);
+                // Break or continue? Probably continue to prompt
+                input = undefined;
+            } finally {
+                if (process.stdin.isTTY) {
+                    process.stdin.removeListener('keypress', onKeypress);
+                    process.stdin.setRawMode(false);
+                }
             }
-            ctx.history.push({ role: 'assistant', content: message || response.raw });
-            input = undefined;
         }
     }
 }
