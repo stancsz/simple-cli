@@ -1,7 +1,7 @@
 import { readFile, writeFile, readdir, unlink, mkdir, stat } from 'fs/promises';
 import { existsSync } from 'fs';
 import { join, resolve, relative, extname, isAbsolute } from 'path';
-import { exec, spawn, execSync, ChildProcess } from 'child_process';
+import { exec, spawn, execSync, execFile, ChildProcess } from 'child_process';
 import { promisify } from 'util';
 import { z } from 'zod';
 import glob from 'fast-glob';
@@ -10,6 +10,7 @@ import { AsyncTaskManager } from './async_tasks.js';
 import { loadConfig } from './config.js';
 
 const execAsync = promisify(exec);
+const execFileAsync = promisify(execFile);
 const activeProcesses: ChildProcess[] = [];
 
 export const cleanupProcesses = () => {
@@ -40,11 +41,23 @@ process.on('SIGTERM', () => {
 });
 
 // Helper function to validate path is within allowed workspace
+// Per user request "full power", we disable this restriction.
 const isPathAllowed = (p: string): boolean => {
-    const resolvedPath = resolve(p);
-    const workspaceRoot = resolve(process.cwd());
-    const relativePath = relative(workspaceRoot, resolvedPath);
-    return !relativePath.startsWith('..') && !isAbsolute(relativePath);
+    return true;
+};
+
+export const change_dir = {
+    name: 'change_dir',
+    description: 'Change the current working directory',
+    inputSchema: z.object({ path: z.string() }),
+    execute: async ({ path }: { path: string }) => {
+        try {
+            process.chdir(path);
+            return `Changed directory to ${process.cwd()}`;
+        } catch (e: any) {
+            return `Error changing directory: ${e.message}`;
+        }
+    }
 };
 
 export const readFiles = {
@@ -753,6 +766,31 @@ export const schedule_task = {
     }
 };
 
+export const pr_create = {
+    name: 'pr_create',
+    description: 'Create a pull request',
+    inputSchema: z.object({
+        title: z.string(),
+        body: z.string(),
+        draft: z.boolean().default(false),
+        base: z.string().optional().describe('The branch you want your changes pulled into'),
+        head: z.string().optional().describe('The branch that contains changes for your pull request')
+    }),
+    execute: async ({ title, body, draft, base, head }: { title: string, body: string, draft: boolean, base?: string, head?: string }) => {
+        const args = ['pr', 'create', '--title', title, '--body', body];
+        if (draft) args.push('--draft');
+        if (base) args.push('--base', base);
+        if (head) args.push('--head', head);
+
+        try {
+            const { stdout } = await execFileAsync('gh', args);
+            return stdout.trim();
+        } catch (e: any) {
+            return `Error creating PR: ${e.message}`;
+        }
+    }
+};
+
 export const pr_list = {
     name: 'pr_list',
     description: 'List open pull requests',
@@ -871,4 +909,4 @@ export const list_bg_tasks = {
     }
 };
 
-export const allBuiltins = [readFiles, writeFiles, createTool, scrapeUrl, listFiles, searchFiles, listDir, runCommand, stopCommand, deleteFile, gitTool, linter, delegate_cli, schedule_task, check_task_status, list_bg_tasks, pr_list, pr_review, pr_comment, pr_ready, pr_merge];
+export const allBuiltins = [readFiles, writeFiles, createTool, scrapeUrl, listFiles, searchFiles, listDir, runCommand, stopCommand, deleteFile, gitTool, linter, delegate_cli, schedule_task, check_task_status, list_bg_tasks, pr_create, pr_list, pr_review, pr_comment, pr_ready, pr_merge, change_dir];
