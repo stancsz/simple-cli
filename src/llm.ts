@@ -77,8 +77,9 @@ export class LLM {
                 return this.parse(text);
             } catch (e: any) {
                 lastError = e;
-                console.warn(`[LLM] Provider ${config.provider}:${config.model} failed: ${e.message}`);
-                console.warn(`[LLM] Trying next...`);
+                if (this.configs.indexOf(config) === 0) {
+                     console.warn(`[LLM] Primary provider failed, switching to fallbacks...`);
+                }
             }
         }
 

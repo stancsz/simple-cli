@@ -152,6 +152,7 @@ export class Engine {
                             const s = spinner();
                             s.start(`Executing ${tName}...`);
                             let toolExecuted = false;
+                            let qaSpinner: any = null;
                             try {
                                 const result = await t.execute(tArgs, { signal });
                                 s.stop(`Executed ${tName}`);
@@ -172,7 +173,8 @@ export class Engine {
                                 ctx.history.push({ role: 'user', content: `Result: ${JSON.stringify(result)}` });
 
                                 // --- Supervisor Loop (QA & Reflection) ---
-                                log.step(`[Supervisor] Verifying work from ${tName}...`);
+                                qaSpinner = spinner();
+                                qaSpinner.start(`[Supervisor] Verifying work from ${tName}...`);
 
                                 let qaPrompt = `Analyze the result of the tool execution: ${JSON.stringify(result)}. Did it satisfy the user's request: "${input || userHistory.pop()?.content}"? If specific files were mentioned (like flask app), check if they exist or look correct based on the tool output.`;
 
@@ -181,21 +183,25 @@ export class Engine {
                                 }
 
                                 const qaCheck = await this.llm.generate(qaPrompt, [...ctx.history, { role: 'user', content: qaPrompt }], signal);
-                                log.step(`[Supervisor] ${qaCheck.message || qaCheck.thought}`);
 
                                 if (qaCheck.message && qaCheck.message.toLowerCase().includes('fail')) {
-                                    log.error(`[Supervisor] QA FAILED for ${tName}. Asking for retry...`);
+                                    qaSpinner.stop(`[Supervisor] QA FAILED`);
+                                    log.error(`[Supervisor] Reason: ${qaCheck.message || qaCheck.thought}`);
+                                    log.error(`[Supervisor] Asking for retry...`);
                                     input = "The previous attempt failed. Please retry or fix the issue.";
                                     allExecuted = false;
                                     break; // Stop batch execution on failure
                                 } else {
-                                    log.success('[Supervisor] QA PASSED. Work verified.');
+                                    qaSpinner.stop('[Supervisor] Verified');
                                     // Optional: Learnings can be aggregated or skipped for batch to save tokens/time
                                 }
                             } catch (e: any) {
                                 if (signal.aborted) throw e; // Re-throw if it was an abort
                                 if (!toolExecuted) s.stop(`Error executing ${tName}`);
-                                else log.error(`Error during verification: ${e.message}`);
+                                else {
+                                    if (qaSpinner) qaSpinner.stop('Verification Error');
+                                    log.error(`Error during verification: ${e.message}`);
+                                }
 
                                 ctx.history.push({ role: 'user', content: `Error executing ${tName}: ${e.message}` });
                                 input = 'Fix the error.';
