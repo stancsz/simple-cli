@@ -36,22 +36,25 @@ jobs:
 
       - name: Sync and Bump Version
         run: |
-          LATEST_VERSION=$(npm view . version)
-          echo "Latest version on npm: $LATEST_VERSION"
+          # Fetch tags to ensure we have the full history
+          git fetch --tags
           
-          # If package.json version matches npm version, we are good to patch
-          # If package.json is BEHIND (which shouldn't happen if we push correctly), we update it
-          # To be safe, let's bump based on what's in package.json, but ensure we don't hit a tag conflict
+          # Find the latest semantic version tag (vX.Y.Z)
+          LATEST_TAG=$(git tag -l "v*" | sort -V | tail -n 1)
           
-          CURRENT_VERSION=$(node -p "require('./package.json').version")
-          
-          # If the current version in package.json has already been tagged in git, we need to handle that
-          if git rev-parse "v$CURRENT_VERSION" >/dev/null 2>&1; then
-             echo "Tag v$CURRENT_VERSION exists. Bumping..."
+          if [ -n "$LATEST_TAG" ]; then
+            # Strip the 'v' prefix
+            LATEST_VER=${LATEST_TAG#v}
+            echo "Syncing package.json to match latest tag: $LATEST_VER"
+            
+            # Update package.json version to match the tag, without creating a git commit/tag yet
+            npm version $LATEST_VER --no-git-tag-version --allow-same-version
+          else
+            echo "No existing tags found. Proceeding with package.json version."
           fi
 
-          # Attempt to bump patch. If it fails due to existing tag, we might need to force or skip
-          npm version patch --force
+          # Now bump the patch version (e.g. 0.2.7 -> 0.2.8) and create the tag
+          npm version patch
 
       - name: Push Changes
         run: git push --follow-tags
