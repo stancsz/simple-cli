@@ -222,6 +222,23 @@ export class Engine {
                     continue;
                 }
 
+                // --- Lazy Agent Detection ---
+                const rawText = (message || response.raw || '').toLowerCase();
+                const isRefusal = /(cannot|can't|unable to|no access|don't have access) (to )?(create|write|modify|delete|save|edit)/.test(rawText) || /(did not|didn't) (create|write|modify|delete|save|edit).*?file/.test(rawText);
+                const isHallucination = /(i|i've|i have) (created|updated|modified|deleted|saved|written) (the file|a file)/.test(rawText);
+                const isLazyInstruction = /(please|you need to|you should|run this) (create|save|write|copy)/.test(rawText) && /(file|code)/.test(rawText);
+
+                if (isRefusal || isHallucination || isLazyInstruction) {
+                     log.warn('Lazy/Hallucinating Agent detected. Forcing retry...');
+                     if (message) log.info(pc.dim(`Agent: ${message}`));
+
+                     ctx.history.push({ role: 'assistant', content: message || response.raw });
+
+                     input = "System Correction: You MUST use the 'write_files' tool to create or modify files. Do not describe the action or ask the user to do it. Use the tool now.";
+                     continue;
+                }
+                // ----------------------------
+
                 if (message || response.raw) {
                     console.log();
                     console.log(pc.blue('Agent:'));

@@ -27,10 +27,24 @@ If you don't need to use a tool, use "tool": "none" and provide a "message".
   "tool": "none",
   "message": "Response to user"
 }
-Important:
-- If a task requires multiple steps, perform them one by one.
-- Do not ask for confirmation if you have enough information to proceed.
-- When writing to files that might exist (like logs), read them first and append to them if necessary, unless instructed to overwrite.
+
+Important Rules:
+1. **Always use tools** to perform actions. Do not just describe what to do.
+2. To create or edit files, use the 'write_files' tool. **Do not** simply provide the file content in the message.
+3. If you don't need to use a tool, use "tool": "none" and provide a "message".
+4. If a task requires multiple steps, perform them one by one.
+5. Do not ask for confirmation if you have enough information to proceed.
+
+Example of creating a file:
+{
+  "thought": "I need to create a hello world file.",
+  "tool": "write_files",
+  "args": {
+    "files": [
+      { "path": "hello.py", "content": "print('Hello World')" }
+    ]
+  }
+}
 `
   }
 };
