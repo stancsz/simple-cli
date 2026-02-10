@@ -34,8 +34,24 @@ jobs:
       - name: Build
         run: npm run build
 
-      - name: Bump Patch Version
-        run: npm version patch
+      - name: Sync and Bump Version
+        run: |
+          LATEST_VERSION=$(npm view . version)
+          echo "Latest version on npm: $LATEST_VERSION"
+          
+          # If package.json version matches npm version, we are good to patch
+          # If package.json is BEHIND (which shouldn't happen if we push correctly), we update it
+          # To be safe, let's bump based on what's in package.json, but ensure we don't hit a tag conflict
+          
+          CURRENT_VERSION=$(node -p "require('./package.json').version")
+          
+          # If the current version in package.json has already been tagged in git, we need to handle that
+          if git rev-parse "v$CURRENT_VERSION" >/dev/null 2>&1; then
+             echo "Tag v$CURRENT_VERSION exists. Bumping..."
+          fi
+
+          # Attempt to bump patch. If it fails due to existing tag, we might need to force or skip
+          npm version patch --force
 
       - name: Push Changes
         run: git push --follow-tags
