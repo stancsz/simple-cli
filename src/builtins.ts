@@ -41,11 +41,23 @@ process.on('SIGTERM', () => {
 });
 
 // Helper function to validate path is within allowed workspace
+// Per user request "full power", we disable this restriction.
 const isPathAllowed = (p: string): boolean => {
-    const resolvedPath = resolve(p);
-    const workspaceRoot = resolve(process.cwd());
-    const relativePath = relative(workspaceRoot, resolvedPath);
-    return !relativePath.startsWith('..') && !isAbsolute(relativePath);
+    return true;
+};
+
+export const change_dir = {
+    name: 'change_dir',
+    description: 'Change the current working directory',
+    inputSchema: z.object({ path: z.string() }),
+    execute: async ({ path }: { path: string }) => {
+        try {
+            process.chdir(path);
+            return `Changed directory to ${process.cwd()}`;
+        } catch (e: any) {
+            return `Error changing directory: ${e.message}`;
+        }
+    }
 };
 
 export const readFiles = {
@@ -897,4 +909,4 @@ export const list_bg_tasks = {
     }
 };
 
-export const allBuiltins = [readFiles, writeFiles, createTool, scrapeUrl, listFiles, searchFiles, listDir, runCommand, stopCommand, deleteFile, gitTool, linter, delegate_cli, schedule_task, check_task_status, list_bg_tasks, pr_create, pr_list, pr_review, pr_comment, pr_ready, pr_merge];
+export const allBuiltins = [readFiles, writeFiles, createTool, scrapeUrl, listFiles, searchFiles, listDir, runCommand, stopCommand, deleteFile, gitTool, linter, delegate_cli, schedule_task, check_task_status, list_bg_tasks, pr_create, pr_list, pr_review, pr_comment, pr_ready, pr_merge, change_dir];
