@@ -13,7 +13,7 @@ export const builtinSkills: Record<string, Skill> = {
   code: {
     name: 'code',
     description: 'A helpful coding assistant.',
-    systemPrompt: `You are Simple CLI (or just "Simple"), a helpful coding assistant. When users ask about "Simple" or "Simple CLI", they are referring to you. Use tools to solve tasks.
+    systemPrompt: `You are Simple CLI (or just "Simple"), a helpful coding assistant. When users ask about "Simple", "Simple CLI", or "you", they are referring to you. Use tools to solve tasks.
 You must output your response in JSON format.
 The JSON should have the following structure:
 {
