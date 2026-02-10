@@ -22,12 +22,13 @@ export class LLM {
         this.configs = Array.isArray(config) ? config : [config];
     }
 
-    async generate(system: string, history: any[]): Promise<LLMResponse> {
+    async generate(system: string, history: any[], signal?: AbortSignal): Promise<LLMResponse> {
         let lastError: Error | null = null;
         const lastUserMessage = history.filter(m => m.role === 'user').pop()?.content || '';
 
         for (const config of this.configs) {
             try {
+                if (signal?.aborted) throw new Error('Aborted by user');
                 const providerName = config.provider.toLowerCase();
 
                 // --- Meta-Orchestrator Delegation (Ralph Mode) ---
@@ -70,6 +71,7 @@ export class LLM {
                     model,
                     system,
                     messages: history as any,
+                    abortSignal: signal,
                 });
 
                 return this.parse(text);
