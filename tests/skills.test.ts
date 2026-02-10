@@ -39,6 +39,11 @@ describe('skills', () => {
       expect(builtinSkills.code).toBeDefined();
       expect(builtinSkills.code.name).toBe('code');
     });
+
+    it('should include "Simple CLI" identity in default system prompt', () => {
+      expect(builtinSkills.code.systemPrompt).toContain('Simple CLI');
+      expect(builtinSkills.code.systemPrompt).toContain('When users ask about "Simple" or "Simple CLI", they are referring to you.');
+    });
   });
 
   describe('getActiveSkill', () => {
