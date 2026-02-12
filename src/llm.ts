@@ -33,9 +33,9 @@ export class LLM {
                 let model: any;
                 const apiKey = config.apiKey || this.getEnvKey(providerName);
 
-                if (providerName === 'openai') {
+                if (providerName === 'openai' || providerName === 'codex') {
                     model = createOpenAI({ apiKey })(modelName);
-                } else if (providerName === 'anthropic') {
+                } else if (providerName === 'anthropic' || providerName === 'claude') {
                     model = createAnthropic({ apiKey });
                     model = model(modelName);
                 } else if (providerName === 'google' || providerName === 'gemini') {
@@ -63,8 +63,8 @@ export class LLM {
     }
 
     private getEnvKey(providerName: string): string | undefined {
-        if (providerName === 'openai') return process.env.OPENAI_API_KEY;
-        if (providerName === 'anthropic') return process.env.ANTHROPIC_API_KEY;
+        if (providerName === 'openai' || providerName === 'codex') return process.env.OPENAI_API_KEY;
+        if (providerName === 'anthropic' || providerName === 'claude') return process.env.ANTHROPIC_API_KEY;
         if (providerName === 'google' || providerName === 'gemini') return process.env.GOOGLE_API_KEY || process.env.GEMINI_API_KEY;
         return undefined;
     }
