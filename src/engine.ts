@@ -71,6 +71,7 @@ export class Registry {
 
 export class Engine {
     private learningManager: LearningManager;
+    private s = spinner();
 
     constructor(private llm: any, private registry: Registry, private mcp: MCP) {
         this.learningManager = new LearningManager(process.cwd());
@@ -149,13 +150,12 @@ export class Engine {
                         const t = this.registry.tools.get(tName);
 
                         if (t) {
-                            const s = spinner();
-                            s.start(`Executing ${tName}...`);
+                            this.s.start(`Executing ${tName}...`);
                             let toolExecuted = false;
-                            let qaSpinner: any = null;
+                            let qaStarted = false;
                             try {
                                 const result = await t.execute(tArgs, { signal });
-                                s.stop(`Executed ${tName}`);
+                                this.s.stop(`Executed ${tName}`);
                                 toolExecuted = true;
 
                                 // Reload tools if create_tool was used
@@ -173,8 +173,8 @@ export class Engine {
                                 ctx.history.push({ role: 'user', content: `Result: ${JSON.stringify(result)}` });
 
                                 // --- Supervisor Loop (QA & Reflection) ---
-                                qaSpinner = spinner();
-                                qaSpinner.start(`[Supervisor] Verifying work from ${tName}...`);
+                                this.s.start(`[Supervisor] Verifying work from ${tName}...`);
+                                qaStarted = true;
 
                                 let qaPrompt = `Analyze the result of the tool execution: ${JSON.stringify(result)}. Did it satisfy the user's request: "${input || userHistory.pop()?.content}"? If specific files were mentioned (like flask app), check if they exist or look correct based on the tool output.`;
 
@@ -185,22 +185,24 @@ export class Engine {
                                 const qaCheck = await this.llm.generate(qaPrompt, [...ctx.history, { role: 'user', content: qaPrompt }], signal);
 
                                 if (qaCheck.message && qaCheck.message.toLowerCase().includes('fail')) {
-                                    qaSpinner.stop(`[Supervisor] QA FAILED`);
+                                    this.s.stop(`[Supervisor] QA FAILED`);
                                     log.error(`[Supervisor] Reason: ${qaCheck.message || qaCheck.thought}`);
                                     log.error(`[Supervisor] Asking for retry...`);
                                     input = "The previous attempt failed. Please retry or fix the issue.";
                                     allExecuted = false;
                                     break; // Stop batch execution on failure
                                 } else {
-                                    qaSpinner.stop('[Supervisor] Verified');
+                                    this.s.stop('[Supervisor] Verified');
                                     // Optional: Learnings can be aggregated or skipped for batch to save tokens/time
                                 }
                             } catch (e: any) {
                                 if (signal.aborted) throw e; // Re-throw if it was an abort
-                                if (!toolExecuted) s.stop(`Error executing ${tName}`);
-                                else {
-                                    if (qaSpinner) qaSpinner.stop('Verification Error');
+                                if (!toolExecuted) this.s.stop(`Error executing ${tName}`);
+                                else if (qaStarted) {
+                                    this.s.stop('Verification Error');
                                     log.error(`Error during verification: ${e.message}`);
+                                } else {
+                                    log.error(`Error: ${e.message}`);
                                 }
 
                                 ctx.history.push({ role: 'user', content: `Error executing ${tName}: ${e.message}` });

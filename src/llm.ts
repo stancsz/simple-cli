@@ -31,36 +31,17 @@ export class LLM {
                 if (signal?.aborted) throw new Error('Aborted by user');
                 const providerName = config.provider.toLowerCase();
 
-                // --- Meta-Orchestrator Delegation (Ralph Mode) ---
-                if (['codex', 'gemini', 'claude'].includes(providerName)) {
-                    console.log(`\n[Ralph] I found an expert for this! specialized agent: ${providerName} CLI...`);
-
-                    // We return a TOOL call. This ensures the Engine sees an action was taken,
-                    // triggers the execution (which we will define in builtins), and then
-                    // triggers the QA/Reflection loop.
-                    return {
-                        thought: `Task is complex. Delegating to specialized agent: ${providerName}.`,
-                        tool: 'delegate_cli',
-                        args: {
-                            cli: providerName,
-                            task: lastUserMessage
-                        },
-                        message: '', // No message yet, the tool output will provide it
-                        raw: ''
-                    };
-                }
-
                 // --- Fallback: Internal API Logic ---
                 const modelName = config.model;
                 let model: any;
                 const apiKey = config.apiKey || this.getEnvKey(providerName);
 
-                if (providerName === 'openai') {
+                if (providerName === 'openai' || providerName === 'codex') {
                     model = createOpenAI({ apiKey })(modelName);
-                } else if (providerName === 'anthropic') {
+                } else if (providerName === 'anthropic' || providerName === 'claude') {
                     model = createAnthropic({ apiKey });
                     model = model(modelName);
-                } else if (providerName === 'google' || providerName === 'gemini') { // This handles the API fallback if CLI isn't meant
+                } else if (providerName === 'google' || providerName === 'gemini') {
                     model = createGoogleGenerativeAI({ apiKey });
                     model = model(modelName);
                 } else {
@@ -87,8 +68,8 @@ export class LLM {
     }
 
     private getEnvKey(providerName: string): string | undefined {
-        if (providerName === 'openai') return process.env.OPENAI_API_KEY;
-        if (providerName === 'anthropic') return process.env.ANTHROPIC_API_KEY;
+        if (providerName === 'openai' || providerName === 'codex') return process.env.OPENAI_API_KEY;
+        if (providerName === 'anthropic' || providerName === 'claude') return process.env.ANTHROPIC_API_KEY;
         if (providerName === 'google' || providerName === 'gemini') return process.env.GOOGLE_API_KEY || process.env.GEMINI_API_KEY;
         return undefined;
     }
