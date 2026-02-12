@@ -8,6 +8,7 @@ import glob from 'fast-glob';
 import { Scheduler } from './scheduler.js';
 import { AsyncTaskManager } from './async_tasks.js';
 import { loadConfig } from './config.js';
+import { claw } from './claw/tool.js';
 
 const execAsync = promisify(exec);
 const execFileAsync = promisify(execFile);
@@ -909,4 +910,4 @@ export const list_bg_tasks = {
     }
 };
 
-export const allBuiltins = [readFiles, writeFiles, createTool, scrapeUrl, listFiles, searchFiles, listDir, runCommand, stopCommand, deleteFile, gitTool, linter, delegate_cli, schedule_task, check_task_status, list_bg_tasks, pr_create, pr_list, pr_review, pr_comment, pr_ready, pr_merge, change_dir];
+export const allBuiltins = [readFiles, writeFiles, createTool, scrapeUrl, listFiles, searchFiles, listDir, runCommand, stopCommand, deleteFile, gitTool, linter, delegate_cli, schedule_task, check_task_status, list_bg_tasks, pr_create, pr_list, pr_review, pr_comment, pr_ready, pr_merge, change_dir, claw];
