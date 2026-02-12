@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 import 'dotenv/config';
-import { statSync } from 'fs';
+import { statSync, existsSync, appendFileSync } from 'fs';
+import { join } from 'path';
 import { Engine, Context, Registry } from './engine.js';
 import { allBuiltins } from './builtins.js';
 import { createLLM } from './llm.js';
@@ -9,6 +10,7 @@ import { getActiveSkill } from './skills.js';
 import { showBanner } from './tui.js';
 import { Scheduler } from './scheduler.js';
 import { log, outro } from '@clack/prompts';
+import pc from 'picocolors';
 
 async function main() {
   const args = process.argv.slice(2);
@@ -17,9 +19,23 @@ async function main() {
   let cwd = process.cwd();
   let interactive = true;
   let daemon = false;
+  let clawTask = null;
   const remainingArgs = [];
 
-  for (const arg of args) {
+  for (let i = 0; i < args.length; i++) {
+      const arg = args[i];
+
+      if (arg === '--claw') {
+          if (i + 1 < args.length) {
+              clawTask = args[i + 1];
+              i++; // Consume next arg
+              continue;
+          } else {
+              console.error(pc.red('Error: --claw requires a task argument.'));
+              process.exit(1);
+          }
+      }
+
       if (arg === '--non-interactive') {
           interactive = false;
           continue;
@@ -39,6 +55,24 @@ async function main() {
           } catch {}
       }
       remainingArgs.push(arg);
+  }
+
+  // Handle Claw Task Injection immediately
+  if (clawTask) {
+      const heartbeatFile = join(cwd, 'HEARTBEAT.md');
+      try {
+          // If file doesn't exist, maybe add a header? Or just append.
+          // User said "inject a task into OpenClaw's HEARTBEAT.md".
+          // Assuming simple markdown checklist format.
+          const taskEntry = `- [ ] ${clawTask}\n`;
+          appendFileSync(heartbeatFile, taskEntry, 'utf8');
+
+          console.log(pc.green(`✔ Task injected into HEARTBEAT.md: "${clawTask}"`));
+          process.exit(0);
+      } catch (e: any) {
+          console.error(pc.red(`Error injecting task into HEARTBEAT.md: ${e.message}`));
+          process.exit(1);
+      }
   }
 
   const prompt = remainingArgs.filter(a => !a.startsWith('-')).join(' ');
