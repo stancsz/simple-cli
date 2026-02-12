@@ -631,13 +631,9 @@ export const delegate_cli = {
             console.log(`[delegate_cli] Spawning external process for ${cli}...`);
             const config = await loadConfig();
 
-            // Default to mock if no config for this agent
+            // Error if no config for this agent
             if (!config.agents || !config.agents[cli]) {
-                console.warn(`[delegate_cli] No configuration found for '${cli}'. Falling back to mock.`);
-                const cmd = `npx tsx tests/manual_scripts/mock_cli.ts "${task}"`;
-                const { stdout, stderr } = await execAsync(cmd);
-                if (stderr) console.warn(`[delegate_cli] Stderr: ${stderr}`);
-                return `[${cli} CLI (Mock)]:\n${stdout.trim()}`;
+                return `[delegate_cli] Error: No configuration found for agent '${cli}'. Please add it to your mcp.json or .agent/config.json.`;
             }
 
             const agent = config.agents[cli];

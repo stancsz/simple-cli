@@ -32,6 +32,10 @@ vi.mock('child_process', () => {
             kill: vi.fn()
         })),
         execSync: vi.fn(),
+        execFile: vi.fn((cmd, args, cb) => {
+             if (cb) cb(null, { stdout: 'execFile output', stderr: '' });
+             return { stdout: 'execFile output' };
+        }),
         ChildProcess: class {}
     };
 });
@@ -41,13 +45,12 @@ describe('delegate_cli', () => {
         vi.clearAllMocks();
     });
 
-    it('should use fallback mock if no config found', async () => {
+    it('should return error if no config found', async () => {
         (config.loadConfig as any).mockResolvedValue({});
 
         const result = await delegate_cli.execute({ cli: 'test-agent', task: 'do something' });
 
-        expect(result).toContain('Mock CLI received task');
-        expect(result).toContain('[test-agent CLI (Mock)]');
+        expect(result).toContain('Error: No configuration found for agent');
     });
 
     it('should use configured agent', async () => {

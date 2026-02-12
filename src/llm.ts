@@ -24,33 +24,11 @@ export class LLM {
 
     async generate(system: string, history: any[], signal?: AbortSignal): Promise<LLMResponse> {
         let lastError: Error | null = null;
-        const lastUserMessage = history.filter(m => m.role === 'user').pop()?.content || '';
 
         for (const config of this.configs) {
             try {
                 if (signal?.aborted) throw new Error('Aborted by user');
                 const providerName = config.provider.toLowerCase();
-
-                // --- Meta-Orchestrator Delegation (Ralph Mode) ---
-                if (['codex', 'gemini', 'claude'].includes(providerName)) {
-                    console.log(`\n[Ralph] I found an expert for this! specialized agent: ${providerName} CLI...`);
-
-                    // We return a TOOL call. This ensures the Engine sees an action was taken,
-                    // triggers the execution (which we will define in builtins), and then
-                    // triggers the QA/Reflection loop.
-                    return {
-                        thought: `Task is complex. Delegating to specialized agent: ${providerName}.`,
-                        tool: 'delegate_cli',
-                        args: {
-                            cli: providerName,
-                            task: lastUserMessage
-                        },
-                        message: '', // No message yet, the tool output will provide it
-                        raw: ''
-                    };
-                }
-
-                // --- Fallback: Internal API Logic ---
                 const modelName = config.model;
                 let model: any;
                 const apiKey = config.apiKey || this.getEnvKey(providerName);
@@ -60,11 +38,11 @@ export class LLM {
                 } else if (providerName === 'anthropic') {
                     model = createAnthropic({ apiKey });
                     model = model(modelName);
-                } else if (providerName === 'google' || providerName === 'gemini') { // This handles the API fallback if CLI isn't meant
+                } else if (providerName === 'google' || providerName === 'gemini') {
                     model = createGoogleGenerativeAI({ apiKey });
                     model = model(modelName);
                 } else {
-                    continue; // Skip unsupported
+                    throw new Error(`Unsupported provider: ${providerName}`);
                 }
 
                 const { text } = await generateText({
@@ -77,9 +55,7 @@ export class LLM {
                 return this.parse(text);
             } catch (e: any) {
                 lastError = e;
-                if (this.configs.indexOf(config) === 0) {
-                     console.warn(`[LLM] Primary provider failed, switching to fallbacks...`);
-                }
+                console.warn(`[LLM] Error with ${config.provider}:${config.model}: ${e.message}`);
             }
         }
 
@@ -151,7 +127,7 @@ export class LLM {
             }
         }
 
-        // 2. Fallback: If no tools found via loop, try single block extraction (legacy behavior)
+        // 2. Fallback: If no tools found via loop, try single block extraction
         if (tools.length === 0) {
             try {
                 const jsonPart = rawTrimmed.match(/\{[\s\S]*\}/)?.[0] || rawTrimmed;
@@ -185,22 +161,8 @@ export const createLLM = (model?: string) => {
     const m = model || process.env.MODEL || 'openai:gpt-5.2-codex';
     const [p, n] = m.includes(':') ? m.split(':') : ['openai', m];
 
-    // Define Failover Chain
-    const configs: LLMConfig[] = [{ provider: p, model: n }];
+    // Simple configuration without complex fallback chains across different providers
+    const config: LLMConfig = { provider: p, model: n };
 
-    // Add fallbacks if they aren't the primary
-    const fallbacks: LLMConfig[] = [
-        { provider: 'anthropic', model: 'claude-3-7-sonnet-latest' },
-        { provider: 'google', model: 'gemini-2.0-flash-001' },
-        { provider: 'openai', model: 'gpt-4o' }
-    ];
-
-    for (const f of fallbacks) {
-        // Prevent duplicate provider/model combinations
-        if (!(f.provider === p && f.model === n)) {
-            configs.push(f);
-        }
-    }
-
-    return new LLM(configs);
+    return new LLM(config);
 };
