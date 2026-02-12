@@ -766,108 +766,6 @@ export const schedule_task = {
     }
 };
 
-export const pr_create = {
-    name: 'pr_create',
-    description: 'Create a pull request',
-    inputSchema: z.object({
-        title: z.string(),
-        body: z.string(),
-        draft: z.boolean().default(false),
-        base: z.string().optional().describe('The branch you want your changes pulled into'),
-        head: z.string().optional().describe('The branch that contains changes for your pull request')
-    }),
-    execute: async ({ title, body, draft, base, head }: { title: string, body: string, draft: boolean, base?: string, head?: string }) => {
-        const args = ['pr', 'create', '--title', title, '--body', body];
-        if (draft) args.push('--draft');
-        if (base) args.push('--base', base);
-        if (head) args.push('--head', head);
-
-        try {
-            const { stdout } = await execFileAsync('gh', args);
-            return stdout.trim();
-        } catch (e: any) {
-            return `Error creating PR: ${e.message}`;
-        }
-    }
-};
-
-export const pr_list = {
-    name: 'pr_list',
-    description: 'List open pull requests',
-    inputSchema: z.object({ limit: z.number().default(10) }),
-    execute: async ({ limit }: { limit: number }) => {
-        try {
-            const { stdout } = await execAsync(`gh pr list --limit ${limit}`);
-            return stdout.trim() || 'No open PRs found.';
-        } catch (e: any) {
-            return `Error listing PRs: ${e.message}`;
-        }
-    }
-};
-
-export const pr_review = {
-    name: 'pr_review',
-    description: 'Get the diff/details of a PR',
-    inputSchema: z.object({ pr_number: z.number() }),
-    execute: async ({ pr_number }: { pr_number: number }) => {
-        try {
-            const { stdout } = await execAsync(`gh pr diff ${pr_number}`);
-            return stdout.trim();
-        } catch (e: any) {
-            return `Error reviewing PR ${pr_number}: ${e.message}`;
-        }
-    }
-};
-
-export const pr_comment = {
-    name: 'pr_comment',
-    description: 'Add a comment to a PR (e.g., to instruct Jules to fix something).',
-    inputSchema: z.object({
-        pr_number: z.number(),
-        body: z.string()
-    }),
-    execute: async ({ pr_number, body }: { pr_number: number, body: string }) => {
-        try {
-            await execAsync(`gh pr comment ${pr_number} --body "${body}"`);
-            return `Commented on PR ${pr_number}: "${body}"`;
-        } catch (e: any) {
-            return `Error commenting on PR ${pr_number}: ${e.message}`;
-        }
-    }
-};
-
-export const pr_ready = {
-    name: 'pr_ready',
-    description: 'Mark a Draft PR as Ready for Review',
-    inputSchema: z.object({ pr_number: z.number() }),
-    execute: async ({ pr_number }: { pr_number: number }) => {
-        try {
-            await execAsync(`gh pr ready ${pr_number}`);
-            return `PR ${pr_number} marked as Ready for Review`;
-        } catch (e: any) {
-            return `Error marking PR ${pr_number} as ready: ${e.message}`;
-        }
-    }
-};
-
-export const pr_merge = {
-    name: 'pr_merge',
-    description: 'Merge a pull request',
-    inputSchema: z.object({
-        pr_number: z.number(),
-        method: z.enum(['merge', 'squash', 'rebase']).default('merge')
-    }),
-    execute: async ({ pr_number, method }: { pr_number: number, method: string }) => {
-        try {
-            await execAsync(`gh pr merge ${pr_number} --${method} --delete-branch`);
-            return `Successfully merged PR ${pr_number}`;
-        } catch (e: any) {
-            return `Error merging PR ${pr_number}: ${e.message}`;
-        }
-    }
-};
-
-
 export const check_task_status = {
     name: 'check_task_status',
     description: 'Check the status and logs of a background task.',
@@ -909,4 +807,4 @@ export const list_bg_tasks = {
     }
 };
 
-export const allBuiltins = [readFiles, writeFiles, createTool, scrapeUrl, listFiles, searchFiles, listDir, runCommand, stopCommand, deleteFile, gitTool, linter, delegate_cli, schedule_task, check_task_status, list_bg_tasks, pr_create, pr_list, pr_review, pr_comment, pr_ready, pr_merge, change_dir];
+export const allBuiltins = [readFiles, writeFiles, createTool, scrapeUrl, listFiles, searchFiles, listDir, runCommand, stopCommand, deleteFile, gitTool, linter, delegate_cli, schedule_task, check_task_status, list_bg_tasks, change_dir];
