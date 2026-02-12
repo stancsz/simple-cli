@@ -38,16 +38,30 @@ export async function loadConfig(cwd: string = process.cwd()): Promise<Config> {
         join(cwd, '.agent', 'config.json')
     ];
 
+    let config: Config = {};
+
     for (const loc of locations) {
         if (existsSync(loc)) {
             try {
                 const content = await readFile(loc, 'utf-8');
-                return JSON.parse(content);
+                config = JSON.parse(content);
+                break;
             } catch (e) {
                 console.error(`Failed to parse config at ${loc}:`, e);
             }
         }
     }
 
-    return {};
+    // Default configuration for Open Claw integration (Meta-Orchestrator sub-agent)
+    if (!config.agents) config.agents = {};
+    if (!config.agents.claw) {
+        config.agents.claw = {
+            command: 'npx',
+            args: ['openclaw', 'agent', '--local', '--json', '--session-id', 'simple-cli-delegate', '--message'],
+            description: 'Delegate tasks to Open Claw (local execution).',
+            supports_stdin: false
+        };
+    }
+
+    return config;
 }
