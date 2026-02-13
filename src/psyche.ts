@@ -1,6 +1,12 @@
 import { readFile, writeFile } from "fs/promises";
 import { existsSync, mkdirSync } from "fs";
 import { join } from "path";
+import {
+  createCipheriv,
+  createDecipheriv,
+  randomBytes,
+  scryptSync,
+} from "node:crypto";
 import { LLM } from "./llm.js";
 
 export interface InternalMonologue {
@@ -40,16 +46,17 @@ export interface StateVector {
 
 export class Psyche {
   private statePath: string;
+  private agentDir: string;
   public state: StateVector;
 
   constructor(cwd: string) {
-    const agentDir = join(cwd, ".agent");
-    if (!existsSync(agentDir)) {
+    this.agentDir = join(cwd, ".agent");
+    if (!existsSync(this.agentDir)) {
       try {
-        mkdirSync(agentDir, { recursive: true });
+        mkdirSync(this.agentDir, { recursive: true });
       } catch {}
     }
-    this.statePath = join(agentDir, "state.json");
+    this.statePath = join(this.agentDir, "state.json");
     this.state = {
       dna: {
         mbti: "ENTJ",
@@ -68,8 +75,15 @@ export class Psyche {
   async load() {
     if (existsSync(this.statePath)) {
       try {
-        const data = await readFile(this.statePath, "utf-8");
-        const loaded = JSON.parse(data);
+        const rawData = await readFile(this.statePath, "utf-8");
+        let content: string;
+        try {
+          content = await this.decrypt(rawData);
+        } catch (e) {
+          // Fallback for migration: try parsing as plaintext if decryption fails
+          content = rawData;
+        }
+        const loaded = JSON.parse(content);
         // Merge with default to ensure all fields exist
         this.state = {
           dna: { ...this.state.dna, ...loaded.dna },
@@ -86,7 +100,9 @@ export class Psyche {
   }
 
   async save() {
-    await writeFile(this.statePath, JSON.stringify(this.state, null, 2));
+    const json = JSON.stringify(this.state, null, 2);
+    const encrypted = await this.encrypt(json);
+    await writeFile(this.statePath, encrypted);
   }
 
   getSystemInstruction(): string {
@@ -147,6 +163,57 @@ Cognitive Fatigue: If irritation is high (> 0.7), use shorter, more dismissive s
     }
 
     await this.save();
+  }
+
+  private async getKey(): Promise<Buffer> {
+    const envSecret = process.env.AGENT_STATE_SECRET;
+    if (envSecret) {
+      return scryptSync(envSecret, "psyche-salt", 32);
+    }
+
+    const keyPath = join(this.agentDir, "secret.key");
+    if (existsSync(keyPath)) {
+      return await readFile(keyPath);
+    }
+
+    const newKey = randomBytes(32);
+    await writeFile(keyPath, newKey);
+    return newKey;
+  }
+
+  private async encrypt(text: string): Promise<string> {
+    const key = await this.getKey();
+    const iv = randomBytes(12);
+    const cipher = createCipheriv("aes-256-gcm", key, iv);
+    const encrypted = Buffer.concat([
+      cipher.update(text, "utf8"),
+      cipher.final(),
+    ]);
+    const tag = cipher.getAuthTag();
+    return JSON.stringify({
+      iv: iv.toString("base64"),
+      tag: tag.toString("base64"),
+      data: encrypted.toString("base64"),
+    });
+  }
+
+  private async decrypt(encryptedContent: string): Promise<string> {
+    const key = await this.getKey();
+    const parsed = JSON.parse(encryptedContent);
+    if (!parsed.iv || !parsed.tag || !parsed.data) {
+      throw new Error("Invalid encrypted format");
+    }
+    const { iv, tag, data } = parsed;
+    const decipher = createDecipheriv(
+      "aes-256-gcm",
+      key,
+      Buffer.from(iv, "base64"),
+    );
+    decipher.setAuthTag(Buffer.from(tag, "base64"));
+    return (
+      decipher.update(Buffer.from(data, "base64"), undefined, "utf8") +
+      decipher.final("utf8")
+    );
   }
 
   async reflect(history: any[], llm: LLM) {
