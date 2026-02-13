@@ -44,4 +44,7 @@ This document outlines critical feedback from a stress test of the Simple CLI, f
 2.  **Add Token Tracking**: Update `LLM.generate` to return usage stats and `Engine` to display them.
 3.  **Implement Type-Ahead**: Buffer keypresses during busy states.
 4.  **Improve Interrupts**: Handle `SIGINT` gracefully.
+<<<<<<< HEAD
 
+=======
+>>>>>>> origin/main

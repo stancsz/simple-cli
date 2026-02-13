@@ -631,7 +631,11 @@ All tasks completed successfully. Images and receipts are sorted, and expenses a
 (Use `node --trace-warnings ...` to show where the warning was created)
 (node:2938) [DEP0180] DeprecationWarning: fs.Stats constructor is deprecated.
 (Use `node --trace-deprecation ...` to show where the warning was created)
+<<<<<<< HEAD
 ┌   SIMPLE-CLI v0.2.9 
+=======
+┌   SIMPLE-CLI v0.2.9
+>>>>>>> origin/main
 [LLM] Primary provider failed, switching to fallbacks...
 │
 ■  Error: All LLM providers failed. Last error: API key expired. Please renew the API key.
@@ -647,7 +651,11 @@ All tasks completed successfully. Images and receipts are sorted, and expenses a
 (Use `node --trace-warnings ...` to show where the warning was created)
 (node:3529) [DEP0180] DeprecationWarning: fs.Stats constructor is deprecated.
 (Use `node --trace-deprecation ...` to show where the warning was created)
+<<<<<<< HEAD
 ┌   SIMPLE-CLI v0.2.9 
+=======
+┌   SIMPLE-CLI v0.2.9
+>>>>>>> origin/main
 [LLM] Primary provider failed, switching to fallbacks...
 │
 ■  Error: All LLM providers failed. Last error: API key expired. Please renew the API key.
@@ -663,7 +671,11 @@ All tasks completed successfully. Images and receipts are sorted, and expenses a
 (Use `node --trace-warnings ...` to show where the warning was created)
 (node:7005) [DEP0180] DeprecationWarning: fs.Stats constructor is deprecated.
 (Use `node --trace-deprecation ...` to show where the warning was created)
+<<<<<<< HEAD
 ┌   SIMPLE-CLI v0.2.9 
+=======
+┌   SIMPLE-CLI v0.2.9
+>>>>>>> origin/main
 [LLM] Primary provider failed, switching to fallbacks...
 │
 ■  Error: All LLM providers failed. Last error: API key expired. Please renew the API key.
@@ -679,10 +691,17 @@ All tasks completed successfully. Images and receipts are sorted, and expenses a
 (Use `node --trace-warnings ...` to show where the warning was created)
 (node:7611) [DEP0180] DeprecationWarning: fs.Stats constructor is deprecated.
 (Use `node --trace-deprecation ...` to show where the warning was created)
+<<<<<<< HEAD
 ┌   SIMPLE-CLI v0.2.9 
+=======
+┌   SIMPLE-CLI v0.2.9
+>>>>>>> origin/main
 [LLM] Primary provider failed, switching to fallbacks...
 │
 ■  Error: All LLM providers failed. Last error: API key expired. Please renew the API key.
 │
 └  Session finished.
+<<<<<<< HEAD
 
+=======
+>>>>>>> origin/main

@@ -73,10 +73,17 @@ Node.js v22.22.0
 
 ## Intent: Step 1: Write a file named 'ping_source.js' that exports a tool object (using ESM `export const tool = { name: 'ping_tool', ... }`) with an execute function that returns 'PONG CONNECTION SUCCESSFUL'. Step 2: Use 'create_tool' to register it. Step 3: Call 'ping_tool'. execute all steps immediately without asking for confirmation.
 
+<<<<<<< HEAD
 ┌   SIMPLE-CLI v0.2.9 
+=======
+┌   SIMPLE-CLI v0.2.9
+>>>>>>> origin/main
 [LLM] Primary provider failed, switching to fallbacks...
 │
 ■  Error: All LLM providers failed. Last error: API key expired. Please renew the API key.
 │
 └  Session finished.
+<<<<<<< HEAD
 
+=======
+>>>>>>> origin/main
