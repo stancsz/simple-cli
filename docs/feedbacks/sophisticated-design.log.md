@@ -15,12 +15,12 @@ Do not skip steps. Execute them one by one.
 
 
 ## Execution Log
-(node:4055) ExperimentalWarning: `--experimental-loader` may be removed in the future; instead use `register()`:
+(node:7795) ExperimentalWarning: `--experimental-loader` may be removed in the future; instead use `register()`:
 --import 'data:text/javascript,import { register } from "node:module"; import { pathToFileURL } from "node:url"; register("ts-node/esm", pathToFileURL("./"));'
 (Use `node --trace-warnings ...` to show where the warning was created)
-(node:4055) [DEP0180] DeprecationWarning: fs.Stats constructor is deprecated.
+(node:7795) [DEP0180] DeprecationWarning: fs.Stats constructor is deprecated.
 (Use `node --trace-deprecation ...` to show where the warning was created)
-┌   SIMPLE-CLI v0.2.9
+┌   SIMPLE-CLI v0.2.9 
 [LLM] Primary provider failed, switching to fallbacks...
 │
 ■  Error: All LLM providers failed. Last error: API key expired. Please renew the API key.

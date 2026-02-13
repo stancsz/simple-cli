@@ -80,6 +80,7 @@ export class Engine {
     async run(ctx: Context, initialPrompt?: string, options: { interactive: boolean } = { interactive: true }) {
         await this.learningManager.load();
         let input = initialPrompt;
+        let bufferedInput = '';
         await this.mcp.init();
         (await this.mcp.getTools()).forEach(t => this.registry.tools.set(t.name, t as any));
 
@@ -93,7 +94,11 @@ export class Engine {
         while (true) {
             if (!input) {
                 if (!options.interactive || !process.stdout.isTTY) break;
-                const res = await text({ message: pc.cyan('Chat') });
+                const res = await text({ 
+                    message: pc.cyan('Chat'),
+                    initialValue: bufferedInput
+                });
+                bufferedInput = '';
                 if (isCancel(res)) break;
                 input = res as string;
             }
@@ -105,10 +110,28 @@ export class Engine {
             let aborted = false;
 
             const onKeypress = (str: string, key: any) => {
+                if (key.ctrl && key.name === 'c') {
+                    log.warn('Interrupted by user.');
+                    aborted = true;
+                    controller.abort();
+                    return;
+                }
                 if (key.name === 'escape') {
                     log.warn('Interrupted by user.');
                     aborted = true;
                     controller.abort();
+                    return;
+                }
+                
+                // Type-ahead buffering
+                if (!key.ctrl && !key.meta) {
+                    if (key.name === 'backspace') {
+                        bufferedInput = bufferedInput.slice(0, -1);
+                    } else if (key.name === 'return') {
+                        // Do nothing for return, user must hit it again at prompt
+                    } else if (str && str.length === 1) {
+                         bufferedInput += str;
+                    }
                 }
             };
 
@@ -131,6 +154,12 @@ export class Engine {
 
                 // Pass signal to LLM
                 const response = await this.llm.generate(prompt, ctx.history, signal);
+                
+                if (response.usage) {
+                    const { promptTokens, completionTokens, totalTokens } = response.usage;
+                    log.info(pc.dim(`Tokens: ${promptTokens ?? '?'} prompt + ${completionTokens ?? '?'} completion = ${totalTokens ?? '?'} total`));
+                }
+
                 const { thought, tool, args, message, tools } = response;
 
                 if (thought) log.info(pc.dim(thought));
