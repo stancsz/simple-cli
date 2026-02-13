@@ -20,7 +20,7 @@ Do not skip steps. Execute them one by one.
 (Use `node --trace-warnings ...` to show where the warning was created)
 (node:7795) [DEP0180] DeprecationWarning: fs.Stats constructor is deprecated.
 (Use `node --trace-deprecation ...` to show where the warning was created)
-┌   SIMPLE-CLI v0.2.9
+┌   SIMPLE-CLI v0.2.9 
 [LLM] Primary provider failed, switching to fallbacks...
 │
 ■  Error: All LLM providers failed. Last error: API key expired. Please renew the API key.

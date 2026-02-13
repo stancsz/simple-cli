@@ -143,7 +143,11 @@ Node.js v22.22.0
 
 ## Intent: Use the env_check tool with test_arg="HELLO_WORLD"
 
+<<<<<<< HEAD
+┌   SIMPLE-CLI v0.2.9 
+=======
 ┌   SIMPLE-CLI v0.2.9
+>>>>>>> origin/main
 [LLM] Primary provider failed, switching to fallbacks...
 │
 ■  Error: All LLM providers failed. Last error: API key expired. Please renew the API key.
@@ -154,9 +158,17 @@ Node.js v22.22.0
 
 ## Intent: Use scheduler tool to schedule 'bingo' to run every minute.
 
+<<<<<<< HEAD
+┌   SIMPLE-CLI v0.2.9 
+=======
 ┌   SIMPLE-CLI v0.2.9
+>>>>>>> origin/main
 [LLM] Primary provider failed, switching to fallbacks...
 │
 ■  Error: All LLM providers failed. Last error: API key expired. Please renew the API key.
 │
 └  Session finished.
+<<<<<<< HEAD
+
+=======
+>>>>>>> origin/main
