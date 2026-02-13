@@ -63,5 +63,33 @@ export async function loadConfig(cwd: string = process.cwd()): Promise<Config> {
         };
     }
 
+    if (!config.agents.deepseek_aider) {
+        config.agents.deepseek_aider = {
+            command: 'npx',
+            args: ['tsx', 'src/agents/deepseek_aider.ts'],
+            description: 'Delegate coding tasks to Aider using DeepSeek V3.',
+            supports_stdin: false,
+            context_flag: '' // Aider accepts files as positional arguments
+        };
+    }
+
+    if (!config.agents.deepseek_opencode) {
+        config.agents.deepseek_opencode = {
+            command: 'npx',
+            args: ['tsx', 'src/agents/deepseek_opencode.ts'],
+            description: 'Delegate tasks to OpenCode using DeepSeek V3.',
+            supports_stdin: false
+        };
+    }
+
+    if (!config.agents.deepseek_claude) {
+        config.agents.deepseek_claude = {
+            command: 'npx',
+            args: ['tsx', 'src/agents/deepseek_claude.ts'],
+            description: 'Delegate tasks to Claude Code using DeepSeek V3.',
+            supports_stdin: false
+        };
+    }
+
     return config;
 }

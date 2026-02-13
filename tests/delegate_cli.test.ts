@@ -32,6 +32,13 @@ vi.mock('child_process', () => {
             kill: vi.fn()
         })),
         execSync: vi.fn(),
+        execFile: vi.fn((file, args, cb) => {
+            if (typeof args === 'function') {
+                cb = args;
+            }
+            cb && cb(null, { stdout: '', stderr: '' });
+            return { unref: vi.fn(), kill: vi.fn() };
+        }),
         ChildProcess: class {}
     };
 });

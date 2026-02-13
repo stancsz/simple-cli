@@ -94,11 +94,7 @@ export class Engine {
         while (true) {
             if (!input) {
                 if (!options.interactive || !process.stdout.isTTY) break;
-<<<<<<< HEAD
-                const res = await text({ 
-=======
                 const res = await text({
->>>>>>> origin/main
                     message: pc.cyan('Chat'),
                     initialValue: bufferedInput
                 });
@@ -126,11 +122,7 @@ export class Engine {
                     controller.abort();
                     return;
                 }
-<<<<<<< HEAD
-                
-=======
 
->>>>>>> origin/main
                 // Type-ahead buffering
                 if (!key.ctrl && !key.meta) {
                     if (key.name === 'backspace') {
@@ -162,11 +154,7 @@ export class Engine {
 
                 // Pass signal to LLM
                 const response = await this.llm.generate(prompt, ctx.history, signal);
-<<<<<<< HEAD
-                
-=======
 
->>>>>>> origin/main
                 if (response.usage) {
                     const { promptTokens, completionTokens, totalTokens } = response.usage;
                     log.info(pc.dim(`Tokens: ${promptTokens ?? '?'} prompt + ${completionTokens ?? '?'} completion = ${totalTokens ?? '?'} total`));
