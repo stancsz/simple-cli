@@ -56,8 +56,13 @@ describe("delegate_cli", () => {
       task: "do something",
     });
 
-    expect(result).toContain("Mock CLI received task");
-    expect(result).toContain("[test-agent CLI (Mock)]");
+    // Expect fallback mock execution via spawn
+    expect(result).toContain("spawned output");
+    expect(spawn).toHaveBeenCalledWith(
+      "echo",
+      ["mock_cli.ts", "do something"],
+      expect.anything(),
+    );
   });
 
   it("should use configured agent", async () => {

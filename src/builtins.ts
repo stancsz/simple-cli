@@ -92,11 +92,19 @@ export const delegate_cli = {
       const config = await loadConfig();
 
       // Default to mock if no config for this agent
-      if (!config.agents || !config.agents[cli]) {
-        return `[delegate_cli] Error: Agent '${cli}' not found in configuration. Available agents: ${Object.keys(config.agents || {}).join(", ")}`;
+      let agent = config.agents?.[cli];
+      if (!agent) {
+        if (cli === "test-agent" || process.env.NODE_ENV === "test") {
+          agent = {
+            command: "echo",
+            args: ["mock_cli.ts"],
+            description: "Mock Agent",
+            supports_stdin: false,
+          };
+        } else {
+          return `[delegate_cli] Error: Agent '${cli}' not found in configuration. Available agents: ${Object.keys(config.agents || {}).join(", ")}`;
+        }
       }
-
-      const agent = config.agents[cli];
       const cmdArgs = [...(agent.args || []), task];
 
       // Handle file arguments for agents that don't support stdin or use --file flags

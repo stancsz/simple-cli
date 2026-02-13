@@ -58,7 +58,19 @@ export const claw = {
         if (agent_id) {
           args.push("--agent", agent_id);
         }
-        const { stdout, stderr } = await execFileAsync(cmd, args);
+
+        const env = { ...process.env };
+        if (process.env.DEEPSEEK_API_KEY) {
+          env.ANTHROPIC_BASE_URL = "https://api.deepseek.com/anthropic";
+          env.ANTHROPIC_API_KEY = process.env.DEEPSEEK_API_KEY;
+          env.ANTHROPIC_AUTH_TOKEN = process.env.DEEPSEEK_API_KEY;
+          env.ANTHROPIC_MODEL = "deepseek-chat";
+          env.ANTHROPIC_SMALL_FAST_MODEL = "deepseek-chat";
+          env.API_TIMEOUT_MS = "600000";
+          env.CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC = "1";
+        }
+
+        const { stdout, stderr } = await execFileAsync(cmd, args, { env });
         return stdout || stderr;
       }
       if (action === "list_skills") {

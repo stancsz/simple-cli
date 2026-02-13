@@ -52,6 +52,17 @@ export async function loadConfig(cwd: string = process.cwd()): Promise<Config> {
   // Default configuration for Open Claw integration (Meta-Orchestrator sub-agent)
   if (!config.agents) config.agents = {};
   if (!config.agents.claw) {
+    const env: Record<string, string> = {};
+    if (process.env.DEEPSEEK_API_KEY) {
+      env.ANTHROPIC_BASE_URL = "https://api.deepseek.com/anthropic";
+      env.ANTHROPIC_API_KEY = process.env.DEEPSEEK_API_KEY;
+      env.ANTHROPIC_AUTH_TOKEN = process.env.DEEPSEEK_API_KEY;
+      env.ANTHROPIC_MODEL = "deepseek-chat";
+      env.ANTHROPIC_SMALL_FAST_MODEL = "deepseek-chat";
+      env.API_TIMEOUT_MS = "600000";
+      env.CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC = "1";
+    }
+
     config.agents.claw = {
       command: "npx",
       args: [
@@ -65,6 +76,7 @@ export async function loadConfig(cwd: string = process.cwd()): Promise<Config> {
       ],
       description: "Delegate tasks to Open Claw (local execution).",
       supports_stdin: false,
+      env,
     };
   }
 
