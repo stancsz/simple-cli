@@ -18,5 +18,6 @@ Verify the "Success Criteria" manually or via scripts.
 ## Contribution
 
 To add a new test case:
+
 1. Create a new directory under `live/<category>/<test-name>`.
 2. Add a `test_specs.md` following the existing format.

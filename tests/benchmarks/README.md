@@ -14,10 +14,10 @@ The suite includes tasks inspired by:
 
 ## Prerequisites
 
--   Node.js >= 18
--   `npm install` dependencies.
--   `npm run build` to compile the CLI.
--   **API Keys**: The agent requires valid API keys (e.g., `OPENAI_API_KEY`) to function. Set them in your environment or `.env` file.
+- Node.js >= 18
+- `npm install` dependencies.
+- `npm run build` to compile the CLI.
+- **API Keys**: The agent requires valid API keys (e.g., `OPENAI_API_KEY`) to function. Set them in your environment or `.env` file.
 
 ## Running Benchmarks
 
@@ -34,10 +34,10 @@ This will execute each task in a temporary directory and report Pass/Fail status
 1.  Open `tests/benchmarks/definitions.ts`.
 2.  Add a new `Benchmark` object to the `benchmarks` array.
 3.  Define tasks with:
-    -   `name`: Task name.
-    -   `prompt`: The instruction for the agent.
-    -   `setup`: (Optional) Function to prepare the environment (create files).
-    -   `verify`: Function to check if the task succeeded (inspect files/output).
+    - `name`: Task name.
+    - `prompt`: The instruction for the agent.
+    - `setup`: (Optional) Function to prepare the environment (create files).
+    - `verify`: Function to check if the task succeeded (inspect files/output).
 
 Example:
 
@@ -57,5 +57,5 @@ Example:
 
 ## Troubleshooting
 
--   **Timeouts**: Tasks have a 60s timeout. If the agent gets stuck in a loop (e.g., repeated errors), it will be killed.
--   **API Errors**: Ensure your API keys are valid. The runner captures stdout/stderr, which may show `litellm` errors.
+- **Timeouts**: Tasks have a 60s timeout. If the agent gets stuck in a loop (e.g., repeated errors), it will be killed.
+- **API Errors**: Ensure your API keys are valid. The runner captures stdout/stderr, which may show `litellm` errors.

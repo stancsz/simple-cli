@@ -1,27 +1,36 @@
-import { describe, it, expect, beforeAll } from 'vitest';
-import { spawn } from 'child_process';
-import { resolve, join } from 'path';
-import { writeFileSync, mkdirSync, existsSync, readFileSync, rmSync, appendFileSync } from 'fs';
+import { describe, it, expect, beforeAll } from "vitest";
+import { spawn } from "child_process";
+import { resolve, join } from "path";
+import {
+  writeFileSync,
+  mkdirSync,
+  existsSync,
+  readFileSync,
+  rmSync,
+  appendFileSync,
+} from "fs";
 
-const DEMO_DIR = resolve('./test_claw_advanced');
-const cliPath = resolve('./dist/cli.js');
-const LOG_FILE = resolve('./docs/feedbacks/claw-advanced.log.md');
+const DEMO_DIR = resolve("./test_claw_advanced");
+const cliPath = resolve("./dist/cli.js");
+const LOG_FILE = resolve("./docs/feedbacks/claw-advanced.log.md");
 
-describe('Claw Advanced Features', () => {
-    beforeAll(() => {
-        if (existsSync(DEMO_DIR)) {
-            rmSync(DEMO_DIR, { recursive: true, force: true });
-        }
-        mkdirSync(DEMO_DIR, { recursive: true });
-    }, 180000);
+describe("Claw Advanced Features", () => {
+  beforeAll(() => {
+    if (existsSync(DEMO_DIR)) {
+      rmSync(DEMO_DIR, { recursive: true, force: true });
+    }
+    mkdirSync(DEMO_DIR, { recursive: true });
+  }, 180000);
 
-    it('should inject CLAW_* environment variables', async () => {
-        // Create a tool that logs environment variables
-        const toolsDir = join(DEMO_DIR, '.agent', 'tools');
-        mkdirSync(toolsDir, { recursive: true });
+  it("should inject CLAW_* environment variables", async () => {
+    // Create a tool that logs environment variables
+    const toolsDir = join(DEMO_DIR, ".agent", "tools");
+    mkdirSync(toolsDir, { recursive: true });
 
-        const toolPath = join(toolsDir, 'env_check.js');
-        writeFileSync(toolPath, `
+    const toolPath = join(toolsDir, "env_check.js");
+    writeFileSync(
+      toolPath,
+      `
 import { z } from 'zod';
 export const tool = {
     name: 'env_check',
@@ -34,23 +43,27 @@ export const tool = {
         return "Checked";
     }
 };
-`);
+`,
+    );
 
-        // Run claw mode to trigger the tool
-        const result = await runClaw('Use the env_check tool with test_arg="HELLO_WORLD"');
+    // Run claw mode to trigger the tool
+    const result = await runClaw(
+      'Use the env_check tool with test_arg="HELLO_WORLD"',
+    );
 
-        expect(result, `CLI Output: ${result}`).toContain('WORKSPACE=');
-        expect(result, `CLI Output: ${result}`).toContain('DATA=');
-        expect(result, `CLI Output: ${result}`).toContain('INPUT=HELLO_WORLD');
-    }, 180000);
+    expect(result, `CLI Output: ${result}`).toContain("WORKSPACE=");
+    expect(result, `CLI Output: ${result}`).toContain("DATA=");
+    expect(result, `CLI Output: ${result}`).toContain("INPUT=HELLO_WORLD");
+  }, 180000);
 
-    it('should support scheduler tool', async () => {
+  it("should support scheduler tool", async () => {
+    const toolsDir = join(DEMO_DIR, ".agent", "tools");
+    if (!existsSync(toolsDir)) mkdirSync(toolsDir, { recursive: true });
 
-        const toolsDir = join(DEMO_DIR, '.agent', 'tools');
-        if (!existsSync(toolsDir)) mkdirSync(toolsDir, { recursive: true });
-
-        const toolPath = join(toolsDir, 'scheduler.js');
-        writeFileSync(toolPath, `
+    const toolPath = join(toolsDir, "scheduler.js");
+    writeFileSync(
+      toolPath,
+      `
 import { z } from 'zod';
 export const tool = {
     name: 'scheduler',
@@ -62,55 +75,63 @@ export const tool = {
         return "Scheduled";
     }
 };
-`);
+`,
+    );
 
-        // Explicit intent to avoid ambiguity
-        const intent = "Use scheduler tool to schedule 'bingo' to run every minute.";
-        const result = await runClaw(intent);
+    // Explicit intent to avoid ambiguity
+    const intent =
+      "Use scheduler tool to schedule 'bingo' to run every minute.";
+    const result = await runClaw(intent);
 
-        if (process.platform === 'win32') {
-            expect(result, `CLI Output: ${result}`).toContain('Task scheduled on Windows: bingo');
-        } else {
-            expect(result, `CLI Output: ${result}`).toContain('Task scheduled on Linux/Mac: bingo');
-        }
-    }, 180000);
+    if (process.platform === "win32") {
+      expect(result, `CLI Output: ${result}`).toContain(
+        "Task scheduled on Windows: bingo",
+      );
+    } else {
+      expect(result, `CLI Output: ${result}`).toContain(
+        "Task scheduled on Linux/Mac: bingo",
+      );
+    }
+  }, 180000);
 });
 
 async function runClaw(intent: string): Promise<string> {
-    console.log(`\n    [DEBUG] Running claw with intent: ${intent}`);
-    appendFileSync(LOG_FILE, `\n\n## Intent: ${intent}\n\n`);
+  console.log(`\n    [DEBUG] Running claw with intent: ${intent}`);
+  appendFileSync(LOG_FILE, `\n\n## Intent: ${intent}\n\n`);
 
-    return new Promise((resolve, reject) => {
-        const cliProcess = spawn(process.execPath, [cliPath, DEMO_DIR, intent], {
-            env: {
-                ...process.env,
-                MODEL: 'openai:gpt-4o',
-                DEBUG: 'true',
-                CLAW_WORKSPACE: process.env.CLAW_WORKSPACE || join(process.cwd(), 'examples/full-agent/.agent')
-            }
-        });
-
-        let stdout = '';
-        cliProcess.stdout.on('data', (data) => {
-            const chunk = data.toString();
-            stdout += chunk;
-            appendFileSync(LOG_FILE, chunk);
-            if (process.env.DEBUG_TEST) console.log(chunk);
-        });
-        cliProcess.stderr.on('data', (data) => {
-            const chunk = data.toString();
-            stdout += chunk;
-            appendFileSync(LOG_FILE, chunk);
-            if (process.env.DEBUG_TEST) console.log(chunk);
-        });
-
-        cliProcess.on('close', (code) => {
-            resolve(stdout);
-        });
-
-        setTimeout(() => {
-            console.log('    [DEBUG] runClaw timed out after 120s');
-            cliProcess.kill();
-        }, 120000);
+  return new Promise((resolve, reject) => {
+    const cliProcess = spawn(process.execPath, [cliPath, DEMO_DIR, intent], {
+      env: {
+        ...process.env,
+        MODEL: "openai:gpt-4o",
+        DEBUG: "true",
+        CLAW_WORKSPACE:
+          process.env.CLAW_WORKSPACE ||
+          join(process.cwd(), "examples/full-agent/.agent"),
+      },
     });
+
+    let stdout = "";
+    cliProcess.stdout.on("data", (data) => {
+      const chunk = data.toString();
+      stdout += chunk;
+      appendFileSync(LOG_FILE, chunk);
+      if (process.env.DEBUG_TEST) console.log(chunk);
+    });
+    cliProcess.stderr.on("data", (data) => {
+      const chunk = data.toString();
+      stdout += chunk;
+      appendFileSync(LOG_FILE, chunk);
+      if (process.env.DEBUG_TEST) console.log(chunk);
+    });
+
+    cliProcess.on("close", (code) => {
+      resolve(stdout);
+    });
+
+    setTimeout(() => {
+      console.log("    [DEBUG] runClaw timed out after 120s");
+      cliProcess.kill();
+    }, 120000);
+  });
 }
