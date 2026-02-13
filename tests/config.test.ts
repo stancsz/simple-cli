@@ -27,12 +27,12 @@ describe('Config Loader', () => {
         expect(loaded.agents?.test.command).toBe('echo');
     });
 
-    it('should return empty object if no config found', async () => {
+    it('should return default claw agent if no config found', async () => {
         const loaded = await loadConfig(TEST_DIR);
-        expect(loaded).toEqual({});
+        expect(loaded.agents?.claw).toBeDefined();
     });
 
-    it('should prioritize mcp.json', async () => {
+    it('should prioritize mcp.json but include default agents', async () => {
         const mcpConfig = { mcpServers: { s1: {} } };
         const agentConfig = { agents: { a1: {} } };
 
@@ -41,6 +41,6 @@ describe('Config Loader', () => {
 
         const loaded = await loadConfig(TEST_DIR);
         expect(loaded.mcpServers).toBeDefined();
-        expect(loaded.agents).toBeUndefined(); // Prioritizes mcp.json completely (first found) based on my implementation
+        expect(loaded.agents?.claw).toBeDefined();
     });
 });
