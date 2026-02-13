@@ -129,16 +129,21 @@ export class AsyncTaskManager {
   async listTasks(): Promise<AsyncTask[]> {
     await this.init();
     const files = await readdir(this.tasksDir);
-    const tasks: AsyncTask[] = [];
 
-    for (const file of files) {
-      if (file.endsWith(".json")) {
+    const taskPromises = files
+      .filter((file) => file.endsWith(".json"))
+      .map(async (file) => {
         try {
           const content = await readFile(join(this.tasksDir, file), "utf-8");
-          tasks.push(JSON.parse(content));
-        } catch {}
-      }
-    }
+          return JSON.parse(content) as AsyncTask;
+        } catch {
+          return null;
+        }
+      });
+
+    const results = await Promise.all(taskPromises);
+    const tasks = results.filter((task): task is AsyncTask => task !== null);
+
     return tasks.sort((a, b) => b.startTime - a.startTime);
   }
 }
