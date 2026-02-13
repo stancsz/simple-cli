@@ -39,6 +39,11 @@ export class LLM {
 
                 if (providerName === 'openai' || providerName === 'codex') {
                     model = createOpenAI({ apiKey })(modelName);
+                } else if (providerName === 'deepseek') {
+                    model = createOpenAI({
+                        apiKey,
+                        baseURL: 'https://api.deepseek.com',
+                    })(modelName);
                 } else if (providerName === 'anthropic' || providerName === 'claude') {
                     model = createAnthropic({ apiKey });
                     model = model(modelName);
@@ -70,6 +75,7 @@ export class LLM {
 
     private getEnvKey(providerName: string): string | undefined {
         if (providerName === 'openai' || providerName === 'codex') return process.env.OPENAI_API_KEY;
+        if (providerName === 'deepseek') return process.env.DEEPSEEK_API_KEY;
         if (providerName === 'anthropic' || providerName === 'claude') return process.env.ANTHROPIC_API_KEY;
         if (providerName === 'google' || providerName === 'gemini') return process.env.GOOGLE_API_KEY || process.env.GEMINI_API_KEY;
         return undefined;
