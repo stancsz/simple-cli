@@ -18,15 +18,15 @@ async function main() {
 
     console.log(`[DeepSeek+Claude] Starting claude code with model deepseek/deepseek-chat...`);
 
-    // Use shell: true to resolve npx correctly
+    // Use shell: false to avoid argument splitting issues
     const child = spawn('npx', claudeArgs, {
         stdio: 'inherit',
-        shell: true,
+        shell: false,
         env: {
             ...process.env,
             // Configure DeepSeek as per documentation
             // https://api-docs.deepseek.com/guides/anthropic_api
-            ANTHROPIC_BASE_URL: 'https://api.deepseek.com',
+            ANTHROPIC_BASE_URL: 'https://api.deepseek.com/anthropic',
             ANTHROPIC_API_KEY: apiKey,
             ANTHROPIC_AUTH_TOKEN: apiKey, // Some docs suggest this too
             ANTHROPIC_MODEL: 'deepseek-chat',
