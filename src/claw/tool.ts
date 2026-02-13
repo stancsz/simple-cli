@@ -10,16 +10,22 @@ export const claw = {
     inputSchema: z.object({
         action: z.enum(['agent', 'list_skills', 'inspect_skill']).describe('Action to perform'),
         message: z.string().optional().describe('Message for the agent (required for action=agent)'),
-        skill_name: z.string().optional().describe('Name of the skill to inspect')
+        skill_name: z.string().optional().describe('Name of the skill to inspect'),
+        session_id: z.string().optional().describe('Custom session ID for the agent'),
+        agent_id: z.string().optional().describe('Specific agent ID to use (e.g. openai-agent)')
     }),
-    execute: async ({ action, message, skill_name }: { action: string, message?: string, skill_name?: string }) => {
+    execute: async ({ action, message, skill_name, session_id, agent_id }: { action: string, message?: string, skill_name?: string, session_id?: string, agent_id?: string }) => {
         const isWin = process.platform === 'win32';
         const cmd = isWin ? 'npx.cmd' : 'npx';
 
         try {
             if (action === 'agent') {
                 if (!message) return 'Error: message is required for agent action';
-                const args = ['openclaw', 'agent', '--local', '--json', '--session-id', 'simple-cli-claw-tool', '--message', message];
+                const sId = session_id || `simple-cli-claw-tool-${Date.now()}`;
+                const args = ['openclaw', 'agent', '--local', '--json', '--session-id', sId, '--message', message];
+                if (agent_id) {
+                    args.push('--agent', agent_id);
+                }
                 const { stdout, stderr } = await execFileAsync(cmd, args);
                 return stdout || stderr;
             }
