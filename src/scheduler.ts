@@ -17,7 +17,7 @@ export class Scheduler {
   private tasks: ScheduledTask[] = [];
   private filePath: string;
 
-  private constructor(cwd: string) {
+  public constructor(cwd: string) {
     this.filePath = join(cwd, ".agent", "scheduler.json");
   }
 
@@ -26,6 +26,13 @@ export class Scheduler {
       Scheduler.instance = new Scheduler(cwd);
     }
     return Scheduler.instance;
+  }
+
+  /**
+   * Resets the singleton instance. Primarily used for testing.
+   */
+  public static resetInstance(): void {
+    Scheduler.instance = undefined as any;
   }
 
   async load() {

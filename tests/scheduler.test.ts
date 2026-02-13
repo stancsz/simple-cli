@@ -13,27 +13,8 @@ describe("Scheduler", () => {
     }
     await mkdir(TEST_DIR, { recursive: true });
 
-    // Reset the singleton instance if possible.
-    // Since Scheduler is a singleton, we need to be careful.
-    // The implementation uses `Scheduler.instance`, which is private static.
-    // Ideally we would have a method to reset it for testing, or pass the CWD to getInstance everytime.
-    // In `Scheduler.getInstance(cwd)`, it only creates new if instance is null.
-    // This is a limitation of the Singleton pattern in testing.
-    //
-    // WORKAROUND: We can modify the `scheduler.json` path logic or just accept that
-    // we might be reusing the instance but pointing it to different data?
-    // Actually, the `filePath` is set in the constructor.
-    // If the singleton is already created with the default CWD, `getInstance(TEST_DIR)`
-    // will return the EXISTING instance with the WRONG CWD.
-    //
-    // REFLECTION: The current Scheduler implementation is hard to test because of the Singleton pattern
-    // without a reset mechanism. I should modify `src/scheduler.ts` to allow resetting
-    // or just exposing the constructor for testing?
-    // Or better: Allow updating the CWD or reloading.
-
-    // Let's modify the test to manually "reset" the instance by accessing the private property
-    // via 'any' casting, which is a common hack in TS testing.
-    (Scheduler as any).instance = undefined;
+    // Reset the singleton instance between tests.
+    Scheduler.resetInstance();
   });
 
   afterEach(async () => {
