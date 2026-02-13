@@ -82,5 +82,14 @@ export async function loadConfig(cwd: string = process.cwd()): Promise<Config> {
         };
     }
 
+    if (!config.agents.deepseek_claude) {
+        config.agents.deepseek_claude = {
+            command: 'npx',
+            args: ['tsx', 'src/agents/deepseek_claude.ts'],
+            description: 'Delegate tasks to Claude Code using DeepSeek V3.',
+            supports_stdin: false
+        };
+    }
+
     return config;
 }
