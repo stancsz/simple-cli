@@ -62,12 +62,12 @@ export const change_dir = {
 export const delegate_cli = {
   name: "delegate_cli",
   description:
-    "Delegate a task to a specialized external CLI agent (e.g., deepseek_claude, openai_codex).",
+    "Delegate a task to a specialized external CLI agent (e.g., deepseek_claude).",
   inputSchema: z.object({
     cli: z
       .string()
       .describe(
-        "The agent to use. Default: 'deepseek_claude'. Fallback: 'openai_codex'.",
+        "The agent to use. Default: 'deepseek_claude'.",
       ),
     task: z.string(),
     context_files: z.array(z.string()).optional(),

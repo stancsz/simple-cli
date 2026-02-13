@@ -48,7 +48,7 @@ describe("delegate_cli", () => {
     vi.clearAllMocks();
   });
 
-  it("should use fallback mock if no config found", async () => {
+  it("should return error if no config found", async () => {
     (config.loadConfig as any).mockResolvedValue({});
 
     const result = await delegate_cli.execute({
@@ -56,8 +56,9 @@ describe("delegate_cli", () => {
       task: "do something",
     });
 
-    expect(result).toContain("Mock CLI received task");
-    expect(result).toContain("[test-agent CLI (Mock)]");
+    expect(result).toContain(
+      "[delegate_cli] Error: Agent 'test-agent' not found in configuration",
+    );
   });
 
   it("should use configured agent", async () => {
