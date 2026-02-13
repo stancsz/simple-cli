@@ -517,12 +517,16 @@ export const gitTool = {
     name: 'git',
     description: 'Run git operations',
     inputSchema: z.object({
-        operation: z.enum(['status', 'add', 'commit', 'diff', 'log', 'branch']),
+        operation: z.enum(['status', 'add', 'commit', 'diff', 'log', 'branch', 'push', 'checkout', 'init', 'remote']),
         cwd: z.string().default('.'),
         files: z.array(z.string()).optional(),
-        message: z.string().optional()
+        message: z.string().optional(),
+        remote: z.string().optional(),
+        branch_name: z.string().optional(),
+        new_branch: z.boolean().optional(),
+        url: z.string().optional()
     }),
-    execute: async ({ operation, cwd, files, message }: { operation: string, cwd: string, files?: string[], message?: string }) => {
+    execute: async ({ operation, cwd, files, message, remote, branch_name, new_branch, url }: { operation: string, cwd: string, files?: string[], message?: string, remote?: string, branch_name?: string, new_branch?: boolean, url?: string }) => {
         if (!isPathAllowed(cwd)) return { success: false, error: "Access denied: Path is outside the allowed workspace." };
 
         const run = async (cmd: string) => {
@@ -553,6 +557,23 @@ export const gitTool = {
         }
         if (operation === 'branch') {
             return run('git branch');
+        }
+        if (operation === 'push') {
+            const r = remote || 'origin';
+            const b = branch_name ? ` ${branch_name}` : '';
+            return run(`git push ${r}${b}`);
+        }
+        if (operation === 'checkout') {
+            if (!branch_name) return { success: false, error: 'No branch_name specified for checkout' };
+            const flags = new_branch ? '-b' : '';
+            return run(`git checkout ${flags} ${branch_name}`);
+        }
+        if (operation === 'init') {
+            return run('git init');
+        }
+        if (operation === 'remote') {
+            if (!remote || !url) return { success: false, error: 'Remote name and URL required' };
+            return run(`git remote add ${remote} ${url}`);
         }
         return { success: false, error: 'Unknown operation' };
     }
