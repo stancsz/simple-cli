@@ -622,3 +622,66 @@ All tasks completed successfully. Images and receipts are sorted, and expenses a
 ■  Error: All LLM providers failed. Last error: API key expired. Please renew the API key.
 │
 └  Session finished.
+
+
+## Intent: Scan the current directory. Sort images (jpg, png) into /Photos, docs (pdf, docx) into /Documents, and installers (exe, msi) into /Trash. If you find a receipt, extract the total and append it to Expenses.csv (read existing file first to preserve history) before moving the file. Execute the first step immediately. Perform one action at a time. Do not batch tool calls.
+
+(node:2938) ExperimentalWarning: `--experimental-loader` may be removed in the future; instead use `register()`:
+--import 'data:text/javascript,import { register } from "node:module"; import { pathToFileURL } from "node:url"; register("ts-node/esm", pathToFileURL("./"));'
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:2938) [DEP0180] DeprecationWarning: fs.Stats constructor is deprecated.
+(Use `node --trace-deprecation ...` to show where the warning was created)
+┌   SIMPLE-CLI v0.2.9
+[LLM] Primary provider failed, switching to fallbacks...
+│
+■  Error: All LLM providers failed. Last error: API key expired. Please renew the API key.
+│
+└  Session finished.
+
+
+
+## Intent: Scan the current directory. Sort images (jpg, png) into /Photos, docs (pdf, docx) into /Documents, and installers (exe, msi) into /Trash. If you find a receipt, extract the total and append it to Expenses.csv (read existing file first to preserve history) before moving the file. Execute the first step immediately. Perform one action at a time. Do not batch tool calls.
+
+(node:3529) ExperimentalWarning: `--experimental-loader` may be removed in the future; instead use `register()`:
+--import 'data:text/javascript,import { register } from "node:module"; import { pathToFileURL } from "node:url"; register("ts-node/esm", pathToFileURL("./"));'
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:3529) [DEP0180] DeprecationWarning: fs.Stats constructor is deprecated.
+(Use `node --trace-deprecation ...` to show where the warning was created)
+┌   SIMPLE-CLI v0.2.9
+[LLM] Primary provider failed, switching to fallbacks...
+│
+■  Error: All LLM providers failed. Last error: API key expired. Please renew the API key.
+│
+└  Session finished.
+
+
+
+## Intent: Scan the current directory. Sort images (jpg, png) into /Photos, docs (pdf, docx) into /Documents, and installers (exe, msi) into /Trash. If you find a receipt, extract the total and append it to Expenses.csv (read existing file first to preserve history) before moving the file. Execute the first step immediately. Perform one action at a time. Do not batch tool calls.
+
+(node:7005) ExperimentalWarning: `--experimental-loader` may be removed in the future; instead use `register()`:
+--import 'data:text/javascript,import { register } from "node:module"; import { pathToFileURL } from "node:url"; register("ts-node/esm", pathToFileURL("./"));'
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:7005) [DEP0180] DeprecationWarning: fs.Stats constructor is deprecated.
+(Use `node --trace-deprecation ...` to show where the warning was created)
+┌   SIMPLE-CLI v0.2.9
+[LLM] Primary provider failed, switching to fallbacks...
+│
+■  Error: All LLM providers failed. Last error: API key expired. Please renew the API key.
+│
+└  Session finished.
+
+
+
+## Intent: Scan the current directory. Sort images (jpg, png) into /Photos, docs (pdf, docx) into /Documents, and installers (exe, msi) into /Trash. If you find a receipt, extract the total and append it to Expenses.csv (read existing file first to preserve history) before moving the file. Execute the first step immediately. Perform one action at a time. Do not batch tool calls.
+
+(node:7611) ExperimentalWarning: `--experimental-loader` may be removed in the future; instead use `register()`:
+--import 'data:text/javascript,import { register } from "node:module"; import { pathToFileURL } from "node:url"; register("ts-node/esm", pathToFileURL("./"));'
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:7611) [DEP0180] DeprecationWarning: fs.Stats constructor is deprecated.
+(Use `node --trace-deprecation ...` to show where the warning was created)
+┌   SIMPLE-CLI v0.2.9
+[LLM] Primary provider failed, switching to fallbacks...
+│
+■  Error: All LLM providers failed. Last error: API key expired. Please renew the API key.
+│
+└  Session finished.

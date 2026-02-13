@@ -11,6 +11,7 @@ export interface LLMResponse {
     message?: string;
     raw: string;
     tools?: { tool: string; args: any }[];
+    usage?: { promptTokens: number; completionTokens: number; totalTokens: number };
 }
 
 export type LLMConfig = { provider: string; model: string; apiKey?: string };
@@ -48,14 +49,14 @@ export class LLM {
                     continue; // Skip unsupported
                 }
 
-                const { text } = await generateText({
+                const { text, usage } = await generateText({
                     model,
                     system,
                     messages: history as any,
                     abortSignal: signal,
                 });
 
-                return this.parse(text);
+                return this.parse(text, usage as any);
             } catch (e: any) {
                 lastError = e;
                 if (this.configs.indexOf(config) === 0) {
@@ -74,7 +75,7 @@ export class LLM {
         return undefined;
     }
 
-    private parse(raw: string): LLMResponse {
+    private parse(raw: string, usage?: { promptTokens: number; completionTokens: number; totalTokens: number }): LLMResponse {
         const tools: { tool: string; args: any }[] = [];
         let thought = '';
         let message = '';
@@ -143,10 +144,11 @@ export class LLM {
                     tool: (p.tool || p.command || 'none').toLowerCase(),
                     args: p.args || p.parameters || {},
                     message: p.message || '',
-                    raw
+                    raw,
+                    usage
                 };
             } catch {
-                return { thought: '', tool: 'none', args: {}, message: raw, raw };
+                return { thought: '', tool: 'none', args: {}, message: raw, raw, usage };
             }
         }
 
@@ -156,7 +158,8 @@ export class LLM {
             args: tools[0]?.args || {},
             message: message.trim(),
             raw,
-            tools
+            tools,
+            usage
         };
     }
 }
