@@ -29,4 +29,4 @@ export function greet(user: User): string {
   return `Hello, ${user.getName()}!`;
 }
 
-export const VERSION = '1.0.0';
+export const VERSION = "1.0.0";
