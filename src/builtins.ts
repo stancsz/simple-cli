@@ -61,9 +61,9 @@ export const change_dir = {
 // --- Meta-Orchestrator Tools ---
 export const delegate_cli = {
     name: 'delegate_cli',
-    description: 'Delegate a task to a specialized external CLI agent (e.g., deepseek_claude, openai_codex).',
+    description: 'Delegate a task to a specialized external CLI agent (e.g., deepseek_claude).',
     inputSchema: z.object({
-        cli: z.string().describe("The agent to use. Default: 'deepseek_claude'. Fallback: 'openai_codex'."),
+        cli: z.string().default('deepseek_claude').describe("The agent to use. Default: 'deepseek_claude'."),
         task: z.string(),
         context_files: z.array(z.string()).optional(),
         async: z.boolean().default(false).describe("Run in background mode. Returns a Task ID to monitor.")

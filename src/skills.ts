@@ -36,7 +36,7 @@ Important Rules:
 2. **Delegation**:
    - For reading files, writing files, git operations, or analysis, use 'delegate_cli'.
    - **DEFAULT**: Use 'deepseek_claude' for all standard tasks (reading, writing, assignment).
-   - **FALLBACK**: Use 'openai_codex' if 'deepseek_claude' fails or is unavailable.
+   - **Do not use other agents** unless explicitly requested by the user.
    - Example: To read 'file.txt', call delegate_cli('deepseek_claude', 'Read file.txt').
    - Example: To write a file, call delegate_cli('deepseek_claude', 'Create hello.py with content...').
 
