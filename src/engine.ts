@@ -9,6 +9,7 @@ import { createLLM } from './llm.js';
 import { MCP } from './mcp.js';
 import { LearningManager } from './learnings.js';
 import { Skill } from './skills.js';
+import { Psyche } from './psyche.js';
 
 export interface Message { role: 'user' | 'assistant' | 'system'; content: string; }
 export interface Tool { name: string; description: string; execute: (args: any, options?: { signal?: AbortSignal }) => Promise<any>; }
@@ -71,14 +72,17 @@ export class Registry {
 
 export class Engine {
     private learningManager: LearningManager;
+    private psyche: Psyche;
     private s = spinner();
 
     constructor(private llm: any, private registry: Registry, private mcp: MCP) {
         this.learningManager = new LearningManager(process.cwd());
+        this.psyche = new Psyche(process.cwd());
     }
 
     async run(ctx: Context, initialPrompt?: string, options: { interactive: boolean } = { interactive: true }) {
         await this.learningManager.load();
+        await this.psyche.load();
         let input = initialPrompt;
         let bufferedInput = '';
         await this.mcp.init();
@@ -143,6 +147,8 @@ export class Engine {
             try {
                 // RAG: Inject learnings
                 let prompt = await ctx.buildPrompt(this.registry.tools);
+                prompt = this.psyche.getSystemInstruction() + "\n\n" + prompt;
+
                 const userHistory = ctx.history.filter(m => m.role === 'user' && !['Continue.', 'Fix the error.'].includes(m.content));
                 const lastUserMsg = userHistory[userHistory.length - 1]?.content || '';
                 const query = (input && !['Continue.', 'Fix the error.'].includes(input)) ? input : lastUserMsg;
@@ -154,6 +160,20 @@ export class Engine {
 
                 // Pass signal to LLM
                 const response = await this.llm.generate(prompt, ctx.history, signal);
+
+                // Psyche: Process Monologue
+                if (response.raw) {
+                    const monologueMatch = response.raw.match(/\[INTERNAL_MONOLOGUE\]([\s\S]*?)\[\/INTERNAL_MONOLOGUE\]/);
+                    if (monologueMatch) {
+                        try {
+                            const monologue = JSON.parse(monologueMatch[1]);
+                            await this.psyche.processInteraction(monologue);
+                        } catch (e) {
+                            // ignore
+                        }
+                    }
+                }
+                await this.psyche.reflect(ctx.history, this.llm);
 
                 if (response.usage) {
                     const { promptTokens, completionTokens, totalTokens } = response.usage;
