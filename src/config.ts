@@ -96,5 +96,14 @@ export async function loadConfig(cwd: string = process.cwd()): Promise<Config> {
     };
   }
 
+  if (!config.agents.openai_codex) {
+    config.agents.openai_codex = {
+      command: "npx",
+      args: ["tsx", "src/agents/openai_codex.ts"],
+      description: "Delegate coding tasks to OpenAI Codex (GPT-4o).",
+      supports_stdin: false,
+    };
+  }
+
   return config;
 }

@@ -13,6 +13,9 @@ async function main() {
   // Construct arguments for opencode
   // Attempt to run opencode using npx with environment variables for DeepSeek
   // Many tools support OpenAI-compatible env vars: OPENAI_API_KEY and OPENAI_BASE_URL
+
+  // WARNING: The 'opencode' package does not appear to exist in the public npm registry.
+  // This agent might require a specific private package or a local installation.
   const opencodeArgs = ["opencode", ...userArgs];
 
   console.log(

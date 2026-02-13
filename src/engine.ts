@@ -365,7 +365,7 @@ export class Engine {
           });
 
           input =
-            "System Correction: You MUST use the 'write_files' tool to create or modify files. Do not describe the action or ask the user to do it. Use the tool now.";
+            "System Correction: You MUST use the 'delegate_cli' tool to create or modify files via subagents. Do not describe the action or ask the user to do it. Use the tool now.";
           continue;
         }
         // ----------------------------

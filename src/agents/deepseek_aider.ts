@@ -38,10 +38,11 @@ async function main() {
   console.log(`[DeepSeek+Aider] Message: ${message}`);
   console.log(`[DeepSeek+Aider] Files: ${files.join(", ")}`);
 
-  // Use shell: true to resolve npx correctly
-  const child = spawn("npx", aiderArgs, {
+  // Aider is a python tool, so we call it directly (must be in PATH)
+  // We remove the first argument 'aider' because spawn takes the command as the first argument
+  const child = spawn("aider", aiderArgs.slice(1), {
     stdio: "inherit",
-    shell: true,
+    shell: false,
     env: {
       ...process.env,
       DEEPSEEK_API_KEY: apiKey,
