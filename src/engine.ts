@@ -285,7 +285,7 @@ export class Engine {
 
                      ctx.history.push({ role: 'assistant', content: message || response.raw });
 
-                     input = "System Correction: You MUST use the 'write_files' tool to create or modify files. Do not describe the action or ask the user to do it. Use the tool now.";
+                     input = "System Correction: You MUST use the 'delegate_cli' tool to create or modify files via subagents. Do not describe the action or ask the user to do it. Use the tool now.";
                      continue;
                 }
                 // ----------------------------
