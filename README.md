@@ -79,6 +79,7 @@ Simple-CLI wraps powerful industry CLIs into a unified interface:
 *   **DeepSeek Claude (`deepseek_claude`)**: Wraps Anthropic's Claude CLI, optimized for DeepSeek's reasoning.
 *   **DeepSeek Aider (`deepseek_aider`)**: Wraps the popular `aider` CLI for code editing.
 *   **DeepSeek OpenCode (`deepseek_opencode`)**: Fast, open-source model generation.
+*   **DeepSeek CrewAI (`deepseek_crewai`)**: Delegates complex research and writing tasks to a CrewAI team.
 
 ---
 
@@ -113,12 +114,14 @@ simple "Delegate the UI fix to Jules and the API tests to Aider in parallel."
 
 ---
 
-## 🧠 Memory Engine (MCP)
+## 🔌 Integrated MCP Servers
 
-Simple-CLI includes a powerful Side-Car Context Engine powered by **sqlite-vec**.
-It allows semantic search over your codebase to provide surgical context to agents.
+Simple-CLI extends its capabilities via the Model Context Protocol (MCP). It includes several built-in MCP servers located in `src/mcp_servers/`:
 
-See [docs/MEMORY.md](docs/MEMORY.md) for details on setting up the Memory MCP Server.
+*   **CrewAI (`crewai`)**: Orchestrates multi-agent crews (Researcher + Writer) for complex tasks.
+*   **OpenCowork (`opencowork`)**: Enables hierarchical agency by allowing the hiring and delegation of tasks to worker agents.
+*   **OpenClaw (`openclaw`)**: Integrates OpenClaw skills (e.g., system tools, GitHub) into the workflow.
+*   **Jules (`jules`)**: Provides a bridge to the Jules API for autonomous PR creation and management.
 
 ## 🧠 The `.agent` Brain
 Simple-CLI persists its memory and configuration in your project:
