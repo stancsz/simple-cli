@@ -130,7 +130,12 @@ async function main() {
         console.log(`\n---------------------------------------------------`);
         console.log(`PR #${pr.number}: ${pr.title}`);
         console.log(`Author: ${pr.author.login} | Branch: ${pr.headRefName}`);
+        console.log(`Author: ${pr.author.login} | Branch: ${pr.headRefName}`);
         console.log(`Mergeable: ${pr.mergeable}`);
+
+        const isJules = pr.author.login.toLowerCase().includes('jules') || pr.author.login.toLowerCase().includes('google-labs-jules');
+        const mention = isJules ? '@jules ' : '';
+        const instructionPrefix = isJules ? 'Please resolve the following issues:\n' : '';
 
         console.log(`Checking out PR #${pr.number}...`);
         run(`gh pr checkout ${pr.number}`);
@@ -159,7 +164,7 @@ async function main() {
             if (!conflicts) {
                 console.log("No conflicting files found locally (despite merge failure?). Proceeding with caution.");
                 // We failed to merge but git diff shows no conflicts. likely unrelated error.
-                commentOnPr(pr.number, "🚨 I attempted to merge `main` but the failing operation was not a standard conflict. Please check the PR manually.");
+                commentOnPr(pr.number, `${mention}🚨 I attempted to merge \`main\` but the failing operation was not a standard conflict. ${instructionPrefix}Please check the PR manually.`);
             } else {
                 console.log(`Conflicting files:\n${conflicts}`);
 
@@ -172,7 +177,7 @@ async function main() {
 
                 if (!status) {
                     console.error("Agent failed to resolve conflicts via CLI. Skipping PR.");
-                    commentOnPr(pr.number, "⚠️ I found merge conflicts but failed to resolve them automatically. Please resolve conflicts manually to proceed.");
+                    commentOnPr(pr.number, `${mention}⚠️ I found merge conflicts but failed to resolve them automatically. ${instructionPrefix}Please resolve conflicts manually to proceed.`);
                     continue;
                 }
 
@@ -185,7 +190,7 @@ async function main() {
                     console.log("✅ Conflicts resolved and pushed.");
                 } catch (e: any) {
                     console.error(`Failed to commit/push resolution: ${e.message}`);
-                    commentOnPr(pr.number, `✅ I resolved the conflicts locally but failed to push the changes usually due to permissions. Error: ${e.message}`);
+                    commentOnPr(pr.number, `${mention}✅ I resolved the conflicts locally but failed to push the changes usually due to permissions. Error: ${e.message}`);
                     continue;
                 }
             }
@@ -215,7 +220,10 @@ async function main() {
                 fs.writeFileSync(logFile, (e.stdout || '') + '\n' + (e.stderr || ''));
             }
 
-            const prompt = `You are a Code Reviewer Agent. The tests for PR #${pr.number} failed. Read '${logFile}'. Use 'pr_comment' to explain the failure on PR #${pr.number}. Be concise.`;
+            const prompt = `You are a Code Reviewer Agent. The tests for PR #${pr.number} failed. Read '${logFile}'. Use 'pr_comment' to explain the failure on PR #${pr.number}.
+            
+Important: The PR author is '${pr.author.login}'. If the author is 'jules' or contains 'jules', you MUST include '@jules' in your comment and give clear instructions like "@jules The tests failed. Please fix them.".
+Be concise.`;
 
             // Run Agent using Isolated Runtime
             const status = runSafe('npx', ['tsx', `"${agentCli}"`, '.', `"${prompt}"`, '--non-interactive']);
