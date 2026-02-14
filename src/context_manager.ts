@@ -89,14 +89,14 @@ export class ContextManager {
     if (this.data.constraints.length > 0) {
       parts.push(
         "## Constraints & Guidelines\n" +
-          this.data.constraints.map((c) => `- ${c}`).join("\n"),
+        this.data.constraints.map((c) => `- ${c}`).join("\n"),
       );
     }
 
     if (this.data.recent_changes.length > 0) {
       parts.push(
         "## Recent Architectural Changes\n" +
-          this.data.recent_changes.map((c) => `- ${c}`).join("\n"),
+        this.data.recent_changes.map((c) => `- ${c}`).join("\n"),
       );
     }
 
@@ -116,7 +116,13 @@ export class ContextManager {
 
   async addMemory(text: string, metadata: any = {}): Promise<void> {
     if (this.vectorStore) {
-        await this.vectorStore.add(text, metadata);
+      await this.vectorStore.add(text, metadata);
+    }
+  }
+
+  close() {
+    if (this.vectorStore) {
+      this.vectorStore.close();
     }
   }
 }
