@@ -25,7 +25,7 @@ vi.mock("../../src/context_manager.js", () => {
       addConstraint = mockAddConstraint;
       logChange = mockLogChange;
       getContextSummary = mockGetContextSummary;
-    }
+    },
   };
 });
 
@@ -46,7 +46,9 @@ describe("SimpleToolsServer", () => {
     expect(mockAddGoal).toHaveBeenCalledWith("New Goal");
     expect(mockAddConstraint).toHaveBeenCalledWith("New Constraint");
     expect((result as any).content[0].text).toContain("Added goal: New Goal");
-    expect((result as any).content[0].text).toContain("Added constraint: New Constraint");
+    expect((result as any).content[0].text).toContain(
+      "Added constraint: New Constraint",
+    );
   });
 
   it("should handle read_context tool", async () => {
@@ -76,7 +78,9 @@ describe("SimpleToolsServer", () => {
     });
 
     expect(writeFile).toHaveBeenCalledWith("test.txt", "Content");
-    expect((result as any).content[0].text).toContain("Successfully wrote to test.txt");
+    expect((result as any).content[0].text).toContain(
+      "Successfully wrote to test.txt",
+    );
   });
 
   it("should handle run_command tool", async () => {
