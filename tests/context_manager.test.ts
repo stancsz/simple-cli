@@ -5,6 +5,20 @@ import { tmpdir } from "os";
 import { ContextManager } from "../src/context_manager.js";
 import { existsSync } from "fs";
 
+// Mock embedding model for test
+const mockEmbeddingModel = {
+    specificationVersion: 'v2',
+    provider: 'mock',
+    modelId: 'mock-embedding',
+    doEmbed: async ({ values }: any) => {
+         return {
+            embeddings: values.map(() => Array(1536).fill(0).map(() => Math.random())),
+            usage: { tokens: 10 },
+            warnings: []
+         };
+    }
+};
+
 describe("ContextManager", () => {
   let testDir: string;
 
@@ -18,7 +32,7 @@ describe("ContextManager", () => {
   });
 
   it("should initialize with empty data", async () => {
-    const cm = new ContextManager(testDir);
+    const cm = new ContextManager(testDir, mockEmbeddingModel);
     const data = cm.getContextData();
     expect(data.goals).toEqual([]);
     expect(data.constraints).toEqual([]);
@@ -26,12 +40,12 @@ describe("ContextManager", () => {
   });
 
   it("should save and load context", async () => {
-    const cm = new ContextManager(testDir);
+    const cm = new ContextManager(testDir, mockEmbeddingModel);
     await cm.addGoal("Goal 1");
     await cm.addConstraint("Constraint 1");
 
     // Create new instance to test loading
-    const cm2 = new ContextManager(testDir);
+    const cm2 = new ContextManager(testDir, mockEmbeddingModel);
     await cm2.loadContext();
     const data = cm2.getContextData();
 
@@ -40,7 +54,7 @@ describe("ContextManager", () => {
   });
 
   it("should not duplicate goals or constraints", async () => {
-    const cm = new ContextManager(testDir);
+    const cm = new ContextManager(testDir, mockEmbeddingModel);
     await cm.addGoal("Goal 1");
     await cm.addGoal("Goal 1");
 
@@ -48,7 +62,7 @@ describe("ContextManager", () => {
   });
 
   it("should limit recent changes to 10", async () => {
-    const cm = new ContextManager(testDir);
+    const cm = new ContextManager(testDir, mockEmbeddingModel);
     for (let i = 0; i < 15; i++) {
       await cm.logChange(`Change ${i}`);
     }
@@ -60,7 +74,7 @@ describe("ContextManager", () => {
   });
 
   it("should generate a context summary", async () => {
-    const cm = new ContextManager(testDir);
+    const cm = new ContextManager(testDir, mockEmbeddingModel);
     await cm.addGoal("Fix bugs");
     await cm.addConstraint("No breaking changes");
     await cm.logChange("Refactored auth");
@@ -75,9 +89,9 @@ describe("ContextManager", () => {
   });
 
   it("should create .agent directory if it doesn't exist", async () => {
-    const cm = new ContextManager(testDir);
-    await cm.addGoal("Test Goal");
-    const contextPath = join(testDir, ".agent", "context.json");
-    expect(existsSync(contextPath)).toBe(true);
+      const cm = new ContextManager(testDir, mockEmbeddingModel);
+      await cm.addGoal("Test Goal");
+      const contextPath = join(testDir, ".agent", "context.json");
+      expect(existsSync(contextPath)).toBe(true);
   });
 });

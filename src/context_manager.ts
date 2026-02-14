@@ -1,6 +1,7 @@
 import { readFile, writeFile, mkdir } from "fs/promises";
 import { existsSync } from "fs";
 import { join, dirname } from "path";
+import { VectorStore } from "./memory/vector_store.js";
 
 export interface ContextData {
   goals: string[];
@@ -10,14 +11,20 @@ export interface ContextData {
 
 export class ContextManager {
   private contextFile: string;
+  private vectorStore: VectorStore | null = null;
   private data: ContextData = {
     goals: [],
     constraints: [],
     recent_changes: [],
   };
 
-  constructor(cwd: string = process.cwd()) {
+  constructor(cwd: string = process.cwd(), embeddingModel?: any) {
     this.contextFile = join(cwd, ".agent", "context.json");
+    try {
+      this.vectorStore = new VectorStore(cwd, embeddingModel);
+    } catch (e) {
+      console.warn("Failed to initialize vector store:", e);
+    }
   }
 
   async loadContext(): Promise<void> {
@@ -45,6 +52,7 @@ export class ContextManager {
     if (!this.data.goals.includes(goal)) {
       this.data.goals.push(goal);
       await this.saveContext();
+      if (this.vectorStore) await this.vectorStore.add(`Goal: ${goal}`, { type: 'goal' });
     }
   }
 
@@ -53,6 +61,7 @@ export class ContextManager {
     if (!this.data.constraints.includes(constraint)) {
       this.data.constraints.push(constraint);
       await this.saveContext();
+      if (this.vectorStore) await this.vectorStore.add(`Constraint: ${constraint}`, { type: 'constraint' });
     }
   }
 
@@ -64,6 +73,7 @@ export class ContextManager {
       this.data.recent_changes = this.data.recent_changes.slice(-10);
     }
     await this.saveContext();
+    if (this.vectorStore) await this.vectorStore.add(`Change: ${change}`, { type: 'change' });
   }
 
   async getContextSummary(): Promise<string> {
@@ -95,5 +105,18 @@ export class ContextManager {
 
   getContextData(): ContextData {
     return this.data;
+  }
+
+  async searchMemory(query: string, limit: number = 5): Promise<string> {
+    if (!this.vectorStore) return "Memory not available.";
+    const results = await this.vectorStore.search(query, limit);
+    if (results.length === 0) return "No relevant memory found.";
+    return results.map(r => `- ${r.text} (Similarity: ${(1 - (r.distance || 0)).toFixed(2)})`).join("\n");
+  }
+
+  async addMemory(text: string, metadata: any = {}): Promise<void> {
+    if (this.vectorStore) {
+        await this.vectorStore.add(text, metadata);
+    }
   }
 }

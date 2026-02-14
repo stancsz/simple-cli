@@ -93,11 +93,45 @@ export const RUN_COMMAND_TOOL = {
   },
 };
 
+export const SEARCH_MEMORY_TOOL = {
+  name: "search_memory",
+  description: "Search long-term memory for relevant information.",
+  inputSchema: {
+    type: "object",
+    properties: {
+      query: {
+        type: "string",
+        description: "The search query.",
+      },
+    },
+    required: ["query"],
+  },
+};
+
+export const ADD_MEMORY_TOOL = {
+  name: "add_memory",
+  description: "Add a piece of information to long-term memory.",
+  inputSchema: {
+    type: "object",
+    properties: {
+      text: {
+        type: "string",
+        description: "The information to remember.",
+      },
+      metadata: {
+        type: "string",
+        description: "Optional JSON metadata string.",
+      },
+    },
+    required: ["text"],
+  },
+};
+
 export class SimpleToolsServer {
   private server: Server;
   private contextManager: ContextManager;
 
-  constructor() {
+  constructor(contextManager?: ContextManager) {
     this.server = new Server(
       {
         name: "simple-tools-server",
@@ -110,7 +144,7 @@ export class SimpleToolsServer {
       },
     );
     // Initialize ContextManager relative to process.cwd()
-    this.contextManager = new ContextManager(process.cwd());
+    this.contextManager = contextManager || new ContextManager(process.cwd());
     this.setupHandlers();
   }
 
@@ -122,6 +156,8 @@ export class SimpleToolsServer {
         READ_FILE_TOOL,
         WRITE_FILE_TOOL,
         RUN_COMMAND_TOOL,
+        SEARCH_MEMORY_TOOL,
+        ADD_MEMORY_TOOL,
       ],
     }));
 
@@ -211,6 +247,32 @@ export class SimpleToolsServer {
               text: stdout + (stderr ? `\nStderr: ${stderr}` : ""),
             },
           ],
+        };
+      }
+
+      if (name === "search_memory") {
+        const { query } = args as any;
+        if (!query) throw new Error("Query is required");
+        const result = await this.contextManager.searchMemory(query);
+        return {
+          content: [{ type: "text", text: result }],
+        };
+      }
+
+      if (name === "add_memory") {
+        const { text, metadata } = args as any;
+        if (!text) throw new Error("Text is required");
+        let meta = {};
+        if (metadata) {
+          try {
+            meta = JSON.parse(metadata);
+          } catch {
+            meta = { raw: metadata };
+          }
+        }
+        await this.contextManager.addMemory(text, meta);
+        return {
+          content: [{ type: "text", text: "Memory added." }],
         };
       }
 
