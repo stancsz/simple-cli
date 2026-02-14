@@ -113,6 +113,13 @@ simple "Delegate the UI fix to Jules and the API tests to Aider in parallel."
 
 ---
 
+## 🧠 Memory Engine (MCP)
+
+Simple-CLI includes a powerful Side-Car Context Engine powered by **sqlite-vec**.
+It allows semantic search over your codebase to provide surgical context to agents.
+
+See [docs/MEMORY.md](docs/MEMORY.md) for details on setting up the Memory MCP Server.
+
 ## 🧠 The `.agent` Brain
 Simple-CLI persists its memory and configuration in your project:
 *   **`.agent/state.json`**: The Psyche (Personality, Trust, Irritation).

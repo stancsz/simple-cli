@@ -64,11 +64,7 @@ export const delegate_cli = {
   description:
     "Delegate a task to a specialized external CLI agent (e.g., deepseek_claude).",
   inputSchema: z.object({
-    cli: z
-      .string()
-      .describe(
-        "The agent to use. Default: 'deepseek_claude'.",
-      ),
+    cli: z.string().describe("The agent to use. Default: 'deepseek_claude'."),
     task: z.string(),
     context_files: z.array(z.string()).optional(),
     async: z
