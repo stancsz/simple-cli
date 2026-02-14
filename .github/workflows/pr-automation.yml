@@ -37,4 +37,6 @@ jobs:
 
       - name: Run Review Script
         run: |
-          npx -y tsx .github/scripts/review.ts
+          # Copy script outside repo to prevent it from being deleted during checkout
+          cp .github/scripts/review.ts ../review.ts
+          npx -y tsx ../review.ts

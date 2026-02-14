@@ -66,38 +66,42 @@ async function main() {
         console.log(`Author: ${pr.author.login} | Branch: ${pr.headRefName}`);
         console.log(`Mergeable: ${pr.mergeable}`);
 
-        if (pr.mergeable === 'CONFLICTING') {
+        console.log(`Checking out PR #${pr.number}...`);
+        run(`gh pr checkout ${pr.number}`);
+
+        // Conflict Detection & Resolution
+        let hasConflicts = (pr.mergeable === 'CONFLICTING');
+
+        try {
+            console.log("Merging origin/main locally to verify conflicts/update...");
+            run('git fetch origin main');
+            execSync('git merge origin/main', { cwd: CWD, stdio: 'pipe' });
+            console.log("Merge successful (local).");
+        } catch (e: any) {
+            console.log("Merge conflict detected locally (or merge failure).");
+            // Log stderr to help debugging
+            if (e.stderr) console.error(e.stderr.toString());
+            hasConflicts = true;
+        }
+
+        if (hasConflicts) {
             console.log(`⚠️  PR #${pr.number} has conflicts. Attempting to resolve...`);
-
-            console.log(`Checking out PR #${pr.number}...`);
-            run(`gh pr checkout ${pr.number}`);
-
-            try {
-                console.log("Merging origin/main to trigger conflicts...");
-                run('git fetch origin main');
-                // We expect this to fail if there are conflicts
-                execSync('git merge origin/main', { cwd: CWD, stdio: 'pipe' });
-                console.log("Merge successful (no conflicts locally?).");
-            } catch (e) {
-                console.log("Merge conflict detected locally.");
-            }
 
             // Identify conflicting files
             const conflicts = run('git diff --name-only --diff-filter=U');
 
             if (!conflicts) {
-                console.log("No conflicting files found locally. Proceeding.");
+                console.log("No conflicting files found locally (despite merge failure?). Proceeding with caution.");
             } else {
                 console.log(`Conflicting files:\n${conflicts}`);
 
-                const prompt = `You are a Senior Developer. We have merge conflicts in these files:\n${conflicts}\n\nRead these files, find conflict markers (<<<<<<<, =======, >>>>>>>), and resolve them. Keep the PR's intent but incorporate changes from main. Remove all markers.`;
+                const prompt = `You are a Senior Developer. We have merge conflicts in these files:\n${conflicts}\n\nRead these files, find conflict markers (<<<<<<<, =======, >>>>>>>), and resolve them. Keep the PR's intent but incorporate changes from main. Remove all markers. Ensure the code is valid typescript and logic is preserved.`;
 
                 // Allow the agent to use tools (read_file, write_file)
                 const status = runSafe('npx', ['tsx', 'src/cli.ts', `"${prompt}"`, '--non-interactive']);
 
                 if (!status) {
-                    console.error("Agent failed to resolve conflicts via CLI.");
-                    // Continue to next PR or fail? Let's skip this one.
+                    console.error("Agent failed to resolve conflicts via CLI. Skipping PR.");
                     continue;
                 }
 
@@ -105,7 +109,6 @@ async function main() {
                 try {
                     console.log("Committing resolution...");
                     run('git add .');
-                    // Check if anything is staged (if agent didn't change anything, commit might fail if empty? no, merge is pending)
                     run('git commit -m "chore: Resolve merge conflicts via Simple-CLI"');
                     run('git push');
                     console.log("✅ Conflicts resolved and pushed.");
@@ -116,15 +119,8 @@ async function main() {
             }
         }
 
-        // Filter checks - enabled for safety during development, disabled for production usage if desired.
-        // For now, we process ALL open PRs.
-        // if (!pr.title.includes("Test PR")) { ... }
-
-        console.log(`Checking out PR #${pr.number}...`);
-        run(`gh pr checkout ${pr.number}`);
-
         console.log("Installing dependencies...");
-        runSafe('npm', ['ci'], { stdio: 'ignore' }); // Use ci for clean install
+        runSafe('npm', ['ci'], { stdio: 'ignore' });
 
         console.log("Running tests...");
         const testsPassed = runSafe('npm', ['test']);
@@ -132,8 +128,9 @@ async function main() {
         if (testsPassed) {
             console.log(`✅ Tests Passed for PR #${pr.number}.`);
             console.log(`Merging PR #${pr.number}...`);
-            runSafe('gh', ['pr', 'merge', pr.number.toString(), '--merge', '--delete-branch']);
-            console.log(`[Result] PR #${pr.number} Merged.`);
+            const merged = runSafe('gh', ['pr', 'merge', pr.number.toString(), '--merge', '--delete-branch']);
+            if (merged) console.log(`[Result] PR #${pr.number} Merged.`);
+            else console.log(`[Result] PR #${pr.number} Merge Failed (Check GH logs).`);
         } else {
             console.log(`❌ Tests Failed for PR #${pr.number}.`);
             console.log("Analyzing failure with Simple-CLI...");
@@ -149,7 +146,6 @@ async function main() {
             const prompt = `You are a Code Reviewer Agent. The tests for PR #${pr.number} failed. Read '${logFile}'. Use 'pr_comment' to explain the failure on PR #${pr.number}. Be concise.`;
 
             // Run Agent using npx tsx src/cli.ts
-            // We use spawnSync to ensure it runs correctly
             const status = runSafe('npx', ['tsx', 'src/cli.ts', `"${prompt}"`, '--non-interactive']);
             if (status) console.log("Review comment posted via Agent.");
             else console.error("Agent failed to run.");
