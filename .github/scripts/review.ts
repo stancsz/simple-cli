@@ -1,7 +1,12 @@
 #!/usr/bin/env npx tsx
+/**
+ * Simple Code Review
+ * Automated PR review and merge system for Simple CLI
+ */
 import { execSync, spawnSync } from 'child_process';
 import * as fs from 'fs';
 import * as path from 'path';
+
 
 // Configuration
 const CWD = process.cwd();
@@ -153,7 +158,7 @@ async function delegateComment(agentCli: string, pr: any, context: string, error
 }
 
 async function main() {
-    console.log("🔍 Simple-CLI PR Reviewer");
+    console.log("🔍 Simple Code Review");
     console.log("===============================");
 
     // 0. Configure git user for commits

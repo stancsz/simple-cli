@@ -1,4 +1,4 @@
-name: PR Automation
+name: Simple Code Review
 on:
   schedule:
     - cron: '0 * * * *'
@@ -10,12 +10,14 @@ permissions:
   issues: write
 
 jobs:
-  review-and-merge:
+  simple-code-review:
     runs-on: ubuntu-latest
     env:
       GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
       ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+      JULES_API_KEY: ${{ secrets.JULES_API_KEY }}
+      DEEPSEEK_API_KEY: ${{ secrets.DEEPSEEK_API_KEY }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -35,7 +37,7 @@ jobs:
           # But for `npx tsx .github/scripts/review.ts` we might need tsx installed.
           # npx -y tsx handles installation.
 
-      - name: Run Review Script
+      - name: Simple Code Review
         run: |
           # Copy script outside repo to prevent it from being deleted during checkout
           cp .github/scripts/review.ts ../review.ts
