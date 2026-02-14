@@ -28,7 +28,9 @@ describe("CrewAIServer", () => {
 
     const result = await promise;
     expect(result.isError).toBe(true);
-    expect(result.content[0].text).toContain("Error: 'crewai' python package is not installed");
+    expect(result.content[0].text).toContain(
+      "Error: 'crewai' python package is not installed",
+    );
   });
 
   it("should run crew if installed", async () => {
@@ -51,8 +53,8 @@ describe("CrewAIServer", () => {
 
     // Simulate run output and success
     setTimeout(() => {
-        mockRunProcess.stdout.emit("data", "Success output");
-        mockRunProcess.emit("close", 0);
+      mockRunProcess.stdout.emit("data", "Success output");
+      mockRunProcess.emit("close", 0);
     }, 20);
 
     const result = await promise;

@@ -13,7 +13,8 @@ const execAsync = promisify(exec);
 
 export const JULES_TASK_TOOL = {
   name: "jules_task",
-  description: "Delegate a coding task to the Jules agent (Google Cloud). Jules will attempt to create a Pull Request.",
+  description:
+    "Delegate a coding task to the Jules agent (Google Cloud). Jules will attempt to create a Pull Request.",
   inputSchema: {
     type: "object",
     properties: {
@@ -177,7 +178,9 @@ class JulesClient {
 
       console.error(`[JulesClient] Detecting repository...`);
       const { owner, repo, branch } = await this.getRepoInfo();
-      console.error(`[JulesClient] Target: ${owner}/${repo} on branch ${branch}`);
+      console.error(
+        `[JulesClient] Target: ${owner}/${repo} on branch ${branch}`,
+      );
 
       console.error(`[JulesClient] Finding source in Jules...`);
       const sources = await this.listSources();
@@ -274,10 +277,13 @@ export class JulesServer {
           throw new Error("Task argument is required");
         }
 
-        const result = await this.client.executeTask(args.task, args.context_files || []);
+        const result = await this.client.executeTask(
+          args.task,
+          args.context_files || [],
+        );
 
         if (result.success) {
-           return {
+          return {
             content: [
               {
                 type: "text",
@@ -290,7 +296,7 @@ export class JulesServer {
             ],
           };
         } else {
-           return {
+          return {
             content: [
               {
                 type: "text",

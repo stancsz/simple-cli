@@ -155,7 +155,4 @@ export const delegate_cli = {
   },
 };
 
-export const allBuiltins = [
-  delegate_cli,
-  change_dir,
-];
+export const allBuiltins = [delegate_cli, change_dir];

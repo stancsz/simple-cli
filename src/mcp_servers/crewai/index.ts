@@ -12,7 +12,8 @@ import { fileURLToPath } from "url";
 // Define the tool schema
 export const START_CREW_TOOL = {
   name: "start_crew",
-  description: "Start a CrewAI crew to perform a complex task using multiple agents.",
+  description:
+    "Start a CrewAI crew to perform a complex task using multiple agents.",
   inputSchema: {
     type: "object",
     properties: {

@@ -9,8 +9,8 @@ vi.mock("../../src/engine.js", () => {
   return {
     Engine: vi.fn().mockImplementation(() => ({
       run: vi.fn().mockImplementation(async (ctx, prompt, options) => {
-          // Simulate some history update
-          ctx.history.push({ role: "assistant", content: "Done." });
+        // Simulate some history update
+        ctx.history.push({ role: "assistant", content: "Done." });
       }),
     })),
     Context: vi.fn().mockImplementation((cwd, skill) => ({
@@ -56,9 +56,9 @@ describe("OpenCoworkServer", () => {
   });
 
   it("should delegate task", async () => {
-      await server.hireWorker("coder", "Bob");
-      const result = await server.delegateTask("Bob", "Write code");
-      expect(result.content[0].text).toContain("Worker finished");
-      expect(result.content[0].text).toContain("Done.");
+    await server.hireWorker("coder", "Bob");
+    const result = await server.delegateTask("Bob", "Write code");
+    expect(result.content[0].text).toContain("Worker finished");
+    expect(result.content[0].text).toContain("Done.");
   });
 });
