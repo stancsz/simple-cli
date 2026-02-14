@@ -1,0 +1,40 @@
+name: PR Automation
+on:
+  schedule:
+    - cron: '0 * * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: write
+  issues: write
+
+jobs:
+  review-and-merge:
+    runs-on: ubuntu-latest
+    env:
+      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+      ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+
+      - name: Install Dependencies
+        run: |
+          npm ci
+          npm run build
+          # We need to link local CLI or just ensure dependencies like tsx are present
+          # npm install -g . is useful for 'simple' command but our script uses npx tsx src/cli.ts directly?
+          # The script uses `npx tsx src/cli.ts` which is fine if deps are installed.
+          # But for `npx tsx .github/scripts/review.ts` we might need tsx installed.
+          # npx -y tsx handles installation.
+
+      - name: Run Review Script
+        run: |
+          npx -y tsx .github/scripts/review.ts
