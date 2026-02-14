@@ -1,0 +1,67 @@
+name: Publish Package
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  id-token: write
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    environment: npm
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GH_PAT }}
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          registry-url: 'https://registry.npmjs.org'
+
+      - name: Setup Git User
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+
+      - name: Install Dependencies
+        run: npm ci
+
+      - name: Build
+        run: npm run build
+
+      - name: Sync and Bump Version
+        run: |
+          # Fetch tags to ensure we have the full history
+          git fetch --tags
+          
+          # Find the latest semantic version tag (vX.Y.Z)
+          LATEST_TAG=$(git tag -l "v*" | sort -V | tail -n 1)
+          
+          if [ -n "$LATEST_TAG" ]; then
+            # Strip the 'v' prefix
+            LATEST_VER=${LATEST_TAG#v}
+            echo "Syncing package.json to match latest tag: $LATEST_VER"
+            
+            # Update package.json version to match the tag, without creating a git commit/tag yet
+            npm version $LATEST_VER --no-git-tag-version --allow-same-version
+          else
+            echo "No existing tags found. Proceeding with package.json version."
+          fi
+
+          # Now bump the patch version (e.g. 0.2.7 -> 0.2.8) and create the tag
+          npm version patch --force
+
+      - name: Push Changes
+        run: git push --follow-tags
+
+      - name: Publish to NPM
+        run: |
+          npm config set //registry.npmjs.org/:_authToken=$NODE_AUTH_TOKEN
+          npm publish
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}

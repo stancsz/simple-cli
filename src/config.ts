@@ -1,53 +1,79 @@
-import { readFile } from 'fs/promises';
-import { existsSync } from 'fs';
-import { join } from 'path';
+import { readFile } from "fs/promises";
+import { existsSync } from "fs";
+import { join } from "path";
 
 export interface AgentConfig {
-    command: string;
-    args: string[];
-    description: string;
-    supports_stdin?: boolean;
-    env?: Record<string, string>;
-    context_flag?: string;
-}
-
-export interface TaskConfig {
-    id: string;
-    cron: string;
-    command: string; // The command or prompt to execute
-    description: string;
-    enabled?: boolean;
-}
-
-export interface SchedulerConfig {
-    enabled: boolean;
-    tasks: TaskConfig[];
+  command: string;
+  args: string[];
+  description: string;
+  supports_stdin?: boolean;
+  env?: Record<string, string>;
+  context_flag?: string;
 }
 
 export interface Config {
-    mcpServers?: Record<string, any>;
-    agents?: Record<string, AgentConfig>;
-    scheduler?: SchedulerConfig;
-    yoloMode?: boolean;
-    autoDecisionTimeout?: number;
+  mcpServers?: Record<string, any>;
+  agents?: Record<string, AgentConfig>;
+  yoloMode?: boolean;
+  autoDecisionTimeout?: number;
 }
 
 export async function loadConfig(cwd: string = process.cwd()): Promise<Config> {
-    const locations = [
-        join(cwd, 'mcp.json'),
-        join(cwd, '.agent', 'config.json')
-    ];
+  const locations = [join(cwd, "mcp.json"), join(cwd, ".agent", "config.json")];
 
-    for (const loc of locations) {
-        if (existsSync(loc)) {
-            try {
-                const content = await readFile(loc, 'utf-8');
-                return JSON.parse(content);
-            } catch (e) {
-                console.error(`Failed to parse config at ${loc}:`, e);
-            }
-        }
+  let config: Config = {};
+
+  for (const loc of locations) {
+    if (existsSync(loc)) {
+      try {
+        const content = await readFile(loc, "utf-8");
+        config = JSON.parse(content);
+        break;
+      } catch (e) {
+        console.error(`Failed to parse config at ${loc}:`, e);
+      }
     }
+  }
 
-    return {};
+  if (!config.agents) config.agents = {};
+
+  if (!config.agents.deepseek_crewai) {
+    config.agents.deepseek_crewai = {
+      command: "npx",
+      args: ["tsx", "src/agents/deepseek_crewai.ts"],
+      description:
+        "Delegate tasks to a generic CrewAI crew (Researcher + Writer).",
+      supports_stdin: false,
+    };
+  }
+
+  if (!config.agents.deepseek_aider) {
+    config.agents.deepseek_aider = {
+      command: "npx",
+      args: ["tsx", "src/agents/deepseek_aider.ts"],
+      description: "Delegate coding tasks to Aider using DeepSeek V3.",
+      supports_stdin: false,
+      context_flag: "", // Aider accepts files as positional arguments
+    };
+  }
+
+  if (!config.agents.deepseek_opencode) {
+    config.agents.deepseek_opencode = {
+      command: "npx",
+      args: ["tsx", "src/agents/deepseek_opencode.ts"],
+      description: "Delegate tasks to OpenCode using DeepSeek V3.",
+      supports_stdin: false,
+    };
+  }
+
+  if (!config.agents.deepseek_claude) {
+    config.agents.deepseek_claude = {
+      command: "npx",
+      args: ["tsx", "src/agents/deepseek_claude.ts"],
+      description: "Delegate tasks to Claude Code using DeepSeek V3.",
+      supports_stdin: false,
+    };
+  }
+
+  return config;
 }

@@ -1,6 +1,6 @@
-import { readFile, readdir, writeFile } from 'fs/promises';
-import { join, basename, extname } from 'path';
-import { existsSync } from 'fs';
+import { readFile, readdir, writeFile } from "fs/promises";
+import { join, basename, extname } from "path";
+import { existsSync } from "fs";
 
 export interface Skill {
   name: string;
@@ -11,9 +11,13 @@ export interface Skill {
 
 export const builtinSkills: Record<string, Skill> = {
   code: {
-    name: 'code',
-    description: 'A helpful coding assistant.',
-    systemPrompt: `You are a helpful coding assistant. Use tools to solve tasks.
+    name: "code",
+    description:
+      "A Meta Orchestrator that delegates tasks to specialized subagents.",
+    systemPrompt: `You are Simple CLI (or just "Simple"), a Meta Orchestrator. When users ask about "Simple", "Simple CLI", or "you", they are referring to you.
+You DO NOT have direct access to files, git, or command execution.
+You must delegate ALL reading, writing, and execution tasks to subagents.
+
 You must output your response in JSON format.
 The JSON should have the following structure:
 {
@@ -27,29 +31,48 @@ If you don't need to use a tool, use "tool": "none" and provide a "message".
   "tool": "none",
   "message": "Response to user"
 }
-Important:
-- If a task requires multiple steps, perform them one by one.
-- Do not ask for confirmation if you have enough information to proceed.
-- When writing to files that might exist (like logs), read them first and append to them if necessary, unless instructed to overwrite.
-`
-  }
+
+Important Rules:
+1. **Always use tools** to perform actions. Do not just describe what to do.
+2. **Context Management (UCP)**:
+   - Use 'update_context' to add high-level goals, constraints, or log major architectural decisions.
+   - Maintain a shared understanding for all agents.
+
+3. **Smart Delegation (Router)**:
+   Analyze the task complexity and choose the best agent:
+   - **Simple Fix / Typo / Code Edit**: Use 'deepseek_aider'. It is fast and good at direct edits.
+   - **Refactor / Feature / Architecture**: Use 'deepseek_claude'. It has strong reasoning and architectural grasp.
+   - **Research / Writing**: Use 'deepseek_crewai'. It spawns researchers and writers.
+   - **Quick Snippets**: Use 'deepseek_opencode'.
+   - **PR Management**: Use 'jules'.
+
+   **Default**: If unsure, use 'deepseek_claude'.
+
+   Example: To read 'file.txt', call delegate_cli('deepseek_claude', 'Read file.txt').
+   Example: To write a file, call delegate_cli('deepseek_claude', 'Create hello.py with content...').
+
+4. If you don't need to use a tool, use "tool": "none" and provide a "message".
+5. If a task requires multiple steps, perform them one by one.
+6. Do not ask for confirmation if you have enough information to proceed.
+`,
+  },
 };
 
 export async function loadSkillFromFile(path: string): Promise<Skill | null> {
   if (!existsSync(path)) return null;
   try {
-    const content = await readFile(path, 'utf-8');
+    const content = await readFile(path, "utf-8");
     const ext = extname(path).toLowerCase();
 
-    if (ext === '.json') {
+    if (ext === ".json") {
       const skill = JSON.parse(content);
       if (!skill.name || !skill.systemPrompt) return null;
       return skill;
-    } else if (ext === '.md') {
+    } else if (ext === ".md") {
       // Parse markdown:
       // Title (# Title) -> Name
       // Content -> System Prompt
-      let name = basename(path, '.md');
+      let name = basename(path, ".md");
 
       const titleMatch = content.match(/^#\s+(.+)$/m);
       if (titleMatch) {
@@ -59,7 +82,7 @@ export async function loadSkillFromFile(path: string): Promise<Skill | null> {
       return {
         name,
         description: `Loaded from ${basename(path)}`,
-        systemPrompt: content
+        systemPrompt: content,
       };
     }
   } catch (e) {
@@ -68,22 +91,24 @@ export async function loadSkillFromFile(path: string): Promise<Skill | null> {
   return null;
 }
 
-export async function getActiveSkill(cwd: string = process.cwd()): Promise<Skill> {
+export async function getActiveSkill(
+  cwd: string = process.cwd(),
+): Promise<Skill> {
   // 1. Env var
   if (process.env.SIMPLE_CLI_SKILL) {
-     if (builtinSkills[process.env.SIMPLE_CLI_SKILL]) {
-         return builtinSkills[process.env.SIMPLE_CLI_SKILL];
-     }
+    if (builtinSkills[process.env.SIMPLE_CLI_SKILL]) {
+      return builtinSkills[process.env.SIMPLE_CLI_SKILL];
+    }
   }
 
   // 2. Project config (.agent/AGENT.md or .agent/SOUL.md)
-  const agentMd = join(cwd, '.agent', 'AGENT.md');
+  const agentMd = join(cwd, ".agent", "AGENT.md");
   if (existsSync(agentMd)) {
     const skill = await loadSkillFromFile(agentMd);
     if (skill) return skill;
   }
 
-  const soulMd = join(cwd, '.agent', 'SOUL.md');
+  const soulMd = join(cwd, ".agent", "SOUL.md");
   if (existsSync(soulMd)) {
     const skill = await loadSkillFromFile(soulMd);
     if (skill) return skill;
@@ -105,36 +130,41 @@ export function listSkills(): Skill[] {
   return Object.values(builtinSkills);
 }
 
-export async function loadCustomSkills(dir: string): Promise<Record<string, Skill>> {
+export async function loadCustomSkills(
+  dir: string,
+): Promise<Record<string, Skill>> {
   const skills: Record<string, Skill> = {};
   if (!existsSync(dir)) return skills;
 
   try {
-      const entries = await readdir(dir, { withFileTypes: true });
-      for (const entry of entries) {
-        if (entry.isFile()) {
-          const path = join(dir, entry.name);
-          const skill = await loadSkillFromFile(path);
-          if (skill) {
-            skills[skill.name] = skill;
-          }
+    const entries = await readdir(dir, { withFileTypes: true });
+    for (const entry of entries) {
+      if (entry.isFile()) {
+        const path = join(dir, entry.name);
+        const skill = await loadSkillFromFile(path);
+        if (skill) {
+          skills[skill.name] = skill;
         }
       }
+    }
   } catch {}
   return skills;
 }
 
 export function buildSkillPrompt(skill: Skill, context?: any): string {
-    let prompt = skill.systemPrompt;
-    if (context?.repoMap) {
-        prompt += `\n\n## Repository Structure\n${context.repoMap}`;
-    }
-    if (context?.files && context.files.length > 0) {
-        prompt += `\n\n## Active Files\n${context.files.join('\n')}`;
-    }
-    return prompt;
+  let prompt = skill.systemPrompt;
+  if (context?.repoMap) {
+    prompt += `\n\n## Repository Structure\n${context.repoMap}`;
+  }
+  if (context?.files && context.files.length > 0) {
+    prompt += `\n\n## Active Files\n${context.files.join("\n")}`;
+  }
+  return prompt;
 }
 
-export async function saveSkillToFile(skill: Skill, path: string): Promise<void> {
-    await writeFile(path, JSON.stringify(skill, null, 2));
+export async function saveSkillToFile(
+  skill: Skill,
+  path: string,
+): Promise<void> {
+  await writeFile(path, JSON.stringify(skill, null, 2));
 }

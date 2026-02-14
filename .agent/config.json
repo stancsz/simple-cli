@@ -1,0 +1,10 @@
+{
+  "agents": {
+    "openclaw": {
+      "command": "openclaw",
+      "args": ["agent", "--thinking", "high", "--message"],
+      "description": "OpenClaw Personal AI Assistant. Use this for complex tasks requiring conversation, browsing, or multi-step reasoning.",
+      "supports_stdin": false
+    }
+  }
+}
