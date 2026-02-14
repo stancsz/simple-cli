@@ -1,0 +1,74 @@
+name: PR Automation
+on:
+  schedule:
+    - cron: '0 * * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: write
+  issues: write
+
+jobs:
+  review-and-merge:
+    runs-on: ubuntu-latest
+    env:
+      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+      ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+
+      - name: Install Simple CLI
+        run: |
+          npm ci
+          npm run build
+          npm install -g .
+          simple --version
+
+      - name: Process PRs
+        run: |
+          # Listing Open PRs that are mergeable
+          # Note: 'gh pr list' by default lists open PRs
+          # We check mergeable state in the loop because list --json mergeable is efficient
+          PRS=$(gh pr list --json number,mergeable,headRefName --limit 10)
+          
+          echo "Checking PRs..."
+          echo "$PRS" | jq -c '.[]' | while read -r pr; do
+            NUM=$(echo "$pr" | jq -r '.number')
+            STATE=$(echo "$pr" | jq -r '.mergeable')
+            branch=$(echo "$pr" | jq -r '.headRefName')
+            
+            echo "PR #$NUM ($branch) - Mergeable: $STATE"
+            
+            if [ "$STATE" != "MERGEABLE" ]; then
+              echo "Skipping PR #$NUM (Not mergeable)"
+              continue
+            fi
+            
+            echo "Checking out PR #$NUM..."
+            gh pr checkout $NUM
+            
+            echo "Running tests..."
+            if npm ci && npm test; then
+              echo "✅ Tests passed. Merging..."
+              gh pr merge $NUM --merge --auto
+            else
+              echo "❌ Tests failed."
+              # Capture log
+              npm test 2>&1 | tail -n 50 > failure.log
+              
+              echo "Generating comment..."
+              simple "You are a CI bot. The tests for PR #$NUM failed. Read 'failure.log' and use 'pr_comment' tool to post a helpful comment on PR #$NUM explaining the failure. Do not fix code." --non-interactive
+            fi
+            
+            # Reset
+            git checkout -
+            git clean -fd
+          done
