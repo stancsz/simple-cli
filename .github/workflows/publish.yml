@@ -2,6 +2,16 @@ name: Publish Package
 
 on:
   workflow_dispatch:
+    inputs:
+      bump_type:
+        description: 'Version bump type (patch, minor, major)'
+        required: true
+        default: 'patch'
+        type: choice
+        options:
+          - patch
+          - minor
+          - major
 
 permissions:
   contents: write
@@ -53,8 +63,8 @@ jobs:
             echo "No existing tags found. Proceeding with package.json version."
           fi
 
-          # Now bump the patch version (e.g. 0.2.7 -> 0.2.8) and create the tag
-          npm version patch --force
+          # Bump the version and create the tag
+          npm version ${{ inputs.bump_type }} --force
 
       - name: Push Changes
         run: git push --follow-tags
