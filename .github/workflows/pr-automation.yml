@@ -25,14 +25,16 @@ jobs:
         with:
           node-version: '18'
 
-      - name: Install Simple CLI
+      - name: Install Dependencies
         run: |
           npm ci
           npm run build
-          npm install -g .
-          simple --version
+          # We need to link local CLI or just ensure dependencies like tsx are present
+          # npm install -g . is useful for 'simple' command but our script uses npx tsx src/cli.ts directly?
+          # The script uses `npx tsx src/cli.ts` which is fine if deps are installed.
+          # But for `npx tsx .github/scripts/review.ts` we might need tsx installed.
+          # npx -y tsx handles installation.
 
       - name: Run Review Script
         run: |
-          npm install -D tsx
-          npx tsx .github/scripts/review.ts
+          npx -y tsx .github/scripts/review.ts
