@@ -3,11 +3,17 @@ import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js"
 import {
   CallToolRequestSchema,
   ListToolsRequestSchema,
+  McpError,
+  ErrorCode,
 } from "@modelcontextprotocol/sdk/types.js";
 import { z } from "zod";
 import { spawn } from "child_process";
 import { join } from "path";
 import { fileURLToPath } from "url";
+
+const StartCrewSchema = z.object({
+  task: z.string().describe("The task description for the crew to execute."),
+});
 
 // Define the tool schema
 export const START_CREW_TOOL = {
@@ -51,15 +57,28 @@ export class CrewAIServer {
     }));
 
     this.server.setRequestHandler(CallToolRequestSchema, async (request) => {
-      if (request.params.name === "start_crew") {
-        const args = request.params.arguments as { task: string };
-        if (!args.task) {
-          throw new Error("Task argument is required");
-        }
-        return await this.startCrew(args.task);
-      }
-      throw new Error(`Tool not found: ${request.params.name}`);
+      const { name, arguments: args } = request.params;
+      return this.handleCallTool(name, args);
     });
+  }
+
+  public async handleCallTool(name: string, args: any) {
+    if (name === "start_crew") {
+      const parsed = StartCrewSchema.safeParse(args);
+      if (!parsed.success) {
+        throw new McpError(ErrorCode.InvalidParams, parsed.error.message);
+      }
+      const { task } = parsed.data;
+      try {
+        return await this.startCrew(task);
+      } catch (e: any) {
+        throw new McpError(
+          ErrorCode.InternalError,
+          `Crew execution failed: ${e.message}`,
+        );
+      }
+    }
+    throw new McpError(ErrorCode.MethodNotFound, `Tool not found: ${name}`);
   }
 
   async startCrew(task: string) {

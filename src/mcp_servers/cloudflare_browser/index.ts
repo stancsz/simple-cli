@@ -3,8 +3,15 @@ import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js"
 import {
   CallToolRequestSchema,
   ListToolsRequestSchema,
+  McpError,
+  ErrorCode,
 } from "@modelcontextprotocol/sdk/types.js";
 import { fileURLToPath } from "url";
+import { z } from "zod";
+
+const FetchMarkdownSchema = z.object({
+  url: z.string().describe("The URL of the webpage to fetch."),
+});
 
 const FETCH_MARKDOWN_TOOL = {
   name: "fetch_markdown",
@@ -47,27 +54,28 @@ export class CloudflareBrowserServer {
     }));
 
     this.server.setRequestHandler(CallToolRequestSchema, async (request) => {
-      try {
-        if (request.params.name === "fetch_markdown") {
-          const args = request.params.arguments as { url?: string };
-          if (!args || typeof args.url !== "string") {
-            throw new Error("Invalid arguments: 'url' string is required");
-          }
-          return await this.fetchMarkdown(args.url);
-        }
-        throw new Error(`Tool not found: ${request.params.name}`);
-      } catch (e: any) {
-        return {
-          content: [
-            {
-              type: "text",
-              text: `Error: ${e.message}`,
-            },
-          ],
-          isError: true,
-        };
-      }
+      const { name, arguments: args } = request.params;
+      return this.handleCallTool(name, args);
     });
+  }
+
+  public async handleCallTool(name: string, args: any) {
+    if (name === "fetch_markdown") {
+      const parsed = FetchMarkdownSchema.safeParse(args);
+      if (!parsed.success) {
+        throw new McpError(ErrorCode.InvalidParams, parsed.error.message);
+      }
+      const { url } = parsed.data;
+      try {
+        return await this.fetchMarkdown(url);
+      } catch (e: any) {
+        throw new McpError(
+          ErrorCode.InternalError,
+          `Failed to fetch markdown: ${e.message}`,
+        );
+      }
+    }
+    throw new McpError(ErrorCode.MethodNotFound, `Tool not found: ${name}`);
   }
 
   public async fetchMarkdown(url: string) {

@@ -3,13 +3,24 @@ import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js"
 import {
   CallToolRequestSchema,
   ListToolsRequestSchema,
+  McpError,
+  ErrorCode,
 } from "@modelcontextprotocol/sdk/types.js";
 import { exec } from "child_process";
 import { promisify } from "util";
 import fetch from "node-fetch";
 import { fileURLToPath } from "url";
+import { z } from "zod";
 
 const execAsync = promisify(exec);
+
+const JulesTaskSchema = z.object({
+  task: z.string().describe("The task description."),
+  context_files: z
+    .array(z.string())
+    .optional()
+    .describe("List of file paths to provide as context."),
+});
 
 export const JULES_TASK_TOOL = {
   name: "jules_task",
@@ -49,7 +60,7 @@ interface Source {
   };
 }
 
-class JulesClient {
+export class JulesClient {
   private apiBaseUrl: string;
   private apiKey?: string;
 
@@ -268,18 +279,24 @@ export class JulesServer {
     }));
 
     this.server.setRequestHandler(CallToolRequestSchema, async (request) => {
-      if (request.params.name === "jules_task") {
-        const args = request.params.arguments as {
-          task: string;
-          context_files?: string[];
-        };
-        if (!args.task) {
-          throw new Error("Task argument is required");
-        }
+      const { name, arguments: args } = request.params;
+      return this.handleCallTool(name, args);
+    });
+  }
 
+  public async handleCallTool(name: string, args: any) {
+    if (name === "jules_task") {
+      const parsed = JulesTaskSchema.safeParse(args);
+      if (!parsed.success) {
+        throw new McpError(ErrorCode.InvalidParams, parsed.error.message);
+      }
+
+      const { task, context_files } = parsed.data;
+
+      try {
         const result = await this.client.executeTask(
-          args.task,
-          args.context_files || [],
+          task,
+          context_files || [],
         );
 
         if (result.success) {
@@ -306,9 +323,14 @@ export class JulesServer {
             isError: true,
           };
         }
+      } catch (e: any) {
+        throw new McpError(
+            ErrorCode.InternalError,
+            `Jules Client error: ${e.message}`
+        );
       }
-      throw new Error(`Tool not found: ${request.params.name}`);
-    });
+    }
+    throw new McpError(ErrorCode.MethodNotFound, `Tool not found: ${name}`);
   }
 
   async run() {

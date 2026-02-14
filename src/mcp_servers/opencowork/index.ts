@@ -3,6 +3,8 @@ import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js"
 import {
   CallToolRequestSchema,
   ListToolsRequestSchema,
+  McpError,
+  ErrorCode,
 } from "@modelcontextprotocol/sdk/types.js";
 import { z } from "zod";
 import { Engine, Context, Registry } from "../../engine.js";
@@ -11,7 +13,19 @@ import { createLLM } from "../../llm.js";
 import { builtinSkills } from "../../skills.js";
 import { fileURLToPath } from "url";
 
-// Define tool schemas
+// Define tool schemas with Zod
+const HireWorkerSchema = z.object({
+  role: z
+    .string()
+    .describe("The role of the worker (e.g., 'researcher', 'coder')."),
+  name: z.string().describe("A unique name for the worker."),
+});
+
+const DelegateTaskSchema = z.object({
+  worker_name: z.string().describe("The name of the worker to delegate to."),
+  task: z.string().describe("The task description."),
+});
+
 export const HIRE_WORKER_TOOL = {
   name: "hire_worker",
   description: "Hire a new worker (sub-agent) with a specific role.",
@@ -86,42 +100,53 @@ export class OpenCoworkServer {
     }));
 
     this.server.setRequestHandler(CallToolRequestSchema, async (request) => {
-      try {
-        if (request.params.name === "hire_worker") {
-          const args = request.params.arguments as {
-            role: string;
-            name: string;
-          };
-          return await this.hireWorker(args.role, args.name);
-        }
-        if (request.params.name === "delegate_task") {
-          const args = request.params.arguments as {
-            worker_name: string;
-            task: string;
-          };
-          return await this.delegateTask(args.worker_name, args.task);
-        }
-        if (request.params.name === "list_workers") {
-          return await this.listWorkers();
-        }
-        throw new Error(`Tool not found: ${request.params.name}`);
-      } catch (e: any) {
-        return {
-          content: [
-            {
-              type: "text",
-              text: `Error: ${e.message}`,
-            },
-          ],
-          isError: true,
-        };
-      }
+      const { name, arguments: args } = request.params;
+      return this.handleCallTool(name, args);
     });
+  }
+
+  public async handleCallTool(name: string, args: any) {
+    try {
+      if (name === "hire_worker") {
+        const parsed = HireWorkerSchema.safeParse(args);
+        if (!parsed.success) {
+          throw new McpError(ErrorCode.InvalidParams, parsed.error.message);
+        }
+        const { role, name: workerName } = parsed.data;
+        return await this.hireWorker(role, workerName);
+      }
+      if (name === "delegate_task") {
+        const parsed = DelegateTaskSchema.safeParse(args);
+        if (!parsed.success) {
+          throw new McpError(ErrorCode.InvalidParams, parsed.error.message);
+        }
+        const { worker_name, task } = parsed.data;
+        return await this.delegateTask(worker_name, task);
+      }
+      if (name === "list_workers") {
+        return await this.listWorkers();
+      }
+      throw new McpError(ErrorCode.MethodNotFound, `Tool not found: ${name}`);
+    } catch (e: any) {
+      if (e instanceof McpError) throw e;
+      return {
+        content: [
+          {
+            type: "text",
+            text: `Error: ${e.message}`,
+          },
+        ],
+        isError: true,
+      };
+    }
   }
 
   async hireWorker(role: string, name: string) {
     if (this.workers.has(name)) {
-      throw new Error(`Worker with name '${name}' already exists.`);
+      throw new McpError(
+        ErrorCode.InvalidParams,
+        `Worker with name '${name}' already exists.`,
+      );
     }
 
     console.error(`[OpenCowork] Hiring worker '${name}' as '${role}'...`);
@@ -129,7 +154,7 @@ export class OpenCoworkServer {
     // Create a new Engine instance for the worker
     const llm = createLLM();
     const registry = new Registry();
-    const mcp = new MCP(); // Workers can have their own MCP clients if needed
+    const mcp = new MCP();
     // Note: Calling mcp.init() might be needed if workers need tools.
     // For now, we assume basic LLM capabilities.
 
@@ -163,7 +188,10 @@ export class OpenCoworkServer {
     const context = this.workerContexts.get(workerName);
 
     if (!engine || !context) {
-      throw new Error(`Worker '${workerName}' not found.`);
+      throw new McpError(
+        ErrorCode.InvalidParams,
+        `Worker '${workerName}' not found.`,
+      );
     }
 
     console.error(
@@ -177,6 +205,15 @@ export class OpenCoworkServer {
     } catch (e: any) {
       // Ignore "interactive" errors if they occur
       console.error(`[OpenCowork] Worker error: ${e.message}`);
+      return {
+        content: [
+          {
+            type: "text",
+            text: `Worker encountered an error: ${e.message}`,
+          },
+        ],
+        isError: true,
+      };
     }
 
     const newMessages = context.history.slice(initialHistoryLength);

@@ -3,14 +3,39 @@ import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js"
 import {
   CallToolRequestSchema,
   ListToolsRequestSchema,
+  McpError,
+  ErrorCode,
 } from "@modelcontextprotocol/sdk/types.js";
 import { exec } from "child_process";
 import { promisify } from "util";
 import { readFile, writeFile } from "fs/promises";
 import { fileURLToPath } from "url";
 import { ContextManager } from "../../context_manager.js";
+import { z } from "zod";
 
 const execAsync = promisify(exec);
+
+const UpdateContextSchema = z.object({
+  goal: z.string().optional().describe("Add a new high-level goal."),
+  constraint: z.string().optional().describe("Add a new global constraint."),
+  change: z
+    .string()
+    .optional()
+    .describe("Log a recent architectural change or decision."),
+});
+
+const ReadFileSchema = z.object({
+  path: z.string().describe("The path of the file to read."),
+});
+
+const WriteFileSchema = z.object({
+  path: z.string().describe("The path of the file to write."),
+  content: z.string().describe("The content to write."),
+});
+
+const RunCommandSchema = z.object({
+  command: z.string().describe("The command to execute."),
+});
 
 export const UPDATE_CONTEXT_TOOL = {
   name: "update_context",
@@ -134,7 +159,11 @@ export class SimpleToolsServer {
   public async handleCallTool(name: string, args: any) {
     try {
       if (name === "update_context") {
-        const { goal, constraint, change } = args as any;
+        const parsed = UpdateContextSchema.safeParse(args);
+        if (!parsed.success) {
+          throw new McpError(ErrorCode.InvalidParams, parsed.error.message);
+        }
+        const { goal, constraint, change } = parsed.data;
         const updates = [];
         if (goal) {
           await this.contextManager.addGoal(goal);
@@ -160,6 +189,7 @@ export class SimpleToolsServer {
       }
 
       if (name === "read_context") {
+        // No input validation needed for read_context as it takes no args
         const summary = await this.contextManager.getContextSummary();
         return {
           content: [
@@ -172,50 +202,88 @@ export class SimpleToolsServer {
       }
 
       if (name === "read_file") {
-        const { path } = args as any;
-        if (!path) throw new Error("Path is required");
-        const content = await readFile(path, "utf-8");
-        return {
-          content: [
-            {
-              type: "text",
-              text: content,
-            },
-          ],
-        };
+        const parsed = ReadFileSchema.safeParse(args);
+        if (!parsed.success) {
+          throw new McpError(ErrorCode.InvalidParams, parsed.error.message);
+        }
+        const { path } = parsed.data;
+        try {
+          const content = await readFile(path, "utf-8");
+          return {
+            content: [
+              {
+                type: "text",
+                text: content,
+              },
+            ],
+          };
+        } catch (e: any) {
+          throw new McpError(
+            ErrorCode.InternalError,
+            `Failed to read file: ${e.message}`,
+          );
+        }
       }
 
       if (name === "write_file") {
-        const { path, content } = args as any;
-        if (!path || content === undefined)
-          throw new Error("Path and content are required");
-        await writeFile(path, content);
-        return {
-          content: [
-            {
-              type: "text",
-              text: `Successfully wrote to ${path}`,
-            },
-          ],
-        };
+        const parsed = WriteFileSchema.safeParse(args);
+        if (!parsed.success) {
+          throw new McpError(ErrorCode.InvalidParams, parsed.error.message);
+        }
+        const { path, content } = parsed.data;
+        try {
+          await writeFile(path, content);
+          return {
+            content: [
+              {
+                type: "text",
+                text: `Successfully wrote to ${path}`,
+              },
+            ],
+          };
+        } catch (e: any) {
+          throw new McpError(
+            ErrorCode.InternalError,
+            `Failed to write file: ${e.message}`,
+          );
+        }
       }
 
       if (name === "run_command") {
-        const { command } = args as any;
-        if (!command) throw new Error("Command is required");
-        const { stdout, stderr } = await execAsync(command);
-        return {
-          content: [
-            {
-              type: "text",
-              text: stdout + (stderr ? `\nStderr: ${stderr}` : ""),
-            },
-          ],
-        };
+        const parsed = RunCommandSchema.safeParse(args);
+        if (!parsed.success) {
+          throw new McpError(ErrorCode.InvalidParams, parsed.error.message);
+        }
+        const { command } = parsed.data;
+        try {
+          const { stdout, stderr } = await execAsync(command);
+          return {
+            content: [
+              {
+                type: "text",
+                text: stdout + (stderr ? `\nStderr: ${stderr}` : ""),
+              },
+            ],
+          };
+        } catch (e: any) {
+          // Command failure is not necessarily an internal error, but we can treat it as such or return structured error content
+          return {
+            content: [
+              {
+                type: "text",
+                text: `Command failed: ${e.message}\nStderr: ${e.stderr || ""}`,
+              },
+            ],
+            isError: true,
+          };
+        }
       }
 
-      throw new Error(`Tool not found: ${name}`);
+      throw new McpError(ErrorCode.MethodNotFound, `Tool not found: ${name}`);
     } catch (error: any) {
+      if (error instanceof McpError) {
+        throw error;
+      }
       return {
         content: [
           {

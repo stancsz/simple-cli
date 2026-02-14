@@ -3,12 +3,21 @@ import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js"
 import {
   CallToolRequestSchema,
   ListToolsRequestSchema,
+  McpError,
+  ErrorCode,
 } from "@modelcontextprotocol/sdk/types.js";
 import { z } from "zod";
 import { spawn } from "child_process";
 import { join } from "path";
 import { existsSync } from "fs";
 import { fileURLToPath } from "url";
+
+const OpenClawRunSchema = z.object({
+  skill: z
+    .string()
+    .describe("The name of the skill to run (e.g., 'weather', 'github')."),
+  args: z.record(z.any()).optional().describe("Arguments for the skill."),
+});
 
 export const OPENCLAW_RUN_TOOL = {
   name: "openclaw_run",
@@ -56,15 +65,28 @@ export class OpenClawServer {
     }));
 
     this.server.setRequestHandler(CallToolRequestSchema, async (request) => {
-      if (request.params.name === "openclaw_run") {
-        const args = request.params.arguments as {
-          skill: string;
-          args?: Record<string, any>;
-        };
-        return await this.runSkill(args.skill, args.args || {});
-      }
-      throw new Error(`Tool not found: ${request.params.name}`);
+      const { name, arguments: args } = request.params;
+      return this.handleCallTool(name, args);
     });
+  }
+
+  public async handleCallTool(name: string, args: any) {
+    if (name === "openclaw_run") {
+      const parsed = OpenClawRunSchema.safeParse(args);
+      if (!parsed.success) {
+        throw new McpError(ErrorCode.InvalidParams, parsed.error.message);
+      }
+      const { skill, args: skillArgs } = parsed.data;
+      try {
+        return await this.runSkill(skill, skillArgs || {});
+      } catch (e: any) {
+        throw new McpError(
+          ErrorCode.InternalError,
+          `Skill execution failed: ${e.message}`,
+        );
+      }
+    }
+    throw new McpError(ErrorCode.MethodNotFound, `Tool not found: ${name}`);
   }
 
   async runSkill(skill: string, args: Record<string, any>) {
