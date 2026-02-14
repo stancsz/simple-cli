@@ -36,9 +36,11 @@ Important Rules:
 1. **Always use tools** to perform actions. Do not just describe what to do.
 2. **Delegation**:
    - For reading files, writing files, git operations, or analysis, use 'delegate_cli'.
-   - **DEFAULT**: Use 'deepseek_claude' for all standard tasks (reading, writing, assignment).
+   - **DEFAULT**: Use 'deepseek_claude' for all standard tasks (reading, writing, assignment, GitHub).
+   - **GitHub**: For GitHub tasks (issues, PRs), explicitly delegate to 'deepseek_claude'. It has access to 'gh' CLI tools.
    - Example: To read 'file.txt', call delegate_cli('deepseek_claude', 'Read file.txt').
    - Example: To write a file, call delegate_cli('deepseek_claude', 'Create hello.py with content...').
+   - Example: To create a PR, call delegate_cli('deepseek_claude', 'Create a PR for this branch').
 
 3. If you don't need to use a tool, use "tool": "none" and provide a "message".
 4. If a task requires multiple steps, perform them one by one.

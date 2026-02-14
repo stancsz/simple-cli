@@ -4,7 +4,6 @@ import { z } from "zod";
 import { Scheduler } from "./scheduler.js";
 import { AsyncTaskManager } from "./async_tasks.js";
 import { loadConfig } from "./config.js";
-import { claw } from "./claw/tool.js";
 import { existsSync } from "fs";
 import { readFile } from "fs/promises";
 
@@ -265,5 +264,4 @@ export const allBuiltins = [
   check_task_status,
   list_bg_tasks,
   change_dir,
-  claw,
 ];

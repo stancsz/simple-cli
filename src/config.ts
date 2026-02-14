@@ -87,15 +87,6 @@ export async function loadConfig(cwd: string = process.cwd()): Promise<Config> {
     };
   }
 
-  if (!config.agents.deepseek_opencode) {
-    config.agents.deepseek_opencode = {
-      command: "npx",
-      args: ["tsx", "src/agents/deepseek_opencode.ts"],
-      description: "Delegate tasks to OpenCode using DeepSeek V3.",
-      supports_stdin: false,
-    };
-  }
-
   if (!config.agents.deepseek_claude) {
     config.agents.deepseek_claude = {
       command: "npx",
