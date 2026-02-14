@@ -32,19 +32,52 @@ class JulesClient {
             const prData = JSON.parse(prJson);
             const branch = prData.headRefName;
 
+            // Extract owner/repo from git remote
+            const remoteUrl = run('git remote get-url origin');
+            let owner = '', repo = '';
+
+            // Parse GitHub URL (https or ssh)
+            if (remoteUrl.includes('github.com')) {
+                const match = remoteUrl.match(/github\.com[:/]([^/]+)\/([^/.]+)/);
+                if (match) {
+                    owner = match[1];
+                    repo = match[2];
+                }
+            }
+
+            console.log(`Repository: ${owner}/${repo}, Branch: ${branch}`);
+
             // List sources
             const sourcesUrl = `${this.apiBaseUrl}/sources`;
             const sourcesRes = await fetch(sourcesUrl, {
                 headers: { "X-Goog-Api-Key": this.apiKey }
             });
             const sourcesData: any = await sourcesRes.json();
+            console.log(`Found ${sourcesData.sources?.length || 0} Jules sources`);
+
+            // Debug: List all available sources
+            if (sourcesData.sources) {
+                console.log("Available sources:");
+                sourcesData.sources.forEach((s: any) => {
+                    console.log(`  - ${s.name}: ${s.githubRepo?.owner}/${s.githubRepo?.repo}`);
+                });
+            }
+
             const source = sourcesData.sources?.find((s: any) =>
-                s.githubRepo?.owner === "stancsz" && s.githubRepo?.repo === "simple-cli"
+                s.githubRepo?.owner === owner && s.githubRepo?.repo === repo
             );
 
             if (!source) {
-                return { success: false, message: "Repository not found in Jules sources" };
+                const availableSources = sourcesData.sources?.map((s: any) =>
+                    `${s.githubRepo?.owner}/${s.githubRepo?.repo}`
+                ).join(", ") || "none";
+                return {
+                    success: false,
+                    message: `Repository ${owner}/${repo} not found in Jules sources. Available: ${availableSources}. Please connect the repository at https://jules.google.com/settings`
+                };
             }
+
+            console.log(`Using Jules source: ${source.name}`);
 
             // Create session
             const sessionUrl = `${this.apiBaseUrl}/sessions`;
@@ -60,6 +93,8 @@ class JulesClient {
                 title: `Fix PR #${prNumber}`,
             };
 
+            console.log(`Creating Jules session for branch: ${branch}`);
+
             const sessionRes = await fetch(sessionUrl, {
                 method: "POST",
                 headers: {
@@ -71,12 +106,14 @@ class JulesClient {
 
             if (!sessionRes.ok) {
                 const errorText = await sessionRes.text();
-                return { success: false, message: `Failed to create Jules session: ${errorText}` };
+                return { success: false, message: `Failed to create Jules session (${sessionRes.status}): ${errorText}` };
             }
 
             const session = await sessionRes.json();
+            console.log(`✓ Jules session created: ${session.name}`);
             return { success: true, message: `Jules task created: ${session.name}` };
         } catch (error: any) {
+            console.error(`Jules API error:`, error);
             return { success: false, message: `Jules API error: ${error.message}` };
         }
     }
