@@ -81,15 +81,23 @@ export class ContextManager {
     const parts: string[] = [];
 
     if (this.data.goals.length > 0) {
-      parts.push("## Current Goals\n" + this.data.goals.map(g => `- ${g}`).join("\n"));
+      parts.push(
+        "## Current Goals\n" + this.data.goals.map((g) => `- ${g}`).join("\n"),
+      );
     }
 
     if (this.data.constraints.length > 0) {
-      parts.push("## Constraints & Guidelines\n" + this.data.constraints.map(c => `- ${c}`).join("\n"));
+      parts.push(
+        "## Constraints & Guidelines\n" +
+          this.data.constraints.map((c) => `- ${c}`).join("\n"),
+      );
     }
 
     if (this.data.recent_changes.length > 0) {
-      parts.push("## Recent Architectural Changes\n" + this.data.recent_changes.map(c => `- ${c}`).join("\n"));
+      parts.push(
+        "## Recent Architectural Changes\n" +
+          this.data.recent_changes.map((c) => `- ${c}`).join("\n"),
+      );
     }
 
     return parts.join("\n\n");
