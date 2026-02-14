@@ -18,7 +18,8 @@ export const OPENCLAW_RUN_TOOL = {
     properties: {
       skill: {
         type: "string",
-        description: "The name of the skill to run (e.g., 'weather', 'github').",
+        description:
+          "The name of the skill to run (e.g., 'weather', 'github').",
       },
       args: {
         type: "object",

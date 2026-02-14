@@ -38,10 +38,12 @@ describe("JulesServer", () => {
   it("should execute task successfully", async () => {
     // Mock git commands
     (exec as any).mockImplementation((cmd: string, cb: any) => {
-        if (typeof cb !== 'function') cb = arguments[arguments.length - 1];
-        if (cmd.includes("remote get-url")) cb(null, { stdout: "https://github.com/owner/repo.git", stderr: "" });
-        else if (cmd.includes("rev-parse")) cb(null, { stdout: "main", stderr: "" });
-        else cb(new Error("Unknown command"));
+      if (typeof cb !== "function") cb = arguments[arguments.length - 1];
+      if (cmd.includes("remote get-url"))
+        cb(null, { stdout: "https://github.com/owner/repo.git", stderr: "" });
+      else if (cmd.includes("rev-parse"))
+        cb(null, { stdout: "main", stderr: "" });
+      else cb(new Error("Unknown command"));
     });
 
     // Mock fetch responses
@@ -50,7 +52,11 @@ describe("JulesServer", () => {
     mockFetch
       .mockResolvedValueOnce({
         ok: true,
-        json: async () => ({ sources: [{ name: "source/1", githubRepo: { owner: "owner", repo: "repo" } }] }),
+        json: async () => ({
+          sources: [
+            { name: "source/1", githubRepo: { owner: "owner", repo: "repo" } },
+          ],
+        }),
       })
       .mockResolvedValueOnce({
         ok: true,
@@ -59,7 +65,7 @@ describe("JulesServer", () => {
       .mockResolvedValueOnce({
         ok: true,
         json: async () => ({
-            outputs: [{ pullRequest: { url: "http://pr.url" } }]
+          outputs: [{ pullRequest: { url: "http://pr.url" } }],
         }),
       });
 
@@ -70,16 +76,18 @@ describe("JulesServer", () => {
   });
 
   it("should handle source not found", async () => {
-     (exec as any).mockImplementation((cmd: string, cb: any) => {
-         if (typeof cb !== 'function') cb = arguments[arguments.length - 1];
-        if (cmd.includes("remote get-url")) cb(null, { stdout: "https://github.com/owner/repo.git", stderr: "" });
-        else if (cmd.includes("rev-parse")) cb(null, { stdout: "main", stderr: "" });
-        else cb(new Error("Unknown command"));
+    (exec as any).mockImplementation((cmd: string, cb: any) => {
+      if (typeof cb !== "function") cb = arguments[arguments.length - 1];
+      if (cmd.includes("remote get-url"))
+        cb(null, { stdout: "https://github.com/owner/repo.git", stderr: "" });
+      else if (cmd.includes("rev-parse"))
+        cb(null, { stdout: "main", stderr: "" });
+      else cb(new Error("Unknown command"));
     });
 
     (fetch as any).mockResolvedValueOnce({
-        ok: true,
-        json: async () => ({ sources: [] }),
+      ok: true,
+      json: async () => ({ sources: [] }),
     });
 
     const result = await (server as any).client.executeTask("test task");
