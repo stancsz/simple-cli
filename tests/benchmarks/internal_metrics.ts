@@ -4,6 +4,21 @@ import { performance } from 'perf_hooks';
 import { unlinkSync, existsSync, mkdirSync, rmSync } from 'fs';
 import { join } from 'path';
 
+// Mock embedding model for benchmark
+const mockEmbeddingModel = {
+    specificationVersion: 'v2',
+    provider: 'mock',
+    modelId: 'mock-embedding',
+    doEmbed: async ({ values }: any) => {
+         // minimal simulation of embedding generation
+         return {
+            embeddings: values.map(() => Array(1536).fill(0).map(() => Math.random())),
+            usage: { tokens: 10 },
+            warnings: [],
+         };
+    }
+};
+
 async function benchmarkMemory() {
     console.log('--- Benchmarking Memory (ContextManager) ---');
     const cwd = join(process.cwd(), '.benchmark_test');
@@ -13,7 +28,8 @@ async function benchmarkMemory() {
     const agentDir = join(cwd, '.agent');
     if (!existsSync(agentDir)) mkdirSync(agentDir);
 
-    const cm = new ContextManager(cwd);
+    // Use mock model for reliable benchmark
+    const cm = new ContextManager(cwd, mockEmbeddingModel);
 
     // Clear previous context file
     const contextFile = join(agentDir, 'context.json');
@@ -33,6 +49,22 @@ async function benchmarkMemory() {
     const endRead = performance.now();
     console.log(`Read context summary: ${(endRead - startRead).toFixed(2)}ms`);
     console.log(`Context summary size: ${summary.length} chars`);
+
+    // --- RAG Benchmark ---
+    console.log('\n--- Benchmarking RAG (VectorStore + Mock Embedding) ---');
+
+    const startVecAdd = performance.now();
+    await cm.addMemory("The capital of France is Paris.", { type: "fact" });
+    await cm.addMemory("The capital of Germany is Berlin.", { type: "fact" });
+    await cm.addMemory("Node.js is a runtime.", { type: "tech" });
+    const endVecAdd = performance.now();
+    console.log(`Add 3 memories (mock embedding + sqlite-vec): ${(endVecAdd - startVecAdd).toFixed(2)}ms`);
+
+    const startVecSearch = performance.now();
+    const results = await cm.searchMemory("France capital");
+    const endVecSearch = performance.now();
+    console.log(`Search memory (mock embedding + query): ${(endVecSearch - startVecSearch).toFixed(2)}ms`);
+    console.log(`Result (mock): ${results.trim().substring(0, 50)}...`);
 
     // Clean up
     rmSync(cwd, { recursive: true, force: true });
