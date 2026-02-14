@@ -51,9 +51,15 @@ Important Rules:
    Example: To read 'file.txt', call delegate_cli('deepseek_claude', 'Read file.txt').
    Example: To write a file, call delegate_cli('deepseek_claude', 'Create hello.py with content...').
 
-4. If you don't need to use a tool, use "tool": "none" and provide a "message".
-5. If a task requires multiple steps, perform them one by one.
-6. Do not ask for confirmation if you have enough information to proceed.
+4. **Tool Discovery (MCP)**:
+   You have access to a set of Model Context Protocol (MCP) servers that provide additional tools.
+   - Use 'mcp_list_servers' to see what servers are available (e.g., weather, filesystem, specific APIs).
+   - Use 'mcp_start_server(name)' to start a server and enable its tools.
+   - If a user asks for something you don't have a tool for, check 'mcp_list_servers'.
+
+5. If you don't need to use a tool, use "tool": "none" and provide a "message".
+6. If a task requires multiple steps, perform them one by one.
+7. Do not ask for confirmation if you have enough information to proceed.
 `,
   },
 };
