@@ -27,9 +27,9 @@ describe("Config Loader", () => {
     expect(loaded.agents?.test.command).toBe("echo");
   });
 
-  it("should return default claw agent if no config found", async () => {
+  it("should return default deepseek agents if no config found", async () => {
     const loaded = await loadConfig(TEST_DIR);
-    expect(loaded.agents?.claw).toBeDefined();
+    expect(loaded.agents?.deepseek_claude).toBeDefined();
   });
 
   it("should prioritize mcp.json but include default agents", async () => {
@@ -44,6 +44,6 @@ describe("Config Loader", () => {
 
     const loaded = await loadConfig(TEST_DIR);
     expect(loaded.mcpServers).toBeDefined();
-    expect(loaded.agents?.claw).toBeDefined();
+    expect(loaded.agents?.deepseek_claude).toBeDefined();
   });
 });
