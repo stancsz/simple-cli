@@ -3,7 +3,9 @@ import { promisify } from "util";
 import { z } from "zod";
 import { loadConfig } from "./config.js";
 import { existsSync } from "fs";
-import { readFile } from "fs/promises";
+import { readFile, writeFile } from "fs/promises";
+import { join } from "path";
+import { ContextManager } from "./context_manager.js";
 
 const execFileAsync = promisify(execFile);
 const activeProcesses: ChildProcess[] = [];
@@ -55,6 +57,45 @@ export const change_dir = {
   },
 };
 
+export const update_context = {
+  name: "update_context",
+  description:
+    "Update the shared context (goals, constraints, recent changes) for all agents.",
+  inputSchema: z.object({
+    goal: z.string().optional().describe("Add a new high-level goal."),
+    constraint: z.string().optional().describe("Add a new global constraint."),
+    change: z
+      .string()
+      .optional()
+      .describe("Log a recent architectural change or decision."),
+  }),
+  execute: async ({
+    goal,
+    constraint,
+    change,
+  }: {
+    goal?: string;
+    constraint?: string;
+    change?: string;
+  }) => {
+    const cm = new ContextManager();
+    const updates = [];
+    if (goal) {
+      await cm.addGoal(goal);
+      updates.push(`Added goal: ${goal}`);
+    }
+    if (constraint) {
+      await cm.addConstraint(constraint);
+      updates.push(`Added constraint: ${constraint}`);
+    }
+    if (change) {
+      await cm.logChange(change);
+      updates.push(`Logged change: ${change}`);
+    }
+    return updates.length > 0 ? updates.join("\n") : "No updates made.";
+  },
+};
+
 // --- Meta-Orchestrator Tools ---
 export const delegate_cli = {
   name: "delegate_cli",
@@ -83,12 +124,39 @@ export const delegate_cli = {
         return `[delegate_cli] Error: Agent '${cli}' not found in configuration. Available agents: ${Object.keys(config.agents || {}).join(", ")}`;
       }
 
+      // --- Context Injection ---
+      const cm = new ContextManager();
+      const contextSummary = await cm.getContextSummary();
+      let finalContextFiles = context_files || [];
+
+      if (contextSummary) {
+        // Create a temporary context file
+        // We put it in .agent/ to keep it hidden but accessible
+        // Use a fixed name or random one? Fixed is fine as it's transient context for the run.
+        const contextPath = join(process.cwd(), ".agent", "current_context.md");
+        // Ensure .agent dir exists (ContextManager handles it but we should be safe)
+        if (!existsSync(join(process.cwd(), ".agent"))) {
+          // mkdir handled by ContextManager usually, but let's assume it exists or created by saveContext
+          // cm.saveContext() creates it.
+          // But getContextSummary() calls loadContext().
+          // Let's just try to write it.
+        }
+        await writeFile(contextPath, contextSummary);
+        // Prepend context file so it's read first
+        finalContextFiles = [contextPath, ...finalContextFiles];
+      }
+      // -------------------------
+
       const agent = config.agents[cli];
       const cmdArgs = [...(agent.args || []), task];
 
       // Handle file arguments for agents that don't support stdin or use --file flags
-      if (!agent.supports_stdin && context_files && context_files.length > 0) {
-        for (const file of context_files) {
+      if (
+        !agent.supports_stdin &&
+        finalContextFiles &&
+        finalContextFiles.length > 0
+      ) {
+        for (const file of finalContextFiles) {
           if (!isPathAllowed(file)) {
             console.warn(`[delegate_cli] Skipped restricted file: ${file}`);
             continue;
@@ -110,9 +178,13 @@ export const delegate_cli = {
 
       // Sync Mode (Existing Logic)
       // Handle Stdin Context Injection
-      if (agent.supports_stdin && context_files && context_files.length > 0) {
+      if (
+        agent.supports_stdin &&
+        finalContextFiles &&
+        finalContextFiles.length > 0
+      ) {
         let context = "";
-        for (const file of context_files) {
+        for (const file of finalContextFiles) {
           if (!isPathAllowed(file)) {
             console.warn(`[delegate_cli] Skipped restricted file: ${file}`);
             continue;
@@ -155,4 +227,4 @@ export const delegate_cli = {
   },
 };
 
-export const allBuiltins = [delegate_cli, change_dir];
+export const allBuiltins = [delegate_cli, change_dir, update_context];
