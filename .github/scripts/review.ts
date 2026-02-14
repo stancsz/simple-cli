@@ -23,9 +23,33 @@ function runSafe(cmd: string, args: string[], options: any = {}) {
     return res.status === 0;
 }
 
+function commentOnPr(prNumber: number, body: string) {
+    const commentFile = path.join(CWD, 'pr_comment_body.txt');
+    try {
+        console.log(`Posting comment on PR #${prNumber}...`);
+        fs.writeFileSync(commentFile, body);
+        run(`gh pr comment ${prNumber} --body-file "${commentFile}"`);
+        console.log("Comment posted.");
+    } catch (e) {
+        console.error(`Failed to comment on PR #${prNumber}:`, e);
+    } finally {
+        if (fs.existsSync(commentFile)) {
+            fs.unlinkSync(commentFile);
+        }
+    }
+}
+
 async function main() {
     console.log("🔍 Simple-CLI PR Reviewer");
     console.log("===============================");
+
+    // 0. Configure git user for commits
+    try {
+        run('git config user.name "Simple-CLI Bot"');
+        run('git config user.email "bot@simple-cli.dev"');
+    } catch (e) {
+        console.warn("Failed to configure git user/email.");
+    }
 
     // 1. Check prerequisites
     try {
@@ -60,6 +84,48 @@ async function main() {
 
     console.log(`Found ${prs.length} open PRs.`);
 
+    // X. Create Isolated Runtime
+    // We copy the current repo (Main) to a neighbor directory to serve as the "Agent Runtime".
+    // This ensures we always use the latest Agent code/skills vs the PR's potentially outdated code.
+    const runtimeDir = path.resolve(CWD, '../simple-cli-agent');
+    console.log(`Setting up Agent Runtime at ${runtimeDir}...`);
+    try {
+        if (fs.existsSync(runtimeDir)) {
+            fs.rmSync(runtimeDir, { recursive: true, force: true });
+        }
+        // recursive copy excluding .git and node_modules to be faster? 
+        // Actually we need node_modules for npx tsx to work natively without install
+        // But copying node_modules is slow.
+        // Let's assume we can CP everything.
+        // Or better: We rely on the fact that GitHub Actions checks out to GITHUB_WORKSPACE.
+        // We can just CP the critical parts: src, .agent, package.json, tsconfig.json
+        fs.mkdirSync(runtimeDir, { recursive: true });
+        run(`cp -r src package.json tsconfig.json .agent ${runtimeDir}`);
+
+        // We need dependencies. If we don't copy node_modules, we must install.
+        // CI environment usually has a cache.
+        // Let's try to link node_modules? 
+        // Windows/Linux symlink might work.
+        try {
+            if (process.platform === 'win32') {
+                run(`mklink /J "${path.join(runtimeDir, 'node_modules')}" "${path.join(CWD, 'node_modules')}"`);
+            } else {
+                run(`ln -s "${path.join(CWD, 'node_modules')}" "${path.join(runtimeDir, 'node_modules')}"`);
+            }
+        } catch (e) {
+            console.warn("Failed to symlink node_modules, trying copy (slow)...");
+            run(`cp -r node_modules ${runtimeDir}`);
+        }
+
+        console.log("Agent Runtime ready.");
+    } catch (e) {
+        console.error("Failed to setup runtime:", e);
+        process.exit(1);
+    }
+
+    const agentCli = path.join(runtimeDir, 'src/cli.ts');
+
+
     for (const pr of prs) {
         console.log(`\n---------------------------------------------------`);
         console.log(`PR #${pr.number}: ${pr.title}`);
@@ -92,16 +158,21 @@ async function main() {
 
             if (!conflicts) {
                 console.log("No conflicting files found locally (despite merge failure?). Proceeding with caution.");
+                // We failed to merge but git diff shows no conflicts. likely unrelated error.
+                commentOnPr(pr.number, "🚨 I attempted to merge `main` but the failing operation was not a standard conflict. Please check the PR manually.");
             } else {
                 console.log(`Conflicting files:\n${conflicts}`);
 
                 const prompt = `You are a Senior Developer. We have merge conflicts in these files:\n${conflicts}\n\nRead these files, find conflict markers (<<<<<<<, =======, >>>>>>>), and resolve them. Keep the PR's intent but incorporate changes from main. Remove all markers. Ensure the code is valid typescript and logic is preserved.`;
 
                 // Allow the agent to use tools (read_file, write_file)
-                const status = runSafe('npx', ['tsx', 'src/cli.ts', `"${prompt}"`, '--non-interactive']);
+                // Usr the Isolated Runtime Agent !!
+                // We pass "." as the first argument to tell the agent to work on CWD
+                const status = runSafe('npx', ['tsx', `"${agentCli}"`, '.', `"${prompt}"`, '--non-interactive']);
 
                 if (!status) {
                     console.error("Agent failed to resolve conflicts via CLI. Skipping PR.");
+                    commentOnPr(pr.number, "⚠️ I found merge conflicts but failed to resolve them automatically. Please resolve conflicts manually to proceed.");
                     continue;
                 }
 
@@ -114,6 +185,7 @@ async function main() {
                     console.log("✅ Conflicts resolved and pushed.");
                 } catch (e: any) {
                     console.error(`Failed to commit/push resolution: ${e.message}`);
+                    commentOnPr(pr.number, `✅ I resolved the conflicts locally but failed to push the changes usually due to permissions. Error: ${e.message}`);
                     continue;
                 }
             }
@@ -145,8 +217,8 @@ async function main() {
 
             const prompt = `You are a Code Reviewer Agent. The tests for PR #${pr.number} failed. Read '${logFile}'. Use 'pr_comment' to explain the failure on PR #${pr.number}. Be concise.`;
 
-            // Run Agent using npx tsx src/cli.ts
-            const status = runSafe('npx', ['tsx', 'src/cli.ts', `"${prompt}"`, '--non-interactive']);
+            // Run Agent using Isolated Runtime
+            const status = runSafe('npx', ['tsx', `"${agentCli}"`, '.', `"${prompt}"`, '--non-interactive']);
             if (status) console.log("Review comment posted via Agent.");
             else console.error("Agent failed to run.");
         }

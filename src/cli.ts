@@ -12,8 +12,11 @@ import { outro } from "@clack/prompts";
 async function main() {
   const args = process.argv.slice(2);
 
+  // Capture initial CWD before any chdir
+  const initialCwd = process.cwd();
+
   // Handle optional directory argument
-  let cwd = process.cwd();
+  let cwd = initialCwd;
   let interactive = true;
   const remainingArgs = [];
 
@@ -31,7 +34,7 @@ async function main() {
           process.chdir(cwd);
           continue;
         }
-      } catch {}
+      } catch { }
     }
     remainingArgs.push(arg);
   }
@@ -40,7 +43,30 @@ async function main() {
 
   const registry = new Registry();
   allBuiltins.forEach((t) => registry.tools.set(t.name, t as any));
+
+  // 1. Load tools from Target Workspace (CWD) - The project being worked on
   await registry.loadProjectTools(cwd);
+
+  // 2. Load tools from Runtime Location (Initial CWD) - The agent's own skills
+  if (initialCwd !== cwd) {
+    // If we are running from outside the project dir
+    await registry.loadProjectTools(initialCwd);
+  }
+
+  // 3. Robust fallback: Load relative to script location
+  // This handles cases where initialCwd is unpredictable (like in global installs)
+  try {
+    const { dirname, resolve } = await import("path");
+    const { fileURLToPath } = await import("url");
+    const scriptDir = dirname(fileURLToPath(import.meta.url)); // src/
+    const projectRoot = resolve(scriptDir, ".."); // .
+
+    if (projectRoot !== cwd && projectRoot !== initialCwd) {
+      await registry.loadProjectTools(projectRoot);
+    }
+  } catch (e) {
+    // Ignore
+  }
 
   const mcp = new MCP();
   const provider = createLLM();
@@ -55,4 +81,7 @@ async function main() {
   outro("Session finished.");
 }
 
-main().catch(console.error);
+main().catch((err) => {
+  console.error(err);
+  process.exit(1);
+});
