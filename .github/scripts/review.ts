@@ -39,6 +39,32 @@ function commentOnPr(prNumber: number, body: string) {
     }
 }
 
+function delegateComment(agentCli: string, pr: any, context: string, errorDetails: string = "") {
+    console.log(`Delegating comment generation for PR #${pr.number}...`);
+
+    const isJules = pr.author.login.toLowerCase().includes('jules') || pr.author.login.toLowerCase().includes('google-labs-jules');
+    const role = isJules ?
+        `You are supervising an AI agent named Jules. You need to give clear, directive feedback.` :
+        `You are a helpful Senior Developer reviewing a PR.`;
+
+    const instructions = isJules ?
+        `You MUST include '@jules' at the start. Example: "@jules The merge failed because..."` :
+        `Be professional and helpful.`;
+
+    const prompt = `${role}
+    
+    Situation: ${context}
+    Error Details: ${errorDetails}
+    
+    Task: Analyze the situation and post a comment on PR #${pr.number} using the 'pr_comment' tool.
+    ${instructions}
+    
+    Do not just say you will do it, actually use the tool.`;
+
+    // Run the isolated agent
+    runSafe('npx', ['tsx', `"${agentCli}"`, '.', `"${prompt}"`, '--non-interactive']);
+}
+
 async function main() {
     console.log("🔍 Simple-CLI PR Reviewer");
     console.log("===============================");
@@ -164,7 +190,10 @@ async function main() {
             if (!conflicts) {
                 console.log("No conflicting files found locally (despite merge failure?). Proceeding with caution.");
                 // We failed to merge but git diff shows no conflicts. likely unrelated error.
-                commentOnPr(pr.number, `${mention}🚨 I attempted to merge \`main\` but the failing operation was not a standard conflict. ${instructionPrefix}Please check the PR manually.`);
+                delegateComment(agentCli, pr,
+                    "I attempted to merge `main` into this branch, but the operation failed. However, `git diff` shows no standard merge conflicts.",
+                    "Possible unrelated git error or dirty state."
+                );
             } else {
                 console.log(`Conflicting files:\n${conflicts}`);
 
@@ -177,7 +206,10 @@ async function main() {
 
                 if (!status) {
                     console.error("Agent failed to resolve conflicts via CLI. Skipping PR.");
-                    commentOnPr(pr.number, `${mention}⚠️ I found merge conflicts but failed to resolve them automatically. ${instructionPrefix}Please resolve conflicts manually to proceed.`);
+                    delegateComment(agentCli, pr,
+                        "I attempted to resolve the merge conflicts automatically, but I failed to complete the task.",
+                        "The agent process returned a failure status during conflict resolution."
+                    );
                     continue;
                 }
 
@@ -190,11 +222,16 @@ async function main() {
                     console.log("✅ Conflicts resolved and pushed.");
                 } catch (e: any) {
                     console.error(`Failed to commit/push resolution: ${e.message}`);
-                    commentOnPr(pr.number, `${mention}✅ I resolved the conflicts locally but failed to push the changes usually due to permissions. Error: ${e.message}`);
+                    delegateComment(agentCli, pr,
+                        "I successfully resolved the conflicts locally, but failed to push the changes to the remote branch.",
+                        e.message
+                    );
                     continue;
                 }
+                continue;
             }
         }
+
 
         console.log("Installing dependencies...");
         runSafe('npm', ['ci'], { stdio: 'ignore' });
@@ -220,10 +257,14 @@ async function main() {
                 fs.writeFileSync(logFile, (e.stdout || '') + '\n' + (e.stderr || ''));
             }
 
-            const prompt = `You are a Code Reviewer Agent. The tests for PR #${pr.number} failed. Read '${logFile}'. Use 'pr_comment' to explain the failure on PR #${pr.number}.
+            const prompt = `You are a Code Reviewer Agent. The tests for PR #${pr.number} failed. 
             
-Important: The PR author is '${pr.author.login}'. If the author is 'jules' or contains 'jules', you MUST include '@jules' in your comment and give clear instructions like "@jules The tests failed. Please fix them.".
-Be concise.`;
+            Read 'pr_failure.log' to understand why.
+            
+            Then, use 'pr_comment' to post a helpul comment on PR #${pr.number} explaining the failure.
+            
+            Important: The PR author is '${pr.author.login}'. ${isJules ? "You MUST include '@jules' and give clear instructions." : "Be constructive."}
+            `;
 
             // Run Agent using Isolated Runtime
             const status = runSafe('npx', ['tsx', `"${agentCli}"`, '.', `"${prompt}"`, '--non-interactive']);
