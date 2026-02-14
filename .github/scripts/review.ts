@@ -67,8 +67,53 @@ async function main() {
         console.log(`Mergeable: ${pr.mergeable}`);
 
         if (pr.mergeable === 'CONFLICTING') {
-            console.log("⚠️  PR has conflicts. Skipping.");
-            continue;
+            console.log(`⚠️  PR #${pr.number} has conflicts. Attempting to resolve...`);
+
+            console.log(`Checking out PR #${pr.number}...`);
+            run(`gh pr checkout ${pr.number}`);
+
+            try {
+                console.log("Merging origin/main to trigger conflicts...");
+                run('git fetch origin main');
+                // We expect this to fail if there are conflicts
+                execSync('git merge origin/main', { cwd: CWD, stdio: 'pipe' });
+                console.log("Merge successful (no conflicts locally?).");
+            } catch (e) {
+                console.log("Merge conflict detected locally.");
+            }
+
+            // Identify conflicting files
+            const conflicts = run('git diff --name-only --diff-filter=U');
+
+            if (!conflicts) {
+                console.log("No conflicting files found locally. Proceeding.");
+            } else {
+                console.log(`Conflicting files:\n${conflicts}`);
+
+                const prompt = `You are a Senior Developer. We have merge conflicts in these files:\n${conflicts}\n\nRead these files, find conflict markers (<<<<<<<, =======, >>>>>>>), and resolve them. Keep the PR's intent but incorporate changes from main. Remove all markers.`;
+
+                // Allow the agent to use tools (read_file, write_file)
+                const status = runSafe('npx', ['tsx', 'src/cli.ts', `"${prompt}"`, '--non-interactive']);
+
+                if (!status) {
+                    console.error("Agent failed to resolve conflicts via CLI.");
+                    // Continue to next PR or fail? Let's skip this one.
+                    continue;
+                }
+
+                // Try to commit
+                try {
+                    console.log("Committing resolution...");
+                    run('git add .');
+                    // Check if anything is staged (if agent didn't change anything, commit might fail if empty? no, merge is pending)
+                    run('git commit -m "chore: Resolve merge conflicts via Simple-CLI"');
+                    run('git push');
+                    console.log("✅ Conflicts resolved and pushed.");
+                } catch (e: any) {
+                    console.error(`Failed to commit/push resolution: ${e.message}`);
+                    continue;
+                }
+            }
         }
 
         // Filter checks - enabled for safety during development, disabled for production usage if desired.
