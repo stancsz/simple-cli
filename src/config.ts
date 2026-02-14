@@ -72,7 +72,8 @@ export async function loadConfig(cwd: string = process.cwd()): Promise<Config> {
     config.agents.deepseek_crewai = {
       command: "npx",
       args: ["tsx", "src/agents/deepseek_crewai.ts"],
-      description: "Delegate tasks to a generic CrewAI crew (Researcher + Writer).",
+      description:
+        "Delegate tasks to a generic CrewAI crew (Researcher + Writer).",
       supports_stdin: false,
     };
   }

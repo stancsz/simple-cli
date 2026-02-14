@@ -70,5 +70,10 @@ tmp*
 tmp_*/
 scraper_screenshots/
 .agent/work/
+.agent/secret.key
+.agent/*.sqlite
+.agent/*.db
+data_analyst_demo/
+temp_product_director_test/
 jules_work_*
 .aider*

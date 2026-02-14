@@ -72,7 +72,12 @@ describe("Psyche Security", () => {
 
     const plaintextState = {
       dna: { mbti: "INTJ", ocean: { O: 0.5, C: 0.5, E: 0.5, A: 0.5, N: 0.5 } },
-      live_metrics: { trust: 0.12, irritation: 0.1, interaction_count: 0, core_trauma: [] }
+      live_metrics: {
+        trust: 0.12,
+        irritation: 0.1,
+        interaction_count: 0,
+        core_trauma: [],
+      },
     };
     writeFileSync(statePath, JSON.stringify(plaintextState));
 
