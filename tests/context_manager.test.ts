@@ -75,9 +75,9 @@ describe("ContextManager", () => {
   });
 
   it("should create .agent directory if it doesn't exist", async () => {
-      const cm = new ContextManager(testDir);
-      await cm.addGoal("Test Goal");
-      const contextPath = join(testDir, ".agent", "context.json");
-      expect(existsSync(contextPath)).toBe(true);
+    const cm = new ContextManager(testDir);
+    await cm.addGoal("Test Goal");
+    const contextPath = join(testDir, ".agent", "context.json");
+    expect(existsSync(contextPath)).toBe(true);
   });
 });
