@@ -1,10 +1,39 @@
+import { Server } from "@modelcontextprotocol/sdk/server/index.js";
+import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
+import {
+  CallToolRequestSchema,
+  ListToolsRequestSchema,
+} from "@modelcontextprotocol/sdk/types.js";
 import { exec } from "child_process";
 import { promisify } from "util";
 import fetch from "node-fetch";
+import { fileURLToPath } from "url";
 
 const execAsync = promisify(exec);
 
-export interface JulesTaskResult {
+export const JULES_TASK_TOOL = {
+  name: "jules_task",
+  description: "Delegate a coding task to the Jules agent (Google Cloud). Jules will attempt to create a Pull Request.",
+  inputSchema: {
+    type: "object",
+    properties: {
+      task: {
+        type: "string",
+        description: "The task description.",
+      },
+      context_files: {
+        type: "array",
+        items: {
+          type: "string",
+        },
+        description: "List of file paths to provide as context.",
+      },
+    },
+    required: ["task"],
+  },
+};
+
+interface JulesTaskResult {
   success: boolean;
   prUrl?: string;
   message: string;
@@ -19,7 +48,7 @@ interface Source {
   };
 }
 
-export class JulesClient {
+class JulesClient {
   private apiBaseUrl: string;
   private apiKey?: string;
 
@@ -34,12 +63,10 @@ export class JulesClient {
     repo: string;
     branch: string;
   }> {
-    // Try to detect from git
     try {
       const { stdout: remoteUrl } = await execAsync(
         "git remote get-url origin",
       );
-      // Support https://github.com/owner/repo.git or git@github.com:owner/repo.git
       let owner = "",
         repo = "";
       const cleanUrl = remoteUrl.trim().replace(/\.git$/, "");
@@ -60,10 +87,10 @@ export class JulesClient {
       );
       return { owner, repo, branch: branch.trim() };
     } catch (e) {
-      console.warn(
-        "[JulesClient] Could not detect git repo info locally. Falling back to defaults if possible.",
+      console.error(
+        "[JulesClient] Could not detect git repo info locally. Falling back to defaults.",
       );
-      return { owner: "stancsz", repo: "simple-cli", branch: "main" }; // Fallback
+      return { owner: "stancsz", repo: "simple-cli", branch: "main" };
     }
   }
 
@@ -119,13 +146,11 @@ export class JulesClient {
   }
 
   private async getSession(sessionId: string) {
-    const url = `${this.apiBaseUrl}/sessions/${sessionId}`; // Note: sessionId might include "sessions/" prefix
-
-    const fullUrl = sessionId.startsWith("sessions/")
+    const url = sessionId.startsWith("sessions/")
       ? `${this.apiBaseUrl}/${sessionId}`
       : `${this.apiBaseUrl}/sessions/${sessionId}`;
 
-    const response = await fetch(fullUrl, {
+    const response = await fetch(url, {
       headers: {
         "X-Goog-Api-Key": this.apiKey || "",
       },
@@ -138,9 +163,6 @@ export class JulesClient {
     return await response.json();
   }
 
-  /**
-   * Executes a task using the Jules API.
-   */
   async executeTask(
     task: string,
     contextFiles: string[] = [],
@@ -153,11 +175,11 @@ export class JulesClient {
         };
       }
 
-      console.log(`[JulesClient] Detecting repository...`);
+      console.error(`[JulesClient] Detecting repository...`);
       const { owner, repo, branch } = await this.getRepoInfo();
-      console.log(`[JulesClient] Target: ${owner}/${repo} on branch ${branch}`);
+      console.error(`[JulesClient] Target: ${owner}/${repo} on branch ${branch}`);
 
-      console.log(`[JulesClient] Finding source in Jules...`);
+      console.error(`[JulesClient] Finding source in Jules...`);
       const sources = await this.listSources();
       const source = sources.find(
         (s) => s.githubRepo.owner === owner && s.githubRepo.repo === repo,
@@ -169,23 +191,20 @@ export class JulesClient {
           message: `Repository ${owner}/${repo} not found in your Jules sources. Please connect it first.`,
         };
       }
-      console.log(`[JulesClient] Found source: ${source.name}`);
+      console.error(`[JulesClient] Found source: ${source.name}`);
 
-      // Augment prompt with context files if any
       let prompt = task;
       if (contextFiles.length > 0) {
         prompt += `\n\nContext Files: ${contextFiles.join(", ")} (Please read these if needed)`;
       }
 
-      console.log(`[JulesClient] Creating session for task: "${task}"...`);
+      console.error(`[JulesClient] Creating session for task: "${task}"...`);
       const session = await this.createSession(source.name, prompt, branch);
-      console.log(`[JulesClient] Session created: ${session.name}`);
+      console.error(`[JulesClient] Session created: ${session.name}`);
 
-      // Poll for PR
-      console.log(`[JulesClient] Polling for Pull Request (timeout 5m)...`);
+      console.error(`[JulesClient] Polling for Pull Request (timeout 5m)...`);
       const startTime = Date.now();
       while (Date.now() - startTime < 300000) {
-        // 5 min timeout
         const updatedSession: any = await this.getSession(session.name);
 
         if (updatedSession.outputs && updatedSession.outputs.length > 0) {
@@ -200,9 +219,8 @@ export class JulesClient {
           }
         }
 
-        // Wait 5 seconds
         await new Promise((resolve) => setTimeout(resolve, 5000));
-        process.stdout.write(".");
+        // process.stdout.write("."); // Avoid writing to stdout in MCP server (use stderr for logs)
       }
 
       return {
@@ -221,63 +239,84 @@ export class JulesClient {
   }
 }
 
-async function main() {
-  const args = process.argv.slice(2);
-  const files: string[] = [];
-  let task = "";
+export class JulesServer {
+  private server: Server;
+  private client: JulesClient;
 
-  // Simple arg parsing
-  for (let i = 0; i < args.length; i++) {
-    const arg = args[i];
-    if (arg === "--file" || arg === "-f") {
-      if (i + 1 < args.length) {
-        files.push(args[++i]);
+  constructor() {
+    this.server = new Server(
+      {
+        name: "jules-server",
+        version: "1.0.0",
+      },
+      {
+        capabilities: {
+          tools: {},
+        },
+      },
+    );
+    this.client = new JulesClient();
+    this.setupHandlers();
+  }
+
+  private setupHandlers() {
+    this.server.setRequestHandler(ListToolsRequestSchema, async () => ({
+      tools: [JULES_TASK_TOOL],
+    }));
+
+    this.server.setRequestHandler(CallToolRequestSchema, async (request) => {
+      if (request.params.name === "jules_task") {
+        const args = request.params.arguments as {
+          task: string;
+          context_files?: string[];
+        };
+        if (!args.task) {
+          throw new Error("Task argument is required");
+        }
+
+        const result = await this.client.executeTask(args.task, args.context_files || []);
+
+        if (result.success) {
+           return {
+            content: [
+              {
+                type: "text",
+                text: JSON.stringify({
+                  status: "success",
+                  pr_url: result.prUrl,
+                  message: result.message,
+                }),
+              },
+            ],
+          };
+        } else {
+           return {
+            content: [
+              {
+                type: "text",
+                text: `Error: ${result.message}`,
+              },
+            ],
+            isError: true,
+          };
+        }
       }
-    } else if (!arg.startsWith("-")) {
-      // Assume the first non-flag arg is the task (or append to task)
-      if (task) task += " " + arg;
-      else task = arg;
-    }
+      throw new Error(`Tool not found: ${request.params.name}`);
+    });
   }
 
-  if (!task) {
-    console.error("Error: No task description provided.");
-    process.exit(1);
-  }
-
-  console.log(`[Jules Agent] Starting task: "${task}"`);
-  console.log(`[Jules Agent] Context files: ${files.length}`);
-
-  const client = new JulesClient({
-    apiKey: process.env.JULES_API_KEY,
-  });
-
-  // Execute the task
-  const result = await client.executeTask(task, files);
-
-  if (result.success) {
-    console.log(`\n[SUCCESS] Task completed.`);
-    if (result.prUrl) {
-      console.log(`PR Created: ${result.prUrl}`);
-      // JSON output for structured tools
-      console.log(
-        JSON.stringify({
-          status: "success",
-          pr_url: result.prUrl,
-          message: result.message,
-        }),
-      );
-    } else {
-      console.log(result.message);
-    }
-  } else {
-    console.error(`\n[FAILURE] Task failed.`);
-    console.error(result.message);
-    process.exit(1);
+  async run() {
+    const transport = new StdioServerTransport();
+    await this.server.connect(transport);
+    console.error("Jules MCP Server running on stdio");
   }
 }
 
-main().catch((err) => {
-  console.error("Unexpected error:", err);
-  process.exit(1);
-});
+const isMainModule = process.argv[1] === fileURLToPath(import.meta.url);
+if (isMainModule) {
+  const server = new JulesServer();
+  server.run().catch((err) => {
+    console.error("Fatal error in Jules MCP Server:", err);
+    process.exit(1);
+  });
+}
