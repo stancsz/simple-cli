@@ -6,6 +6,79 @@ import * as path from 'path';
 // Configuration
 const CWD = process.cwd();
 
+// Jules API Client
+class JulesClient {
+    private apiBaseUrl: string;
+    private apiKey?: string;
+
+    constructor() {
+        this.apiKey = process.env.JULES_API_KEY;
+        this.apiBaseUrl = "https://jules.googleapis.com/v1alpha";
+    }
+
+    async createTaskForPR(prNumber: number, task: string): Promise<{ success: boolean, message: string }> {
+        if (!this.apiKey) {
+            return { success: false, message: "JULES_API_KEY not set" };
+        }
+
+        try {
+            // Get PR details to extract the branch
+            const prJson = run(`gh pr view ${prNumber} --json headRefName,headRepository`);
+            const prData = JSON.parse(prJson);
+            const branch = prData.headRefName;
+
+            // List sources
+            const sourcesUrl = `${this.apiBaseUrl}/sources`;
+            const sourcesRes = await fetch(sourcesUrl, {
+                headers: { "X-Goog-Api-Key": this.apiKey }
+            });
+            const sourcesData: any = await sourcesRes.json();
+            const source = sourcesData.sources?.find((s: any) =>
+                s.githubRepo?.owner === "stancsz" && s.githubRepo?.repo === "simple-cli"
+            );
+
+            if (!source) {
+                return { success: false, message: "Repository not found in Jules sources" };
+            }
+
+            // Create session
+            const sessionUrl = `${this.apiBaseUrl}/sessions`;
+            const sessionBody = {
+                prompt: task,
+                sourceContext: {
+                    source: source.name,
+                    githubRepoContext: {
+                        startingBranch: branch,
+                    },
+                },
+                automationMode: "AUTO_CREATE_PR",
+                title: `Fix PR #${prNumber}`,
+            };
+
+            const sessionRes = await fetch(sessionUrl, {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                    "X-Goog-Api-Key": this.apiKey,
+                },
+                body: JSON.stringify(sessionBody),
+            });
+
+            if (!sessionRes.ok) {
+                const errorText = await sessionRes.text();
+                return { success: false, message: `Failed to create Jules session: ${errorText}` };
+            }
+
+            const session = await sessionRes.json();
+            return { success: true, message: `Jules task created: ${session.name}` };
+        } catch (error: any) {
+            return { success: false, message: `Jules API error: ${error.message}` };
+        }
+    }
+}
+
+const julesClient = new JulesClient();
+
 function run(cmd: string, options: any = {}) {
     console.log(`> ${cmd}`);
     try {
@@ -39,30 +112,44 @@ function commentOnPr(prNumber: number, body: string) {
     }
 }
 
-function delegateComment(agentCli: string, pr: any, context: string, errorDetails: string = "") {
+async function delegateComment(agentCli: string, pr: any, context: string, errorDetails: string = "") {
     console.log(`Delegating comment generation for PR #${pr.number}...`);
 
     const isJules = pr.author.login.toLowerCase().includes('jules') || pr.author.login.toLowerCase().includes('google-labs-jules');
-    const role = isJules ?
-        `You are supervising an AI agent named Jules. You need to give clear, directive feedback.` :
-        `You are a helpful Senior Developer reviewing a PR.`;
 
-    const instructions = isJules ?
-        `You MUST include '@jules' at the start. Example: "@jules The merge failed because..."` :
-        `Be professional and helpful.`;
+    if (isJules) {
+        // Use Jules API to create an actionable task
+        console.log(`Detected Jules as PR author. Creating Jules task instead of comment...`);
+        const task = `${context}\n\nError Details: ${errorDetails}\n\nPlease fix this issue in PR #${pr.number}.`;
+        const result = await julesClient.createTaskForPR(pr.number, task);
 
-    const prompt = `${role}
-    
-    Situation: ${context}
-    Error Details: ${errorDetails}
-    
-    Task: Analyze the situation and post a comment on PR #${pr.number} using the 'pr_comment' tool.
-    ${instructions}
-    
-    Do not just say you will do it, actually use the tool.`;
+        if (result.success) {
+            console.log(`Jules task created successfully: ${result.message}`);
+            // Also post a comment to notify
+            commentOnPr(pr.number, `@jules I've created a task for you to fix this issue. ${result.message}`);
+        } else {
+            console.error(`Failed to create Jules task: ${result.message}`);
+            // Fallback to regular comment
+            commentOnPr(pr.number, `@jules ${context}\n\nError: ${errorDetails}\n\nNote: I tried to create an automated task but failed: ${result.message}`);
+        }
+    } else {
+        // Use agent for non-Jules PRs
+        const role = `You are a helpful Senior Developer reviewing a PR.`;
+        const instructions = `Be professional and helpful.`;
 
-    // Run the isolated agent
-    runSafe('npx', ['tsx', `"${agentCli}"`, '.', `"${prompt}"`, '--non-interactive']);
+        const prompt = `${role}
+        
+        Situation: ${context}
+        Error Details: ${errorDetails}
+        
+        Task: Analyze the situation and post a comment on PR #${pr.number} using the 'pr_comment' tool.
+        ${instructions}
+        
+        Do not just say you will do it, actually use the tool.`;
+
+        // Run the isolated agent
+        runSafe('npx', ['tsx', `"${agentCli}"`, '.', `"${prompt}"`, '--non-interactive']);
+    }
 }
 
 async function main() {
@@ -190,7 +277,7 @@ async function main() {
             if (!conflicts) {
                 console.log("No conflicting files found locally (despite merge failure?). Proceeding with caution.");
                 // We failed to merge but git diff shows no conflicts. likely unrelated error.
-                delegateComment(agentCli, pr,
+                await delegateComment(agentCli, pr,
                     "I attempted to merge `main` into this branch, but the operation failed. However, `git diff` shows no standard merge conflicts.",
                     "Possible unrelated git error or dirty state."
                 );
@@ -206,7 +293,7 @@ async function main() {
 
                 if (!status) {
                     console.error("Agent failed to resolve conflicts via CLI. Skipping PR.");
-                    delegateComment(agentCli, pr,
+                    await delegateComment(agentCli, pr,
                         "I attempted to resolve the merge conflicts automatically, but I failed to complete the task.",
                         "The agent process returned a failure status during conflict resolution."
                     );
@@ -222,7 +309,7 @@ async function main() {
                     console.log("✅ Conflicts resolved and pushed.");
                 } catch (e: any) {
                     console.error(`Failed to commit/push resolution: ${e.message}`);
-                    delegateComment(agentCli, pr,
+                    await delegateComment(agentCli, pr,
                         "I successfully resolved the conflicts locally, but failed to push the changes to the remote branch.",
                         e.message
                     );
