@@ -24,9 +24,7 @@ describe("CoolifyServer", () => {
     expect(mockFetch).toHaveBeenCalledWith(
       "http://coolify.test/api/v1/services",
       expect.objectContaining({
-        headers: expect.objectContaining({
-          Authorization: "Bearer test-token",
-        }),
+        headers: expect.objectContaining({ Authorization: "Bearer test-token" }),
       }),
     );
     expect((result as any).content[0].text).toContain("Service 1");
