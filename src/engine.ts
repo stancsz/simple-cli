@@ -219,6 +219,14 @@ export class Engine {
                   log.success("Tools reloaded.");
                 }
 
+                // Reload tools if mcp_start_server was used
+                if (tName === "mcp_start_server") {
+                  (await this.mcp.getTools()).forEach((t) =>
+                    this.registry.tools.set(t.name, t as any),
+                  );
+                  log.success("MCP tools updated.");
+                }
+
                 // Add individual tool execution to history to keep context updated
                 // We mock a single tool response for history consistency
                 ctx.history.push({
