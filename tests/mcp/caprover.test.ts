@@ -17,13 +17,21 @@ describe("CaproverServer", () => {
     server = new CaproverServer();
   });
 
+  // Helper to access tool handler
+  const callTool = async (name: string, args: any) => {
+    const mcpServer = (server as any).server;
+    const tool = (mcpServer as any)._registeredTools[name];
+    if (!tool) throw new Error(`Tool ${name} not found`);
+    return await tool.handler(args);
+  };
+
   it("should handle caprover_deploy", async () => {
     const mockProcess = new EventEmitter();
     (mockProcess as any).stdout = new EventEmitter();
     (mockProcess as any).stderr = new EventEmitter();
     (spawn as any).mockReturnValue(mockProcess);
 
-    const promise = server.handleCallTool("caprover_deploy", {
+    const promise = callTool("caprover_deploy", {
       appName: "test-app",
     });
 

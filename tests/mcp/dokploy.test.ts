@@ -14,13 +14,21 @@ describe("DokployServer", () => {
     server = new DokployServer();
   });
 
+  // Helper to access tool handler
+  const callTool = async (name: string, args: any) => {
+    const mcpServer = (server as any).server;
+    const tool = (mcpServer as any)._registeredTools[name];
+    if (!tool) throw new Error(`Tool ${name} not found`);
+    return await tool.handler(args);
+  };
+
   it("should handle dokploy_list_projects", async () => {
     mockFetch.mockResolvedValue({
       ok: true,
       json: async () => [{ name: "Project 1" }],
     });
 
-    const result = await server.handleCallTool("dokploy_list_projects", {});
+    const result = await callTool("dokploy_list_projects", {});
     expect(mockFetch).toHaveBeenCalledWith(
       "http://dokploy.test/api/project.all",
       expect.objectContaining({
@@ -37,7 +45,7 @@ describe("DokployServer", () => {
       json: async () => ({ id: "1", name: "New Project" }),
     });
 
-    const result = await server.handleCallTool("dokploy_create_project", {
+    const result = await callTool("dokploy_create_project", {
       name: "New Project",
       description: "Desc",
     });

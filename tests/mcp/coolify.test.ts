@@ -14,13 +14,21 @@ describe("CoolifyServer", () => {
     server = new CoolifyServer();
   });
 
+  // Helper to access tool handler
+  const callTool = async (name: string, args: any) => {
+    const mcpServer = (server as any).server;
+    const tool = (mcpServer as any)._registeredTools[name];
+    if (!tool) throw new Error(`Tool ${name} not found`);
+    return await tool.handler(args);
+  };
+
   it("should handle coolify_list_services", async () => {
     mockFetch.mockResolvedValue({
       ok: true,
       json: async () => [{ name: "Service 1" }],
     });
 
-    const result = await server.handleCallTool("coolify_list_services", {});
+    const result = await callTool("coolify_list_services", {});
     expect(mockFetch).toHaveBeenCalledWith(
       "http://coolify.test/api/v1/services",
       expect.objectContaining({
@@ -38,7 +46,7 @@ describe("CoolifyServer", () => {
       json: async () => ({ status: "deployed" }),
     });
 
-    const result = await server.handleCallTool("coolify_deploy_service", {
+    const result = await callTool("coolify_deploy_service", {
       uuid: "123",
       force: true,
     });

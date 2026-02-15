@@ -21,16 +21,7 @@ describe("MidjourneyServer", () => {
 
   // Helper to access tool handler
   const callTool = async (name: string, args: any) => {
-    const mcpServer = (server as any).server; // Access private property
-    // Check internal property structure based on runtime inspection
-    // Wait, inspect output showed `_registeredTools` directly on `McpServer` instance, not `server` property inside it?
-    // inspect output: `McpServer { _registeredTools: ... }`
-    // So it's `mcpServer._registeredTools[name].handler(args)`
-
-    // Check inspect output again carefully:
-    // McpServer { ... _registeredTools: ... server: Server { ... } }
-    // Yes.
-
+    const mcpServer = (server as any).server;
     const tool = (mcpServer as any)._registeredTools[name];
     if (!tool) throw new Error(`Tool ${name} not found`);
     return await tool.handler(args);
