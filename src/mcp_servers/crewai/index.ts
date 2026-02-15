@@ -51,7 +51,7 @@ export class CrewAIServer {
       return {
         content: [
           {
-            type: "text",
+            type: "text" as const,
             text: "Error: 'crewai' python package is not installed. Please install it using `pip install crewai`.",
           },
         ],
@@ -93,7 +93,7 @@ export class CrewAIServer {
           resolve({
             content: [
               {
-                type: "text",
+                type: "text" as const,
                 text: output || "Crew execution completed successfully.",
               },
             ],
@@ -102,7 +102,7 @@ export class CrewAIServer {
           resolve({
             content: [
               {
-                type: "text",
+                type: "text" as const,
                 text: `Crew execution failed (exit code ${code}):\n${errorOutput}\n${output}`,
               },
             ],
@@ -115,7 +115,7 @@ export class CrewAIServer {
         resolve({
           content: [
             {
-              type: "text",
+              type: "text" as const,
               text: `Failed to spawn python process: ${err.message}`,
             },
           ],

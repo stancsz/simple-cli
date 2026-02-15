@@ -85,7 +85,7 @@ export class MinimaxServer {
           return {
             content: [
               {
-                type: "text",
+                type: "text" as const,
                 text: JSON.stringify(response, null, 2),
               },
             ],

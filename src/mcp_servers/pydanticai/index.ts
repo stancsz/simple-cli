@@ -68,7 +68,7 @@ export class PydanticAIServer {
           resolve({
             content: [
               {
-                type: "text",
+                type: "text" as const,
                 text: output.trim(),
               },
             ],
@@ -77,7 +77,7 @@ export class PydanticAIServer {
           resolve({
             content: [
               {
-                type: "text",
+                type: "text" as const,
                 text: `Error extracting data (exit code ${code}):\n${errorOutput}\n${output}`,
               },
             ],
@@ -90,7 +90,7 @@ export class PydanticAIServer {
         resolve({
           content: [
             {
-              type: "text",
+              type: "text" as const,
               text: `Failed to spawn python process: ${err.message}`,
             },
           ],
