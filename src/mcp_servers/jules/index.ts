@@ -242,7 +242,7 @@ export class JulesServer {
           return {
             content: [
               {
-                type: "text",
+                type: "text" as const,
                 text: JSON.stringify({
                   status: "success",
                   pr_url: result.prUrl,
@@ -266,7 +266,7 @@ export class JulesServer {
             // I should return the result.
 
             return {
-                content: [{ type: "text", text: `Error: ${result.message}` }],
+                content: [{ type: "text" as const, text: `Error: ${result.message}` }],
                 isError: true,
             }
         }

@@ -58,7 +58,7 @@ export class CoolifyServer {
       async () => {
         const services = await callCoolify("/api/v1/services");
         return {
-          content: [{ type: "text", text: JSON.stringify(services, null, 2) }],
+          content: [{ type: "text" as const, text: JSON.stringify(services, null, 2) }],
         };
       }
     );
@@ -70,7 +70,7 @@ export class CoolifyServer {
       async () => {
         const apps = await callCoolify("/api/v1/applications");
         return {
-          content: [{ type: "text", text: JSON.stringify(apps, null, 2) }],
+          content: [{ type: "text" as const, text: JSON.stringify(apps, null, 2) }],
         };
       }
     );
@@ -88,7 +88,7 @@ export class CoolifyServer {
           "GET",
         );
         return {
-          content: [{ type: "text", text: JSON.stringify(result, null, 2) }],
+          content: [{ type: "text" as const, text: JSON.stringify(result, null, 2) }],
         };
       }
     );

@@ -53,7 +53,7 @@ export class KimiSwarmServer {
       return {
         content: [
           {
-            type: "text",
+            type: "text" as const,
             text: "Error: 'crewai' python package is not installed. Please install it using `pip install crewai`.",
           },
         ],
@@ -68,7 +68,7 @@ export class KimiSwarmServer {
       return {
         content: [
           {
-            type: "text",
+            type: "text" as const,
             text: "Error: MOONSHOT_API_KEY or KIMI_API_KEY environment variable is not set.",
           },
         ],
@@ -105,7 +105,7 @@ export class KimiSwarmServer {
           resolve({
             content: [
               {
-                type: "text",
+                type: "text" as const,
                 text: output || "Kimi Swarm execution completed successfully.",
               },
             ],
@@ -114,7 +114,7 @@ export class KimiSwarmServer {
           resolve({
             content: [
               {
-                type: "text",
+                type: "text" as const,
                 text: `Kimi Swarm execution failed (exit code ${code}):\n${errorOutput}\n${output}`,
               },
             ],
@@ -127,7 +127,7 @@ export class KimiSwarmServer {
         resolve({
           content: [
             {
-              type: "text",
+              type: "text" as const,
               text: `Failed to spawn python process: ${err.message}`,
             },
           ],

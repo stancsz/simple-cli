@@ -79,7 +79,7 @@ export class SunoServer {
 
         const result = await this.makeRequest("/generate", "POST", payload);
         return {
-          content: [{ type: "text", text: JSON.stringify(result, null, 2) }],
+          content: [{ type: "text" as const, text: JSON.stringify(result, null, 2) }],
         };
       }
     );
@@ -97,7 +97,7 @@ export class SunoServer {
         };
         const result = await this.makeRequest("/lyrics", "POST", payload);
         return {
-          content: [{ type: "text", text: JSON.stringify(result, null, 2) }],
+          content: [{ type: "text" as const, text: JSON.stringify(result, null, 2) }],
         };
       }
     );
@@ -126,7 +126,7 @@ export class SunoServer {
         };
         const result = await this.makeRequest("/generate/extend", "POST", payload);
         return {
-          content: [{ type: "text", text: JSON.stringify(result, null, 2) }],
+          content: [{ type: "text" as const, text: JSON.stringify(result, null, 2) }],
         };
       }
     );
@@ -154,7 +154,7 @@ export class SunoServer {
         };
         const result = await this.makeRequest("/generate/upload-cover", "POST", payload);
         return {
-          content: [{ type: "text", text: JSON.stringify(result, null, 2) }],
+          content: [{ type: "text" as const, text: JSON.stringify(result, null, 2) }],
         };
       }
     );
@@ -169,7 +169,7 @@ export class SunoServer {
         const endpoint = `/generate/record-info?taskId=${taskId}`;
         const result = await this.makeRequest(endpoint, "GET");
         return {
-          content: [{ type: "text", text: JSON.stringify(result, null, 2) }],
+          content: [{ type: "text" as const, text: JSON.stringify(result, null, 2) }],
         };
       }
     );
@@ -181,7 +181,7 @@ export class SunoServer {
       async () => {
         const result = await this.makeRequest("/generate/credit", "GET");
         return {
-          content: [{ type: "text", text: JSON.stringify(result, null, 2) }],
+          content: [{ type: "text" as const, text: JSON.stringify(result, null, 2) }],
         };
       }
     );

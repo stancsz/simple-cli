@@ -50,7 +50,7 @@ export class SimpleToolsServer {
         return {
           content: [
             {
-              type: "text",
+              type: "text" as const,
               text: updates.length > 0 ? updates.join("\n") : "No updates made.",
             },
           ],
@@ -67,7 +67,7 @@ export class SimpleToolsServer {
         return {
           content: [
             {
-              type: "text",
+              type: "text" as const,
               text: summary || "No context available.",
             },
           ],
@@ -84,7 +84,7 @@ export class SimpleToolsServer {
       async ({ path }) => {
         const content = await readFile(path, "utf-8");
         return {
-          content: [{ type: "text", text: content }],
+          content: [{ type: "text" as const, text: content }],
         };
       }
     );
@@ -99,7 +99,7 @@ export class SimpleToolsServer {
       async ({ path, content }) => {
         await writeFile(path, content);
         return {
-          content: [{ type: "text", text: `Successfully wrote to ${path}` }],
+          content: [{ type: "text" as const, text: `Successfully wrote to ${path}` }],
         };
       }
     );
@@ -115,7 +115,7 @@ export class SimpleToolsServer {
         return {
           content: [
             {
-              type: "text",
+              type: "text" as const,
               text: stdout + (stderr ? `\nStderr: ${stderr}` : ""),
             },
           ],
@@ -132,7 +132,7 @@ export class SimpleToolsServer {
       async ({ query }) => {
         const result = await this.contextManager.searchMemory(query);
         return {
-          content: [{ type: "text", text: result }],
+          content: [{ type: "text" as const, text: result }],
         };
       }
     );
@@ -155,7 +155,7 @@ export class SimpleToolsServer {
         }
         await this.contextManager.addMemory(text, meta);
         return {
-          content: [{ type: "text", text: "Memory added." }],
+          content: [{ type: "text" as const, text: "Memory added." }],
         };
       }
     );

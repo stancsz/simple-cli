@@ -40,7 +40,7 @@ export class SeedanceServer {
       async (args) => {
         if (!this.apiKey) {
             return {
-                content: [{ type: "text", text: "Error: SEEDANCE_API_KEY or SUTUI_API_KEY environment variable is not set." }],
+                content: [{ type: "text" as const, text: "Error: SEEDANCE_API_KEY or SUTUI_API_KEY environment variable is not set." } as const],
                 isError: true,
             };
         }
@@ -57,7 +57,7 @@ export class SeedanceServer {
       async ({ task_id }) => {
         if (!this.apiKey) {
             return {
-                content: [{ type: "text", text: "Error: SEEDANCE_API_KEY or SUTUI_API_KEY environment variable is not set." }],
+                content: [{ type: "text" as const, text: "Error: SEEDANCE_API_KEY or SUTUI_API_KEY environment variable is not set." } as const],
                 isError: true,
             };
         }
@@ -100,9 +100,9 @@ export class SeedanceServer {
     return {
       content: [
         {
-          type: "text",
+          type: "text" as const,
           text: JSON.stringify(result, null, 2),
-        },
+        } as const,
       ],
     };
   }
@@ -126,9 +126,9 @@ export class SeedanceServer {
     return {
       content: [
         {
-          type: "text",
+          type: "text" as const,
           text: JSON.stringify(result, null, 2),
-        },
+        } as const,
       ],
     };
   }
