@@ -27,20 +27,55 @@ class JulesClient {
         }
 
         try {
-            // Get PR details to extract the branch and repository
-            const prJson = run(`gh pr view ${prNumber} --json headRefName,headRepositoryOwner,headRepository`);
+            // Get PR details including body to extract existing session
+            const prJson = run(`gh pr view ${prNumber} --json headRefName,headRepositoryOwner,headRepository,body`);
             const prData = JSON.parse(prJson);
             const branch = prData.headRefName;
+            const prBody = prData.body || '';
 
             // Get owner and repo from PR data (works reliably even after checking out branches)
             const owner = prData.headRepositoryOwner?.login || 'stancsz';
             const repo = prData.headRepository?.name || 'simple-cli';
 
-
             console.log(`Repository: ${owner}/${repo}, Branch: ${branch}`);
 
-            // Construct the source name directly (pattern: sources/github/{owner}/{repo})
-            // This avoids expensive pagination through potentially hundreds of sources
+            // Check if this PR was created by Jules and has an existing session
+            // Pattern: jules.google.com/task/{taskId} or jules.google.com/session/{sessionId}
+            const sessionMatch = prBody.match(/jules\.google\.com\/(?:task|session)\/([a-zA-Z0-9-]+)/);
+
+            if (sessionMatch) {
+                const sessionId = sessionMatch[1];
+                const sessionName = `sessions/${sessionId}`;
+                console.log(`Found existing Jules session: ${sessionName}`);
+
+                // Send message to existing session instead of creating new one
+                const messageUrl = `${this.apiBaseUrl}/${sessionName}:sendMessage`;
+                const messageBody = {
+                    message: task
+                };
+
+                console.log(`Sending message to existing session...`);
+
+                const messageRes = await fetch(messageUrl, {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json",
+                        "x-goog-api-key": this.apiKey,
+                    },
+                    body: JSON.stringify(messageBody),
+                });
+
+                if (!messageRes.ok) {
+                    const errorText = await messageRes.text();
+                    console.error(`Failed to send message to session: ${errorText}`);
+                    // Fall through to create new session
+                } else {
+                    console.log(`✓ Message sent to existing Jules session`);
+                    return { success: true, message: `Message sent to existing session: ${sessionName}` };
+                }
+            }
+
+            // No existing session found or message failed - create new session
             const sourceName = `sources/github/${owner}/${repo}`;
             console.log(`Using Jules source: ${sourceName}`);
 
@@ -58,7 +93,7 @@ class JulesClient {
                 title: `Fix PR #${prNumber}`,
             };
 
-            console.log(`Creating Jules session for branch: ${branch}`);
+            console.log(`Creating new Jules session for branch: ${branch}`);
 
             const sessionRes = await fetch(sessionUrl, {
                 method: "POST",
