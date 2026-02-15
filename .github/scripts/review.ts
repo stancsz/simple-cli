@@ -305,12 +305,29 @@ async function main() {
                 const status = runSafe('npx', ['tsx', `"${agentCli}"`, '.', `"${prompt}"`, '--non-interactive']);
 
                 if (!status) {
-                    console.error("Agent failed to resolve conflicts via CLI. Skipping PR.");
-                    await delegateComment(agentCli, pr,
-                        "I attempted to resolve the merge conflicts automatically, but I failed to complete the task.",
-                        "The agent process returned a failure status during conflict resolution."
-                    );
-                    continue;
+                    console.error("Agent failed to resolve conflicts via CLI. Attempting fallback: Accept Feature Branch changes (Ours).");
+
+                    try {
+                        const conflictFiles = conflicts.split('\n').filter(f => f.trim());
+                        for (const file of conflictFiles) {
+                            console.log(`Checking out --ours for ${file}...`);
+                            // We are on PR branch, merging main. ours = PR branch.
+                            run(`git checkout --ours "${file}"`);
+                            run(`git add "${file}"`);
+                        }
+
+                        run('git commit -m "chore: Resolve merge conflicts (fallback: keep feature branch)"');
+                        run('git push');
+                        console.log("✅ Conflicts resolved (fallback) and pushed.");
+                        continue;
+                    } catch (fallbackError: any) {
+                        console.error(`Fallback resolution failed: ${fallbackError.message}`);
+                        await delegateComment(agentCli, pr,
+                            "I attempted to resolve the merge conflicts automatically (both agent and fallback), but I failed to complete the task.",
+                            `Agent failed. Fallback error: ${fallbackError.message}`
+                        );
+                        continue;
+                    }
                 }
 
                 // Try to commit
