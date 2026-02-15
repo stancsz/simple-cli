@@ -80,7 +80,6 @@ export class AgnoServer {
                 text: `Error from Agno Agent (exit code ${code}):\n${errorOutput}\n${output}`,
               },
             ],
-            isError: true,
           });
         }
       });
@@ -93,7 +92,6 @@ export class AgnoServer {
               text: `Failed to spawn python process: ${err.message}`,
             },
           ],
-          isError: true,
         });
       });
     });

@@ -21,9 +21,7 @@ describe("KamalServer", () => {
     (mockProcess as any).stderr = new EventEmitter();
     (spawn as any).mockReturnValue(mockProcess);
 
-    const promise = (server as any).server._registeredTools[
-      "kamal_setup"
-    ].handler({
+    const promise = server.handleCallTool("kamal_setup", {
       configFile: "deploy.yml",
     });
 
@@ -49,9 +47,7 @@ describe("KamalServer", () => {
     (mockProcess as any).stderr = new EventEmitter();
     (spawn as any).mockReturnValue(mockProcess);
 
-    const promise = (server as any).server._registeredTools[
-      "kamal_deploy"
-    ].handler({});
+    const promise = server.handleCallTool("kamal_deploy", {});
 
     setTimeout(() => {
       (mockProcess as any).stdout.emit("data", "Deploy done");

@@ -23,9 +23,7 @@ describe("CaproverServer", () => {
     (mockProcess as any).stderr = new EventEmitter();
     (spawn as any).mockReturnValue(mockProcess);
 
-    const promise = (server as any).server._registeredTools[
-      "caprover_deploy"
-    ].handler({
+    const promise = server.handleCallTool("caprover_deploy", {
       appName: "test-app",
     });
 

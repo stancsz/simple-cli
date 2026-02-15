@@ -57,11 +57,23 @@ export class KimiSwarmServer {
             text: "Error: 'crewai' python package is not installed. Please install it using `pip install crewai`.",
           },
         ],
-        isError: true,
       };
     }
 
-    const apiKey = process.env.MOONSHOT_API_KEY || process.env.OPENAI_API_KEY;
+    // Set up environment
+    const apiKey = process.env.MOONSHOT_API_KEY || process.env.KIMI_API_KEY;
+
+    if (!apiKey) {
+      return {
+        content: [
+          {
+            type: "text",
+            text: "Error: MOONSHOT_API_KEY or KIMI_API_KEY environment variable is not set.",
+          },
+        ],
+      };
+    }
+
     const env = {
       ...process.env,
       OPENAI_API_KEY: apiKey,
@@ -104,7 +116,6 @@ export class KimiSwarmServer {
                 text: `Kimi Swarm execution failed (exit code ${code}):\n${errorOutput}\n${output}`,
               },
             ],
-            isError: true,
           });
         }
       });
@@ -117,7 +128,6 @@ export class KimiSwarmServer {
               text: `Failed to spawn python process: ${err.message}`,
             },
           ],
-          isError: true,
         });
       });
     });

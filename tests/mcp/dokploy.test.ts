@@ -20,9 +20,7 @@ describe("DokployServer", () => {
       json: async () => [{ name: "Project 1" }],
     });
 
-    const result = await (server as any).server._registeredTools[
-      "dokploy_list_projects"
-    ].handler({});
+    const result = await server.handleCallTool("dokploy_list_projects", {});
     expect(mockFetch).toHaveBeenCalledWith(
       "http://dokploy.test/api/project.all",
       expect.objectContaining({
@@ -39,9 +37,7 @@ describe("DokployServer", () => {
       json: async () => ({ id: "1", name: "New Project" }),
     });
 
-    const result = await (server as any).server._registeredTools[
-      "dokploy_create_project"
-    ].handler({
+    const result = await server.handleCallTool("dokploy_create_project", {
       name: "New Project",
       description: "Desc",
     });

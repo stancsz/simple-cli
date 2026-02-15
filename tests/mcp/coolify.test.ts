@@ -20,9 +20,7 @@ describe("CoolifyServer", () => {
       json: async () => [{ name: "Service 1" }],
     });
 
-    const result = await (server as any).server._registeredTools[
-      "coolify_list_services"
-    ].handler({});
+    const result = await server.handleCallTool("coolify_list_services", {});
     expect(mockFetch).toHaveBeenCalledWith(
       "http://coolify.test/api/v1/services",
       expect.objectContaining({
@@ -40,9 +38,7 @@ describe("CoolifyServer", () => {
       json: async () => ({ status: "deployed" }),
     });
 
-    const result = await (server as any).server._registeredTools[
-      "coolify_deploy_service"
-    ].handler({
+    const result = await server.handleCallTool("coolify_deploy_service", {
       uuid: "123",
       force: true,
     });

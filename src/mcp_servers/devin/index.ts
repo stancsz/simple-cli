@@ -33,7 +33,7 @@ export class DevinServer {
       async ({ prompt }) => {
         if (!this.apiKey) {
           return {
-            content: [{ type: "text", text: "Error: DEVIN_API_KEY is not set." }],
+            content: [{ type: "text" as const, text: "Error: DEVIN_API_KEY is not set." }],
             isError: true,
           };
         }
@@ -50,7 +50,7 @@ export class DevinServer {
       async ({ session_id }) => {
         if (!this.apiKey) {
           return {
-            content: [{ type: "text", text: "Error: DEVIN_API_KEY is not set." }],
+            content: [{ type: "text" as const, text: "Error: DEVIN_API_KEY is not set." }],
             isError: true,
           };
         }
@@ -67,7 +67,7 @@ export class DevinServer {
       async ({ limit }) => {
         if (!this.apiKey) {
           return {
-            content: [{ type: "text", text: "Error: DEVIN_API_KEY is not set." }],
+            content: [{ type: "text" as const, text: "Error: DEVIN_API_KEY is not set." }],
             isError: true,
           };
         }
@@ -93,7 +93,7 @@ export class DevinServer {
 
     const data = await response.json();
     return {
-      content: [{ type: "text", text: JSON.stringify(data, null, 2) }],
+      content: [{ type: "text" as const, text: JSON.stringify(data, null, 2) }],
     };
   }
 
@@ -106,35 +106,35 @@ export class DevinServer {
     });
 
     if (!response.ok) {
-        const errorText = await response.text();
-        throw new Error(`API request failed: ${response.status} ${errorText}`);
+      const errorText = await response.text();
+      throw new Error(`API request failed: ${response.status} ${errorText}`);
     }
 
     const data = await response.json();
     return {
-      content: [{ type: "text", text: JSON.stringify(data, null, 2) }],
+      content: [{ type: "text" as const, text: JSON.stringify(data, null, 2) }],
     };
   }
 
   private async listSessions(limit: number = 10) {
-      // Assuming GET /sessions lists sessions
-      // Note: limit might be a query param
-      const response = await fetch(`${API_BASE_URL}/sessions?limit=${limit}`, {
-        method: "GET",
-        headers: {
-            "Authorization": `Bearer ${this.apiKey}`,
-        },
-      });
+    // Assuming GET /sessions lists sessions
+    // Note: limit might be a query param
+    const response = await fetch(`${API_BASE_URL}/sessions?limit=${limit}`, {
+      method: "GET",
+      headers: {
+        "Authorization": `Bearer ${this.apiKey}`,
+      },
+    });
 
-      if (!response.ok) {
-        const errorText = await response.text();
-        throw new Error(`API request failed: ${response.status} ${errorText}`);
-      }
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(`API request failed: ${response.status} ${errorText}`);
+    }
 
-      const data = await response.json();
-      return {
-        content: [{ type: "text", text: JSON.stringify(data, null, 2) }],
-      };
+    const data = await response.json();
+    return {
+      content: [{ type: "text" as const, text: JSON.stringify(data, null, 2) }],
+    };
   }
 
   async run() {
