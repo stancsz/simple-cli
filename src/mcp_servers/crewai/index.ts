@@ -1,65 +1,33 @@
-import { Server } from "@modelcontextprotocol/sdk/server/index.js";
+import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
-import {
-  CallToolRequestSchema,
-  ListToolsRequestSchema,
-} from "@modelcontextprotocol/sdk/types.js";
 import { z } from "zod";
 import { spawn } from "child_process";
 import { join } from "path";
 import { fileURLToPath } from "url";
 
-// Define the tool schema
-export const START_CREW_TOOL = {
-  name: "start_crew",
-  description:
-    "Start a CrewAI crew to perform a complex task using multiple agents.",
-  inputSchema: {
-    type: "object",
-    properties: {
-      task: {
-        type: "string",
-        description: "The task description for the crew to execute.",
-      },
-    },
-    required: ["task"],
-  },
-};
-
 export class CrewAIServer {
-  private server: Server;
+  private server: McpServer;
 
   constructor() {
-    this.server = new Server(
-      {
-        name: "crewai-server",
-        version: "1.0.0",
-      },
-      {
-        capabilities: {
-          tools: {},
-        },
-      },
-    );
+    this.server = new McpServer({
+      name: "crewai-server",
+      version: "1.0.0",
+    });
 
-    this.setupHandlers();
+    this.setupTools();
   }
 
-  private setupHandlers() {
-    this.server.setRequestHandler(ListToolsRequestSchema, async () => ({
-      tools: [START_CREW_TOOL],
-    }));
-
-    this.server.setRequestHandler(CallToolRequestSchema, async (request) => {
-      if (request.params.name === "start_crew") {
-        const args = request.params.arguments as { task: string };
-        if (!args.task) {
-          throw new Error("Task argument is required");
-        }
-        return await this.startCrew(args.task);
+  private setupTools() {
+    this.server.tool(
+      "start_crew",
+      "Start a CrewAI crew to perform a complex task using multiple agents.",
+      {
+        task: z.string().describe("The task description for the crew to execute."),
+      },
+      async ({ task }) => {
+        return await this.startCrew(task);
       }
-      throw new Error(`Tool not found: ${request.params.name}`);
-    });
+    );
   }
 
   async startCrew(task: string) {

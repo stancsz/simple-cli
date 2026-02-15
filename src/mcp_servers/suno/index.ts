@@ -1,198 +1,26 @@
-import { Server } from "@modelcontextprotocol/sdk/server/index.js";
+import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
-import {
-  CallToolRequestSchema,
-  ListToolsRequestSchema,
-} from "@modelcontextprotocol/sdk/types.js";
+import { z } from "zod";
 import { fileURLToPath } from "url";
 
 const API_BASE_URL = "https://api.sunoapi.org/api/v1";
 
-// Tool Schemas
-const GENERATE_MUSIC_TOOL = {
-  name: "suno_generate_music",
-  description: "Generate music using Suno AI. Returns a task ID.",
-  inputSchema: {
-    type: "object",
-    properties: {
-      prompt: {
-        type: "string",
-        description: "Description of the music to generate. Required for non-custom mode.",
-      },
-      customMode: {
-        type: "boolean",
-        description: "Enable custom mode for advanced settings (default: false).",
-      },
-      instrumental: {
-        type: "boolean",
-        description: "Generate instrumental music (default: false).",
-      },
-      model: {
-        type: "string",
-        description: "Model version (e.g., 'V4_5ALL', 'V4', 'V5'). Default: 'V4_5ALL'.",
-      },
-      style: {
-        type: "string",
-        description: "Music style/genre (e.g., 'Classical', 'Jazz'). Required in custom mode.",
-      },
-      title: {
-        type: "string",
-        description: "Title of the track. Required in custom mode.",
-      },
-      callBackUrl: {
-        type: "string",
-        description: "Callback URL for notifications. Defaults to a dummy URL.",
-      },
-    },
-  },
-};
-
-const GENERATE_LYRICS_TOOL = {
-  name: "suno_generate_lyrics",
-  description: "Generate lyrics using Suno AI. Returns a task ID.",
-  inputSchema: {
-    type: "object",
-    properties: {
-      prompt: {
-        type: "string",
-        description: "Description of the lyrics content.",
-      },
-    },
-    required: ["prompt"],
-  },
-};
-
-const EXTEND_MUSIC_TOOL = {
-  name: "suno_extend_music",
-  description: "Extend an existing music track. Returns a task ID.",
-  inputSchema: {
-    type: "object",
-    properties: {
-      audioId: {
-        type: "string",
-        description: "The ID of the audio track to extend.",
-      },
-      continueAt: {
-        type: "number",
-        description: "Time in seconds to start extension from.",
-      },
-      prompt: {
-        type: "string",
-        description: "Description for the extension.",
-      },
-      style: {
-        type: "string",
-        description: "Style for the extension.",
-      },
-      title: {
-        type: "string",
-        description: "Title for the extended track.",
-      },
-      model: {
-        type: "string",
-        description: "Model version (must match source audio model). Default: 'V4_5ALL'.",
-      },
-    },
-    required: ["audioId"],
-  },
-};
-
-const UPLOAD_AND_COVER_TOOL = {
-  name: "suno_upload_and_cover",
-  description: "Upload an audio file and cover/remix it. Returns a task ID.",
-  inputSchema: {
-    type: "object",
-    properties: {
-      uploadUrl: {
-        type: "string",
-        description: "URL of the audio file to upload.",
-      },
-      prompt: {
-        type: "string",
-        description: "Description for the cover/remix.",
-      },
-      style: {
-        type: "string",
-        description: "Target style for the cover.",
-      },
-      title: {
-        type: "string",
-        description: "Title of the new track.",
-      },
-      model: {
-        type: "string",
-        description: "Model version. Default: 'V4_5ALL'.",
-      },
-    },
-    required: ["uploadUrl"],
-  },
-};
-
-const GET_MUSIC_DETAILS_TOOL = {
-  name: "suno_get_music_details",
-  description: "Get details of a generation task (status, audio URLs, etc.).",
-  inputSchema: {
-    type: "object",
-    properties: {
-      taskId: {
-        type: "string",
-        description: "The task ID returned by generation tools.",
-      },
-    },
-    required: ["taskId"],
-  },
-};
-
-const GET_CREDITS_TOOL = {
-  name: "suno_get_credits",
-  description: "Get remaining account credits.",
-  inputSchema: {
-    type: "object",
-    properties: {},
-  },
-};
-
 export class SunoServer {
-  private server: Server;
+  private server: McpServer;
   private apiKey: string;
 
   constructor() {
-    this.server = new Server(
-      {
-        name: "suno-server",
-        version: "1.0.0",
-      },
-      {
-        capabilities: {
-          tools: {},
-        },
-      },
-    );
+    this.server = new McpServer({
+      name: "suno-server",
+      version: "1.0.0",
+    });
 
     this.apiKey = process.env.SUNO_API_KEY || "";
     if (!this.apiKey) {
       console.warn("Warning: SUNO_API_KEY environment variable is not set.");
     }
 
-    this.setupHandlers();
-  }
-
-  private setupHandlers() {
-    this.server.setRequestHandler(ListToolsRequestSchema, async () => ({
-      tools: [
-        GENERATE_MUSIC_TOOL,
-        GENERATE_LYRICS_TOOL,
-        EXTEND_MUSIC_TOOL,
-        UPLOAD_AND_COVER_TOOL,
-        GET_MUSIC_DETAILS_TOOL,
-        GET_CREDITS_TOOL,
-      ],
-    }));
-
-    this.server.setRequestHandler(CallToolRequestSchema, async (request) => {
-      const { name, arguments: args } = request.params;
-      return this.handleCallTool(name, args);
-    });
+    this.setupTools();
   }
 
   private async makeRequest(endpoint: string, method: string, body?: any) {
@@ -200,33 +28,41 @@ export class SunoServer {
       throw new Error("SUNO_API_KEY is not configured.");
     }
 
+    // This API seems to require Bearer token
     const headers = {
       "Authorization": `Bearer ${this.apiKey}`,
       "Content-Type": "application/json",
     };
 
-    try {
-      const response = await fetch(`${API_BASE_URL}${endpoint}`, {
-        method,
-        headers,
-        body: body ? JSON.stringify(body) : undefined,
-      });
+    const response = await fetch(`${API_BASE_URL}${endpoint}`, {
+      method,
+      headers,
+      body: body ? JSON.stringify(body) : undefined,
+    });
 
-      if (!response.ok) {
-        const errorText = await response.text();
-        throw new Error(`Suno API Error (${response.status}): ${errorText}`);
-      }
-
-      return await response.json();
-    } catch (error: any) {
-      throw new Error(`Request failed: ${error.message}`);
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(`Suno API Error (${response.status}): ${errorText}`);
     }
+
+    return await response.json();
   }
 
-  public async handleCallTool(name: string, args: any) {
-    try {
-      if (name === "suno_generate_music") {
-        const payload = {
+  private setupTools() {
+    this.server.tool(
+      "suno_generate_music",
+      "Generate music using Suno AI. Returns a task ID.",
+      {
+        prompt: z.string().optional().describe("Description of the music to generate. Required for non-custom mode."),
+        customMode: z.boolean().optional().default(false).describe("Enable custom mode for advanced settings (default: false)."),
+        instrumental: z.boolean().optional().default(false).describe("Generate instrumental music (default: false)."),
+        model: z.string().optional().default("V4_5ALL").describe("Model version (e.g., 'V4_5ALL', 'V4', 'V5'). Default: 'V4_5ALL'."),
+        style: z.string().optional().describe("Music style/genre (e.g., 'Classical', 'Jazz'). Required in custom mode."),
+        title: z.string().optional().describe("Title of the track. Required in custom mode."),
+        callBackUrl: z.string().optional().describe("Callback URL for notifications. Defaults to a dummy URL."),
+      },
+      async (args) => {
+        const payload: any = {
             customMode: args.customMode || false,
             instrumental: args.instrumental || false,
             model: args.model || "V4_5ALL",
@@ -235,7 +71,7 @@ export class SunoServer {
             style: args.style,
             title: args.title,
         };
-        // If customMode is false, style and title should be undefined
+        // If customMode is false, style and title should be undefined/ignored by API usually, but safe to remove
         if (!payload.customMode) {
             delete payload.style;
             delete payload.title;
@@ -246,10 +82,17 @@ export class SunoServer {
           content: [{ type: "text", text: JSON.stringify(result, null, 2) }],
         };
       }
+    );
 
-      if (name === "suno_generate_lyrics") {
+    this.server.tool(
+      "suno_generate_lyrics",
+      "Generate lyrics using Suno AI. Returns a task ID.",
+      {
+        prompt: z.string().describe("Description of the lyrics content."),
+      },
+      async ({ prompt }) => {
         const payload = {
-          prompt: args.prompt,
+          prompt,
           callBackUrl: "https://example.com/callback",
         };
         const result = await this.makeRequest("/lyrics", "POST", payload);
@@ -257,8 +100,20 @@ export class SunoServer {
           content: [{ type: "text", text: JSON.stringify(result, null, 2) }],
         };
       }
+    );
 
-      if (name === "suno_extend_music") {
+    this.server.tool(
+      "suno_extend_music",
+      "Extend an existing music track. Returns a task ID.",
+      {
+        audioId: z.string().describe("The ID of the audio track to extend."),
+        continueAt: z.number().optional().describe("Time in seconds to start extension from."),
+        prompt: z.string().optional().describe("Description for the extension."),
+        style: z.string().optional().describe("Style for the extension."),
+        title: z.string().optional().describe("Title for the extended track."),
+        model: z.string().optional().describe("Model version (must match source audio model). Default: 'V4_5ALL'."),
+      },
+      async (args) => {
         const payload = {
           defaultParamFlag: true, // Use custom params
           audioId: args.audioId,
@@ -274,8 +129,19 @@ export class SunoServer {
           content: [{ type: "text", text: JSON.stringify(result, null, 2) }],
         };
       }
+    );
 
-      if (name === "suno_upload_and_cover") {
+    this.server.tool(
+      "suno_upload_and_cover",
+      "Upload an audio file and cover/remix it. Returns a task ID.",
+      {
+        uploadUrl: z.string().describe("URL of the audio file to upload."),
+        prompt: z.string().optional().describe("Description for the cover/remix."),
+        style: z.string().optional().describe("Target style for the cover."),
+        title: z.string().optional().describe("Title of the new track."),
+        model: z.string().optional().describe("Model version. Default: 'V4_5ALL'."),
+      },
+      async (args) => {
         const payload = {
           uploadUrl: args.uploadUrl,
           customMode: true,
@@ -291,29 +157,34 @@ export class SunoServer {
           content: [{ type: "text", text: JSON.stringify(result, null, 2) }],
         };
       }
+    );
 
-      if (name === "suno_get_music_details") {
-        const endpoint = `/generate/record-info?taskId=${args.taskId}`;
+    this.server.tool(
+      "suno_get_music_details",
+      "Get details of a generation task (status, audio URLs, etc.).",
+      {
+        taskId: z.string().describe("The task ID returned by generation tools."),
+      },
+      async ({ taskId }) => {
+        const endpoint = `/generate/record-info?taskId=${taskId}`;
         const result = await this.makeRequest(endpoint, "GET");
         return {
           content: [{ type: "text", text: JSON.stringify(result, null, 2) }],
         };
       }
+    );
 
-      if (name === "suno_get_credits") {
+    this.server.tool(
+      "suno_get_credits",
+      "Get remaining account credits.",
+      {},
+      async () => {
         const result = await this.makeRequest("/generate/credit", "GET");
         return {
           content: [{ type: "text", text: JSON.stringify(result, null, 2) }],
         };
       }
-
-      throw new Error(`Tool not found: ${name}`);
-    } catch (error: any) {
-      return {
-        content: [{ type: "text", text: `Error: ${error.message}` }],
-        isError: true,
-      };
-    }
+    );
   }
 
   async run() {

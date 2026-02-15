@@ -1,119 +1,18 @@
-import { Server } from "@modelcontextprotocol/sdk/server/index.js";
+import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
-import {
-  CallToolRequestSchema,
-  ListToolsRequestSchema,
-} from "@modelcontextprotocol/sdk/types.js";
+import { z } from "zod";
 import Anthropic from "@anthropic-ai/sdk";
 import { fileURLToPath } from "url";
 
-const MINIMAX_CHAT_TOOL = {
-  name: "minimax_chat",
-  description:
-    "Chat with Minimax models (compatible with Anthropic API). Supports text generation, tool use, and reasoning.",
-  inputSchema: {
-    type: "object",
-    properties: {
-      messages: {
-        type: "array",
-        description: "A list of messages comprising the conversation so far.",
-        items: {
-          type: "object",
-          properties: {
-            role: { type: "string", enum: ["user", "assistant"] },
-            content: {
-              oneOf: [
-                { type: "string" },
-                {
-                  type: "array",
-                  items: {
-                    type: "object",
-                    properties: {
-                      type: { type: "string" },
-                      text: { type: "string" },
-                    },
-                  },
-                },
-              ],
-            },
-          },
-          required: ["role", "content"],
-        },
-      },
-      model: {
-        type: "string",
-        description: "The model to use. Defaults to MiniMax-M2.5.",
-        default: "MiniMax-M2.5",
-      },
-      max_tokens: {
-        type: "integer",
-        description: "The maximum number of tokens to generate.",
-        default: 1024,
-      },
-      temperature: {
-        type: "number",
-        description: "Amount of randomness injected into the response.",
-        minimum: 0,
-        maximum: 1,
-      },
-      system: {
-        type: "string",
-        description: "A system prompt to provide context and instructions.",
-      },
-      tools: {
-        type: "array",
-        description: "A list of tools the model may call.",
-        items: {
-          type: "object",
-          properties: {
-            name: { type: "string" },
-            description: { type: "string" },
-            input_schema: { type: "object" },
-          },
-          required: ["name", "input_schema"],
-        },
-      },
-      tool_choice: {
-        type: "object",
-        description: "How the model should use the provided tools.",
-      },
-      top_p: {
-        type: "number",
-        description: "Nucleus sampling.",
-      },
-      thinking: {
-        type: "object",
-        description: "Configuration for reasoning content.",
-        properties: {
-          type: { type: "string", enum: ["enabled", "disabled"] },
-          budget_tokens: { type: "integer" },
-        },
-      },
-      metadata: {
-        type: "object",
-        description: "Metadata for the request.",
-      },
-    },
-    required: ["messages"],
-  },
-};
-
 export class MinimaxServer {
-  private server: Server;
+  private server: McpServer;
   private client: Anthropic;
 
   constructor() {
-    this.server = new Server(
-      {
-        name: "minimax-server",
-        version: "1.0.0",
-      },
-      {
-        capabilities: {
-          tools: {},
-        },
-      },
-    );
+    this.server = new McpServer({
+      name: "minimax-server",
+      version: "1.0.0",
+    });
 
     const apiKey = process.env.MINIMAX_API_KEY || process.env.ANTHROPIC_API_KEY;
     if (!apiKey) {
@@ -127,18 +26,43 @@ export class MinimaxServer {
       baseURL: "https://api.minimax.io/anthropic",
     });
 
-    this.setupHandlers();
+    this.setupTools();
   }
 
-  private setupHandlers() {
-    this.server.setRequestHandler(ListToolsRequestSchema, async () => ({
-      tools: [MINIMAX_CHAT_TOOL],
-    }));
-
-    this.server.setRequestHandler(CallToolRequestSchema, async (request) => {
-      if (request.params.name === "minimax_chat") {
-        const args = request.params.arguments as any;
-
+  private setupTools() {
+    this.server.tool(
+      "minimax_chat",
+      "Chat with Minimax models (compatible with Anthropic API). Supports text generation, tool use, and reasoning.",
+      {
+        messages: z.array(
+          z.object({
+            role: z.enum(["user", "assistant"]),
+            content: z.union([
+              z.string(),
+              z.array(
+                z.object({
+                  type: z.string(),
+                  text: z.string().optional(),
+                  // Add more fields if needed for complex contents like images/tool calls
+                }).passthrough()
+              ),
+            ]),
+          })
+        ).describe("A list of messages comprising the conversation so far."),
+        model: z.string().default("MiniMax-M2.5").describe("The model to use. Defaults to MiniMax-M2.5."),
+        max_tokens: z.number().int().default(1024).describe("The maximum number of tokens to generate."),
+        temperature: z.number().min(0).max(1).optional().describe("Amount of randomness injected into the response."),
+        system: z.string().optional().describe("A system prompt to provide context and instructions."),
+        tools: z.array(z.any()).optional().describe("A list of tools the model may call."),
+        tool_choice: z.any().optional().describe("How the model should use the provided tools."),
+        top_p: z.number().optional().describe("Nucleus sampling."),
+        thinking: z.object({
+          type: z.enum(["enabled", "disabled"]),
+          budget_tokens: z.number().int(),
+        }).optional().describe("Configuration for reasoning content."),
+        metadata: z.record(z.any()).optional().describe("Metadata for the request."),
+      },
+      async (args) => {
         try {
           // Construct params for Anthropic SDK
           const params: any = {
@@ -167,19 +91,10 @@ export class MinimaxServer {
             ],
           };
         } catch (error: any) {
-          return {
-            content: [
-              {
-                type: "text",
-                text: `Minimax API Error: ${error.message}`,
-              },
-            ],
-            isError: true,
-          };
+           throw error;
         }
       }
-      throw new Error(`Tool not found: ${request.params.name}`);
-    });
+    );
   }
 
   async run() {

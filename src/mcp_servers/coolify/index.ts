@@ -1,10 +1,6 @@
-import { Server } from "@modelcontextprotocol/sdk/server/index.js";
+import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
-import {
-  CallToolRequestSchema,
-  ListToolsRequestSchema,
-  Tool,
-} from "@modelcontextprotocol/sdk/types.js";
+import { z } from "zod";
 import { fileURLToPath } from "url";
 
 async function callCoolify(
@@ -43,84 +39,50 @@ async function callCoolify(
   return response.json();
 }
 
-const LIST_SERVICES_TOOL: Tool = {
-  name: "coolify_list_services",
-  description: "List all services in Coolify.",
-  inputSchema: {
-    type: "object",
-    properties: {},
-  },
-};
-
-const LIST_APPLICATIONS_TOOL: Tool = {
-  name: "coolify_list_applications",
-  description: "List all applications in Coolify.",
-  inputSchema: {
-    type: "object",
-    properties: {},
-  },
-};
-
-const DEPLOY_SERVICE_TOOL: Tool = {
-  name: "coolify_deploy_service",
-  description: "Deploy a service or application in Coolify by UUID.",
-  inputSchema: {
-    type: "object",
-    properties: {
-      uuid: { type: "string", description: "UUID of the resource to deploy" },
-      force: { type: "boolean", description: "Force deploy (optional)" },
-    },
-    required: ["uuid"],
-  },
-};
-
 export class CoolifyServer {
-  private server: Server;
+  private server: McpServer;
 
   constructor() {
-    this.server = new Server(
-      {
-        name: "coolify-mcp-server",
-        version: "1.0.0",
-      },
-      {
-        capabilities: {
-          tools: {},
-        },
-      },
-    );
-    this.setupHandlers();
-  }
-
-  private setupHandlers() {
-    this.server.setRequestHandler(ListToolsRequestSchema, async () => ({
-      tools: [LIST_SERVICES_TOOL, LIST_APPLICATIONS_TOOL, DEPLOY_SERVICE_TOOL],
-    }));
-
-    this.server.setRequestHandler(CallToolRequestSchema, async (request) => {
-      const { name, arguments: args } = request.params;
-      return this.handleCallTool(name, args);
+    this.server = new McpServer({
+      name: "coolify-mcp-server",
+      version: "1.0.0",
     });
+    this.setupTools();
   }
 
-  async handleCallTool(name: string, args: any) {
-    try {
-      if (name === "coolify_list_services") {
+  private setupTools() {
+    this.server.tool(
+      "coolify_list_services",
+      "List all services in Coolify.",
+      {},
+      async () => {
         const services = await callCoolify("/api/v1/services");
         return {
           content: [{ type: "text", text: JSON.stringify(services, null, 2) }],
         };
       }
+    );
 
-      if (name === "coolify_list_applications") {
+    this.server.tool(
+      "coolify_list_applications",
+      "List all applications in Coolify.",
+      {},
+      async () => {
         const apps = await callCoolify("/api/v1/applications");
         return {
           content: [{ type: "text", text: JSON.stringify(apps, null, 2) }],
         };
       }
+    );
 
-      if (name === "coolify_deploy_service") {
-        const { uuid, force } = args as any;
+    this.server.tool(
+      "coolify_deploy_service",
+      "Deploy a service or application in Coolify by UUID.",
+      {
+        uuid: z.string().describe("UUID of the resource to deploy"),
+        force: z.boolean().optional().describe("Force deploy (optional)"),
+      },
+      async ({ uuid, force }) => {
         const result = await callCoolify(
           `/api/v1/deploy?uuid=${uuid}${force ? "&force=true" : ""}`,
           "GET",
@@ -129,14 +91,7 @@ export class CoolifyServer {
           content: [{ type: "text", text: JSON.stringify(result, null, 2) }],
         };
       }
-
-      throw new Error(`Tool not found: ${name}`);
-    } catch (error: any) {
-      return {
-        content: [{ type: "text", text: `Error: ${error.message}` }],
-        isError: true,
-      };
-    }
+    );
   }
 
   async run() {

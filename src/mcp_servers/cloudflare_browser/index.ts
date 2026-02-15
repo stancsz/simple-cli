@@ -1,73 +1,31 @@
-import { Server } from "@modelcontextprotocol/sdk/server/index.js";
+import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
-import {
-  CallToolRequestSchema,
-  ListToolsRequestSchema,
-} from "@modelcontextprotocol/sdk/types.js";
+import { z } from "zod";
 import { fileURLToPath } from "url";
 
-const FETCH_MARKDOWN_TOOL = {
-  name: "fetch_markdown",
-  description:
-    "Fetches the markdown version of a webpage using Cloudflare's 'Markdown for Agents'.",
-  inputSchema: {
-    type: "object",
-    properties: {
-      url: {
-        type: "string",
-        description: "The URL of the webpage to fetch.",
-      },
-    },
-    required: ["url"],
-  },
-};
-
 export class CloudflareBrowserServer {
-  private server: Server;
+  private server: McpServer;
 
   constructor() {
-    this.server = new Server(
-      {
-        name: "cloudflare-browser",
-        version: "1.0.0",
-      },
-      {
-        capabilities: {
-          tools: {},
-        },
-      },
-    );
+    this.server = new McpServer({
+      name: "cloudflare-browser",
+      version: "1.0.0",
+    });
 
-    this.setupHandlers();
+    this.setupTools();
   }
 
-  private setupHandlers() {
-    this.server.setRequestHandler(ListToolsRequestSchema, async () => ({
-      tools: [FETCH_MARKDOWN_TOOL],
-    }));
-
-    this.server.setRequestHandler(CallToolRequestSchema, async (request) => {
-      try {
-        if (request.params.name === "fetch_markdown") {
-          const args = request.params.arguments as { url?: string };
-          if (!args || typeof args.url !== "string") {
-            throw new Error("Invalid arguments: 'url' string is required");
-          }
-          return await this.fetchMarkdown(args.url);
-        }
-        throw new Error(`Tool not found: ${request.params.name}`);
-      } catch (e: any) {
-        return {
-          content: [
-            {
-              type: "text",
-              text: `Error: ${e.message}`,
-            },
-          ],
-          isError: true,
-        };
+  private setupTools() {
+    this.server.tool(
+      "fetch_markdown",
+      "Fetches the markdown version of a webpage using Cloudflare's 'Markdown for Agents'.",
+      {
+        url: z.string().describe("The URL of the webpage to fetch."),
+      },
+      async ({ url }) => {
+        return await this.fetchMarkdown(url);
       }
-    });
+    );
   }
 
   public async fetchMarkdown(url: string) {
