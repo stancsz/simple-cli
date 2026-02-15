@@ -285,7 +285,6 @@ async function main() {
         console.log(`\n---------------------------------------------------`);
         console.log(`PR #${pr.number}: ${pr.title}`);
         console.log(`Author: ${pr.author.login} | Branch: ${pr.headRefName}`);
-        console.log(`Author: ${pr.author.login} | Branch: ${pr.headRefName}`);
         console.log(`Mergeable: ${pr.mergeable}`);
 
         const isJules = pr.author.login.toLowerCase().includes('jules') || pr.author.login.toLowerCase().includes('google-labs-jules');
