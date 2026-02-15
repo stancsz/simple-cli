@@ -95,11 +95,12 @@ export class OpenClawServer {
               isError: true,
             });
           } else {
-            resolve({
+             // General failure
+             resolve({
               content: [
                 {
                   type: "text",
-                  text: `Skill execution failed (exit code ${code}):\n${errorOutput}\n${output}`,
+                  text: `Skill execution failed (code ${code}):\n${errorOutput}\n${output}`,
                 },
               ],
               isError: true,

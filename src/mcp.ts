@@ -1,6 +1,6 @@
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { StdioClientTransport } from "@modelcontextprotocol/sdk/client/stdio.js";
-import { existsSync, readFileSync } from "fs";
+import { existsSync, readFileSync, writeFileSync } from "fs";
 import { readdir } from "fs/promises";
 import { join } from "path";
 import { log } from "@clack/prompts";
@@ -113,6 +113,105 @@ export class MCP {
       }));
   }
 
+  private async fetchRegistry(query?: string) {
+    try {
+      const url = new URL("https://registry.modelcontextprotocol.io/v0.1/servers");
+      url.searchParams.set("limit", "100");
+
+      let allServers: any[] = [];
+      let nextCursor: string | null = null;
+
+      do {
+          if (nextCursor) url.searchParams.set("cursor", nextCursor);
+
+          const res = await fetch(url.toString());
+          if (!res.ok) throw new Error(res.statusText);
+
+          const data = await res.json() as any;
+          allServers = allServers.concat(data.servers || []);
+          nextCursor = data.metadata?.nextCursor;
+
+          // Safety break
+          if (allServers.length > 2000) break;
+      } while (nextCursor);
+
+      if (query) {
+        const q = query.toLowerCase();
+        return allServers.filter((s: any) =>
+          (s.server.name && s.server.name.toLowerCase().includes(q)) ||
+          (s.server.description && s.server.description.toLowerCase().includes(q))
+        );
+      }
+      return allServers;
+    } catch (e) {
+      log.error(`Error fetching registry: ${e}`);
+      return [];
+    }
+  }
+
+  private async installServer(name: string, env: Record<string, string> = {}) {
+      const servers = await this.fetchRegistry();
+      const server = servers.find((s: any) => s.server.name === name);
+
+      if (!server) {
+          throw new Error(`Server '${name}' not found in registry.`);
+      }
+
+      const npmPackage = server.server.packages?.find((p: any) => p.registryType === "npm");
+
+      // Currently only supporting NPM packages for auto-install
+      if (!npmPackage) {
+          throw new Error(`Server '${name}' does not have an NPM package available for installation.`);
+      }
+
+      const identifier = npmPackage.identifier;
+      const requiredEnv = npmPackage.environmentVariables || [];
+
+      const definedEnvNames = requiredEnv.map((e: any) => e.name);
+      const providedEnvNames = Object.keys(env);
+      const missing = definedEnvNames.filter((name: string) => !providedEnvNames.includes(name) && !process.env[name]);
+
+      if (missing.length > 0) {
+          return `Installation halted. The following environment variables are recommended/required: ${missing.join(", ")}. Please provide them in the 'env' argument.`;
+      }
+
+      // Update mcp.json
+      const configPath = join(process.cwd(), "mcp.json");
+      let config: any = {};
+      if (existsSync(configPath)) {
+          try {
+              config = JSON.parse(readFileSync(configPath, "utf-8"));
+          } catch (e) {
+              log.error(`Error reading mcp.json: ${e}`);
+          }
+      }
+
+      if (!config.mcpServers) config.mcpServers = {};
+
+      config.mcpServers[name] = {
+          command: "npx",
+          args: ["-y", identifier],
+          env: env
+      };
+
+      try {
+          writeFileSync(configPath, JSON.stringify(config, null, 2));
+      } catch (e) {
+          throw new Error(`Failed to write mcp.json: ${e}`);
+      }
+
+      // Update discoveredServers
+      this.discoveredServers.set(name, {
+          name,
+          command: "npx",
+          args: ["-y", identifier],
+          env: env,
+          source: 'config'
+      });
+
+      return `Successfully installed server '${name}'. You can now start it using 'mcp_start_server'.`;
+  }
+
   async getTools() {
     const all = [];
 
@@ -125,6 +224,46 @@ export class MCP {
             const servers = this.listServers();
             if (servers.length === 0) return "No MCP servers found.";
             return servers.map(s => `- ${s.name} (${s.status}) [${s.source}]`).join("\n");
+        }
+    });
+
+    all.push({
+        name: "mcp_search_server",
+        description: "Search for MCP servers in the official registry.",
+        inputSchema: {
+            type: "object",
+            properties: {
+                query: { type: "string", description: "Search query (name or description)" }
+            }
+        },
+        execute: async ({ query }: { query?: string }) => {
+            const servers = await this.fetchRegistry(query);
+            if (servers.length === 0) return "No servers found in registry matching the query.";
+
+            return servers.map((s: any) => {
+                const name = s.server.name;
+                const desc = s.server.description || "No description";
+                const pkg = s.server.packages?.[0];
+                const installType = pkg?.registryType || "unknown";
+                const identifier = pkg?.identifier || "unknown";
+                return `- ${name} (${installType}: ${identifier})\n  ${desc}`;
+            }).join("\n\n");
+        }
+    });
+
+    all.push({
+        name: "mcp_install_server",
+        description: "Install an MCP server from the registry.",
+        inputSchema: {
+            type: "object",
+            properties: {
+                name: { type: "string", description: "Name of the server to install (as listed in registry)" },
+                env: { type: "object", description: "Environment variables required by the server", additionalProperties: { type: "string" } }
+            },
+            required: ["name"]
+        },
+        execute: async ({ name, env }: { name: string, env?: Record<string, string> }) => {
+            return await this.installServer(name, env || {});
         }
     });
 
