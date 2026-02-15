@@ -1,0 +1,44 @@
+name: Simple Code Review
+on:
+  schedule:
+    - cron: '0 * * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: write
+  issues: write
+
+jobs:
+  simple-code-review:
+    runs-on: ubuntu-latest
+    env:
+      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+      ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+      JULES_API_KEY: ${{ secrets.JULES_API_KEY }}
+      DEEPSEEK_API_KEY: ${{ secrets.DEEPSEEK_API_KEY }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Install Dependencies
+        run: |
+          npm ci
+          npm run build
+          # We need to link local CLI or just ensure dependencies like tsx are present
+          # npm install -g . is useful for 'simple' command but our script uses npx tsx src/cli.ts directly?
+          # The script uses `npx tsx src/cli.ts` which is fine if deps are installed.
+          # But for `npx tsx .github/scripts/review.ts` we might need tsx installed.
+          # npx -y tsx handles installation.
+
+      - name: Simple Code Review
+        run: |
+          # Copy script outside repo to prevent it from being deleted during checkout
+          cp .github/scripts/review.ts ../review.ts
+          npx -y tsx ../review.ts

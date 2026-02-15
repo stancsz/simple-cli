@@ -3,7 +3,10 @@
 
 ![License](https://img.shields.io/badge/license-MIT-blue.svg) ![Version](https://img.shields.io/badge/version-0.2.9-green.svg) ![NPM Downloads](https://img.shields.io/npm/dw/@stan-chen/simple-cli)
 
-Simple-CLI is not just another coding assistant. It is a **Meta-Orchestrator** that coordinates a fleet of specialized AI agents (Jules, DeepSeek Claude, DeepSeek Aider, OpenCode) to build software for you—**in parallel.**
+Simple-CLI is not just another coding assistant. It is a **Meta-Orchestrator** with **sqlite-vec RAG memory implemented** that coordinates a fleet of specialized AI agents (Jules, DeepSeek Claude, DeepSeek Aider, OpenCode) to build software for you—**in parallel.**
+
+## 🎯 Goal
+The goal is to build the best general purpose agent, high leverage on most successful framework into its skills and mcp backpacks.
 
 ## 🎥 See it in Action
 
@@ -118,10 +121,17 @@ simple "Delegate the UI fix to Jules and the API tests to Aider in parallel."
 
 Simple-CLI extends its capabilities via the Model Context Protocol (MCP). It includes several built-in MCP servers located in `src/mcp_servers/`:
 
+*   **CapRover (`caprover`)**: Manages CapRover deployments.
+*   **Cloudflare Browser (`cloudflare_browser`)**: Web browsing capabilities via Cloudflare.
+*   **Coolify (`coolify`)**: Integrates with Coolify for self-hosting.
 *   **CrewAI (`crewai`)**: Orchestrates multi-agent crews (Researcher + Writer) for complex tasks.
-*   **OpenCowork (`opencowork`)**: Enables hierarchical agency by allowing the hiring and delegation of tasks to worker agents.
-*   **OpenClaw (`openclaw`)**: Integrates OpenClaw skills (e.g., system tools, GitHub) into the workflow.
+*   **Dokploy (`dokploy`)**: Deployment automation with Dokploy.
 *   **Jules (`jules`)**: Provides a bridge to the Jules API for autonomous PR creation and management.
+*   **Kamal (`kamal`)**: Deploy web apps anywhere.
+*   **Kimi (`kimi`)**: Integrates Kimi AI capabilities.
+*   **OpenClaw (`openclaw`)**: Integrates OpenClaw skills (e.g., system tools, GitHub) into the workflow.
+*   **OpenCowork (`opencowork`)**: Enables hierarchical agency by allowing the hiring and delegation of tasks to worker agents.
+*   **Simple Tools (`simple_tools`)**: Core system tools for the orchestrator.
 
 ## 🧠 The `.agent` Brain
 Simple-CLI persists its memory and configuration in your project:

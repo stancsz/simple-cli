@@ -33,7 +33,7 @@ async function getRepoMap(cwd: string) {
   }
   try {
     await walk(cwd);
-  } catch {}
+  } catch { }
   return files.slice(0, 50).join("\n");
 }
 
@@ -72,17 +72,56 @@ export class Registry {
   tools: Map<string, Tool> = new Map();
 
   async loadProjectTools(cwd: string) {
-    const dir = join(cwd, ".agent", "tools");
-    if (!existsSync(dir)) return;
-    for (const f of await readdir(dir)) {
-      if (f.endsWith(".ts") || f.endsWith(".js")) {
-        const mod = await import(pathToFileURL(join(dir, f)).href);
-        const t = mod.tool || mod.default;
-        if (t?.name) this.tools.set(t.name, t);
+
+    // 1. Scan Legacy Flat Tools
+    const toolsDir = join(cwd, ".agent", "tools");
+    if (existsSync(toolsDir)) {
+      for (const f of await readdir(toolsDir)) {
+        if (f.endsWith(".ts") || f.endsWith(".js")) {
+          try {
+            const mod = await import(pathToFileURL(join(toolsDir, f)).href);
+            const t = mod.tool || mod.default;
+            if (Array.isArray(t)) {
+              t.forEach(tool => { if (tool?.name) this.tools.set(tool.name, tool); });
+            } else if (t?.name) {
+              this.tools.set(t.name, t);
+            }
+          } catch (e) {
+            console.error(`Failed to load tool ${f}:`, e);
+          }
+        }
+      }
+    }
+
+    // 2. Scan Skill-Based Tools (.agent/skills/*/tools.ts)
+    const skillsDir = join(cwd, ".agent", "skills");
+    if (existsSync(skillsDir)) {
+      for (const skillName of await readdir(skillsDir)) {
+        const skillPath = join(skillsDir, skillName);
+        // Look for tools.ts or index.ts
+        const potentialFiles = ["tools.ts", "index.ts", "tools.js", "index.js"];
+
+        for (const file of potentialFiles) {
+          const filePath = join(skillPath, file);
+          if (existsSync(filePath)) {
+            try {
+              const mod = await import(pathToFileURL(filePath).href);
+              const t = mod.tool || mod.default;
+              if (Array.isArray(t)) {
+                t.forEach(tool => { if (tool?.name) this.tools.set(tool.name, tool); });
+              } else if (t?.name) {
+                this.tools.set(t.name, t);
+              }
+            } catch (e) {
+              console.error(`Failed to load tools for skill ${skillName}:`, e);
+            }
+          }
+        }
       }
     }
   }
 }
+
 
 export class Engine {
   private s = spinner();
@@ -91,7 +130,7 @@ export class Engine {
     private llm: any,
     private registry: Registry,
     private mcp: MCP,
-  ) {}
+  ) { }
 
   async run(
     ctx: Context,
@@ -217,6 +256,14 @@ export class Engine {
                 if (tName === "create_tool") {
                   await this.registry.loadProjectTools(ctx.cwd);
                   log.success("Tools reloaded.");
+                }
+
+                // Reload tools if mcp_start_server was used
+                if (tName === "mcp_start_server") {
+                  (await this.mcp.getTools()).forEach((t) =>
+                    this.registry.tools.set(t.name, t as any),
+                  );
+                  log.success("MCP tools updated.");
                 }
 
                 // Add individual tool execution to history to keep context updated
@@ -351,6 +398,11 @@ export class Engine {
         }
         // Log actual errors
         log.error(`Error: ${e.message}`);
+
+        if (!options.interactive) {
+          throw e;
+        }
+
         // Break or continue? Probably continue to prompt
         input = undefined;
       } finally {

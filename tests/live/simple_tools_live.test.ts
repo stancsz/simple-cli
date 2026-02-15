@@ -20,7 +20,10 @@ describe("SimpleToolsServer Live", () => {
     }
 
     // Connect to server
-    const serverScript = join(process.cwd(), "src/mcp_servers/simple_tools/index.ts");
+    const serverScript = join(
+      process.cwd(),
+      "src/mcp_servers/simple_tools/index.ts",
+    );
 
     transport = new StdioClientTransport({
       command: "npx",
@@ -29,7 +32,7 @@ describe("SimpleToolsServer Live", () => {
 
     client = new Client(
       { name: "test-client", version: "1.0.0" },
-      { capabilities: {} }
+      { capabilities: {} },
     );
 
     await client.connect(transport);
@@ -49,20 +52,20 @@ describe("SimpleToolsServer Live", () => {
       await writeFile(contextFile, originalContext);
     } else {
       if (existsSync(contextFile)) {
-         await unlink(contextFile);
+        await unlink(contextFile);
       }
     }
 
     // Close transport
     if (transport) {
-        await transport.close();
+      await transport.close();
     }
   });
 
   it("should list tools", async () => {
     const tools = await client.listTools();
     expect(tools.tools.length).toBeGreaterThan(0);
-    const toolNames = tools.tools.map(t => t.name);
+    const toolNames = tools.tools.map((t) => t.name);
     expect(toolNames).toContain("update_context");
     expect(toolNames).toContain("read_context");
     expect(toolNames).toContain("read_file");
@@ -99,17 +102,17 @@ describe("SimpleToolsServer Live", () => {
   });
 
   it("should update_context", async () => {
-     await client.callTool({
-       name: "update_context",
-       arguments: { goal: "Live Test Goal" },
-     });
+    await client.callTool({
+      name: "update_context",
+      arguments: { goal: "Live Test Goal" },
+    });
 
-     const result = await client.callTool({
-       name: "read_context",
-       arguments: {},
-     });
+    const result = await client.callTool({
+      name: "read_context",
+      arguments: {},
+    });
 
-     const text = (result as any).content[0].text;
-     expect(text).toContain("Live Test Goal");
+    const text = (result as any).content[0].text;
+    expect(text).toContain("Live Test Goal");
   });
 });
