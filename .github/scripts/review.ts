@@ -27,23 +27,14 @@ class JulesClient {
         }
 
         try {
-            // Get PR details to extract the branch
-            const prJson = run(`gh pr view ${prNumber} --json headRefName,headRepository`);
+            // Get PR details to extract the branch and repository
+            const prJson = run(`gh pr view ${prNumber} --json headRefName,headRepositoryOwner,headRepository`);
             const prData = JSON.parse(prJson);
             const branch = prData.headRefName;
 
-            // Extract owner/repo from git remote
-            const remoteUrl = run('git remote get-url origin');
-            let owner = '', repo = '';
-
-            // Parse GitHub URL (https or ssh)
-            if (remoteUrl.includes('github.com')) {
-                const match = remoteUrl.match(/github\.com[:/]([^/]+)\/([^/.]+)/);
-                if (match) {
-                    owner = match[1];
-                    repo = match[2];
-                }
-            }
+            // Get owner and repo from PR data (works reliably even after checking out branches)
+            const owner = prData.headRepositoryOwner?.login || 'stancsz';
+            const repo = prData.headRepository?.name || 'simple-cli';
 
             console.log(`Repository: ${owner}/${repo}, Branch: ${branch}`);
 
