@@ -1,84 +1,33 @@
-import { Server } from "@modelcontextprotocol/sdk/server/index.js";
+import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
-import {
-  CallToolRequestSchema,
-  ListToolsRequestSchema,
-  McpError,
-  ErrorCode,
-} from "@modelcontextprotocol/sdk/types.js";
 import { z } from "zod";
 import { spawn } from "child_process";
 import { join } from "path";
 import { fileURLToPath } from "url";
 
-const StartCrewSchema = z.object({
-  task: z.string().describe("The task description for the crew to execute."),
-});
-
-// Define the tool schema
-export const START_CREW_TOOL = {
-  name: "start_crew",
-  description:
-    "Start a CrewAI crew to perform a complex task using multiple agents.",
-  inputSchema: {
-    type: "object",
-    properties: {
-      task: {
-        type: "string",
-        description: "The task description for the crew to execute.",
-      },
-    },
-    required: ["task"],
-  },
-};
-
 export class CrewAIServer {
-  private server: Server;
+  private server: McpServer;
 
   constructor() {
-    this.server = new Server(
-      {
-        name: "crewai-server",
-        version: "1.0.0",
-      },
-      {
-        capabilities: {
-          tools: {},
-        },
-      },
-    );
-
-    this.setupHandlers();
-  }
-
-  private setupHandlers() {
-    this.server.setRequestHandler(ListToolsRequestSchema, async () => ({
-      tools: [START_CREW_TOOL],
-    }));
-
-    this.server.setRequestHandler(CallToolRequestSchema, async (request) => {
-      const { name, arguments: args } = request.params;
-      return this.handleCallTool(name, args);
+    this.server = new McpServer({
+      name: "crewai-server",
+      version: "1.0.0",
     });
+
+    this.setupTools();
   }
 
-  public async handleCallTool(name: string, args: any) {
-    if (name === "start_crew") {
-      const parsed = StartCrewSchema.safeParse(args);
-      if (!parsed.success) {
-        throw new McpError(ErrorCode.InvalidParams, parsed.error.message);
-      }
-      const { task } = parsed.data;
-      try {
+  private setupTools() {
+    this.server.tool(
+      "start_crew",
+      "Start a CrewAI crew to perform a complex task using multiple agents.",
+      {
+        task: z.string().describe("The task description for the crew to execute."),
+      },
+      async ({ task }) => {
         return await this.startCrew(task);
-      } catch (e: any) {
-        throw new McpError(
-          ErrorCode.InternalError,
-          `Crew execution failed: ${e.message}`,
-        );
       }
-    }
-    throw new McpError(ErrorCode.MethodNotFound, `Tool not found: ${name}`);
+    );
   }
 
   async startCrew(task: string) {

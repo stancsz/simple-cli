@@ -1,10 +1,6 @@
-import { Server } from "@modelcontextprotocol/sdk/server/index.js";
+import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
-import {
-  CallToolRequestSchema,
-  ListToolsRequestSchema,
-  Tool,
-} from "@modelcontextprotocol/sdk/types.js";
+import { z } from "zod";
 import { spawn } from "child_process";
 import { fileURLToPath } from "url";
 
@@ -39,135 +35,75 @@ function runCommand(command: string, args: string[]): Promise<string> {
   });
 }
 
-const SETUP_TOOL: Tool = {
-  name: "kamal_setup",
-  description: "Run kamal setup.",
-  inputSchema: {
-    type: "object",
-    properties: {
-      configFile: {
-        type: "string",
-        description: "Path to config file (optional)",
-      },
-    },
-  },
-};
-
-const DEPLOY_TOOL: Tool = {
-  name: "kamal_deploy",
-  description: "Run kamal deploy.",
-  inputSchema: {
-    type: "object",
-    properties: {
-      configFile: {
-        type: "string",
-        description: "Path to config file (optional)",
-      },
-    },
-  },
-};
-
-const ROLLBACK_TOOL: Tool = {
-  name: "kamal_rollback",
-  description: "Rollback to a specific version.",
-  inputSchema: {
-    type: "object",
-    properties: {
-      version: { type: "string", description: "Version to rollback to" },
-      configFile: {
-        type: "string",
-        description: "Path to config file (optional)",
-      },
-    },
-    required: ["version"],
-  },
-};
-
-const LOGS_TOOL: Tool = {
-  name: "kamal_logs",
-  description: "View app logs.",
-  inputSchema: {
-    type: "object",
-    properties: {
-      configFile: {
-        type: "string",
-        description: "Path to config file (optional)",
-      },
-      lines: { type: "number", description: "Number of lines (optional)" },
-    },
-  },
-};
-
 export class KamalServer {
-  private server: Server;
+  private server: McpServer;
 
   constructor() {
-    this.server = new Server(
-      {
-        name: "kamal-mcp-server",
-        version: "1.0.0",
-      },
-      {
-        capabilities: {
-          tools: {},
-        },
-      },
-    );
-    this.setupHandlers();
-  }
-
-  private setupHandlers() {
-    this.server.setRequestHandler(ListToolsRequestSchema, async () => ({
-      tools: [SETUP_TOOL, DEPLOY_TOOL, ROLLBACK_TOOL, LOGS_TOOL],
-    }));
-
-    this.server.setRequestHandler(CallToolRequestSchema, async (request) => {
-      const { name, arguments: args } = request.params;
-      return this.handleCallTool(name, args);
+    this.server = new McpServer({
+      name: "kamal-mcp-server",
+      version: "1.0.0",
     });
+    this.setupTools();
   }
 
-  async handleCallTool(name: string, args: any) {
-    try {
-      if (name === "kamal_setup") {
-        const { configFile } = args as any;
+  private setupTools() {
+    this.server.tool(
+      "kamal_setup",
+      "Run kamal setup.",
+      {
+        configFile: z.string().optional().describe("Path to config file (optional)"),
+      },
+      async ({ configFile }) => {
         const cmdArgs = ["setup"];
         if (configFile) cmdArgs.push("-c", configFile);
         const output = await runCommand("kamal", cmdArgs);
         return { content: [{ type: "text", text: output }] };
       }
+    );
 
-      if (name === "kamal_deploy") {
-        const { configFile } = args as any;
+    this.server.tool(
+      "kamal_deploy",
+      "Run kamal deploy.",
+      {
+        configFile: z.string().optional().describe("Path to config file (optional)"),
+      },
+      async ({ configFile }) => {
         const cmdArgs = ["deploy"];
         if (configFile) cmdArgs.push("-c", configFile);
         const output = await runCommand("kamal", cmdArgs);
         return { content: [{ type: "text", text: output }] };
       }
+    );
 
-      if (name === "kamal_rollback") {
-        const { version, configFile } = args as any;
+    this.server.tool(
+      "kamal_rollback",
+      "Rollback to a specific version.",
+      {
+        version: z.string().describe("Version to rollback to"),
+        configFile: z.string().optional().describe("Path to config file (optional)"),
+      },
+      async ({ version, configFile }) => {
         const cmdArgs = ["rollback", version];
         if (configFile) cmdArgs.push("-c", configFile);
         const output = await runCommand("kamal", cmdArgs);
         return { content: [{ type: "text", text: output }] };
       }
+    );
 
-      if (name === "kamal_logs") {
-        const { configFile, lines } = args as any;
+    this.server.tool(
+      "kamal_logs",
+      "View app logs.",
+      {
+        configFile: z.string().optional().describe("Path to config file (optional)"),
+        lines: z.number().int().optional().describe("Number of lines (optional)"),
+      },
+      async ({ configFile, lines }) => {
         const cmdArgs = ["app", "logs"];
         if (configFile) cmdArgs.push("-c", configFile);
         const output = await runCommand("kamal", cmdArgs);
         return { content: [{ type: "text", text: output }] };
       }
-
-      throw new Error(`Tool not found: ${name}`);
-    } catch (error: any) {
-      return {
-        content: [{ type: "text", text: `Error: ${error.message}` }],
-        isError: true,
-      };
-    }
+    );
   }
 
   async run() {

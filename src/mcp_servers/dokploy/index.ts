@@ -1,10 +1,6 @@
-import { Server } from "@modelcontextprotocol/sdk/server/index.js";
+import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
-import {
-  CallToolRequestSchema,
-  ListToolsRequestSchema,
-  Tool,
-} from "@modelcontextprotocol/sdk/types.js";
+import { z } from "zod";
 import { fileURLToPath } from "url";
 
 async function callDokploy(
@@ -43,116 +39,38 @@ async function callDokploy(
   return response.json();
 }
 
-const LIST_PROJECTS_TOOL: Tool = {
-  name: "dokploy_list_projects",
-  description: "List all projects in Dokploy.",
-  inputSchema: {
-    type: "object",
-    properties: {},
-  },
-};
-
-const CREATE_PROJECT_TOOL: Tool = {
-  name: "dokploy_create_project",
-  description: "Create a new project in Dokploy.",
-  inputSchema: {
-    type: "object",
-    properties: {
-      name: { type: "string", description: "Name of the project" },
-      description: {
-        type: "string",
-        description: "Description of the project",
-      },
-    },
-    required: ["name"],
-  },
-};
-
-const CREATE_APPLICATION_TOOL: Tool = {
-  name: "dokploy_create_application",
-  description: "Create a new application in a project.",
-  inputSchema: {
-    type: "object",
-    properties: {
-      projectId: { type: "string", description: "ID of the project" },
-      name: { type: "string", description: "Name of the application" },
-      appName: { type: "string", description: "App name (optional, alias)" },
-      description: { type: "string" },
-    },
-    required: ["projectId", "name"],
-  },
-};
-
-const DEPLOY_APPLICATION_TOOL: Tool = {
-  name: "dokploy_deploy_application",
-  description: "Deploy an application in Dokploy.",
-  inputSchema: {
-    type: "object",
-    properties: {
-      applicationId: { type: "string", description: "ID of the application" },
-    },
-    required: ["applicationId"],
-  },
-};
-
-const GET_APPLICATION_TOOL: Tool = {
-  name: "dokploy_get_application",
-  description: "Get details of an application.",
-  inputSchema: {
-    type: "object",
-    properties: {
-      applicationId: { type: "string", description: "ID of the application" },
-    },
-    required: ["applicationId"],
-  },
-};
-
 export class DokployServer {
-  private server: Server;
+  private server: McpServer;
 
   constructor() {
-    this.server = new Server(
-      {
-        name: "dokploy-mcp-server",
-        version: "1.0.0",
-      },
-      {
-        capabilities: {
-          tools: {},
-        },
-      },
-    );
-    this.setupHandlers();
-  }
-
-  private setupHandlers() {
-    this.server.setRequestHandler(ListToolsRequestSchema, async () => ({
-      tools: [
-        LIST_PROJECTS_TOOL,
-        CREATE_PROJECT_TOOL,
-        CREATE_APPLICATION_TOOL,
-        DEPLOY_APPLICATION_TOOL,
-        GET_APPLICATION_TOOL,
-      ],
-    }));
-
-    this.server.setRequestHandler(CallToolRequestSchema, async (request) => {
-      const { name, arguments: args } = request.params;
-      return this.handleCallTool(name, args);
+    this.server = new McpServer({
+      name: "dokploy-mcp-server",
+      version: "1.0.0",
     });
+    this.setupTools();
   }
 
-  async handleCallTool(name: string, args: any) {
-    try {
-      if (name === "dokploy_list_projects") {
+  private setupTools() {
+    this.server.tool(
+      "dokploy_list_projects",
+      "List all projects in Dokploy.",
+      {},
+      async () => {
         const projects = await callDokploy("/api/project.all");
         return {
           content: [{ type: "text", text: JSON.stringify(projects, null, 2) }],
         };
       }
+    );
 
-      if (name === "dokploy_create_project") {
-        const { name, description } = args as any;
+    this.server.tool(
+      "dokploy_create_project",
+      "Create a new project in Dokploy.",
+      {
+        name: z.string().describe("Name of the project"),
+        description: z.string().optional().describe("Description of the project"),
+      },
+      async ({ name, description }) => {
         const result = await callDokploy("/api/project.create", "POST", {
           name,
           description,
@@ -161,9 +79,18 @@ export class DokployServer {
           content: [{ type: "text", text: JSON.stringify(result, null, 2) }],
         };
       }
+    );
 
-      if (name === "dokploy_create_application") {
-        const { projectId, name, appName, description } = args as any;
+    this.server.tool(
+      "dokploy_create_application",
+      "Create a new application in a project.",
+      {
+        projectId: z.string().describe("ID of the project"),
+        name: z.string().describe("Name of the application"),
+        appName: z.string().optional().describe("App name (optional, alias)"),
+        description: z.string().optional(),
+      },
+      async ({ projectId, name, appName, description }) => {
         const result = await callDokploy("/api/application.create", "POST", {
           projectId,
           name: name || appName,
@@ -173,9 +100,15 @@ export class DokployServer {
           content: [{ type: "text", text: JSON.stringify(result, null, 2) }],
         };
       }
+    );
 
-      if (name === "dokploy_deploy_application") {
-        const { applicationId } = args as any;
+    this.server.tool(
+      "dokploy_deploy_application",
+      "Deploy an application in Dokploy.",
+      {
+        applicationId: z.string().describe("ID of the application"),
+      },
+      async ({ applicationId }) => {
         const result = await callDokploy("/api/application.deploy", "POST", {
           applicationId,
         });
@@ -183,9 +116,15 @@ export class DokployServer {
           content: [{ type: "text", text: JSON.stringify(result, null, 2) }],
         };
       }
+    );
 
-      if (name === "dokploy_get_application") {
-        const { applicationId } = args as any;
+    this.server.tool(
+      "dokploy_get_application",
+      "Get details of an application.",
+      {
+        applicationId: z.string().describe("ID of the application"),
+      },
+      async ({ applicationId }) => {
         const result = await callDokploy(
           `/api/application.one?applicationId=${applicationId}`,
         );
@@ -193,14 +132,7 @@ export class DokployServer {
           content: [{ type: "text", text: JSON.stringify(result, null, 2) }],
         };
       }
-
-      throw new Error(`Tool not found: ${name}`);
-    } catch (error: any) {
-      return {
-        content: [{ type: "text", text: `Error: ${error.message}` }],
-        isError: true,
-      };
-    }
+    );
   }
 
   async run() {

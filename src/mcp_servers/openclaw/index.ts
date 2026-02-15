@@ -1,92 +1,35 @@
-import { Server } from "@modelcontextprotocol/sdk/server/index.js";
+import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
-import {
-  CallToolRequestSchema,
-  ListToolsRequestSchema,
-  McpError,
-  ErrorCode,
-} from "@modelcontextprotocol/sdk/types.js";
 import { z } from "zod";
 import { spawn } from "child_process";
 import { join } from "path";
 import { existsSync } from "fs";
 import { fileURLToPath } from "url";
 
-const OpenClawRunSchema = z.object({
-  skill: z
-    .string()
-    .describe("The name of the skill to run (e.g., 'weather', 'github')."),
-  args: z.record(z.any()).optional().describe("Arguments for the skill."),
-});
-
-export const OPENCLAW_RUN_TOOL = {
-  name: "openclaw_run",
-  description: "Run an OpenClaw skill (e.g., weather, github, etc.)",
-  inputSchema: {
-    type: "object",
-    properties: {
-      skill: {
-        type: "string",
-        description:
-          "The name of the skill to run (e.g., 'weather', 'github').",
-      },
-      args: {
-        type: "object",
-        description: "Arguments for the skill.",
-        additionalProperties: true,
-      },
-    },
-    required: ["skill"],
-  },
-};
-
 export class OpenClawServer {
-  private server: Server;
+  private server: McpServer;
 
   constructor() {
-    this.server = new Server(
-      {
-        name: "openclaw-server",
-        version: "1.0.0",
-      },
-      {
-        capabilities: {
-          tools: {},
-        },
-      },
-    );
-
-    this.setupHandlers();
-  }
-
-  private setupHandlers() {
-    this.server.setRequestHandler(ListToolsRequestSchema, async () => ({
-      tools: [OPENCLAW_RUN_TOOL],
-    }));
-
-    this.server.setRequestHandler(CallToolRequestSchema, async (request) => {
-      const { name, arguments: args } = request.params;
-      return this.handleCallTool(name, args);
+    this.server = new McpServer({
+      name: "openclaw-server",
+      version: "1.0.0",
     });
+
+    this.setupTools();
   }
 
-  public async handleCallTool(name: string, args: any) {
-    if (name === "openclaw_run") {
-      const parsed = OpenClawRunSchema.safeParse(args);
-      if (!parsed.success) {
-        throw new McpError(ErrorCode.InvalidParams, parsed.error.message);
+  private setupTools() {
+    this.server.tool(
+      "openclaw_run",
+      "Run an OpenClaw skill (e.g., weather, github, etc.)",
+      {
+        skill: z.string().describe("The name of the skill to run (e.g., 'weather', 'github')."),
+        args: z.record(z.any()).optional().describe("Arguments for the skill."),
+      },
+      async ({ skill, args }) => {
+        return await this.runSkill(skill, args || {});
       }
-      const { skill, args: skillArgs } = parsed.data;
-      try {
-        return await this.runSkill(skill, skillArgs || {});
-      } catch (e: any) {
-        throw new McpError(
-          ErrorCode.InternalError,
-          `Skill execution failed: ${e.message}`,
-        );
-      }
-    }
-    throw new McpError(ErrorCode.MethodNotFound, `Tool not found: ${name}`);
+    );
   }
 
   async runSkill(skill: string, args: Record<string, any>) {

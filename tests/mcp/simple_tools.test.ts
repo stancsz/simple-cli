@@ -37,8 +37,16 @@ describe("SimpleToolsServer", () => {
     server = new SimpleToolsServer();
   });
 
+  // Helper to access tool handler
+  const callTool = async (name: string, args: any) => {
+    const mcpServer = (server as any).server; // Access private property
+    const tool = (mcpServer as any)._registeredTools[name];
+    if (!tool) throw new Error(`Tool ${name} not found`);
+    return await tool.handler(args);
+  };
+
   it("should handle update_context tool", async () => {
-    const result = await server.handleCallTool("update_context", {
+    const result = await callTool("update_context", {
       goal: "New Goal",
       constraint: "New Constraint",
     });
@@ -54,7 +62,7 @@ describe("SimpleToolsServer", () => {
   it("should handle read_context tool", async () => {
     mockGetContextSummary.mockResolvedValue("Context Summary");
 
-    const result = await server.handleCallTool("read_context", {});
+    const result = await callTool("read_context", {});
 
     expect(mockGetContextSummary).toHaveBeenCalled();
     expect((result as any).content[0].text).toBe("Context Summary");
@@ -63,7 +71,7 @@ describe("SimpleToolsServer", () => {
   it("should handle read_file tool", async () => {
     (readFile as any).mockResolvedValue("File Content");
 
-    const result = await server.handleCallTool("read_file", {
+    const result = await callTool("read_file", {
       path: "test.txt",
     });
 
@@ -72,7 +80,7 @@ describe("SimpleToolsServer", () => {
   });
 
   it("should handle write_file tool", async () => {
-    const result = await server.handleCallTool("write_file", {
+    const result = await callTool("write_file", {
       path: "test.txt",
       content: "Content",
     });
@@ -88,7 +96,7 @@ describe("SimpleToolsServer", () => {
       cb(null, { stdout: "Command Output", stderr: "" });
     });
 
-    const result = await server.handleCallTool("run_command", {
+    const result = await callTool("run_command", {
       command: "echo hello",
     });
 

@@ -15,13 +15,21 @@ describe("KamalServer", () => {
     server = new KamalServer();
   });
 
+  // Helper to access tool handler
+  const callTool = async (name: string, args: any) => {
+    const mcpServer = (server as any).server;
+    const tool = (mcpServer as any)._registeredTools[name];
+    if (!tool) throw new Error(`Tool ${name} not found`);
+    return await tool.handler(args);
+  };
+
   it("should handle kamal_setup", async () => {
     const mockProcess = new EventEmitter();
     (mockProcess as any).stdout = new EventEmitter();
     (mockProcess as any).stderr = new EventEmitter();
     (spawn as any).mockReturnValue(mockProcess);
 
-    const promise = server.handleCallTool("kamal_setup", {
+    const promise = callTool("kamal_setup", {
       configFile: "deploy.yml",
     });
 
@@ -47,7 +55,7 @@ describe("KamalServer", () => {
     (mockProcess as any).stderr = new EventEmitter();
     (spawn as any).mockReturnValue(mockProcess);
 
-    const promise = server.handleCallTool("kamal_deploy", {});
+    const promise = callTool("kamal_deploy", {});
 
     setTimeout(() => {
       (mockProcess as any).stdout.emit("data", "Deploy done");
