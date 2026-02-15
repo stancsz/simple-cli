@@ -20,7 +20,10 @@ describe("CoolifyServer", () => {
       json: async () => [{ name: "Service 1" }],
     });
 
-    const result = await server.handleCallTool("coolify_list_services", {});
+    // Access private property to test tool handler directly
+    const tool = (server as any).server._registeredTools["coolify_list_services"];
+    const result = await tool.handler({});
+
     expect(mockFetch).toHaveBeenCalledWith(
       "http://coolify.test/api/v1/services",
       expect.objectContaining({
@@ -38,7 +41,9 @@ describe("CoolifyServer", () => {
       json: async () => ({ status: "deployed" }),
     });
 
-    const result = await server.handleCallTool("coolify_deploy_service", {
+    // Access private property to test tool handler directly
+    const tool = (server as any).server._registeredTools["coolify_deploy_service"];
+    const result = await tool.handler({
       uuid: "123",
       force: true,
     });
