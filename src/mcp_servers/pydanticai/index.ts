@@ -81,7 +81,6 @@ export class PydanticAIServer {
                 text: `Error extracting data (exit code ${code}):\n${errorOutput}\n${output}`,
               },
             ],
-            isError: true,
           });
         }
       });
@@ -94,7 +93,6 @@ export class PydanticAIServer {
               text: `Failed to spawn python process: ${err.message}`,
             },
           ],
-          isError: true,
         });
       });
     });

@@ -83,7 +83,7 @@ export class OpenCoworkServer {
     return {
       content: [
         {
-          type: "text",
+          type: "text" as const,
           text: `Worker '${name}' hired as '${role}'.`,
         },
       ],
@@ -120,7 +120,7 @@ export class OpenCoworkServer {
     return {
       content: [
         {
-          type: "text",
+          type: "text" as const,
           text: resultText,
         },
       ],
@@ -132,7 +132,7 @@ export class OpenCoworkServer {
     return {
       content: [
         {
-          type: "text",
+          type: "text" as const,
           text: `Active workers: ${workers.join(", ") || "None"}`,
         },
       ],
