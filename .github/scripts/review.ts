@@ -180,13 +180,13 @@ async function delegateComment(agentCli: string, pr: any, context: string, error
         const instructions = `Be professional and helpful.`;
 
         const prompt = `${role}
-
+        
         Situation: ${context}
         Error Details: ${errorDetails}
-
+        
         Task: Analyze the situation and post a comment on PR #${pr.number} using the 'pr_comment' tool.
         ${instructions}
-
+        
         Do not just say you will do it, actually use the tool.`;
 
         // Run the isolated agent
@@ -248,7 +248,7 @@ async function main() {
         if (fs.existsSync(runtimeDir)) {
             fs.rmSync(runtimeDir, { recursive: true, force: true });
         }
-        // recursive copy excluding .git and node_modules to be faster?
+        // recursive copy excluding .git and node_modules to be faster? 
         // Actually we need node_modules for npx tsx to work natively without install
         // But copying node_modules is slow.
         // Let's assume we can CP everything.
@@ -259,7 +259,7 @@ async function main() {
 
         // We need dependencies. If we don't copy node_modules, we must install.
         // CI environment usually has a cache.
-        // Let's try to link node_modules?
+        // Let's try to link node_modules? 
         // Windows/Linux symlink might work.
         try {
             if (process.platform === 'win32') {
@@ -386,12 +386,12 @@ async function main() {
                 fs.writeFileSync(logFile, (e.stdout || '') + '\n' + (e.stderr || ''));
             }
 
-            const prompt = `You are a Code Reviewer Agent. The tests for PR #${pr.number} failed.
-
+            const prompt = `You are a Code Reviewer Agent. The tests for PR #${pr.number} failed. 
+            
             Read 'pr_failure.log' to understand why.
-
+            
             Then, use 'pr_comment' to post a helpul comment on PR #${pr.number} explaining the failure.
-
+            
             Important: The PR author is '${pr.author.login}'. ${isJules ? "You MUST include '@jules' and give clear instructions." : "Be constructive."}
             `;
 
