@@ -21,7 +21,9 @@ describe("KamalServer", () => {
     (mockProcess as any).stderr = new EventEmitter();
     (spawn as any).mockReturnValue(mockProcess);
 
-    const promise = server.handleCallTool("kamal_setup", {
+    // Access private property to test tool handler directly
+    const tool = (server as any).server._registeredTools["kamal_setup"];
+    const promise = tool.handler({
       configFile: "deploy.yml",
     });
 
@@ -47,7 +49,9 @@ describe("KamalServer", () => {
     (mockProcess as any).stderr = new EventEmitter();
     (spawn as any).mockReturnValue(mockProcess);
 
-    const promise = server.handleCallTool("kamal_deploy", {});
+    // Access private property to test tool handler directly
+    const tool = (server as any).server._registeredTools["kamal_deploy"];
+    const promise = tool.handler({});
 
     setTimeout(() => {
       (mockProcess as any).stdout.emit("data", "Deploy done");

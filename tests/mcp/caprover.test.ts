@@ -23,7 +23,9 @@ describe("CaproverServer", () => {
     (mockProcess as any).stderr = new EventEmitter();
     (spawn as any).mockReturnValue(mockProcess);
 
-    const promise = server.handleCallTool("caprover_deploy", {
+    // Access private property to test tool handler directly
+    const tool = (server as any).server._registeredTools["caprover_deploy"];
+    const promise = tool.handler({
       appName: "test-app",
     });
 

@@ -20,7 +20,10 @@ describe("DokployServer", () => {
       json: async () => [{ name: "Project 1" }],
     });
 
-    const result = await server.handleCallTool("dokploy_list_projects", {});
+    // Access private property to test tool handler directly
+    const tool = (server as any).server._registeredTools["dokploy_list_projects"];
+    const result = await tool.handler({});
+
     expect(mockFetch).toHaveBeenCalledWith(
       "http://dokploy.test/api/project.all",
       expect.objectContaining({
@@ -37,7 +40,9 @@ describe("DokployServer", () => {
       json: async () => ({ id: "1", name: "New Project" }),
     });
 
-    const result = await server.handleCallTool("dokploy_create_project", {
+    // Access private property to test tool handler directly
+    const tool = (server as any).server._registeredTools["dokploy_create_project"];
+    const result = await tool.handler({
       name: "New Project",
       description: "Desc",
     });
