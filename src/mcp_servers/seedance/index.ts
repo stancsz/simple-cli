@@ -104,7 +104,7 @@ export class SeedanceServer {
           text: JSON.stringify(result, null, 2),
         },
       ],
-    };
+    } as { content: { type: "text"; text: string }[] };
   }
 
   private async queryVideoTask(task_id: string) {
@@ -130,7 +130,7 @@ export class SeedanceServer {
           text: JSON.stringify(result, null, 2),
         },
       ],
-    };
+    } as { content: { type: "text"; text: string }[] };
   }
 
   async run() {

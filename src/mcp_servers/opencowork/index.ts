@@ -87,7 +87,7 @@ export class OpenCoworkServer {
           text: `Worker '${name}' hired as '${role}'.`,
         },
       ],
-    };
+    } as { content: { type: "text"; text: string }[] };
   }
 
   async delegateTask(workerName: string, task: string) {
@@ -124,7 +124,7 @@ export class OpenCoworkServer {
           text: resultText,
         },
       ],
-    };
+    } as { content: { type: "text"; text: string }[] };
   }
 
   async listWorkers() {
@@ -136,7 +136,7 @@ export class OpenCoworkServer {
           text: `Active workers: ${workers.join(", ") || "None"}`,
         },
       ],
-    };
+    } as { content: { type: "text"; text: string }[] };
   }
 
   async run() {

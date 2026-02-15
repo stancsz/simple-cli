@@ -94,7 +94,7 @@ export class DevinServer {
     const data = await response.json();
     return {
       content: [{ type: "text" as const, text: JSON.stringify(data, null, 2) }],
-    };
+    } as { content: { type: "text"; text: string }[] };
   }
 
   private async getSession(sessionId: string) {
@@ -113,7 +113,7 @@ export class DevinServer {
     const data = await response.json();
     return {
       content: [{ type: "text" as const, text: JSON.stringify(data, null, 2) }],
-    };
+    } as { content: { type: "text"; text: string }[] };
   }
 
   private async listSessions(limit: number = 10) {
@@ -134,7 +134,7 @@ export class DevinServer {
     const data = await response.json();
     return {
       content: [{ type: "text" as const, text: JSON.stringify(data, null, 2) }],
-    };
+    } as { content: { type: "text"; text: string }[] };
   }
 
   async run() {

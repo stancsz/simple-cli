@@ -56,7 +56,7 @@ export class CloudflareBrowserServer {
             text: resultText,
           },
         ],
-      };
+      } as { content: { type: "text"; text: string }[] };
     } catch (e: any) {
       throw new Error(`Failed to fetch markdown: ${e.message}`);
     }
