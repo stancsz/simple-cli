@@ -1,9 +1,6 @@
-import { Server } from "@modelcontextprotocol/sdk/server/index.js";
+import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
-import {
-  CallToolRequestSchema,
-  ListToolsRequestSchema,
-} from "@modelcontextprotocol/sdk/types.js";
+import { z } from "zod";
 import { exec } from "child_process";
 import { promisify } from "util";
 import { readFile, writeFile } from "fs/promises";
@@ -12,165 +9,31 @@ import { ContextManager } from "../../context_manager.js";
 
 const execAsync = promisify(exec);
 
-export const UPDATE_CONTEXT_TOOL = {
-  name: "update_context",
-  description:
-    "Update the shared context (goals, constraints, recent changes) for all agents.",
-  inputSchema: {
-    type: "object",
-    properties: {
-      goal: {
-        type: "string",
-        description: "Add a new high-level goal.",
-      },
-      constraint: {
-        type: "string",
-        description: "Add a new global constraint.",
-      },
-      change: {
-        type: "string",
-        description: "Log a recent architectural change or decision.",
-      },
-    },
-  },
-};
-
-export const READ_CONTEXT_TOOL = {
-  name: "read_context",
-  description: "Read the current shared context summary.",
-  inputSchema: {
-    type: "object",
-    properties: {},
-  },
-};
-
-export const READ_FILE_TOOL = {
-  name: "read_file",
-  description: "Read the content of a file.",
-  inputSchema: {
-    type: "object",
-    properties: {
-      path: {
-        type: "string",
-        description: "The path of the file to read.",
-      },
-    },
-    required: ["path"],
-  },
-};
-
-export const WRITE_FILE_TOOL = {
-  name: "write_file",
-  description: "Write content to a file.",
-  inputSchema: {
-    type: "object",
-    properties: {
-      path: {
-        type: "string",
-        description: "The path of the file to write.",
-      },
-      content: {
-        type: "string",
-        description: "The content to write.",
-      },
-    },
-    required: ["path", "content"],
-  },
-};
-
-export const RUN_COMMAND_TOOL = {
-  name: "run_command",
-  description: "Execute a shell command.",
-  inputSchema: {
-    type: "object",
-    properties: {
-      command: {
-        type: "string",
-        description: "The command to execute.",
-      },
-    },
-    required: ["command"],
-  },
-};
-
-export const SEARCH_MEMORY_TOOL = {
-  name: "search_memory",
-  description: "Search long-term memory for relevant information.",
-  inputSchema: {
-    type: "object",
-    properties: {
-      query: {
-        type: "string",
-        description: "The search query.",
-      },
-    },
-    required: ["query"],
-  },
-};
-
-export const ADD_MEMORY_TOOL = {
-  name: "add_memory",
-  description: "Add a piece of information to long-term memory.",
-  inputSchema: {
-    type: "object",
-    properties: {
-      text: {
-        type: "string",
-        description: "The information to remember.",
-      },
-      metadata: {
-        type: "string",
-        description: "Optional JSON metadata string.",
-      },
-    },
-    required: ["text"],
-  },
-};
-
 export class SimpleToolsServer {
-  private server: Server;
+  private server: McpServer;
   private contextManager: ContextManager;
 
   constructor(contextManager?: ContextManager) {
-    this.server = new Server(
-      {
-        name: "simple-tools-server",
-        version: "1.0.0",
-      },
-      {
-        capabilities: {
-          tools: {},
-        },
-      },
-    );
+    this.server = new McpServer({
+      name: "simple-tools-server",
+      version: "1.0.0",
+    });
+
     // Initialize ContextManager relative to process.cwd()
     this.contextManager = contextManager || new ContextManager(process.cwd());
-    this.setupHandlers();
+    this.setupTools();
   }
 
-  private setupHandlers() {
-    this.server.setRequestHandler(ListToolsRequestSchema, async () => ({
-      tools: [
-        UPDATE_CONTEXT_TOOL,
-        READ_CONTEXT_TOOL,
-        READ_FILE_TOOL,
-        WRITE_FILE_TOOL,
-        RUN_COMMAND_TOOL,
-        SEARCH_MEMORY_TOOL,
-        ADD_MEMORY_TOOL,
-      ],
-    }));
-
-    this.server.setRequestHandler(CallToolRequestSchema, async (request) => {
-      const { name, arguments: args } = request.params;
-      return this.handleCallTool(name, args);
-    });
-  }
-
-  public async handleCallTool(name: string, args: any) {
-    try {
-      if (name === "update_context") {
-        const { goal, constraint, change } = args as any;
+  private setupTools() {
+    this.server.tool(
+      "update_context",
+      "Update the shared context (goals, constraints, recent changes) for all agents.",
+      {
+        goal: z.string().optional().describe("Add a new high-level goal."),
+        constraint: z.string().optional().describe("Add a new global constraint."),
+        change: z.string().optional().describe("Log a recent architectural change or decision."),
+      },
+      async ({ goal, constraint, change }) => {
         const updates = [];
         if (goal) {
           await this.contextManager.addGoal(goal);
@@ -188,14 +51,18 @@ export class SimpleToolsServer {
           content: [
             {
               type: "text",
-              text:
-                updates.length > 0 ? updates.join("\n") : "No updates made.",
+              text: updates.length > 0 ? updates.join("\n") : "No updates made.",
             },
           ],
         };
       }
+    );
 
-      if (name === "read_context") {
+    this.server.tool(
+      "read_context",
+      "Read the current shared context summary.",
+      {},
+      async () => {
         const summary = await this.contextManager.getContextSummary();
         return {
           content: [
@@ -206,39 +73,44 @@ export class SimpleToolsServer {
           ],
         };
       }
+    );
 
-      if (name === "read_file") {
-        const { path } = args as any;
-        if (!path) throw new Error("Path is required");
+    this.server.tool(
+      "read_file",
+      "Read the content of a file.",
+      {
+        path: z.string().describe("The path of the file to read."),
+      },
+      async ({ path }) => {
         const content = await readFile(path, "utf-8");
         return {
-          content: [
-            {
-              type: "text",
-              text: content,
-            },
-          ],
+          content: [{ type: "text", text: content }],
         };
       }
+    );
 
-      if (name === "write_file") {
-        const { path, content } = args as any;
-        if (!path || content === undefined)
-          throw new Error("Path and content are required");
+    this.server.tool(
+      "write_file",
+      "Write content to a file.",
+      {
+        path: z.string().describe("The path of the file to write."),
+        content: z.string().describe("The content to write."),
+      },
+      async ({ path, content }) => {
         await writeFile(path, content);
         return {
-          content: [
-            {
-              type: "text",
-              text: `Successfully wrote to ${path}`,
-            },
-          ],
+          content: [{ type: "text", text: `Successfully wrote to ${path}` }],
         };
       }
+    );
 
-      if (name === "run_command") {
-        const { command } = args as any;
-        if (!command) throw new Error("Command is required");
+    this.server.tool(
+      "run_command",
+      "Execute a shell command.",
+      {
+        command: z.string().describe("The command to execute."),
+      },
+      async ({ command }) => {
         const { stdout, stderr } = await execAsync(command);
         return {
           content: [
@@ -249,19 +121,30 @@ export class SimpleToolsServer {
           ],
         };
       }
+    );
 
-      if (name === "search_memory") {
-        const { query } = args as any;
-        if (!query) throw new Error("Query is required");
+    this.server.tool(
+      "search_memory",
+      "Search long-term memory for relevant information.",
+      {
+        query: z.string().describe("The search query."),
+      },
+      async ({ query }) => {
         const result = await this.contextManager.searchMemory(query);
         return {
           content: [{ type: "text", text: result }],
         };
       }
+    );
 
-      if (name === "add_memory") {
-        const { text, metadata } = args as any;
-        if (!text) throw new Error("Text is required");
+    this.server.tool(
+      "add_memory",
+      "Add a piece of information to long-term memory.",
+      {
+        text: z.string().describe("The information to remember."),
+        metadata: z.string().optional().describe("Optional JSON metadata string."),
+      },
+      async ({ text, metadata }) => {
         let meta = {};
         if (metadata) {
           try {
@@ -275,19 +158,7 @@ export class SimpleToolsServer {
           content: [{ type: "text", text: "Memory added." }],
         };
       }
-
-      throw new Error(`Tool not found: ${name}`);
-    } catch (error: any) {
-      return {
-        content: [
-          {
-            type: "text",
-            text: `Error: ${error.message}`,
-          },
-        ],
-        isError: true,
-      };
-    }
+    );
   }
 
   async run() {

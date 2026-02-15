@@ -1,192 +1,24 @@
-import { Server } from "@modelcontextprotocol/sdk/server/index.js";
+import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
-import {
-  CallToolRequestSchema,
-  ListToolsRequestSchema,
-} from "@modelcontextprotocol/sdk/types.js";
+import { z } from "zod";
 import { fileURLToPath } from "url";
 
-// Tool definitions
-const MIDJOURNEY_IMAGINE_TOOL = {
-  name: "midjourney_imagine",
-  description: "Generate an image from a prompt using Midjourney.",
-  inputSchema: {
-    type: "object",
-    properties: {
-      prompt: {
-        type: "string",
-        description: "The prompt to generate an image from.",
-      },
-      aspect_ratio: {
-        type: "string",
-        description: "Aspect ratio for the image (e.g., '16:9', '1:1').",
-      },
-      process_mode: {
-        type: "string",
-        description: "Process mode: 'fast', 'relax', or 'turbo'.",
-      },
-      webhook_url: {
-        type: "string",
-        description: "Optional webhook URL for task updates.",
-      },
-    },
-    required: ["prompt"],
-  },
-};
-
-const MIDJOURNEY_UPSCALE_TOOL = {
-  name: "midjourney_upscale",
-  description: "Upscale a generated image (U1-U4).",
-  inputSchema: {
-    type: "object",
-    properties: {
-      task_id: {
-        type: "string",
-        description: "The ID of the task containing the image to upscale.",
-      },
-      index: {
-        type: "number",
-        description: "The index of the image to upscale (1-4).",
-      },
-    },
-    required: ["task_id", "index"],
-  },
-};
-
-const MIDJOURNEY_VARIATION_TOOL = {
-  name: "midjourney_variation",
-  description: "Create a variation of a generated image (V1-V4).",
-  inputSchema: {
-    type: "object",
-    properties: {
-      task_id: {
-        type: "string",
-        description: "The ID of the task containing the image to create a variation of.",
-      },
-      index: {
-        type: "number",
-        description: "The index of the image to vary (1-4).",
-      },
-    },
-    required: ["task_id", "index"],
-  },
-};
-
-const MIDJOURNEY_DESCRIBE_TOOL = {
-  name: "midjourney_describe",
-  description: "Describe an image from a URL.",
-  inputSchema: {
-    type: "object",
-    properties: {
-      image_url: {
-        type: "string",
-        description: "The URL of the image to describe.",
-      },
-    },
-    required: ["image_url"],
-  },
-};
-
-const MIDJOURNEY_BLEND_TOOL = {
-  name: "midjourney_blend",
-  description: "Blend multiple images together.",
-  inputSchema: {
-    type: "object",
-    properties: {
-      image_urls: {
-        type: "array",
-        items: {
-          type: "string",
-        },
-        description: "List of image URLs to blend.",
-      },
-      dimensions: {
-        type: "string",
-        description: "Dimensions: 'SQUARE', 'PORTRAIT', or 'LANDSCAPE'.",
-      },
-    },
-    required: ["image_urls"],
-  },
-};
-
-const MIDJOURNEY_FACE_SWAP_TOOL = {
-  name: "midjourney_face_swap",
-  description: "Swap face from source image to target image.",
-  inputSchema: {
-    type: "object",
-    properties: {
-      source_url: {
-        type: "string",
-        description: "URL of the source image (face provider).",
-      },
-      target_url: {
-        type: "string",
-        description: "URL of the target image (face receiver).",
-      },
-    },
-    required: ["source_url", "target_url"],
-  },
-};
-
-const MIDJOURNEY_STATUS_TOOL = {
-  name: "midjourney_status",
-  description: "Check the status of a Midjourney task.",
-  inputSchema: {
-    type: "object",
-    properties: {
-      task_id: {
-        type: "string",
-        description: "The ID of the task to check.",
-      },
-    },
-    required: ["task_id"],
-  },
-};
-
 export class MidjourneyServer {
-  private server: Server;
+  private server: McpServer;
   private apiUrl: string;
   private apiKey: string | undefined;
 
   constructor() {
-    this.server = new Server(
-      {
-        name: "midjourney-server",
-        version: "1.0.0",
-      },
-      {
-        capabilities: {
-          tools: {},
-        },
-      },
-    );
+    this.server = new McpServer({
+      name: "midjourney-server",
+      version: "1.0.0",
+    });
 
-    // Default to a placeholder, but allow override
-    // Note: User must provide a valid provider URL compatible with standard wrappers if not using the default.
     this.apiUrl =
       process.env.MIDJOURNEY_API_URL || "https://api.userapi.ai/midjourney/v2";
     this.apiKey = process.env.MIDJOURNEY_API_KEY;
 
-    this.setupHandlers();
-  }
-
-  private setupHandlers() {
-    this.server.setRequestHandler(ListToolsRequestSchema, async () => ({
-      tools: [
-        MIDJOURNEY_IMAGINE_TOOL,
-        MIDJOURNEY_UPSCALE_TOOL,
-        MIDJOURNEY_VARIATION_TOOL,
-        MIDJOURNEY_DESCRIBE_TOOL,
-        MIDJOURNEY_BLEND_TOOL,
-        MIDJOURNEY_FACE_SWAP_TOOL,
-        MIDJOURNEY_STATUS_TOOL,
-      ],
-    }));
-
-    this.server.setRequestHandler(CallToolRequestSchema, async (request) => {
-      const { name, arguments: args } = request.params;
-      return this.handleCallTool(name, args);
-    });
+    this.setupTools();
   }
 
   private async callApi(endpoint: string, method: string, body?: any) {
@@ -195,16 +27,9 @@ export class MidjourneyServer {
     }
 
     const url = `${this.apiUrl}${endpoint}`;
-    const headers = {
+    const headers: Record<string, string> = {
       "Content-Type": "application/json",
-      "api-key": this.apiKey, // Common header for many wrappers
-      // Some wrappers might use Authorization: Bearer <token>
-      // We'll try both or standard "api-key" if generic.
-      // If user sets MIDJOURNEY_API_KEY, we assume it's the right format.
-      // Actually, many use "api-key" or "Authorization".
-      // Let's check environment variable for header name if needed, but defaulting to api-key is safer for now.
-      // Better yet, let's try to detect or just send both if safe, or rely on a standard.
-      // Most wrappers use 'api-key'.
+      "api-key": this.apiKey,
     };
 
     const response = await fetch(url, {
@@ -223,103 +48,111 @@ export class MidjourneyServer {
     return response.json();
   }
 
-  public async handleCallTool(name: string, args: any) {
-    try {
-      if (name === "midjourney_imagine") {
-        const { prompt, aspect_ratio, process_mode, webhook_url } = args;
-        const result = await this.callApi("/imagine", "POST", {
-          prompt,
-          aspect_ratio,
-          process_mode,
-          webhook_url,
-        });
+  private setupTools() {
+    this.server.tool(
+      "midjourney_imagine",
+      "Generate an image from a prompt using Midjourney.",
+      {
+        prompt: z.string().describe("The prompt to generate an image from."),
+        aspect_ratio: z.string().optional().describe("Aspect ratio for the image (e.g., '16:9', '1:1')."),
+        process_mode: z.string().optional().describe("Process mode: 'fast', 'relax', or 'turbo'."),
+        webhook_url: z.string().optional().describe("Optional webhook URL for task updates."),
+      },
+      async (args) => {
+        const result = await this.callApi("/imagine", "POST", args);
         return {
           content: [{ type: "text", text: JSON.stringify(result, null, 2) }],
         };
       }
+    );
 
-      if (name === "midjourney_upscale") {
-        const { task_id, index } = args;
-        const result = await this.callApi("/upscale", "POST", {
-          task_id,
-          index,
-        });
+    this.server.tool(
+      "midjourney_upscale",
+      "Upscale a generated image (U1-U4).",
+      {
+        task_id: z.string().describe("The ID of the task containing the image to upscale."),
+        index: z.number().int().min(1).max(4).describe("The index of the image to upscale (1-4)."),
+      },
+      async (args) => {
+        const result = await this.callApi("/upscale", "POST", args);
         return {
           content: [{ type: "text", text: JSON.stringify(result, null, 2) }],
         };
       }
+    );
 
-      if (name === "midjourney_variation") {
-        const { task_id, index } = args;
-        const result = await this.callApi("/variation", "POST", {
-          task_id,
-          index,
-        });
+    this.server.tool(
+      "midjourney_variation",
+      "Create a variation of a generated image (V1-V4).",
+      {
+        task_id: z.string().describe("The ID of the task containing the image to create a variation of."),
+        index: z.number().int().min(1).max(4).describe("The index of the image to vary (1-4)."),
+      },
+      async (args) => {
+        const result = await this.callApi("/variation", "POST", args);
         return {
           content: [{ type: "text", text: JSON.stringify(result, null, 2) }],
         };
       }
+    );
 
-      if (name === "midjourney_describe") {
-        const { image_url } = args;
-        const result = await this.callApi("/describe", "POST", {
-          image_url,
-        });
+    this.server.tool(
+      "midjourney_describe",
+      "Describe an image from a URL.",
+      {
+        image_url: z.string().describe("The URL of the image to describe."),
+      },
+      async (args) => {
+        const result = await this.callApi("/describe", "POST", args);
         return {
           content: [{ type: "text", text: JSON.stringify(result, null, 2) }],
         };
       }
+    );
 
-      if (name === "midjourney_blend") {
-        const { image_urls, dimensions } = args;
-        const result = await this.callApi("/blend", "POST", {
-          image_urls,
-          dimensions,
-        });
+    this.server.tool(
+      "midjourney_blend",
+      "Blend multiple images together.",
+      {
+        image_urls: z.array(z.string()).describe("List of image URLs to blend."),
+        dimensions: z.string().optional().describe("Dimensions: 'SQUARE', 'PORTRAIT', or 'LANDSCAPE'."),
+      },
+      async (args) => {
+        const result = await this.callApi("/blend", "POST", args);
         return {
           content: [{ type: "text", text: JSON.stringify(result, null, 2) }],
         };
       }
+    );
 
-      if (name === "midjourney_face_swap") {
-        const { source_url, target_url } = args;
-        const result = await this.callApi("/face-swap", "POST", {
-          source_url,
-          target_url,
-        });
+    this.server.tool(
+      "midjourney_face_swap",
+      "Swap face from source image to target image.",
+      {
+        source_url: z.string().describe("URL of the source image (face provider)."),
+        target_url: z.string().describe("URL of the target image (face receiver)."),
+      },
+      async (args) => {
+        const result = await this.callApi("/face-swap", "POST", args);
         return {
           content: [{ type: "text", text: JSON.stringify(result, null, 2) }],
         };
       }
+    );
 
-      if (name === "midjourney_status") {
-        const { task_id } = args;
-        // Some APIs use GET /status?task_id=... or GET /task/{task_id}
-        // I'll assume a standard POST /status or GET with query param.
-        // Let's try GET /status?task_id= first as it's common for status checks.
-        // Or often generic wrapper uses GET /result?taskId=...
-        // Let's stick to a generic endpoint assumption.
-        // Based on UserAPI.ai: POST /status { task_id: ... }
-        const result = await this.callApi("/status", "POST", {
-          task_id,
-        });
+    this.server.tool(
+      "midjourney_status",
+      "Check the status of a Midjourney task.",
+      {
+        task_id: z.string().describe("The ID of the task to check."),
+      },
+      async (args) => {
+        const result = await this.callApi("/status", "POST", args);
         return {
           content: [{ type: "text", text: JSON.stringify(result, null, 2) }],
         };
       }
-
-      throw new Error(`Tool not found: ${name}`);
-    } catch (error: any) {
-      return {
-        content: [
-          {
-            type: "text",
-            text: `Error: ${error.message}`,
-          },
-        ],
-        isError: true,
-      };
-    }
+    );
   }
 
   async run() {

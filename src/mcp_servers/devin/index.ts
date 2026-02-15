@@ -1,118 +1,79 @@
-import { Server } from "@modelcontextprotocol/sdk/server/index.js";
+import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
-import {
-  CallToolRequestSchema,
-  ListToolsRequestSchema,
-} from "@modelcontextprotocol/sdk/types.js";
+import { z } from "zod";
 import { fileURLToPath } from "url";
 
 const API_BASE_URL = "https://api.devin.ai/v1";
 
-const CREATE_SESSION_TOOL = {
-  name: "devin_create_session",
-  description: "Start a new Devin session to perform an autonomous coding task.",
-  inputSchema: {
-    type: "object",
-    properties: {
-      prompt: {
-        type: "string",
-        description: "The task description for Devin.",
-      },
-    },
-    required: ["prompt"],
-  },
-};
-
-const GET_SESSION_TOOL = {
-  name: "devin_get_session",
-  description: "Get the status and details of a specific Devin session.",
-  inputSchema: {
-    type: "object",
-    properties: {
-      session_id: {
-        type: "string",
-        description: "The ID of the session to retrieve.",
-      },
-    },
-    required: ["session_id"],
-  },
-};
-
-const LIST_SESSIONS_TOOL = {
-  name: "devin_list_sessions",
-  description: "List recent Devin sessions.",
-  inputSchema: {
-    type: "object",
-    properties: {
-      limit: {
-        type: "number",
-        description: "Max number of sessions to return (default 10).",
-      },
-    },
-  },
-};
-
 export class DevinServer {
-  private server: Server;
+  private server: McpServer;
   private apiKey: string;
 
   constructor() {
-    this.server = new Server(
-      {
-        name: "devin-server",
-        version: "1.0.0",
-      },
-      {
-        capabilities: {
-          tools: {},
-        },
-      },
-    );
+    this.server = new McpServer({
+      name: "devin-server",
+      version: "1.0.0",
+    });
 
     this.apiKey = process.env.DEVIN_API_KEY || "";
     if (!this.apiKey) {
       console.warn("Warning: DEVIN_API_KEY environment variable is not set. API calls will fail.");
     }
 
-    this.setupHandlers();
+    this.setupTools();
   }
 
-  private setupHandlers() {
-    this.server.setRequestHandler(ListToolsRequestSchema, async () => ({
-      tools: [CREATE_SESSION_TOOL, GET_SESSION_TOOL, LIST_SESSIONS_TOOL],
-    }));
-
-    this.server.setRequestHandler(CallToolRequestSchema, async (request) => {
-      const { name, arguments: args } = request.params;
-
-      if (!this.apiKey) {
-        return {
-          content: [{ type: "text", text: "Error: DEVIN_API_KEY is not set." }],
-          isError: true,
-        };
+  private setupTools() {
+    this.server.tool(
+      "devin_create_session",
+      "Start a new Devin session to perform an autonomous coding task.",
+      {
+        prompt: z.string().describe("The task description for Devin."),
+      },
+      async ({ prompt }) => {
+        if (!this.apiKey) {
+          return {
+            content: [{ type: "text", text: "Error: DEVIN_API_KEY is not set." }],
+            isError: true,
+          };
+        }
+        return await this.createSession(prompt);
       }
+    );
 
-      try {
-        if (name === "devin_create_session") {
-            const params = args as { prompt: string };
-            return await this.createSession(params.prompt);
+    this.server.tool(
+      "devin_get_session",
+      "Get the status and details of a specific Devin session.",
+      {
+        session_id: z.string().describe("The ID of the session to retrieve."),
+      },
+      async ({ session_id }) => {
+        if (!this.apiKey) {
+          return {
+            content: [{ type: "text", text: "Error: DEVIN_API_KEY is not set." }],
+            isError: true,
+          };
         }
-        if (name === "devin_get_session") {
-            const params = args as { session_id: string };
-            return await this.getSession(params.session_id);
-        }
-        if (name === "devin_list_sessions") {
-            const params = args as { limit?: number };
-            return await this.listSessions(params.limit);
-        }
-        throw new Error(`Tool not found: ${name}`);
-      } catch (error: any) {
-        return {
-          content: [{ type: "text", text: `Error: ${error.message}` }],
-          isError: true,
-        };
+        return await this.getSession(session_id);
       }
-    });
+    );
+
+    this.server.tool(
+      "devin_list_sessions",
+      "List recent Devin sessions.",
+      {
+        limit: z.number().int().optional().default(10).describe("Max number of sessions to return (default 10)."),
+      },
+      async ({ limit }) => {
+        if (!this.apiKey) {
+          return {
+            content: [{ type: "text", text: "Error: DEVIN_API_KEY is not set." }],
+            isError: true,
+          };
+        }
+        return await this.listSessions(limit);
+      }
+    );
   }
 
   private async createSession(prompt: string) {
@@ -157,7 +118,8 @@ export class DevinServer {
 
   private async listSessions(limit: number = 10) {
       // Assuming GET /sessions lists sessions
-      const response = await fetch(`${API_BASE_URL}/sessions`, {
+      // Note: limit might be a query param
+      const response = await fetch(`${API_BASE_URL}/sessions?limit=${limit}`, {
         method: "GET",
         headers: {
             "Authorization": `Bearer ${this.apiKey}`,

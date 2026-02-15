@@ -1,38 +1,12 @@
-import { Server } from "@modelcontextprotocol/sdk/server/index.js";
+import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
-import {
-  CallToolRequestSchema,
-  ListToolsRequestSchema,
-} from "@modelcontextprotocol/sdk/types.js";
+import { z } from "zod";
 import { exec } from "child_process";
 import { promisify } from "util";
 import fetch from "node-fetch";
 import { fileURLToPath } from "url";
 
 const execAsync = promisify(exec);
-
-export const JULES_TASK_TOOL = {
-  name: "jules_task",
-  description:
-    "Delegate a coding task to the Jules agent (Google Cloud). Jules will attempt to create a Pull Request.",
-  inputSchema: {
-    type: "object",
-    properties: {
-      task: {
-        type: "string",
-        description: "The task description.",
-      },
-      context_files: {
-        type: "array",
-        items: {
-          type: "string",
-        },
-        description: "List of file paths to provide as context.",
-      },
-    },
-    required: ["task"],
-  },
-};
 
 interface JulesTaskResult {
   success: boolean;
@@ -223,7 +197,6 @@ class JulesClient {
         }
 
         await new Promise((resolve) => setTimeout(resolve, 5000));
-        // process.stdout.write("."); // Avoid writing to stdout in MCP server (use stderr for logs)
       }
 
       return {
@@ -243,45 +216,28 @@ class JulesClient {
 }
 
 export class JulesServer {
-  private server: Server;
+  private server: McpServer;
   private client: JulesClient;
 
   constructor() {
-    this.server = new Server(
-      {
-        name: "jules-server",
-        version: "1.0.0",
-      },
-      {
-        capabilities: {
-          tools: {},
-        },
-      },
-    );
+    this.server = new McpServer({
+      name: "jules-server",
+      version: "1.0.0",
+    });
     this.client = new JulesClient();
-    this.setupHandlers();
+    this.setupTools();
   }
 
-  private setupHandlers() {
-    this.server.setRequestHandler(ListToolsRequestSchema, async () => ({
-      tools: [JULES_TASK_TOOL],
-    }));
-
-    this.server.setRequestHandler(CallToolRequestSchema, async (request) => {
-      if (request.params.name === "jules_task") {
-        const args = request.params.arguments as {
-          task: string;
-          context_files?: string[];
-        };
-        if (!args.task) {
-          throw new Error("Task argument is required");
-        }
-
-        const result = await this.client.executeTask(
-          args.task,
-          args.context_files || [],
-        );
-
+  private setupTools() {
+    this.server.tool(
+      "jules_task",
+      "Delegate a coding task to the Jules agent (Google Cloud). Jules will attempt to create a Pull Request.",
+      {
+        task: z.string().describe("The task description."),
+        context_files: z.array(z.string()).optional().describe("List of file paths to provide as context."),
+      },
+      async ({ task, context_files }) => {
+        const result = await this.client.executeTask(task, context_files || []);
         if (result.success) {
           return {
             content: [
@@ -296,19 +252,26 @@ export class JulesServer {
             ],
           };
         } else {
-          return {
-            content: [
-              {
-                type: "text",
-                text: `Error: ${result.message}`,
-              },
-            ],
-            isError: true,
-          };
+            // Returning error as text but marking as error?
+            // Or throwing?
+            // The original implementation returned { content: [...], isError: true }
+            // McpServer handles thrown errors by returning an error response.
+            // But if we want to return a specific structure, we can do it manually,
+            // or just return text and let the LLM handle it.
+            // But to adhere to MCP gold standard, if the tool fails to do its job, it should probably return an error result.
+            // However, the original code returned a JSON structure for success and text for error with isError=true.
+
+            // I'll return a text content with the error message and let the SDK handle the "error" state if I throw?
+            // No, throwing causes an internal error.
+            // I should return the result.
+
+            return {
+                content: [{ type: "text", text: `Error: ${result.message}` }],
+                isError: true,
+            }
         }
       }
-      throw new Error(`Tool not found: ${request.params.name}`);
-    });
+    );
   }
 
   async run() {

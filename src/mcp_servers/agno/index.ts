@@ -1,9 +1,6 @@
-import { Server } from "@modelcontextprotocol/sdk/server/index.js";
+import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
-import {
-  CallToolRequestSchema,
-  ListToolsRequestSchema,
-} from "@modelcontextprotocol/sdk/types.js";
+import { z } from "zod";
 import { spawn } from "child_process";
 import { join } from "path";
 import { fileURLToPath } from "url";
@@ -12,60 +9,31 @@ import { dirname } from "path";
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
-const AGNO_CHAT_TOOL = {
-  name: "agno_chat",
-  description: "Chat with an AI agent that maintains persistent memory of the user (preferences, facts, history) across sessions.",
-  inputSchema: {
-    type: "object",
-    properties: {
-      user_id: {
-        type: "string",
-        description: "The unique identifier for the user (e.g., email or UUID). Mandatory for memory retrieval.",
-      },
-      message: {
-        type: "string",
-        description: "The message to send to the agent.",
-      },
-      session_id: {
-        type: "string",
-        description: "Optional session ID to continue a specific conversation context. If omitted, a new session might be created or inferred.",
-      },
-    },
-    required: ["user_id", "message"],
-  },
-};
-
 export class AgnoServer {
-  private server: Server;
+  private server: McpServer;
 
   constructor() {
-    this.server = new Server(
-      {
-        name: "agno-server",
-        version: "1.0.0",
-      },
-      {
-        capabilities: {
-          tools: {},
-        },
-      },
-    );
+    this.server = new McpServer({
+      name: "agno-server",
+      version: "1.0.0",
+    });
 
-    this.setupHandlers();
+    this.setupTools();
   }
 
-  private setupHandlers() {
-    this.server.setRequestHandler(ListToolsRequestSchema, async () => ({
-      tools: [AGNO_CHAT_TOOL],
-    }));
-
-    this.server.setRequestHandler(CallToolRequestSchema, async (request) => {
-      if (request.params.name === "agno_chat") {
-        const args = request.params.arguments as { user_id: string; message: string; session_id?: string };
-        return await this.runChat(args.user_id, args.message, args.session_id);
+  private setupTools() {
+    this.server.tool(
+      "agno_chat",
+      "Chat with an AI agent that maintains persistent memory of the user (preferences, facts, history) across sessions.",
+      {
+        user_id: z.string().describe("The unique identifier for the user (e.g., email or UUID). Mandatory for memory retrieval."),
+        message: z.string().describe("The message to send to the agent."),
+        session_id: z.string().optional().describe("Optional session ID to continue a specific conversation context. If omitted, a new session might be created or inferred."),
+      },
+      async ({ user_id, message, session_id }) => {
+        return await this.runChat(user_id, message, session_id);
       }
-      throw new Error(`Tool not found: ${request.params.name}`);
-    });
+    );
   }
 
   async runChat(user_id: string, message: string, session_id?: string) {

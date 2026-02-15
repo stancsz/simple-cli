@@ -1,9 +1,6 @@
-import { Server } from "@modelcontextprotocol/sdk/server/index.js";
+import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
-import {
-  CallToolRequestSchema,
-  ListToolsRequestSchema,
-} from "@modelcontextprotocol/sdk/types.js";
+import { z } from "zod";
 import { spawn } from "child_process";
 import { join } from "path";
 import { fileURLToPath } from "url";
@@ -12,56 +9,30 @@ import { dirname } from "path";
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
-const PYDANTIC_EXTRACT_TOOL = {
-  name: "pydantic_extract",
-  description: "Extract structured data from text using a PydanticAI agent with strict schema validation. Ideal for parsing unstructured text into enterprise-grade JSON objects.",
-  inputSchema: {
-    type: "object",
-    properties: {
-      prompt: {
-        type: "string",
-        description: "The unstructured text to process and extract data from.",
-      },
-      schema: {
-        type: "object",
-        description: "A simplified JSON schema defining the fields to extract. Format: { 'field_name': { 'type': 'str|int|float|bool', 'description': '...' } }",
-      },
-    },
-    required: ["prompt"],
-  },
-};
-
 export class PydanticAIServer {
-  private server: Server;
+  private server: McpServer;
 
   constructor() {
-    this.server = new Server(
-      {
-        name: "pydanticai-server",
-        version: "1.0.0",
-      },
-      {
-        capabilities: {
-          tools: {},
-        },
-      },
-    );
+    this.server = new McpServer({
+      name: "pydanticai-server",
+      version: "1.0.0",
+    });
 
-    this.setupHandlers();
+    this.setupTools();
   }
 
-  private setupHandlers() {
-    this.server.setRequestHandler(ListToolsRequestSchema, async () => ({
-      tools: [PYDANTIC_EXTRACT_TOOL],
-    }));
-
-    this.server.setRequestHandler(CallToolRequestSchema, async (request) => {
-      if (request.params.name === "pydantic_extract") {
-        const args = request.params.arguments as { prompt: string; schema?: any };
-        return await this.runExtraction(args.prompt, args.schema);
+  private setupTools() {
+    this.server.tool(
+      "pydantic_extract",
+      "Extract structured data from text using a PydanticAI agent with strict schema validation. Ideal for parsing unstructured text into enterprise-grade JSON objects.",
+      {
+        prompt: z.string().describe("The unstructured text to process and extract data from."),
+        schema: z.record(z.any()).optional().describe("A simplified JSON schema defining the fields to extract. Format: { 'field_name': { 'type': 'str|int|float|bool', 'description': '...' } }"),
+      },
+      async ({ prompt, schema }) => {
+        return await this.runExtraction(prompt, schema);
       }
-      throw new Error(`Tool not found: ${request.params.name}`);
-    });
+    );
   }
 
   async runExtraction(prompt: string, schema?: any) {
