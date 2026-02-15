@@ -41,7 +41,6 @@ export class SeedanceServer {
         if (!this.apiKey) {
             return {
                 content: [{ type: "text", text: "Error: SEEDANCE_API_KEY or SUTUI_API_KEY environment variable is not set." }],
-                isError: true,
             };
         }
         return await this.createVideoTask(args);
@@ -58,7 +57,6 @@ export class SeedanceServer {
         if (!this.apiKey) {
             return {
                 content: [{ type: "text", text: "Error: SEEDANCE_API_KEY or SUTUI_API_KEY environment variable is not set." }],
-                isError: true,
             };
         }
         return await this.queryVideoTask(task_id);

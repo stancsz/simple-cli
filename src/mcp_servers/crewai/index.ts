@@ -55,7 +55,6 @@ export class CrewAIServer {
             text: "Error: 'crewai' python package is not installed. Please install it using `pip install crewai`.",
           },
         ],
-        isError: true,
       };
     }
 
@@ -106,7 +105,6 @@ export class CrewAIServer {
                 text: `Crew execution failed (exit code ${code}):\n${errorOutput}\n${output}`,
               },
             ],
-            isError: true,
           });
         }
       });
@@ -119,7 +117,6 @@ export class CrewAIServer {
               text: `Failed to spawn python process: ${err.message}`,
             },
           ],
-          isError: true,
         });
       });
     });

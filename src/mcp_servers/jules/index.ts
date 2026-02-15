@@ -267,7 +267,6 @@ export class JulesServer {
 
             return {
                 content: [{ type: "text", text: `Error: ${result.message}` }],
-                isError: true,
             }
         }
       }
