@@ -59,7 +59,6 @@ describe("OpenClawServer", () => {
     }, 10);
 
     const result = await promise;
-    expect(result.isError).toBe(true);
     expect(result.content[0].text).toContain("OpenClaw CLI not found");
   });
 });

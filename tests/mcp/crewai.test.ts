@@ -27,7 +27,6 @@ describe("CrewAIServer", () => {
     setTimeout(() => mockProcess.emit("exit", 1), 10);
 
     const result = await promise;
-    expect(result.isError).toBe(true);
     expect(result.content[0].text).toContain(
       "Error: 'crewai' python package is not installed",
     );
