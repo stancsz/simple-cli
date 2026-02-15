@@ -41,7 +41,7 @@ class JulesClient {
             // List sources
             const sourcesUrl = `${this.apiBaseUrl}/sources`;
             const sourcesRes = await fetch(sourcesUrl, {
-                headers: { "X-Goog-Api-Key": this.apiKey }
+                headers: { "x-goog-api-key": this.apiKey }
             });
             const sourcesData: any = await sourcesRes.json();
             console.log(`Found ${sourcesData.sources?.length || 0} Jules sources`);
@@ -90,7 +90,7 @@ class JulesClient {
                 method: "POST",
                 headers: {
                     "Content-Type": "application/json",
-                    "X-Goog-Api-Key": this.apiKey,
+                    "x-goog-api-key": this.apiKey,
                 },
                 body: JSON.stringify(sessionBody),
             });
