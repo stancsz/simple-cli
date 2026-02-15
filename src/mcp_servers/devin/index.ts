@@ -33,7 +33,7 @@ export class DevinServer {
       async ({ prompt }) => {
         if (!this.apiKey) {
           return {
-            content: [{ type: "text", text: "Error: DEVIN_API_KEY is not set." }],
+            content: [{ type: "text" as const, text: "Error: DEVIN_API_KEY is not set." }],
             isError: true,
           };
         }
@@ -50,7 +50,7 @@ export class DevinServer {
       async ({ session_id }) => {
         if (!this.apiKey) {
           return {
-            content: [{ type: "text", text: "Error: DEVIN_API_KEY is not set." }],
+            content: [{ type: "text" as const, text: "Error: DEVIN_API_KEY is not set." }],
             isError: true,
           };
         }
@@ -67,7 +67,7 @@ export class DevinServer {
       async ({ limit }) => {
         if (!this.apiKey) {
           return {
-            content: [{ type: "text", text: "Error: DEVIN_API_KEY is not set." }],
+            content: [{ type: "text" as const, text: "Error: DEVIN_API_KEY is not set." }],
             isError: true,
           };
         }
@@ -93,7 +93,7 @@ export class DevinServer {
 
     const data = await response.json();
     return {
-      content: [{ type: "text", text: JSON.stringify(data, null, 2) }],
+      content: [{ type: "text" as const, text: JSON.stringify(data, null, 2) }],
     };
   }
 
@@ -112,7 +112,7 @@ export class DevinServer {
 
     const data = await response.json();
     return {
-      content: [{ type: "text", text: JSON.stringify(data, null, 2) }],
+      content: [{ type: "text" as const, text: JSON.stringify(data, null, 2) }],
     };
   }
 
@@ -133,7 +133,7 @@ export class DevinServer {
 
       const data = await response.json();
       return {
-        content: [{ type: "text", text: JSON.stringify(data, null, 2) }],
+        content: [{ type: "text" as const, text: JSON.stringify(data, null, 2) }],
       };
   }
 
