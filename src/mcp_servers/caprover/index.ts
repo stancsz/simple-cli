@@ -1,10 +1,6 @@
-import { Server } from "@modelcontextprotocol/sdk/server/index.js";
+import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
-import {
-  CallToolRequestSchema,
-  ListToolsRequestSchema,
-  Tool,
-} from "@modelcontextprotocol/sdk/types.js";
+import { z } from "zod";
 import { spawn } from "child_process";
 import { fileURLToPath } from "url";
 
@@ -49,8 +45,9 @@ async function runCaprover(args: string[]) {
     );
   }
 
+  // We are running 'npx caprover ...'
+  // The args passed to this function are the arguments for caprover cli
   const finalArgs = [
-    "--yes",
     "caprover",
     ...args,
     "--caproverUrl",
@@ -58,86 +55,38 @@ async function runCaprover(args: string[]) {
     "--caproverPassword",
     CAPROVER_PASSWORD,
   ];
-  return runCommand("npx", finalArgs);
+
+  return runCommand("npx", ["--yes", ...finalArgs]);
 }
 
-const DEPLOY_TOOL: Tool = {
-  name: "caprover_deploy",
-  description: "Deploy an app to Caprover.",
-  inputSchema: {
-    type: "object",
-    properties: {
-      appName: { type: "string", description: "Name of the app to deploy to" },
-      branch: {
-        type: "string",
-        description: "Git branch to deploy (optional)",
-      },
-      imageName: {
-        type: "string",
-        description: "Docker image name to deploy (optional)",
-      },
-    },
-    required: ["appName"],
-  },
-};
-
-const CALL_API_TOOL: Tool = {
-  name: "caprover_call_api",
-  description: "Call Caprover API via CLI.",
-  inputSchema: {
-    type: "object",
-    properties: {
-      method: { type: "string", description: "GET or POST" },
-      path: {
-        type: "string",
-        description: "API path (e.g., /user/system/info)",
-      },
-      data: { type: "string", description: "JSON data string (optional)" },
-    },
-    required: ["method", "path"],
-  },
-};
-
 export class CaproverServer {
-  private server: Server;
+  private server: McpServer;
 
   constructor() {
-    this.server = new Server(
-      {
-        name: "caprover-mcp-server",
-        version: "1.0.0",
-      },
-      {
-        capabilities: {
-          tools: {},
-        },
-      },
-    );
-    this.setupHandlers();
-  }
-
-  private setupHandlers() {
-    this.server.setRequestHandler(ListToolsRequestSchema, async () => ({
-      tools: [DEPLOY_TOOL, CALL_API_TOOL],
-    }));
-
-    this.server.setRequestHandler(CallToolRequestSchema, async (request) => {
-      const { name, arguments: args } = request.params;
-      return this.handleCallTool(name, args);
+    this.server = new McpServer({
+      name: "caprover-mcp-server",
+      version: "1.0.0",
     });
+    this.setupTools();
   }
 
-  async handleCallTool(name: string, args: any) {
-    try {
-      if (name === "caprover_deploy") {
-        const { appName, branch, imageName } = args as any;
+  private setupTools() {
+    this.server.tool(
+      "caprover_deploy",
+      "Deploy an app to Caprover.",
+      {
+        appName: z.string().describe("Name of the app to deploy to"),
+        branch: z.string().optional().describe("Git branch to deploy (optional)"),
+        imageName: z.string().optional().describe("Docker image name to deploy (optional)"),
+      },
+      async ({ appName, branch, imageName }) => {
         const cmdArgs = ["deploy", "-a", appName];
         if (branch) {
           cmdArgs.push("-b", branch);
         } else if (imageName) {
           cmdArgs.push("-i", imageName);
         } else {
-          cmdArgs.push("-d");
+          cmdArgs.push("-d"); // Default to deploy from current directory
         }
 
         const output = await runCaprover(cmdArgs);
@@ -145,9 +94,17 @@ export class CaproverServer {
           content: [{ type: "text", text: output }],
         };
       }
+    );
 
-      if (name === "caprover_call_api") {
-        const { method, path, data } = args as any;
+    this.server.tool(
+      "caprover_call_api",
+      "Call Caprover API via CLI.",
+      {
+        method: z.string().describe("GET or POST"),
+        path: z.string().describe("API path (e.g., /user/system/info)"),
+        data: z.string().optional().describe("JSON data string (optional)"),
+      },
+      async ({ method, path, data }) => {
         const cmdArgs = ["api", "-m", method, "-t", path];
         if (data) cmdArgs.push("-d", data);
 
@@ -156,14 +113,7 @@ export class CaproverServer {
           content: [{ type: "text", text: output }],
         };
       }
-
-      throw new Error(`Tool not found: ${name}`);
-    } catch (error: any) {
-      return {
-        content: [{ type: "text", text: `Error: ${error.message}` }],
-        isError: true,
-      };
-    }
+    );
   }
 
   async run() {

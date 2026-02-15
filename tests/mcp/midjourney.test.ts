@@ -19,13 +19,30 @@ describe("MidjourneyServer", () => {
     process.env = originalEnv;
   });
 
+  // Helper to access tool handler
+  const callTool = async (name: string, args: any) => {
+    const mcpServer = (server as any).server; // Access private property
+    // Check internal property structure based on runtime inspection
+    // Wait, inspect output showed `_registeredTools` directly on `McpServer` instance, not `server` property inside it?
+    // inspect output: `McpServer { _registeredTools: ... }`
+    // So it's `mcpServer._registeredTools[name].handler(args)`
+
+    // Check inspect output again carefully:
+    // McpServer { ... _registeredTools: ... server: Server { ... } }
+    // Yes.
+
+    const tool = (mcpServer as any)._registeredTools[name];
+    if (!tool) throw new Error(`Tool ${name} not found`);
+    return await tool.handler(args);
+  };
+
   it("should handle midjourney_imagine tool", async () => {
     mockFetch.mockResolvedValue({
       ok: true,
       json: async () => ({ taskId: "task-123" }),
     });
 
-    const result = await server.handleCallTool("midjourney_imagine", {
+    const result = await callTool("midjourney_imagine", {
       prompt: "A beautiful sunset",
       aspect_ratio: "16:9",
       process_mode: "fast",
@@ -43,6 +60,7 @@ describe("MidjourneyServer", () => {
           prompt: "A beautiful sunset",
           aspect_ratio: "16:9",
           process_mode: "fast",
+          webhook_url: undefined, // Zod optional might be undefined or not present
         }),
       }
     );
@@ -55,7 +73,7 @@ describe("MidjourneyServer", () => {
       json: async () => ({ taskId: "task-upscale-123" }),
     });
 
-    const result = await server.handleCallTool("midjourney_upscale", {
+    const result = await callTool("midjourney_upscale", {
       task_id: "task-123",
       index: 1,
     });
@@ -83,7 +101,7 @@ describe("MidjourneyServer", () => {
       json: async () => ({ taskId: "task-variation-123" }),
     });
 
-    const result = await server.handleCallTool("midjourney_variation", {
+    const result = await callTool("midjourney_variation", {
       task_id: "task-123",
       index: 2,
     });
@@ -111,7 +129,7 @@ describe("MidjourneyServer", () => {
       json: async () => ({ taskId: "task-describe-123" }),
     });
 
-    const result = await server.handleCallTool("midjourney_describe", {
+    const result = await callTool("midjourney_describe", {
       image_url: "https://example.com/image.jpg",
     });
 
@@ -136,11 +154,12 @@ describe("MidjourneyServer", () => {
       json: async () => ({ taskId: "task-blend-123" }),
     });
 
-    const result = await server.handleCallTool("midjourney_blend", {
+    const result = await callTool("midjourney_blend", {
       image_urls: ["https://example.com/1.jpg", "https://example.com/2.jpg"],
       dimensions: "SQUARE",
     });
 
+    // Zod schema for dimensions is optional string.
     expect(mockFetch).toHaveBeenCalledWith(
       "https://api.userapi.ai/midjourney/v2/blend",
       {
@@ -163,7 +182,7 @@ describe("MidjourneyServer", () => {
       json: async () => ({ taskId: "task-swapped" }),
     });
 
-    const result = await server.handleCallTool("midjourney_face_swap", {
+    const result = await callTool("midjourney_face_swap", {
       source_url: "src",
       target_url: "tgt",
     });
@@ -190,7 +209,7 @@ describe("MidjourneyServer", () => {
       json: async () => ({ status: "completed", url: "http://result" }),
     });
 
-    const result = await server.handleCallTool("midjourney_status", {
+    const result = await callTool("midjourney_status", {
       task_id: "task-123",
     });
 
@@ -218,23 +237,28 @@ describe("MidjourneyServer", () => {
       text: async () => "Internal Server Error",
     });
 
-    const result = await server.handleCallTool("midjourney_imagine", {
-      prompt: "fail",
-    });
+    // McpServer throws errors, it doesn't return { isError: true } structure directly from handler usually,
+    // unless handler catches and returns it.
+    // But `McpServer` catches throws and returns error response via transport.
+    // Here we are calling handler directly. So it should throw.
 
-    expect((result as any).isError).toBe(true);
-    expect((result as any).content[0].text).toContain("API Error: 500 Server Error - Internal Server Error");
+    await expect(callTool("midjourney_imagine", {
+      prompt: "fail",
+    })).rejects.toThrow("API Error: 500 Server Error - Internal Server Error");
   });
 
   it("should fail if API key is missing", async () => {
     delete process.env.MIDJOURNEY_API_KEY;
-    server = new MidjourneyServer(); // Re-initialize to pick up env change if verified in constructor, but it's verified in callApi.
 
-    const result = await server.handleCallTool("midjourney_imagine", {
+    // We need to re-instantiate server because API key is checked/stored in constructor or method.
+    // In my refactoring, it's checked in `callApi`.
+    // However, constructor also checks process.env.
+    // `callApi` checks `this.apiKey`.
+    // `this.apiKey` is initialized in constructor.
+    server = new MidjourneyServer();
+
+    await expect(callTool("midjourney_imagine", {
       prompt: "fail",
-    });
-
-    expect((result as any).isError).toBe(true);
-    expect((result as any).content[0].text).toContain("MIDJOURNEY_API_KEY environment variable is not set");
+    })).rejects.toThrow("MIDJOURNEY_API_KEY environment variable is not set");
   });
 });

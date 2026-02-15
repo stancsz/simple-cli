@@ -1,49 +1,12 @@
-import { Server } from "@modelcontextprotocol/sdk/server/index.js";
+import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
-import {
-  CallToolRequestSchema,
-  ListToolsRequestSchema,
-  McpError,
-  ErrorCode,
-} from "@modelcontextprotocol/sdk/types.js";
+import { z } from "zod";
 import { exec } from "child_process";
 import { promisify } from "util";
 import fetch from "node-fetch";
 import { fileURLToPath } from "url";
-import { z } from "zod";
 
 const execAsync = promisify(exec);
-
-const JulesTaskSchema = z.object({
-  task: z.string().describe("The task description."),
-  context_files: z
-    .array(z.string())
-    .optional()
-    .describe("List of file paths to provide as context."),
-});
-
-export const JULES_TASK_TOOL = {
-  name: "jules_task",
-  description:
-    "Delegate a coding task to the Jules agent (Google Cloud). Jules will attempt to create a Pull Request.",
-  inputSchema: {
-    type: "object",
-    properties: {
-      task: {
-        type: "string",
-        description: "The task description.",
-      },
-      context_files: {
-        type: "array",
-        items: {
-          type: "string",
-        },
-        description: "List of file paths to provide as context.",
-      },
-    },
-    required: ["task"],
-  },
-};
 
 interface JulesTaskResult {
   success: boolean;
@@ -60,7 +23,7 @@ interface Source {
   };
 }
 
-export class JulesClient {
+class JulesClient {
   private apiBaseUrl: string;
   private apiKey?: string;
 
@@ -234,7 +197,6 @@ export class JulesClient {
         }
 
         await new Promise((resolve) => setTimeout(resolve, 5000));
-        // process.stdout.write("."); // Avoid writing to stdout in MCP server (use stderr for logs)
       }
 
       return {
@@ -254,51 +216,28 @@ export class JulesClient {
 }
 
 export class JulesServer {
-  private server: Server;
+  private server: McpServer;
   private client: JulesClient;
 
   constructor() {
-    this.server = new Server(
-      {
-        name: "jules-server",
-        version: "1.0.0",
-      },
-      {
-        capabilities: {
-          tools: {},
-        },
-      },
-    );
-    this.client = new JulesClient();
-    this.setupHandlers();
-  }
-
-  private setupHandlers() {
-    this.server.setRequestHandler(ListToolsRequestSchema, async () => ({
-      tools: [JULES_TASK_TOOL],
-    }));
-
-    this.server.setRequestHandler(CallToolRequestSchema, async (request) => {
-      const { name, arguments: args } = request.params;
-      return this.handleCallTool(name, args);
+    this.server = new McpServer({
+      name: "jules-server",
+      version: "1.0.0",
     });
+    this.client = new JulesClient();
+    this.setupTools();
   }
 
-  public async handleCallTool(name: string, args: any) {
-    if (name === "jules_task") {
-      const parsed = JulesTaskSchema.safeParse(args);
-      if (!parsed.success) {
-        throw new McpError(ErrorCode.InvalidParams, parsed.error.message);
-      }
-
-      const { task, context_files } = parsed.data;
-
-      try {
-        const result = await this.client.executeTask(
-          task,
-          context_files || [],
-        );
-
+  private setupTools() {
+    this.server.tool(
+      "jules_task",
+      "Delegate a coding task to the Jules agent (Google Cloud). Jules will attempt to create a Pull Request.",
+      {
+        task: z.string().describe("The task description."),
+        context_files: z.array(z.string()).optional().describe("List of file paths to provide as context."),
+      },
+      async ({ task, context_files }) => {
+        const result = await this.client.executeTask(task, context_files || []);
         if (result.success) {
           return {
             content: [
@@ -313,24 +252,26 @@ export class JulesServer {
             ],
           };
         } else {
-          return {
-            content: [
-              {
-                type: "text",
-                text: `Error: ${result.message}`,
-              },
-            ],
-            isError: true,
-          };
+            // Returning error as text but marking as error?
+            // Or throwing?
+            // The original implementation returned { content: [...], isError: true }
+            // McpServer handles thrown errors by returning an error response.
+            // But if we want to return a specific structure, we can do it manually,
+            // or just return text and let the LLM handle it.
+            // But to adhere to MCP gold standard, if the tool fails to do its job, it should probably return an error result.
+            // However, the original code returned a JSON structure for success and text for error with isError=true.
+
+            // I'll return a text content with the error message and let the SDK handle the "error" state if I throw?
+            // No, throwing causes an internal error.
+            // I should return the result.
+
+            return {
+                content: [{ type: "text", text: `Error: ${result.message}` }],
+                isError: true,
+            }
         }
-      } catch (e: any) {
-        throw new McpError(
-            ErrorCode.InternalError,
-            `Jules Client error: ${e.message}`
-        );
       }
-    }
-    throw new McpError(ErrorCode.MethodNotFound, `Tool not found: ${name}`);
+    );
   }
 
   async run() {

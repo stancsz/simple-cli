@@ -1,64 +1,33 @@
-import { Server } from "@modelcontextprotocol/sdk/server/index.js";
+import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
-import {
-  CallToolRequestSchema,
-  ListToolsRequestSchema,
-} from "@modelcontextprotocol/sdk/types.js";
+import { z } from "zod";
 import { spawn } from "child_process";
 import { dirname, join } from "path";
 import { fileURLToPath } from "url";
 
-// Define the tool schema
-export const START_KIMI_SWARM_TOOL = {
-  name: "start_kimi_swarm",
-  description:
-    "Start a Kimi K2.5 Agent Swarm to perform a complex task using multiple agents. Uses Moonshot AI's Kimi model.",
-  inputSchema: {
-    type: "object",
-    properties: {
-      task: {
-        type: "string",
-        description: "The task description for the swarm to execute.",
-      },
-    },
-    required: ["task"],
-  },
-};
-
 export class KimiSwarmServer {
-  private server: Server;
+  private server: McpServer;
 
   constructor() {
-    this.server = new Server(
-      {
-        name: "kimi-swarm-server",
-        version: "1.0.0",
-      },
-      {
-        capabilities: {
-          tools: {},
-        },
-      },
-    );
+    this.server = new McpServer({
+      name: "kimi-swarm-server",
+      version: "1.0.0",
+    });
 
-    this.setupHandlers();
+    this.setupTools();
   }
 
-  private setupHandlers() {
-    this.server.setRequestHandler(ListToolsRequestSchema, async () => ({
-      tools: [START_KIMI_SWARM_TOOL],
-    }));
-
-    this.server.setRequestHandler(CallToolRequestSchema, async (request) => {
-      if (request.params.name === "start_kimi_swarm") {
-        const args = request.params.arguments as { task: string };
-        if (!args.task) {
-          throw new Error("Task argument is required");
-        }
-        return await this.startKimiSwarm(args.task);
+  private setupTools() {
+    this.server.tool(
+      "start_kimi_swarm",
+      "Start a Kimi K2.5 Agent Swarm to perform a complex task using multiple agents. Uses Moonshot AI's Kimi model.",
+      {
+        task: z.string().describe("The task description for the swarm to execute."),
+      },
+      async ({ task }) => {
+        return await this.startKimiSwarm(task);
       }
-      throw new Error(`Tool not found: ${request.params.name}`);
-    });
+    );
   }
 
   async startKimiSwarm(task: string) {
