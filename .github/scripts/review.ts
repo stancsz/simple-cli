@@ -73,54 +73,16 @@ class JulesClient {
                 if (!messageRes.ok) {
                     const errorText = await messageRes.text();
                     console.error(`Failed to send message to session: ${errorText}`);
-                    // Fall through to create new session
+                    return { success: false, message: `Failed to continue existing Jules session: ${errorText}` };
                 } else {
                     console.log(`✓ Message sent to existing Jules session`);
                     return { success: true, message: `Message sent to existing session: https://jules.google.com/session/${sessionId}` };
                 }
             }
 
-            // No existing session found or message failed - create new session
-            const sourceName = `sources/github/${owner}/${repo}`;
-            console.log(`Using Jules source: ${sourceName}`);
-
-            // Create session
-            const sessionUrl = `${this.apiBaseUrl}/sessions`;
-            const sessionBody = {
-                prompt: task,
-                sourceContext: {
-                    source: sourceName,
-                    githubRepoContext: {
-                        startingBranch: branch,
-                    },
-                },
-                automationMode: "AUTO_CREATE_PR",
-                title: `Fix PR #${prNumber}`,
-            };
-
-            console.log(`Creating new Jules session for branch: ${branch}`);
-
-            const sessionRes = await fetch(sessionUrl, {
-                method: "POST",
-                headers: {
-                    "Content-Type": "application/json",
-                    "x-goog-api-key": this.apiKey,
-                },
-                body: JSON.stringify(sessionBody),
-            });
-
-            if (!sessionRes.ok) {
-                const errorText = await sessionRes.text();
-                return { success: false, message: `Failed to create Jules session (${sessionRes.status}): ${errorText}` };
-            }
-
-            const session = await sessionRes.json();
-            // session.name is like "sessions/uuid"
-            const sessionId = session.name.split('/').pop();
-            const sessionLink = `https://jules.google.com/session/${sessionId}`;
-
-            console.log(`✓ Jules session created: ${session.name}`);
-            return { success: true, message: `Jules task created: ${sessionLink}` };
+            // No existing session found -> Do NOT create a new one to prevent loops
+            console.warn(`No existing Jules session found in PR #${prNumber} by Jules. Aborting task creation.`);
+            return { success: false, message: "No existing Jules session found in PR description or comments. Cannot create task." };
         } catch (error: any) {
             console.error(`Jules API error:`, error);
             return { success: false, message: `Jules API error: ${error.message}` };
