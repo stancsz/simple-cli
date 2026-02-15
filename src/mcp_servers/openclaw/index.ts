@@ -74,7 +74,7 @@ export class OpenClawServer {
           resolve({
             content: [
               {
-                type: "text",
+                type: "text" as const,
                 text: output || `Skill '${skill}' completed successfully.`,
               },
             ],
@@ -88,7 +88,7 @@ export class OpenClawServer {
             resolve({
               content: [
                 {
-                  type: "text",
+                  type: "text" as const,
                   text: "Error: OpenClaw CLI not found. Please ensure 'openclaw' is installed and in your PATH or node_modules.",
                 },
               ],
@@ -99,7 +99,7 @@ export class OpenClawServer {
              resolve({
               content: [
                 {
-                  type: "text",
+                  type: "text" as const,
                   text: `Skill execution failed (code ${code}):\n${errorOutput}\n${output}`,
                 },
               ],
@@ -113,7 +113,7 @@ export class OpenClawServer {
         resolve({
           content: [
             {
-              type: "text",
+              type: "text" as const,
               text: `Failed to spawn openclaw: ${err.message}`,
             },
           ],
