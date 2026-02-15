@@ -27,11 +27,15 @@ class JulesClient {
         }
 
         try {
-            // Get PR details including body to extract existing session
-            const prJson = run(`gh pr view ${prNumber} --json headRefName,headRepositoryOwner,headRepository,body`);
+            // Get PR details including body and comments to find existing session
+            const prJson = run(`gh pr view ${prNumber} --json headRefName,headRepositoryOwner,headRepository,body,comments`);
             const prData = JSON.parse(prJson);
             const branch = prData.headRefName;
             const prBody = prData.body || '';
+            const comments = prData.comments || [];
+
+            // Combine body and all comment bodies for searching
+            const allText = [prBody, ...comments.map((c: any) => c.body)].join('\n');
 
             // Get owner and repo from PR data (works reliably even after checking out branches)
             const owner = prData.headRepositoryOwner?.login || 'stancsz';
@@ -39,9 +43,10 @@ class JulesClient {
 
             console.log(`Repository: ${owner}/${repo}, Branch: ${branch}`);
 
-            // Check if this PR was created by Jules and has an existing session
+            // Check if this PR was created by Jules OR has an existing session mentioned in comments
             // Pattern: jules.google.com/task/{taskId} or jules.google.com/session/{sessionId}
-            const sessionMatch = prBody.match(/jules\.google\.com\/(?:task|session)\/([a-zA-Z0-9-]+)/);
+            // Also match simple session ID format if we output it differently
+            const sessionMatch = allText.match(/jules\.google\.com\/(?:task|sessions?)\/([a-zA-Z0-9-]+)/);
 
             if (sessionMatch) {
                 const sessionId = sessionMatch[1];
@@ -71,7 +76,7 @@ class JulesClient {
                     // Fall through to create new session
                 } else {
                     console.log(`✓ Message sent to existing Jules session`);
-                    return { success: true, message: `Message sent to existing session: ${sessionName}` };
+                    return { success: true, message: `Message sent to existing session: https://jules.google.com/session/${sessionId}` };
                 }
             }
 
@@ -110,8 +115,12 @@ class JulesClient {
             }
 
             const session = await sessionRes.json();
+            // session.name is like "sessions/uuid"
+            const sessionId = session.name.split('/').pop();
+            const sessionLink = `https://jules.google.com/session/${sessionId}`;
+
             console.log(`✓ Jules session created: ${session.name}`);
-            return { success: true, message: `Jules task created: ${session.name}` };
+            return { success: true, message: `Jules task created: ${sessionLink}` };
         } catch (error: any) {
             console.error(`Jules API error:`, error);
             return { success: false, message: `Jules API error: ${error.message}` };
