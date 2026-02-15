@@ -92,7 +92,6 @@ export class OpenClawServer {
                   text: "Error: OpenClaw CLI not found. Please ensure 'openclaw' is installed and in your PATH or node_modules.",
                 },
               ],
-              isError: true,
             });
           } else {
             resolve({
@@ -102,7 +101,6 @@ export class OpenClawServer {
                   text: `Skill execution failed (exit code ${code}):\n${errorOutput}\n${output}`,
                 },
               ],
-              isError: true,
             });
           }
         }
@@ -116,7 +114,6 @@ export class OpenClawServer {
               text: `Failed to spawn openclaw: ${err.message}`,
             },
           ],
-          isError: true,
         });
       });
     });

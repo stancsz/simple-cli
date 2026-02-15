@@ -34,7 +34,6 @@ export class DevinServer {
         if (!this.apiKey) {
           return {
             content: [{ type: "text", text: "Error: DEVIN_API_KEY is not set." }],
-            isError: true,
           };
         }
         return await this.createSession(prompt);
@@ -51,7 +50,6 @@ export class DevinServer {
         if (!this.apiKey) {
           return {
             content: [{ type: "text", text: "Error: DEVIN_API_KEY is not set." }],
-            isError: true,
           };
         }
         return await this.getSession(session_id);
@@ -68,7 +66,6 @@ export class DevinServer {
         if (!this.apiKey) {
           return {
             content: [{ type: "text", text: "Error: DEVIN_API_KEY is not set." }],
-            isError: true,
           };
         }
         return await this.listSessions(limit);
