@@ -58,7 +58,7 @@ export class DokployServer {
       async () => {
         const projects = await callDokploy("/api/project.all");
         return {
-          content: [{ type: "text", text: JSON.stringify(projects, null, 2) }],
+          content: [{ type: "text" as const, text: JSON.stringify(projects, null, 2) }],
         };
       }
     );
@@ -76,7 +76,7 @@ export class DokployServer {
           description,
         });
         return {
-          content: [{ type: "text", text: JSON.stringify(result, null, 2) }],
+          content: [{ type: "text" as const, text: JSON.stringify(result, null, 2) }],
         };
       }
     );
@@ -97,7 +97,7 @@ export class DokployServer {
           description,
         });
         return {
-          content: [{ type: "text", text: JSON.stringify(result, null, 2) }],
+          content: [{ type: "text" as const, text: JSON.stringify(result, null, 2) }],
         };
       }
     );
@@ -113,7 +113,7 @@ export class DokployServer {
           applicationId,
         });
         return {
-          content: [{ type: "text", text: JSON.stringify(result, null, 2) }],
+          content: [{ type: "text" as const, text: JSON.stringify(result, null, 2) }],
         };
       }
     );
@@ -129,7 +129,7 @@ export class DokployServer {
           `/api/application.one?applicationId=${applicationId}`,
         );
         return {
-          content: [{ type: "text", text: JSON.stringify(result, null, 2) }],
+          content: [{ type: "text" as const, text: JSON.stringify(result, null, 2) }],
         };
       }
     );

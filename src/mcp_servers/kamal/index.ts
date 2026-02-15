@@ -57,7 +57,7 @@ export class KamalServer {
         const cmdArgs = ["setup"];
         if (configFile) cmdArgs.push("-c", configFile);
         const output = await runCommand("kamal", cmdArgs);
-        return { content: [{ type: "text", text: output }] };
+        return { content: [{ type: "text" as const, text: output }] };
       }
     );
 
@@ -71,7 +71,7 @@ export class KamalServer {
         const cmdArgs = ["deploy"];
         if (configFile) cmdArgs.push("-c", configFile);
         const output = await runCommand("kamal", cmdArgs);
-        return { content: [{ type: "text", text: output }] };
+        return { content: [{ type: "text" as const, text: output }] };
       }
     );
 
@@ -86,7 +86,7 @@ export class KamalServer {
         const cmdArgs = ["rollback", version];
         if (configFile) cmdArgs.push("-c", configFile);
         const output = await runCommand("kamal", cmdArgs);
-        return { content: [{ type: "text", text: output }] };
+        return { content: [{ type: "text" as const, text: output }] };
       }
     );
 
@@ -101,7 +101,7 @@ export class KamalServer {
         const cmdArgs = ["app", "logs"];
         if (configFile) cmdArgs.push("-c", configFile);
         const output = await runCommand("kamal", cmdArgs);
-        return { content: [{ type: "text", text: output }] };
+        return { content: [{ type: "text" as const, text: output }] };
       }
     );
   }

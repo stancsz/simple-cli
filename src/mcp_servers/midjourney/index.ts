@@ -61,7 +61,7 @@ export class MidjourneyServer {
       async (args) => {
         const result = await this.callApi("/imagine", "POST", args);
         return {
-          content: [{ type: "text", text: JSON.stringify(result, null, 2) }],
+          content: [{ type: "text" as const, text: JSON.stringify(result, null, 2) }],
         };
       }
     );
@@ -76,7 +76,7 @@ export class MidjourneyServer {
       async (args) => {
         const result = await this.callApi("/upscale", "POST", args);
         return {
-          content: [{ type: "text", text: JSON.stringify(result, null, 2) }],
+          content: [{ type: "text" as const, text: JSON.stringify(result, null, 2) }],
         };
       }
     );
@@ -91,7 +91,7 @@ export class MidjourneyServer {
       async (args) => {
         const result = await this.callApi("/variation", "POST", args);
         return {
-          content: [{ type: "text", text: JSON.stringify(result, null, 2) }],
+          content: [{ type: "text" as const, text: JSON.stringify(result, null, 2) }],
         };
       }
     );
@@ -105,7 +105,7 @@ export class MidjourneyServer {
       async (args) => {
         const result = await this.callApi("/describe", "POST", args);
         return {
-          content: [{ type: "text", text: JSON.stringify(result, null, 2) }],
+          content: [{ type: "text" as const, text: JSON.stringify(result, null, 2) }],
         };
       }
     );
@@ -120,7 +120,7 @@ export class MidjourneyServer {
       async (args) => {
         const result = await this.callApi("/blend", "POST", args);
         return {
-          content: [{ type: "text", text: JSON.stringify(result, null, 2) }],
+          content: [{ type: "text" as const, text: JSON.stringify(result, null, 2) }],
         };
       }
     );
@@ -135,7 +135,7 @@ export class MidjourneyServer {
       async (args) => {
         const result = await this.callApi("/face-swap", "POST", args);
         return {
-          content: [{ type: "text", text: JSON.stringify(result, null, 2) }],
+          content: [{ type: "text" as const, text: JSON.stringify(result, null, 2) }],
         };
       }
     );
@@ -149,7 +149,7 @@ export class MidjourneyServer {
       async (args) => {
         const result = await this.callApi("/status", "POST", args);
         return {
-          content: [{ type: "text", text: JSON.stringify(result, null, 2) }],
+          content: [{ type: "text" as const, text: JSON.stringify(result, null, 2) }],
         };
       }
     );

@@ -52,7 +52,7 @@ export class CloudflareBrowserServer {
       return {
         content: [
           {
-            type: "text",
+            type: "text" as const,
             text: resultText,
           },
         ],
