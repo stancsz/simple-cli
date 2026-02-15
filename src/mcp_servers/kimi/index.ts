@@ -61,21 +61,7 @@ export class KimiSwarmServer {
       };
     }
 
-    // Set up environment
-    const apiKey = process.env.MOONSHOT_API_KEY || process.env.KIMI_API_KEY;
-
-    if (!apiKey) {
-      return {
-        content: [
-          {
-            type: "text",
-            text: "Error: MOONSHOT_API_KEY or KIMI_API_KEY environment variable is not set.",
-          },
-        ],
-        isError: true,
-      };
-    }
-
+    const apiKey = process.env.MOONSHOT_API_KEY || process.env.OPENAI_API_KEY;
     const env = {
       ...process.env,
       OPENAI_API_KEY: apiKey,

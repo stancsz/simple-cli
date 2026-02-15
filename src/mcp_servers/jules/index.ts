@@ -252,19 +252,6 @@ export class JulesServer {
             ],
           };
         } else {
-            // Returning error as text but marking as error?
-            // Or throwing?
-            // The original implementation returned { content: [...], isError: true }
-            // McpServer handles thrown errors by returning an error response.
-            // But if we want to return a specific structure, we can do it manually,
-            // or just return text and let the LLM handle it.
-            // But to adhere to MCP gold standard, if the tool fails to do its job, it should probably return an error result.
-            // However, the original code returned a JSON structure for success and text for error with isError=true.
-
-            // I'll return a text content with the error message and let the SDK handle the "error" state if I throw?
-            // No, throwing causes an internal error.
-            // I should return the result.
-
             return {
                 content: [{ type: "text", text: `Error: ${result.message}` }],
                 isError: true,
