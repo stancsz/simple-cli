@@ -106,6 +106,13 @@ export class KamalServer {
     );
   }
 
+  async handleCallTool(name: string, args: any) {
+    const mcpServer = this.server as any;
+    const tool = mcpServer._registeredTools[name];
+    if (!tool) throw new Error(`Tool ${name} not found`);
+    return tool.handler(args);
+  }
+
   async run() {
     const transport = new StdioServerTransport();
     await this.server.connect(transport);

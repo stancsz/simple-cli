@@ -19,7 +19,8 @@ def main():
         print(json.dumps({"error": "OPENAI_API_KEY environment variable not set."}))
         sys.exit(1)
 
-    config_list = [{"model": "gpt-4o", "api_key": api_key}]
+    model_name = os.environ.get("OPENAI_MODEL_NAME", "gpt-4o")
+    config_list = [{"model": model_name, "api_key": api_key}]
 
     try:
         assistant = AssistantAgent(
