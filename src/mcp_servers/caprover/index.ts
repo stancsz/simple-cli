@@ -91,7 +91,7 @@ export class CaproverServer {
 
         const output = await runCaprover(cmdArgs);
         return {
-          content: [{ type: "text", text: output }],
+          content: [{ type: "text" as const, text: output }],
         };
       }
     );
@@ -110,7 +110,7 @@ export class CaproverServer {
 
         const output = await runCaprover(cmdArgs);
         return {
-          content: [{ type: "text", text: output }],
+          content: [{ type: "text" as const, text: output }],
         };
       }
     );

@@ -67,7 +67,7 @@ export class AgnoServer {
           resolve({
             content: [
               {
-                type: "text",
+                type: "text" as const,
                 text: output.trim(),
               },
             ],
@@ -76,7 +76,7 @@ export class AgnoServer {
           resolve({
             content: [
               {
-                type: "text",
+                type: "text" as const,
                 text: `Error from Agno Agent (exit code ${code}):\n${errorOutput}\n${output}`,
               },
             ],
@@ -89,7 +89,7 @@ export class AgnoServer {
         resolve({
           content: [
             {
-              type: "text",
+              type: "text" as const,
               text: `Failed to spawn python process: ${err.message}`,
             },
           ],
