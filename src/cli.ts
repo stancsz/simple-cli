@@ -48,6 +48,20 @@ async function main() {
     remainingArgs.push(arg);
   }
 
+  if (remainingArgs[0] === "daemon") {
+    try {
+      const { daemon } = await import("./daemon/daemon_cli.js");
+      const subCmd = remainingArgs[1];
+      if (subCmd === "start") await daemon.start();
+      else if (subCmd === "stop") await daemon.stop();
+      else if (subCmd === "status") await daemon.status();
+      else console.log("Usage: simple daemon <start|stop|status>");
+    } catch (e: any) {
+      console.error("Failed to load daemon module:", e.message);
+    }
+    return;
+  }
+
   const prompt = remainingArgs.filter((a) => !a.startsWith("-")).join(" ");
 
   const registry = new Registry();
