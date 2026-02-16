@@ -176,6 +176,11 @@ export class Engine {
     // Ensure tools are loaded for the context cwd
     await this.registry.loadProjectTools(ctx.cwd);
 
+    // Initialize Persona Engine
+    if (this.llm.personaEngine) {
+      await this.llm.personaEngine.loadConfig();
+    }
+
     if (process.stdin.isTTY) {
       readline.emitKeypressEvents(process.stdin);
     }
