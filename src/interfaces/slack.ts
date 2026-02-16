@@ -16,6 +16,68 @@ import { WorkflowEngine } from "../workflows/workflow_engine.js";
 import { createExecuteSOPTool } from "../workflows/execute_sop_tool.js";
 import { fileURLToPath } from "url";
 
+// Custom Engine to capture output and stream to Slack
+class SlackEngine extends Engine {
+  private client: any;
+  private channel: string;
+  private threadTs: string;
+
+  constructor(
+    llm: any,
+    registry: Registry,
+    mcp: MCP,
+    client: any,
+    channel: string,
+    threadTs: string
+  ) {
+    super(llm, registry, mcp);
+    this.client = client;
+    this.channel = channel;
+    this.threadTs = threadTs;
+
+    // Override spinner to stream updates to Slack
+    this.s = {
+      start: (msg: string) => this.log('info', `[Start] ${msg}`),
+      stop: (msg: string) => this.log('success', `[Done] ${msg}`),
+      message: (msg: string) => this.log('info', `[Update] ${msg}`),
+    } as any;
+  }
+
+  // Override log to send updates to Slack thread
+  protected override log(type: 'info' | 'success' | 'warn' | 'error', message: string) {
+    // Filter out verbose logs (like token usage) to avoid spamming the channel
+    if (message.includes("Tokens:") || message.includes("prompt +")) return;
+
+    // Map log types to emojis for better visibility
+    let icon = "";
+    if (type === 'success') icon = "✅ ";
+    else if (type === 'warn') icon = "⚠️ ";
+    else if (type === 'error') icon = "❌ ";
+    else if (type === 'info') icon = "ℹ️ ";
+
+    // Send the log message to the thread
+    // Note: In a high-volume scenario, we might want to batch these or update a single status message.
+    // For now, we'll post individual messages to the thread to provide a detailed execution trace.
+    this.client.chat.postMessage({
+      channel: this.channel,
+      thread_ts: this.threadTs, // Reply in thread
+      text: `${icon} ${message}`
+    }).catch((err: any) => {
+      console.error("Failed to log to Slack:", err);
+    });
+
+    // Also log to console for server-side debugging
+    super.log(type, message);
+  }
+
+  protected async getUserInput(initialValue: string, interactive: boolean): Promise<string | undefined> {
+    // In Slack, we don't support interactive prompts mid-execution for now.
+    // We treat this as a non-interactive session.
+    this.log('warn', "Agent requested input, but interactive mode is disabled in Slack adapter.");
+    return undefined;
+  }
+}
+
 const app = new App({
   token: process.env.SLACK_BOT_TOKEN,
   signingSecret: process.env.SLACK_SIGNING_SECRET,
@@ -78,8 +140,38 @@ app.action(new RegExp("approval_action_.*"), async ({ ack, body, action }: any) 
 app.event("app_mention", async ({ event, say, client }: any) => {
   const channel = event.channel;
   const text = event.text.replace(/<@.*?>/, "").trim(); // Remove mention
+  const ts = event.ts;
 
   try {
+    // 1. Add emoji reaction to acknowledge receipt
+    await client.reactions.add({
+      name: 'thumbsup',
+      channel: channel,
+      timestamp: ts
+    });
+
+    // 2. Implement typing indicators
+    // Attempt requested method (might fail as it's non-standard)
+    try {
+      await client.chat.postMessage({
+        channel: channel,
+        type: 'typing', // Requested feature
+        text: "Typing..." // Fallback text
+      } as any);
+    } catch (e) {
+      // Ignore error if 'type: typing' is not supported
+    }
+
+    // Also send a "Thinking..." message to start the thread/interaction
+    // This serves as a robust typing/status indicator.
+    // We capture the ts of this message to potentially update it later,
+    // or just use the thread for logs.
+    await client.chat.postMessage({
+        channel: channel,
+        text: "Thinking...",
+        thread_ts: ts // Reply to the user's message
+    });
+
     // Ensure global resources are initialized
     if (!isInitialized) {
         await initializeResources();
@@ -130,7 +222,8 @@ app.event("app_mention", async ({ event, say, client }: any) => {
         await client.chat.postMessage({
           channel: channel,
           blocks: blocks as any,
-          text: question // Fallback
+          text: question, // Fallback
+          thread_ts: ts // Keep approvals in thread
         });
 
         // Wait for user action
@@ -141,7 +234,7 @@ app.event("app_mention", async ({ event, say, client }: any) => {
              pendingApprovals.set(actionId, resolve);
           });
 
-          // Timeout after 5 minutes?
+          // Timeout after 5 minutes
           setTimeout(() => {
              resolve("Timeout: No response received.");
              // Cleanup
@@ -154,13 +247,15 @@ app.event("app_mention", async ({ event, say, client }: any) => {
       }
     });
 
-    // Initialize Engine with request registry and shared MCP instance
+    // Initialize SlackEngine with request registry and shared MCP instance
     const cwd = process.cwd();
     const provider = createLLM();
-    const engine = new Engine(provider, requestRegistry, mcp);
+    // Use SlackEngine to capture logs and stream to thread
+    const engine = new SlackEngine(provider, requestRegistry, mcp, client, channel, ts);
     const skill = await getActiveSkill(cwd);
     const ctx = new Context(cwd, skill);
 
+    // Run the engine (simulating CLI command)
     await engine.run(ctx, text, { interactive: false });
 
     // Retrieve Response
@@ -175,17 +270,35 @@ app.event("app_mention", async ({ event, say, client }: any) => {
         } catch {}
 
         if (content) {
-            await say(content);
+            // Post final response to the channel (main thread or thread reply)
+            // Using `say` usually posts to channel. Let's reply in thread for consistency with logs.
+            await client.chat.postMessage({
+                channel: channel,
+                thread_ts: ts,
+                text: content
+            });
         } else {
-             await say("Task completed (check logs/artifacts).");
+             await client.chat.postMessage({
+                 channel: channel,
+                 thread_ts: ts,
+                 text: "Task completed (check logs/artifacts)."
+             });
         }
     } else {
-        await say("I couldn't generate a response.");
+        await client.chat.postMessage({
+            channel: channel,
+            thread_ts: ts,
+            text: "I couldn't generate a response."
+        });
     }
 
   } catch (error: any) {
     console.error("Error processing Slack event:", error);
-    await say(`Error: ${error.message}`);
+    await client.chat.postMessage({
+        channel: channel,
+        thread_ts: ts,
+        text: `Error: ${error.message}`
+    });
   }
 });
 
