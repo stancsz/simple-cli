@@ -19,8 +19,8 @@ This document tracks the migration from ad-hoc internal tools to a strict **MCP-
     - [ ] Remove manual tool loading in `engine.ts`. Use standard MCP discovery.
 - [ ] **Context Management**:
     - [x] Implement Concurrency Control: Added file locking to `ContextManager` to prevent race conditions.
-    - [ ] Implement a **Context MCP Server** (singleton) to handle `context.json` updates securely (fix race conditions).
-    - [ ] Update `engine.ts` to push/pull context via this server.
+    - [x] Implement a **Context MCP Server** (singleton) to handle `context.json` updates securely (fix race conditions).
+    - [x] Update `engine.ts` to push/pull context via this server.
 
 ### 3. Cleanup & Polishing
 - [x] **Security**: Re-enabled path validation in `src/builtins.ts` (sandboxing to CWD).
