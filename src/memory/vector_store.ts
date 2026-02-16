@@ -16,8 +16,11 @@ export class VectorStore {
   private db: Database.Database;
   private embeddingModel: any;
 
-  constructor(baseDir: string = process.cwd(), embeddingModel?: any) {
-    const dbPath = join(baseDir, ".agent", "memory.sqlite");
+  constructor(baseDir: string = process.cwd(), embeddingModel?: any, company?: string) {
+    const dbPath = company
+      ? join(baseDir, ".agent", "companies", company, "memory.sqlite")
+      : join(baseDir, ".agent", "memory.sqlite");
+
     if (!existsSync(dirname(dbPath))) {
       mkdirSync(dirname(dbPath), { recursive: true });
     }

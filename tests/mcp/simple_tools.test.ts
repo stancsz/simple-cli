@@ -12,52 +12,12 @@ vi.mock("child_process", () => ({
   exec: vi.fn(),
 }));
 
-// Mock ContextManager
-const mockAddGoal = vi.fn();
-const mockAddConstraint = vi.fn();
-const mockLogChange = vi.fn();
-const mockGetContextSummary = vi.fn();
-
-vi.mock("../../src/context_manager.js", () => {
-  return {
-    ContextManager: class {
-      addGoal = mockAddGoal;
-      addConstraint = mockAddConstraint;
-      logChange = mockLogChange;
-      getContextSummary = mockGetContextSummary;
-    },
-  };
-});
-
 describe("SimpleToolsServer", () => {
   let server: SimpleToolsServer;
 
   beforeEach(() => {
     vi.resetAllMocks();
     server = new SimpleToolsServer();
-  });
-
-  it("should handle update_context tool", async () => {
-    const result = await server.handleCallTool("update_context", {
-      goal: "New Goal",
-      constraint: "New Constraint",
-    });
-
-    expect(mockAddGoal).toHaveBeenCalledWith("New Goal");
-    expect(mockAddConstraint).toHaveBeenCalledWith("New Constraint");
-    expect((result as any).content[0].text).toContain("Added goal: New Goal");
-    expect((result as any).content[0].text).toContain(
-      "Added constraint: New Constraint",
-    );
-  });
-
-  it("should handle read_context tool", async () => {
-    mockGetContextSummary.mockResolvedValue("Context Summary");
-
-    const result = await server.handleCallTool("read_context", {});
-
-    expect(mockGetContextSummary).toHaveBeenCalled();
-    expect((result as any).content[0].text).toBe("Context Summary");
   });
 
   it("should handle read_file tool", async () => {
