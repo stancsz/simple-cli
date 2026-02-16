@@ -1,0 +1,28 @@
+{
+  "mcpServers": {
+    "filesystem": {
+      "command": "node",
+      "args": [
+        "/app/node_modules/@modelcontextprotocol/server-filesystem/dist/index.js",
+        "/app"
+      ]
+    },
+    "git": {
+      "command": "node",
+      "args": [
+        "/app/node_modules/@modelcontextprotocol/server-git/dist/index.js"
+      ]
+    },
+    "brain": {
+      "url": "http://localhost:3002/sse"
+    },
+    "context_manager": {
+      "command": "node",
+      "args": ["/app/dist/mcp_servers/context_manager/index.js"]
+    },
+    "company": {
+      "command": "node",
+      "args": ["/app/dist/mcp_servers/company/index.js"]
+    }
+  }
+}
