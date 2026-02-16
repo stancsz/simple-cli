@@ -3,8 +3,6 @@ import { existsSync } from "fs";
 import { SOPParser, SOP } from "./sop_parser.js";
 import { SopMcpClient } from "./SopMcpClient.js";
 import { createLLM, LLM } from "../llm.js";
-import { ContextManager } from "../mcp_servers/context_manager/index.js";
-
 export interface ExecutionLog {
   step: string;
   status: "success" | "failure" | "skipped";
@@ -25,14 +23,11 @@ export class SOPEngine {
   private client: SopMcpClient;
   private sopsDir: string;
   private llm: LLM;
-  private contextManager: ContextManager;
-
   constructor(client: SopMcpClient, sopsDir: string = join(process.cwd(), ".agent", "sops")) {
     this.client = client;
     this.parser = new SOPParser();
     this.sopsDir = sopsDir;
     this.llm = createLLM();
-    this.contextManager = new ContextManager();
   }
 
   async loadSOP(name: string): Promise<SOP> {
@@ -105,8 +100,12 @@ export class SOPEngine {
         return { success: false, error: e.message, logs: [] };
     }
 
-    // Log start to ContextManager
-    await this.contextManager.logChange(`Started execution of SOP '${sop.name}'`);
+    // Log start to ContextManager (via MCP)
+    try {
+        await this.client.executeTool("log_change", { change: `Started execution of SOP '${sop.name}'` });
+    } catch (e) {
+        console.warn(`[SOPEngine] Failed to log change: ${e}`);
+    }
 
     const context: Record<string, any> = {
       params,
@@ -188,8 +187,12 @@ export class SOPEngine {
           } catch (e: any) {
               console.error(`[SOPEngine] Step execution failed: ${e.message}`);
 
-              // Log failure to ContextManager
-              await this.contextManager.logChange(`SOP '${sop.name}' failed at step '${step.name}': ${e.message}`);
+              // Log failure to ContextManager (via MCP)
+              try {
+                  await this.client.executeTool("log_change", { change: `SOP '${sop.name}' failed at step '${step.name}': ${e.message}` });
+              } catch (logErr) {
+                  console.warn(`[SOPEngine] Failed to log failure: ${logErr}`);
+              }
 
               // ROLLBACK LOGIC
               if (step.rollback) {
@@ -209,10 +212,14 @@ export class SOPEngine {
                       }
 
                       console.log(`[SOPEngine] Rollback executed successfully.`);
-                      await this.contextManager.logChange(`Rollback executed for step '${step.name}'`);
+                      try {
+                          await this.client.executeTool("log_change", { change: `Rollback executed for step '${step.name}'` });
+                      } catch {}
                   } catch (re: any) {
                       console.error(`[SOPEngine] Rollback failed: ${re.message}`);
-                      await this.contextManager.logChange(`Rollback failed for step '${step.name}': ${re.message}`);
+                      try {
+                          await this.client.executeTool("log_change", { change: `Rollback failed for step '${step.name}': ${re.message}` });
+                      } catch {}
                   }
               }
 
@@ -236,8 +243,12 @@ export class SOPEngine {
       }
     }
 
-    // Log success to ContextManager
-    await this.contextManager.logChange(`Completed execution of SOP '${sop.name}' successfully.`);
+    // Log success to ContextManager (via MCP)
+    try {
+        await this.client.executeTool("log_change", { change: `Completed execution of SOP '${sop.name}' successfully.` });
+    } catch (e) {
+        console.warn(`[SOPEngine] Failed to log completion: ${e}`);
+    }
 
     return {
         success: true,

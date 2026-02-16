@@ -1,16 +1,3 @@
 {
-  "goals": [],
-  "constraints": [],
-  "recent_changes": [
-    "Started execution of SOP 'Conditional SOP'",
-    "Completed execution of SOP 'Conditional SOP' successfully.",
-    "Started execution of SOP 'Conditional SOP'",
-    "Completed execution of SOP 'Conditional SOP' successfully.",
-    "Started execution of SOP 'Sequential SOP'",
-    "Completed execution of SOP 'Sequential SOP' successfully.",
-    "Started execution of SOP 'Conditional SOP'",
-    "Completed execution of SOP 'Conditional SOP' successfully.",
-    "Started execution of SOP 'Conditional SOP'",
-    "Completed execution of SOP 'Conditional SOP' successfully."
-  ]
+  "test": 2
 }
