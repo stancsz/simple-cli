@@ -4,6 +4,8 @@ import { z } from "zod";
 import { spawn } from "child_process";
 import { fileURLToPath } from "url";
 import process from "process";
+import { readFile } from "fs/promises";
+import { join } from "path";
 
 export class AiderServer {
   private server: McpServer;
@@ -60,17 +62,29 @@ export class AiderServer {
       };
     }
 
+    let finalMessage = message;
+    const soulPath = join(process.cwd(), "src", "agents", "souls", "aider.md");
+    try {
+      const soul = await readFile(soulPath, "utf-8");
+      finalMessage = `${soul}\n\nTask:\n${message}`;
+    } catch (e) {
+      // Create soul if not exists, but here we just warn
+      // console.warn("Could not load Aider soul:", e);
+    }
+
     // Construct arguments
     const args = [
       "--model", "deepseek/deepseek-chat",
+      "--api-key", `deepseek=${apiKey}`,
       "--yes", // Automatically confirm changes
-      "--message", message,
+      "--message", finalMessage,
       ...files
     ];
 
     return new Promise<{ content: { type: "text", text: string }[], isError?: boolean }>((resolve) => {
       console.error(`[Aider] Running: aider ${args.join(" ")}`);
 
+      // We assume 'aider' is in the PATH, as in deepseek_aider.ts
       const child = spawn("aider", args, {
         env: { ...process.env, DEEPSEEK_API_KEY: apiKey },
         shell: false
@@ -102,7 +116,7 @@ export class AiderServer {
 
       child.on("error", (err) => {
         resolve({
-          content: [{ type: "text", text: `Failed to start aider: ${err.message}` }],
+          content: [{ type: "text", text: `Failed to start aider: ${err.message}. Make sure 'aider' is installed and in your PATH.` }],
           isError: true,
         });
       });

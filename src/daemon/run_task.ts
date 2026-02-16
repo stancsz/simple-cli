@@ -1,11 +1,14 @@
 import "dotenv/config";
-import { TaskRunner } from "./task_runner.js";
 import { createLLM } from "../llm.js";
 import { MCP } from "../mcp.js";
 import { Registry, Context } from "../engine.js";
+import { AutonomousOrchestrator } from "../engine/autonomous.js";
 import { getActiveSkill } from "../skills.js";
 import { TaskDefinition } from "./task_definitions.js";
 import { allBuiltins } from "../builtins.js";
+import { join, dirname } from "path";
+import { existsSync } from "fs";
+import { readFile, writeFile, mkdir } from "fs/promises";
 
 async function main() {
   const taskDefStr = process.env.JULES_TASK_DEF;
@@ -22,9 +25,7 @@ async function main() {
     process.exit(1);
   }
 
-  const cwd = process.cwd(); // Should be set by daemon to project root
-
-  // Company context is handled by process.env.JULES_COMPANY which should be set by daemon if applicable
+  const cwd = process.cwd();
 
   const registry = new Registry();
   allBuiltins.forEach((t) => registry.tools.set(t.name, t as any));
@@ -34,23 +35,62 @@ async function main() {
   const mcp = new MCP();
   const provider = createLLM();
 
-  const runner = new TaskRunner(provider, registry, mcp, {
-    yoloMode: taskDef.yoloMode ?? true,
-    timeout: taskDef.autoDecisionTimeout
+  const orchestrator = new AutonomousOrchestrator(provider, registry, mcp, {
+    logPath: join(cwd, '.agent', 'autonomous.log'),
+    yoloMode: taskDef.yoloMode ?? true
   });
 
   const skill = await getActiveSkill(cwd);
+
+  // Load and inject Agent Soul if exists
+  const soulPath = join(cwd, "src", "agents", "souls", `${taskDef.name}.md`);
+  if (existsSync(soulPath)) {
+      try {
+          const soulContent = await readFile(soulPath, "utf-8");
+          skill.systemPrompt += `\n\n## Agent Instructions (Soul)\n${soulContent}`;
+          console.log(`Loaded soul for agent: ${taskDef.name}`);
+      } catch (e) {
+          console.error(`Failed to load soul for agent ${taskDef.name}:`, e);
+      }
+  }
+
   const ctx = new Context(cwd, skill);
 
   console.log(`Starting task: ${taskDef.name} (ID: ${taskDef.id})`);
+  const startTime = Date.now();
+  let status = "success";
+  let errorMessage = "";
 
   try {
-    await runner.run(ctx, taskDef.prompt);
+    // Run autonomously
+    await orchestrator.run(ctx, taskDef.prompt, { interactive: false });
     console.log(`Task ${taskDef.name} completed successfully.`);
-    process.exit(0);
   } catch (e: any) {
     console.error(`Task ${taskDef.name} failed:`, e);
-    process.exit(1);
+    status = "failed";
+    errorMessage = e.message;
+  } finally {
+     // Save execution result
+     try {
+        const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+        const logPath = join(cwd, '.agent/logs', `${timestamp}_${taskDef.id}.json`);
+        await mkdir(dirname(logPath), { recursive: true });
+        await writeFile(logPath, JSON.stringify({
+            taskId: taskDef.id,
+            taskName: taskDef.name,
+            startTime,
+            endTime: Date.now(),
+            status,
+            errorMessage,
+            history: ctx.history
+        }, null, 2));
+        console.log(`Execution result saved to ${logPath}`);
+     } catch (logErr) {
+         console.error(`Failed to save execution result: ${logErr}`);
+     }
+
+     if (status === "failed") process.exit(1);
+     process.exit(0);
   }
 }
 

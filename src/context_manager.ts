@@ -17,8 +17,12 @@ export class ContextManager {
     constraints: [],
     recent_changes: [],
   };
+  private cwd: string;
+  private embeddingModel: any;
 
   constructor(cwd: string = process.cwd(), embeddingModel?: any) {
+    this.cwd = cwd;
+    this.embeddingModel = embeddingModel;
     const company = process.env.JULES_COMPANY;
     if (company) {
       this.contextFile = join(cwd, ".agent", "companies", company, "context.json");
@@ -28,6 +32,27 @@ export class ContextManager {
 
     try {
       this.vectorStore = new VectorStore(cwd, embeddingModel, company);
+    } catch (e) {
+      console.warn("Failed to initialize vector store:", e);
+    }
+  }
+
+  setCompany(company: string) {
+    // Close existing vector store
+    if (this.vectorStore) {
+      this.vectorStore.close();
+      this.vectorStore = null;
+    }
+
+    // Update contextFile path
+    this.contextFile = join(this.cwd, ".agent", "companies", company, "context.json");
+
+    // Reset data
+    this.data = { goals: [], constraints: [], recent_changes: [] };
+
+    // Initialize new VectorStore
+    try {
+      this.vectorStore = new VectorStore(this.cwd, this.embeddingModel, company);
     } catch (e) {
       console.warn("Failed to initialize vector store:", e);
     }

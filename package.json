@@ -5,10 +5,13 @@
   "type": "module",
   "main": "dist/cli.js",
   "bin": {
-    "simple": "dist/cli.js"
+    "simple": "dist/cli.js",
+    "simple-daemon": "bin/simple-daemon"
   },
   "scripts": {
     "start": "node --loader ts-node/esm src/cli.ts",
+    "daemon": "node --loader ts-node/esm src/daemon.ts",
+    "start:slack": "node --loader ts-node/esm src/interfaces/slack.ts",
     "dev": "node --loader ts-node/esm --watch src/cli.ts",
     "build": "tsc",
     "typecheck": "tsc --noEmit",
@@ -44,6 +47,7 @@
     "@lancedb/lancedb": "^0.26.2",
     "@modelcontextprotocol/sdk": "^1.0.0",
     "@oclif/core": "^4.0.0",
+    "@slack/bolt": "^4.6.0",
     "@types/cors": "^2.8.19",
     "@types/express": "^5.0.6",
     "@types/node-fetch": "^2.6.13",

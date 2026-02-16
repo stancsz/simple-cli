@@ -9,7 +9,9 @@ import { getActiveSkill } from "./skills.js";
 import { showBanner } from "./tui.js";
 import { outro } from "@clack/prompts";
 import { WorkflowEngine } from "./workflows/workflow_engine.js";
+import { SOPRegistry } from "./workflows/sop_registry.js";
 import { createExecuteSOPTool } from "./workflows/execute_sop_tool.js";
+import { Briefcase, createSwitchCompanyTool } from "./context/briefcase.js";
 
 async function main() {
   const args = process.argv.slice(2);
@@ -20,10 +22,16 @@ async function main() {
   // Handle optional directory argument
   let cwd = initialCwd;
   let interactive = true;
+  let startDaemon = false;
   const remainingArgs = [];
 
   for (let i = 0; i < args.length; i++) {
     const arg = args[i];
+
+    if (arg === "--daemon") {
+      startDaemon = true;
+      continue;
+    }
 
     if (arg === "--non-interactive") {
       interactive = false;
@@ -50,6 +58,16 @@ async function main() {
     remainingArgs.push(arg);
   }
 
+  if (startDaemon) {
+    try {
+      const { daemon } = await import("./daemon/daemon_cli.js");
+      await daemon.start();
+    } catch (e: any) {
+      console.error("Failed to load daemon module:", e.message);
+    }
+    return;
+  }
+
   if (remainingArgs[0] === "daemon") {
     try {
       const { daemon } = await import("./daemon/daemon_cli.js");
@@ -70,7 +88,8 @@ async function main() {
   allBuiltins.forEach((t) => registry.tools.set(t.name, t as any));
 
   // Initialize Workflow Engine and register execute_sop tool
-  const workflowEngine = new WorkflowEngine(registry);
+  const sopRegistry = new SOPRegistry();
+  const workflowEngine = new WorkflowEngine(registry, sopRegistry);
   const sopTool = createExecuteSOPTool(workflowEngine);
   registry.tools.set(sopTool.name, sopTool as any);
 
@@ -99,7 +118,33 @@ async function main() {
   }
 
   const mcp = new MCP();
+
+  // Auto-start core local servers to maintain default capabilities
+  await mcp.init();
+  const coreServers = ["simple_tools", "aider", "claude"];
+  for (const s of coreServers) {
+    try {
+      await mcp.startServer(s);
+    } catch (e) {
+      // Server might not be discovered or failed to start.
+      // We fail silently for optional servers, but simple_tools is critical.
+      if (s === "simple_tools") {
+        console.warn(`[Warning] Core server '${s}' failed to start:`, e);
+      }
+    }
+  }
+
   const provider = createLLM();
+
+  const briefcase = new Briefcase(registry, provider, sopRegistry, mcp);
+  const switchTool = createSwitchCompanyTool(briefcase);
+  registry.tools.set(switchTool.name, switchTool as any);
+
+  // Apply initial company context if env var is set
+  if (process.env.JULES_COMPANY) {
+    await briefcase.switchCompany(process.env.JULES_COMPANY);
+  }
+
   const engine = new Engine(provider, registry, mcp);
 
   showBanner();

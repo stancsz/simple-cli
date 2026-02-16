@@ -5,7 +5,7 @@ import { join, dirname } from 'path';
 import { readFile, appendFile } from 'fs/promises';
 import { existsSync } from 'fs';
 import { fileURLToPath } from 'url';
-import { ScheduleConfig, TaskDefinition } from './task_definitions.js';
+import { ScheduleConfig, TaskDefinition } from './interfaces/daemon.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -14,41 +14,65 @@ const ext = isTs ? '.ts' : '.js';
 
 const CWD = process.cwd();
 const AGENT_DIR = join(CWD, '.agent');
-const LOG_FILE = join(AGENT_DIR, 'daemon.log');
-const SCHEDULE_FILE = join(AGENT_DIR, 'schedule.json');
+const LOG_FILE = join(AGENT_DIR, 'daemon.log'); // Changed from ghost.log
+const MCP_CONFIG_FILE = join(CWD, 'mcp.json');
+const SCHEDULER_FILE = join(AGENT_DIR, 'scheduler.json'); // Legacy support
 
 // State tracking
 const activeChildren = new Set<ChildProcess>();
-const cronJobs: any[] = []; // Use any to avoid type issues with node-cron types
-const taskFileWatchers: any[] = []; // Use any to avoid type issues with chokidar types
+const cronJobs: any[] = [];
+const taskFileWatchers: any[] = [];
 
 async function log(msg: string) {
   const timestamp = new Date().toISOString();
   const line = `[${timestamp}] ${msg}\n`;
   try {
     if (!existsSync(AGENT_DIR)) {
-      // Create .agent dir if not exists? Usually it exists.
+      // Create .agent dir if not exists (though usually it should)
     }
     await appendFile(LOG_FILE, line);
   } catch (e) {
     console.error(`Failed to write log: ${e}`);
   }
-  // Also log to stdout for debugging if attached or captured
   console.log(line.trim());
 }
 
 async function loadSchedule(): Promise<ScheduleConfig> {
-  if (!existsSync(SCHEDULE_FILE)) {
-    await log(`Schedule file not found: ${SCHEDULE_FILE}`);
-    return { tasks: [] };
+  let tasks: TaskDefinition[] = [];
+
+  // 1. Load from mcp.json (Primary)
+  if (existsSync(MCP_CONFIG_FILE)) {
+      try {
+          const content = await readFile(MCP_CONFIG_FILE, 'utf-8');
+          const config = JSON.parse(content);
+          if (config.scheduledTasks && Array.isArray(config.scheduledTasks)) {
+              tasks.push(...config.scheduledTasks);
+          }
+      } catch (e) {
+          await log(`Error reading mcp.json: ${e}`);
+      }
   }
-  try {
-    const content = await readFile(SCHEDULE_FILE, 'utf-8');
-    return JSON.parse(content);
-  } catch (e) {
-    await log(`Error reading schedule: ${e}`);
-    return { tasks: [] };
+
+  // 2. Load from scheduler.json (Legacy/Fallback)
+  if (existsSync(SCHEDULER_FILE)) {
+    try {
+      const content = await readFile(SCHEDULER_FILE, 'utf-8');
+      const legacyConfig = JSON.parse(content);
+      if (legacyConfig.tasks && Array.isArray(legacyConfig.tasks)) {
+          // Avoid duplicates by ID
+          const existingIds = new Set(tasks.map(t => t.id));
+          legacyConfig.tasks.forEach((t: TaskDefinition) => {
+              if (!existingIds.has(t.id)) {
+                  tasks.push(t);
+              }
+          });
+      }
+    } catch (e) {
+      await log(`Error reading scheduler.json: ${e}`);
+    }
   }
+
+  return { tasks };
 }
 
 async function runTask(task: TaskDefinition) {
@@ -63,17 +87,17 @@ async function runTask(task: TaskDefinition) {
     env.JULES_COMPANY = task.company;
   }
 
-  // Use run_task in the same directory as this script
-  const runTaskScript = join(__dirname, `run_task${ext}`);
+  // Point to the new executor in src/scheduler/
+  const executorScript = join(__dirname, 'scheduler', `executor${ext}`);
 
   const args = isTs
-       ? ['--loader', 'ts-node/esm', runTaskScript]
-       : [runTaskScript];
+       ? ['--loader', 'ts-node/esm', executorScript]
+       : [executorScript];
 
   const child = spawn('node', args, {
     env,
     cwd: CWD,
-    stdio: 'pipe' // Capture stdout/stderr
+    stdio: 'pipe'
   });
 
   activeChildren.add(child);
@@ -102,11 +126,9 @@ async function runTask(task: TaskDefinition) {
 async function applySchedule() {
   await log("Applying schedule...");
 
-  // Clear existing cron jobs
   cronJobs.forEach(job => job.stop());
   cronJobs.length = 0;
 
-  // Clear existing task watchers
   await Promise.all(taskFileWatchers.map(w => w.close()));
   taskFileWatchers.length = 0;
 
@@ -132,7 +154,6 @@ async function applySchedule() {
         }
       } else if (task.trigger === 'file-watch' && task.path) {
           const watchPath = join(CWD, task.path);
-          // Use ignoreInitial to avoid triggering on startup
           const watcher = chokidar.watch(watchPath, { persistent: true, ignoreInitial: true });
 
           watcher.on('change', (path) => {
@@ -159,47 +180,34 @@ async function main() {
 
   await applySchedule();
 
-  // Setup persistent watcher for schedule file
-  // Check if file exists to decide how to watch
-  if (existsSync(SCHEDULE_FILE)) {
-      const scheduleWatcher = chokidar.watch(SCHEDULE_FILE, { persistent: true, ignoreInitial: true });
-      scheduleWatcher.on('change', async () => {
-          await log("Schedule file changed. Reloading...");
+  // Watch mcp.json for changes
+  if (existsSync(MCP_CONFIG_FILE)) {
+      const mcpWatcher = chokidar.watch(MCP_CONFIG_FILE, { persistent: true, ignoreInitial: true });
+      mcpWatcher.on('change', async () => {
+          await log("mcp.json changed. Reloading schedule...");
           await applySchedule();
       });
-      // We don't add scheduleWatcher to taskFileWatchers so it persists across reloads
   } else {
-      // Watch directory for creation of schedule file?
-      // Simpler: just try to watch the file path even if it doesn't exist?
-      // Chokidar can watch non-existent paths if using globs, but specific file?
-      // Let's stick to simple logic: if it doesn't exist, we just wait.
-      // If user creates it, they might need to restart daemon or we can watch directory.
-      // Watching .agent directory for 'add' event is safer.
-      if (existsSync(AGENT_DIR)) {
-          const dirWatcher = chokidar.watch(AGENT_DIR, { persistent: true, ignoreInitial: true });
-          dirWatcher.on('add', async (path) => {
-              if (path === SCHEDULE_FILE) {
-                  await log("Schedule file created. Loading...");
-                  await applySchedule();
-                  // Once created, we could switch to watching the file specifically,
-                  // but dir watcher is fine for now if we filter by path.
-                  // However, 'change' events on file might not trigger 'add'.
-                  // So we might need to handle 'change' in dir watcher too.
+      // Watch cwd for creation of mcp.json
+      const dirWatcher = chokidar.watch(CWD, { depth: 0, persistent: true, ignoreInitial: true });
+      dirWatcher.on('add', async (path) => {
+          if (path === MCP_CONFIG_FILE) {
+               await log("mcp.json created. Loading schedule...");
+               await applySchedule();
+               // Could attach specific watcher now, but applySchedule re-runs so logic is fine
+               // We might want to restart to attach specific watcher properly or just rely on manual restart
+               // For now, reloading schedule is good enough.
+          }
+      });
+  }
 
-                  // For simplicity, let's just tell user to restart daemon if they create schedule file
-                  // or rely on them editing it (triggering change if we watched it).
-                  // But we are not watching it if it didn't exist.
-
-                  // Let's implement dynamic switch.
-                  dirWatcher.close();
-                  const scheduleWatcher = chokidar.watch(SCHEDULE_FILE, { persistent: true, ignoreInitial: true });
-                  scheduleWatcher.on('change', async () => {
-                      await log("Schedule file changed. Reloading...");
-                      await applySchedule();
-                  });
-              }
-          });
-      }
+  // Watch scheduler.json as well
+  if (existsSync(SCHEDULER_FILE)) {
+      const legacyWatcher = chokidar.watch(SCHEDULER_FILE, { persistent: true, ignoreInitial: true });
+      legacyWatcher.on('change', async () => {
+          await log("scheduler.json changed. Reloading schedule...");
+          await applySchedule();
+      });
   }
 
   setInterval(() => {}, 1000 * 60 * 60); // Keep alive
@@ -207,19 +215,14 @@ async function main() {
 
 const shutdown = async (signal: string) => {
     await log(`Daemon stopping (${signal})...`);
-
-    // Kill child processes
     if (activeChildren.size > 0) {
         await log(`Killing ${activeChildren.size} active tasks...`);
         for (const child of activeChildren) {
             try {
                 child.kill('SIGTERM');
-            } catch (e) {
-                // ignore
-            }
+            } catch (e) { }
         }
     }
-
     process.exit(0);
 };
 

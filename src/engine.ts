@@ -100,6 +100,28 @@ export class Registry {
         }
       }
     }
+  }
+
+  async loadCompanyTools(company: string) {
+    const cwd = process.cwd();
+    const toolsDir = join(cwd, ".agent", "companies", company, "tools");
+    if (existsSync(toolsDir)) {
+      for (const f of await readdir(toolsDir)) {
+        if (f.endsWith(".ts") || f.endsWith(".js")) {
+          try {
+            const mod = await import(pathToFileURL(join(toolsDir, f)).href);
+            const t = mod.tool || mod.default;
+            if (Array.isArray(t)) {
+              t.forEach(tool => { if (tool?.name) this.tools.set(tool.name, tool); });
+            } else if (t?.name) {
+              this.tools.set(t.name, t);
+            }
+          } catch (e) {
+            console.error(`Failed to load company tool ${f}:`, e);
+          }
+        }
+      }
+    }
 
     // 2. Scan Skill-Based Tools (.agent/skills/*/tools.ts)
     const skillsDir = join(cwd, ".agent", "skills");
@@ -132,14 +154,31 @@ export class Registry {
 
 
 export class Engine {
-  private s = spinner();
+  protected s = spinner();
   private companyContext: CompanyContext | null = null;
 
   constructor(
-    private llm: any,
-    private registry: Registry,
-    private mcp: MCP,
+    protected llm: any,
+    protected registry: Registry,
+    protected mcp: MCP,
   ) { }
+
+  protected async getUserInput(initialValue: string, interactive: boolean): Promise<string | undefined> {
+    if (!interactive || !process.stdout.isTTY) return undefined;
+    const res = await text({
+      message: pc.cyan("Chat"),
+      initialValue,
+    });
+    if (isCancel(res)) return undefined;
+    return res as string;
+  }
+
+  protected log(type: 'info' | 'success' | 'warn' | 'error', message: string) {
+    if (type === 'info') log.info(message);
+    else if (type === 'success') log.success(message);
+    else if (type === 'warn') log.warn(message);
+    else if (type === 'error') log.error(message);
+  }
 
   async run(
     ctx: Context,
@@ -155,6 +194,11 @@ export class Engine {
 
     // Ensure tools are loaded for the context cwd
     await this.registry.loadProjectTools(ctx.cwd);
+
+    // Initialize Persona Engine
+    if (this.llm.personaEngine) {
+      await this.llm.personaEngine.loadConfig();
+    }
 
     if (process.stdin.isTTY) {
       readline.emitKeypressEvents(process.stdin);
@@ -172,14 +216,9 @@ export class Engine {
 
     while (true) {
       if (!input) {
-        if (!options.interactive || !process.stdout.isTTY) break;
-        const res = await text({
-          message: pc.cyan("Chat"),
-          initialValue: bufferedInput,
-        });
+        input = await this.getUserInput(bufferedInput, options.interactive);
         bufferedInput = "";
-        if (isCancel(res)) break;
-        input = res as string;
+        if (!input) break;
       }
 
       ctx.history.push({ role: "user", content: input });
@@ -249,7 +288,8 @@ export class Engine {
         if (response.usage) {
           const { promptTokens, completionTokens, totalTokens } =
             response.usage;
-          log.info(
+          this.log(
+            "info",
             pc.dim(
               `Tokens: ${promptTokens ?? "?"} prompt + ${completionTokens ?? "?"} completion = ${totalTokens ?? "?"} total`,
             ),
@@ -258,7 +298,7 @@ export class Engine {
 
         const { thought, tool, args, message, tools } = response;
 
-        if (thought) log.info(pc.dim(thought));
+        if (thought) this.log("info", pc.dim(thought));
 
         // Determine execution list
         const executionList =
@@ -289,7 +329,7 @@ export class Engine {
                 // Reload tools if create_tool was used
                 if (tName === "create_tool") {
                   await this.registry.loadProjectTools(ctx.cwd);
-                  log.success("Tools reloaded.");
+                  this.log("success", "Tools reloaded.");
                 }
 
                 // Reload tools if mcp_start_server was used
@@ -297,7 +337,7 @@ export class Engine {
                   (await this.mcp.getTools()).forEach((t) =>
                     this.registry.tools.set(t.name, t as any),
                   );
-                  log.success("MCP tools updated.");
+                  this.log("success", "MCP tools updated.");
                 }
 
                 // Add individual tool execution to history to keep context updated
@@ -321,11 +361,6 @@ export class Engine {
 
                 let qaPrompt = `Analyze the result of the tool execution: ${JSON.stringify(result)}. Did it satisfy the user's request: "${input || userHistory.pop()?.content}"? If specific files were mentioned (like flask app), check if they exist or look correct based on the tool output.`;
 
-                if (tName === "delegate_cli") {
-                  qaPrompt +=
-                    " Since this was delegated to an external CLI, be extra critical. Does the output explicitly confirm file creation?";
-                }
-
                 const qaCheck = await this.llm.generate(
                   qaPrompt,
                   [...ctx.history, { role: "user", content: qaPrompt }],
@@ -337,10 +372,10 @@ export class Engine {
                   qaCheck.message.toLowerCase().includes("fail")
                 ) {
                   this.s.stop(`[Supervisor] QA FAILED`);
-                  log.error(
+                  this.log("error",
                     `[Supervisor] Reason: ${qaCheck.message || qaCheck.thought}`,
                   );
-                  log.error(`[Supervisor] Asking for retry...`);
+                  this.log("error", `[Supervisor] Asking for retry...`);
                   input =
                     "The previous attempt failed. Please retry or fix the issue.";
                   allExecuted = false;
@@ -353,9 +388,9 @@ export class Engine {
                 if (!toolExecuted) this.s.stop(`Error executing ${tName}`);
                 else if (qaStarted) {
                   this.s.stop("Verification Error");
-                  log.error(`Error during verification: ${e.message}`);
+                  this.log("error", `Error during verification: ${e.message}`);
                 } else {
-                  log.error(`Error: ${e.message}`);
+                  this.log("error", `Error: ${e.message}`);
                 }
 
                 ctx.history.push({
@@ -402,8 +437,8 @@ export class Engine {
           ) && /(file|code)/.test(rawText);
 
         if (isRefusal || isHallucination || isLazyInstruction) {
-          log.warn("Lazy/Hallucinating Agent detected. Forcing retry...");
-          if (message) log.info(pc.dim(`Agent: ${message}`));
+          this.log("warn", "Lazy/Hallucinating Agent detected. Forcing retry...");
+          if (message) this.log("info", pc.dim(`Agent: ${message}`));
 
           ctx.history.push({
             role: "assistant",
@@ -411,7 +446,7 @@ export class Engine {
           });
 
           input =
-            "System Correction: You MUST use the 'delegate_cli' tool to create or modify files via subagents. Do not describe the action or ask the user to do it. Use the tool now.";
+            "System Correction: You MUST use an appropriate tool (e.g., 'write_file', 'aider_edit_files', 'ask_claude') to create or modify files. Do not describe the action or ask the user to do it.";
           continue;
         }
         // ----------------------------
@@ -434,7 +469,7 @@ export class Engine {
           continue;
         }
         // Log actual errors
-        log.error(`Error: ${e.message}`);
+        this.log("error", `Error: ${e.message}`);
 
         if (!options.interactive) {
           throw e;

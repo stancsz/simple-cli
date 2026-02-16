@@ -105,6 +105,24 @@ export class MCP {
       }
   }
 
+  isServerRunning(name: string): boolean {
+    return this.clients.has(name);
+  }
+
+  async stopServer(name: string) {
+    const client = this.clients.get(name);
+    if (client) {
+      try {
+        await client.close();
+      } catch (e) {
+        // ignore error during close
+      }
+      this.clients.delete(name);
+      return `Stopped server '${name}'.`;
+    }
+    return `Server '${name}' is not running.`;
+  }
+
   listServers() {
       return Array.from(this.discoveredServers.values()).map(s => ({
           name: s.name,

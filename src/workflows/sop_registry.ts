@@ -17,6 +17,10 @@ export class SOPRegistry {
     }
   }
 
+  setCompany(company: string) {
+    this.companyWorkflowDir = join(process.cwd(), ".agent", "companies", company, "workflows");
+  }
+
   private async ensureDir(dir: string) {
     if (!existsSync(dir)) {
       await mkdir(dir, { recursive: true });
