@@ -73,6 +73,8 @@ scraper_screenshots/
 .agent/secret.key
 .agent/*.sqlite
 .agent/*.db
+.agent/contexts/
+.agent/companies/
 data_analyst_demo/
 temp_product_director_test/
 jules_work_*
