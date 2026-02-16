@@ -4,7 +4,6 @@ import { createAnthropic } from "@ai-sdk/anthropic";
 import { createGoogleGenerativeAI } from "@ai-sdk/google";
 import { jsonrepair } from "jsonrepair";
 import chalk from "chalk";
-import { Persona } from "./persona.js";
 
 export interface LLMResponse {
   thought: string;
@@ -24,11 +23,9 @@ export type LLMConfig = { provider: string; model: string; apiKey?: string };
 
 export class LLM {
   private configs: LLMConfig[];
-  public persona: Persona;
 
   constructor(config: LLMConfig | LLMConfig[]) {
     this.configs = Array.isArray(config) ? config : [config];
-    this.persona = new Persona();
   }
 
   async embed(text: string): Promise<number[]> {
@@ -131,21 +128,14 @@ export class LLM {
           continue; // Skip unsupported
         }
 
-        const configPath = process.env.JULES_COMPANY
-          ? `.agent/companies/${process.env.JULES_COMPANY}/persona.json`
-          : "persona.json";
-        await this.persona.load(configPath);
-
-        const systemWithPersona = this.persona.inject_personality(system);
         const { text, usage } = await generateText({
           model,
-          system: systemWithPersona,
+          system,
           messages: history as any,
           abortSignal: signal,
         });
 
         const parsed = this.parse(text, usage as any);
-        parsed.message = this.persona.format_response(parsed.message || "");
         return parsed;
       } catch (e: any) {
         lastError = e;

@@ -1,7 +1,7 @@
 import { join } from "path";
-import { LLMResponse } from "../llm.js";
+import { LLM, LLMResponse } from "../llm.js";
 import { PersonaConfig, loadPersonaConfig } from "./loader.js";
-import { injectPersonality as injectSystem, transformResponse as transformResp } from "./injector.js";
+import { injectPersonality as injectSystem, transformResponse as transformResp, isWithinWorkingHours } from "./injector.js";
 
 const DEFAULT_PERSONA: PersonaConfig = {
   name: "Jules",
@@ -29,7 +29,7 @@ export class PersonaEngine {
   private company: string | null = null;
   private cwd: string;
 
-  constructor(cwd: string = process.cwd()) {
+  constructor(private llm: LLM, cwd: string = process.cwd()) {
     this.cwd = cwd;
     const company = process.env.JULES_COMPANY;
     this.company = company || null;
@@ -60,17 +60,32 @@ export class PersonaEngine {
     }
   }
 
-  async injectPersonality(systemPrompt: string): Promise<string> {
+  async generate(
+    system: string,
+    history: any[],
+    signal?: AbortSignal,
+    onTyping?: () => void
+  ): Promise<LLMResponse> {
     if (!this.config) {
       await this.loadConfig();
     }
-    return injectSystem(systemPrompt, this.config!);
-  }
 
-  async transform(response: LLMResponse): Promise<LLMResponse> {
-    if (!this.config) {
-      await this.loadConfig();
+    // Optimization: Check working hours before calling LLM
+    if (this.config?.enabled && this.config.working_hours && !isWithinWorkingHours(this.config.working_hours)) {
+        // Just call transform to return the offline message
+        // Create a dummy response to transform
+        const dummy: LLMResponse = {
+            thought: "",
+            tool: "none",
+            args: {},
+            message: "",
+            raw: ""
+        };
+        return transformResp(dummy, this.config, onTyping);
     }
-    return transformResp(response, this.config!);
+
+    const systemWithPersona = injectSystem(system, this.config!);
+    const response = await this.llm.generate(systemWithPersona, history, signal);
+    return transformResp(response, this.config!, onTyping);
   }
 }
