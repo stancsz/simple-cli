@@ -37,12 +37,12 @@ export class LLM {
       history.filter((m) => m.role === "user").pop()?.content || "";
 
     for (const config of this.configs) {
+      const providerName = config.provider.toLowerCase();
+      const modelName = config.model;
       try {
         if (signal?.aborted) throw new Error("Aborted by user");
-        const providerName = config.provider.toLowerCase();
 
         // --- Fallback: Internal API Logic ---
-        const modelName = config.model;
         let model: any;
         const apiKey = config.apiKey || this.getEnvKey(providerName);
 
@@ -89,6 +89,7 @@ export class LLM {
         return this.parse(text, usage as any);
       } catch (e: any) {
         lastError = e;
+        console.error(`[LLM] ${providerName}:${modelName} failed: ${e.message}`);
         if (this.configs.indexOf(config) === 0) {
           console.warn(
             `[LLM] Primary provider failed, switching to fallbacks...`,
