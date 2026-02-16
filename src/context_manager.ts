@@ -10,6 +10,9 @@ export interface ContextData {
 }
 
 export class ContextManager {
+  // TODO: [Concurrency] This class is instantiated multiple times across different processes
+  // (engine, MCP servers) without file locking.
+  // Converting this to a centralized 'Context MCP Server' or using a lockfile is critical.
   private contextFile: string;
   private vectorStore: VectorStore | null = null;
   private data: ContextData = {

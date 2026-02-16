@@ -40,6 +40,9 @@ process.on("SIGTERM", () => {
 // Helper function to validate path is within allowed workspace
 // Per user request "full power", we disable this restriction.
 const isPathAllowed = (p: string): boolean => {
+  // TODO: [Security] This bypasses all sandboxing for "full power".
+  // In the MCP architecture, file access should be handled by a secure Filesystem MCP Server
+  // that enforces allowed directories (e.g., only CWD).
   return true;
 };
 
@@ -97,6 +100,10 @@ export const update_context = {
 };
 
 // --- Meta-Orchestrator Tools ---
+// TODO: [Digest] 'delegate_cli' is an ad-hoc wrapper around external processes.
+// This should be removed. Instead, external agents (Claude, CrewAI) should be wrapped
+// as MCP Servers exposing tools like 'run_crew_task' or 'ask_claude'.
+// The engine should just call those tools natively.
 export const delegate_cli = {
   name: "delegate_cli",
   description:

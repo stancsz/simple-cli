@@ -1,3 +1,6 @@
+// TODO: [Ingest] Convert to 'crewai-mcp' server.
+// This logic creates a CrewAI process. It belongs in a dedicated MCP server.
+
 import { spawn } from "child_process";
 import process from "process";
 import { join } from "path";
@@ -53,9 +56,9 @@ async function main() {
     // If using DeepSeek, we set OPENAI_BASE_URL to DeepSeek's API
     ...(process.env.DEEPSEEK_API_KEY
       ? {
-          OPENAI_BASE_URL: "https://api.deepseek.com",
-          OPENAI_MODEL_NAME: "deepseek-chat",
-        }
+        OPENAI_BASE_URL: "https://api.deepseek.com",
+        OPENAI_MODEL_NAME: "deepseek-chat",
+      }
       : {}),
   };
 

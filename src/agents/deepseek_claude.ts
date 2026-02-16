@@ -1,3 +1,6 @@
+// TODO: [Ingest] Convert to 'claude-code-mcp' server.
+// Instead of this script, use an MCP server that wraps the 'claude' CLI.
+
 import { spawn } from "child_process";
 import process from "process";
 

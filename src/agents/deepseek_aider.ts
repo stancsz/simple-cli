@@ -1,3 +1,7 @@
+// TODO: [Ingest] This script is an ad-hoc wrapper for Aider.
+// It should be converted into a standalone MCP Server (e.g., 'aider-mcp').
+// The server should expose tools like 'aider_edit_files', 'aider_chat'.
+
 import { spawn } from "child_process";
 import process from "process";
 

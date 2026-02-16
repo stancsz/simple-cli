@@ -38,6 +38,10 @@ export async function loadConfig(cwd: string = process.cwd()): Promise<Config> {
   if (!config.agents) config.agents = {};
 
   if (!config.agents.deepseek_crewai) {
+    // TODO: [Config] Hardcoded path to 'src/agents/deepseek_crewai.ts'.
+    // This assumes the user has the source code.
+    // Instead, this agent should be an installable MCP server (npm package or similar),
+    // configured in mcp.json, not here.
     config.agents.deepseek_crewai = {
       command: "npx",
       args: ["tsx", "src/agents/deepseek_crewai.ts"],

@@ -9,6 +9,13 @@ import { ContextManager } from "../../context_manager.js";
 
 const execAsync = promisify(exec);
 
+// TODO: [Ingest] This entire server is a collection of ad-hoc tools (run_command, read_file).
+// It simulates standard capabilities but poorly.
+// REPLACE this with:
+// 1. @modelcontextprotocol/server-filesystem (for read_file/write_file)
+// 2. @modelcontextprotocol/server-git (for git ops)
+// 3. A dedicated 'Context MCP Server' if needed, or just let the engine handle context.
+
 export class SimpleToolsServer {
   private server: McpServer;
   private contextManager: ContextManager;
@@ -106,6 +113,8 @@ export class SimpleToolsServer {
 
     this.server.tool(
       "run_command",
+      // TODO: [Security] Arbitrary command execution is dangerous.
+      // If needed, use a sandboxed shell MCP server or separate 'Terminal MCP'.
       "Execute a shell command.",
       {
         command: z.string().describe("The command to execute."),

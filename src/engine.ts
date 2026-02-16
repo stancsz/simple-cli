@@ -1,3 +1,7 @@
+// TODO: [Refactor] This entire engine should act as a 'Universal Adapter'.
+// Instead of manually loading tools or parsing lazy agent outputs with regex,
+// it should ingest standardized MCP tool definitions and digest them into a shared context.
+
 import { readFile, writeFile, readdir } from "fs/promises";
 import { existsSync } from "fs";
 import { join, relative, resolve } from "path";
@@ -72,6 +76,9 @@ export class Registry {
   tools: Map<string, Tool> = new Map();
 
   async loadProjectTools(cwd: string) {
+    // TODO: [Ingest] Deprecate this manual tool scanning.
+    // Tools should be loaded exclusively via MCP Server discovery (mcp.json).
+    // The concept of "Legacy Flat Tools" and "Skill-Based Tools" should migrate to local MCP servers.
 
     // 1. Scan Legacy Flat Tools
     const toolsDir = join(cwd, ".agent", "tools");
@@ -347,6 +354,9 @@ export class Engine {
         }
 
         // --- Lazy Agent Detection ---
+        // TODO: [Refactor] Remove regex-based lazy agent detection.
+        // Instead, valid MCP tools should enforce structured outputs or errors.
+        // If an agent (like Devin) is lazy, the Devin MCP Server wrapper should handle the retry logic, not this engine.
         const rawText = (message || response.raw || "").toLowerCase();
         const isRefusal =
           /(cannot|can't|unable to|no access|don't have access) (to )?(create|write|modify|delete|save|edit)/.test(
