@@ -10,6 +10,7 @@
   },
   "scripts": {
     "start": "node --loader ts-node/esm src/cli.ts",
+    "start:brain": "npx tsx src/mcp_servers/brain/index.ts",
     "daemon": "node --loader ts-node/esm src/daemon.ts",
     "start:slack": "node --loader ts-node/esm src/interfaces/slack.ts",
     "dev": "node --loader ts-node/esm --watch src/cli.ts",
