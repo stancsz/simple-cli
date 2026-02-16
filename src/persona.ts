@@ -43,7 +43,7 @@ export class Persona {
     }
   }
 
-  injectPrompt(systemPrompt: string): string {
+  inject_personality(systemPrompt: string): string {
     if (!this.config || !this.config.enabled) return systemPrompt;
 
     let personalityPrompt = `You are ${this.config.name}, a ${this.config.role}.`;
@@ -57,12 +57,11 @@ export class Persona {
     return `${personalityPrompt}\n\n${systemPrompt}`;
   }
 
-  async processResponse(response: string): Promise<string> {
+  format_response(response: string): string {
     if (!this.config || !this.config.enabled) return response;
 
     // Working Hours Check
     if (this.config.working_hours && !this.isWithinWorkingHours(this.config.working_hours)) {
-      await this.simulateLatency();
       return `I am currently offline. My working hours are ${this.config.working_hours}.`;
     }
 
@@ -92,7 +91,6 @@ export class Persona {
       message = `${message}\n\n${signoff}`;
     }
 
-    await this.simulateLatency();
     return message;
   }
 
@@ -131,13 +129,5 @@ export class Persona {
       }
       return match;
     });
-  }
-
-  private async simulateLatency(): Promise<void> {
-    if (this.config?.response_latency) {
-      const { min, max } = this.config.response_latency;
-      const delay = Math.floor(Math.random() * (max - min + 1)) + min;
-      await new Promise((resolve) => setTimeout(resolve, delay));
-    }
   }
 }

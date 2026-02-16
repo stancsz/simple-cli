@@ -136,7 +136,7 @@ export class LLM {
           : "persona.json";
         await this.persona.load(configPath);
 
-        const systemWithPersona = this.persona.injectPrompt(system);
+        const systemWithPersona = this.persona.inject_personality(system);
         const { text, usage } = await generateText({
           model,
           system: systemWithPersona,
@@ -145,7 +145,7 @@ export class LLM {
         });
 
         const parsed = this.parse(text, usage as any);
-        parsed.message = await this.persona.processResponse(parsed.message || "");
+        parsed.message = this.persona.format_response(parsed.message || "");
         return parsed;
       } catch (e: any) {
         lastError = e;
