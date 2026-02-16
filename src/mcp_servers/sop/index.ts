@@ -94,14 +94,13 @@ export class SOPServer {
       {
         sop_path: z.string().describe("The path to the SOP markdown file (e.g., 'sops/deploy.md')."),
         params: z.record(z.any()).optional().describe("Optional parameters for the SOP."),
-        resume: z.boolean().optional().describe("Whether to resume from the last saved state."),
       },
-      async ({ sop_path, params, resume }) => {
+      async ({ sop_path, params }) => {
         try {
           // Ensure client is initialized and connected to tools
           await this.client.init();
 
-          const result = await this.engine.executeSOP(sop_path, params || {}, resume || false);
+          const result = await this.engine.executeSOP(sop_path, params || {});
 
           // Log progress to .agent/sop_logs.jsonl
           const agentDir = join(process.cwd(), ".agent");

@@ -77,9 +77,6 @@ export class ContextManager {
     const retryDelay = 100;
     const staleThreshold = 30000; // 30 seconds
 
-    // Ensure directory exists
-    await mkdir(dirname(lockFile), { recursive: true });
-
     for (let i = 0; i < maxRetries; i++) {
       try {
         await writeFile(lockFile, "", { flag: "wx" });

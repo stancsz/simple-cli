@@ -120,7 +120,7 @@ describe("mcp", () => {
       expect(config.servers).toHaveLength(0);
     });
 
-    it("should handle missing config gracefully", async () => {
+    it("should handle missing config gracefully", () => {
       const loadConfig = async (path: string) => {
         try {
           // Simulating file not found
@@ -130,7 +130,7 @@ describe("mcp", () => {
         }
       };
 
-      await expect(loadConfig("./nonexistent.json")).resolves.toEqual({
+      expect(loadConfig("./nonexistent.json")).resolves.toEqual({
         servers: [],
       });
     });

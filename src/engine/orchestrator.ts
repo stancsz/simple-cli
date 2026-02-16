@@ -9,6 +9,7 @@ import { relative, join } from "path";
 import { MCP } from "../mcp.js";
 import { Skill } from "../skills.js";
 import { CompanyContext } from "../brain/company_context.js";
+import { ContextManager } from "../context/manager.js";
 
 export interface Message {
   role: "user" | "assistant" | "system";
@@ -170,9 +171,23 @@ export class Engine {
     let input = initialPrompt;
     let bufferedInput = "";
     await this.mcp.init();
+
+    // Auto-start Brain server
+    try {
+      const servers = this.mcp.listServers();
+      if (servers.find((s) => s.name === "brain" && s.status === "stopped")) {
+        await this.mcp.startServer("brain");
+        this.log("success", "Brain server started.");
+      }
+    } catch (e) {
+      console.error("Failed to start Brain server:", e);
+    }
+
     (await this.mcp.getTools()).forEach((t) =>
       this.registry.tools.set(t.name, t as any),
     );
+
+    const contextManager = new ContextManager(this.registry);
 
     // Legacy loading removed
     // await this.registry.loadProjectTools(ctx.cwd);
@@ -201,6 +216,14 @@ export class Engine {
         input = await this.getUserInput(bufferedInput, options.interactive);
         bufferedInput = "";
         if (!input) break;
+      }
+
+      // Brain: Recall similar past experiences
+      const userRequest = input; // Capture original request
+      const pastMemory = await contextManager.recallSimilar(userRequest);
+      if (pastMemory) {
+        this.log("info", pc.dim(`[Brain] Recalled past experience.`));
+        input = `[Past Experience]\n${pastMemory}\n\n[User Request]\n${input}`;
       }
 
       ctx.history.push({ role: "user", content: input });
@@ -293,6 +316,7 @@ export class Engine {
 
         if (executionList.length > 0) {
           let allExecuted = true;
+          const currentArtifacts: string[] = [];
           for (const item of executionList) {
             if (signal.aborted) break;
 
@@ -308,6 +332,11 @@ export class Engine {
                 const result = await t.execute(tArgs, { signal });
                 this.s.stop(`Executed ${tName}`);
                 toolExecuted = true;
+
+                // Track artifacts
+                if (tArgs && (tArgs.filepath || tArgs.path)) {
+                   currentArtifacts.push(tArgs.filepath || tArgs.path);
+                }
 
                 // Reload tools if create_tool was used (via MCP refresh if available?)
                 // Since legacy tools are gone, create_tool would likely create an MCP server or file.
@@ -395,6 +424,8 @@ export class Engine {
           }
 
           if (allExecuted) {
+            // Store successful memory
+            await contextManager.storeMemory(userRequest, message || response.thought || "Task completed.", currentArtifacts);
             input = "The tool executions were verified. Proceed.";
           }
           continue;

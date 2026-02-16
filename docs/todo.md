@@ -19,7 +19,6 @@ This document tracks the migration from ad-hoc internal tools to a strict **MCP-
     - [ ] Remove manual tool loading in `engine.ts`. Use standard MCP discovery.
 - [ ] **Context Management**:
     - [x] Implement Concurrency Control: Added file locking to `ContextManager` to prevent race conditions.
-    - [x] Fix Context Manager race conditions: Added directory creation logic to lock file acquisition.
     - [ ] Implement a **Context MCP Server** (singleton) to handle `context.json` updates securely (fix race conditions).
     - [ ] Update `engine.ts` to push/pull context via this server.
 
@@ -34,10 +33,10 @@ This document tracks the migration from ad-hoc internal tools to a strict **MCP-
 
 ### 5. Phase 5: The Digital Co-worker (Deployment & Persona)
 - [ ] **Persona Engine**:
-    - [x] Create `src/persona.ts`: Load `persona.json` and wrap LLM responses.
+    - [ ] Create `src/persona.ts`: Load `persona.json` and wrap LLM responses.
     - [ ] Implement `inject_personality()` function in `src/llm.ts`.
 - [ ] **Interfaces**:
-    - [x] Create `src/interfaces/slack.ts`: Implement Slack Bolt.js adapter.
+    - [ ] Create `src/interfaces/slack.ts`: Implement Slack Bolt.js adapter.
     - [ ] Create `src/interfaces/teams.ts`: Implement Microsoft Bot Framework adapter.
 - [ ] **Infrastructure**:
     - [ ] Create `Dockerfile` for lightweight production image.

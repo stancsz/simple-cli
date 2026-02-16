@@ -17,7 +17,7 @@ oclif.manifest.json
 tmp**
 
 # MCP config (may contain API keys)
-# mcp.json
+mcp.json
 .mcp.json
 
 # Simple-CLI data
@@ -73,8 +73,6 @@ scraper_screenshots/
 .agent/secret.key
 .agent/*.sqlite
 .agent/*.db
-.agent/contexts/
-.agent/companies/
 data_analyst_demo/
 temp_product_director_test/
 jules_work_*
@@ -82,5 +80,3 @@ jules_work_*
 report.txt
 .agent/sop_logs.json
 .agent/sop_logs.jsonl
-.agent/sop_logs/
-.agent/sop_states/

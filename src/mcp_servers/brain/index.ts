@@ -4,7 +4,7 @@ import express from "express";
 import cors from "cors";
 import { z } from "zod";
 import { fileURLToPath } from "url";
-import { EpisodicMemory } from "../../brain/episodic_memory.js";
+import { EpisodicMemory } from "../../brain/index.js";
 import { SemanticGraph } from "../../brain/semantic_graph.js";
 import { join } from "path";
 import { readFile, readdir } from "fs/promises";
@@ -39,22 +39,26 @@ export class BrainServer {
   private setupTools() {
     // Episodic Memory Tools
     this.server.tool(
-      "store_episodic_memory",
-      "Store a new episodic memory (text + metadata).",
+      "store_memory",
+      "Store a new episodic memory (user prompt, agent response, artifacts).",
       {
-        text: z.string().describe("The content of the memory."),
-        metadata: z.string().optional().describe("JSON string of metadata."),
+        userPrompt: z.string().describe("The user's original request."),
+        agentResponse: z.string().describe("The agent's final response or summary."),
+        artifacts: z.string().optional().describe("JSON string array of modified file paths."),
       },
-      async ({ text, metadata }) => {
-        let meta = {};
-        if (metadata) {
+      async ({ userPrompt, agentResponse, artifacts }) => {
+        let artifactList: string[] = [];
+        if (artifacts) {
           try {
-            meta = JSON.parse(metadata);
+            artifactList = JSON.parse(artifacts);
+            if (!Array.isArray(artifactList)) artifactList = [];
           } catch {
-            meta = { raw: metadata };
+            // If simple string, wrap in array? Or ignore?
+            // Let's assume input is JSON array string.
+            artifactList = [];
           }
         }
-        await this.episodic.add(text, meta);
+        await this.episodic.add(userPrompt, agentResponse, artifactList);
         return {
           content: [{ type: "text", text: "Memory stored successfully." }],
         };
@@ -62,13 +66,13 @@ export class BrainServer {
     );
 
     this.server.tool(
-      "query_episodic_memory",
-      "Search episodic memory for relevant information.",
+      "query_memory",
+      "Search episodic memory for relevant past experiences.",
       {
         query: z.string().describe("The search query."),
-        limit: z.number().optional().default(5).describe("Max number of results."),
+        limit: z.number().optional().default(3).describe("Max number of results."),
       },
-      async ({ query, limit = 5 }) => {
+      async ({ query, limit = 3 }) => {
         const results = await this.episodic.search(query, limit);
         if (results.length === 0) {
           return { content: [{ type: "text", text: "No relevant memories found." }] };
@@ -76,9 +80,9 @@ export class BrainServer {
         const text = results
           .map(
             (r) =>
-              `- ${r.text} (Date: ${new Date(r.created_at).toISOString()})`
+              `[${new Date(r.timestamp).toISOString()}]\nUser: ${r.userPrompt}\nAgent: ${r.agentResponse}\nArtifacts: ${r.artifacts.join(", ") || "None"}`
           )
-          .join("\n");
+          .join("\n\n---\n\n");
         return { content: [{ type: "text", text }] };
       }
     );
