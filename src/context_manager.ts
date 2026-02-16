@@ -1,4 +1,4 @@
-import { readFile, writeFile, mkdir, unlink } from "fs/promises";
+import { readFile, writeFile, mkdir, unlink, stat } from "fs/promises";
 import { existsSync } from "fs";
 import { join, dirname } from "path";
 import { VectorStore } from "./memory/vector_store.js";
@@ -31,6 +31,7 @@ export class ContextManager {
     const lockFile = this.contextFile + ".lock";
     const maxRetries = 100; // 10 seconds
     const retryDelay = 100;
+    const staleThreshold = 30000; // 30 seconds
 
     for (let i = 0; i < maxRetries; i++) {
       try {
@@ -44,6 +45,27 @@ export class ContextManager {
         }
       } catch (e: any) {
         if (e.code === "EEXIST") {
+          // Check if lock is stale
+          try {
+            const stats = await stat(lockFile);
+            const now = Date.now();
+            if (now - stats.mtimeMs > staleThreshold) {
+              console.warn(
+                `[ContextManager] Found stale lock file (age: ${
+                  now - stats.mtimeMs
+                }ms). Removing...`,
+              );
+              try {
+                await unlink(lockFile);
+                // Try again immediately
+                continue;
+              } catch (unlinkError) {
+                // Ignore, maybe another process removed it
+              }
+            }
+          } catch (statError) {
+            // Lock file might be gone already
+          }
           await new Promise((resolve) => setTimeout(resolve, retryDelay));
         } else {
           throw e;
