@@ -4,7 +4,7 @@ import { createAnthropic } from "@ai-sdk/anthropic";
 import { createGoogleGenerativeAI } from "@ai-sdk/google";
 import { jsonrepair } from "jsonrepair";
 import chalk from "chalk";
-import { PersonaEngine } from "./persona.js";
+import { PersonaEngine } from "./persona/engine.js";
 
 export interface LLMResponse {
   thought: string;
