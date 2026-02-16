@@ -21,10 +21,7 @@ export class Briefcase {
     // 1. Set environment variable
     process.env.JULES_COMPANY = company;
 
-    // 2. Update Persona Engine
-    if (this.llm.personaEngine) {
-        this.llm.personaEngine.setCompany(company);
-    }
+    // 2. Persona Engine updates automatically based on env var in LLM.generate
 
     // 3. Update SOP Registry
     this.sopRegistry.setCompany(company);

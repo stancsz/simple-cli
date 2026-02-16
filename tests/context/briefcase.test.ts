@@ -6,13 +6,7 @@ const mockRegistry = {
   loadCompanyTools: vi.fn(),
 };
 
-const mockPersonaEngine = {
-  setCompany: vi.fn(),
-};
-
-const mockLLM = {
-  personaEngine: mockPersonaEngine,
-};
+const mockLLM = {};
 
 const mockSOPRegistry = {
   setCompany: vi.fn(),
@@ -44,7 +38,6 @@ describe('Briefcase', () => {
     await briefcase.switchCompany(company);
 
     expect(process.env.JULES_COMPANY).toBe(company);
-    expect(mockLLM.personaEngine.setCompany).toHaveBeenCalledWith(company);
     expect(mockSOPRegistry.setCompany).toHaveBeenCalledWith(company);
     expect(mockRegistry.loadCompanyTools).toHaveBeenCalledWith(company);
     expect(mockMCP.isServerRunning).toHaveBeenCalledWith('context');
@@ -59,7 +52,6 @@ describe('Briefcase', () => {
     await briefcase.switchCompany(company);
 
     expect(process.env.JULES_COMPANY).toBe(company);
-    expect(mockLLM.personaEngine.setCompany).toHaveBeenCalledWith(company);
     expect(mockSOPRegistry.setCompany).toHaveBeenCalledWith(company);
     expect(mockRegistry.loadCompanyTools).toHaveBeenCalledWith(company);
     expect(mockMCP.isServerRunning).toHaveBeenCalledWith('context');
