@@ -27,6 +27,15 @@ async function main() {
       interactive = false;
       continue;
     }
+
+    if (arg === "--company") {
+      if (i + 1 < args.length) {
+        process.env.JULES_COMPANY = args[i + 1];
+        i++; // Consume next arg
+        continue;
+      }
+    }
+
     if (!arg.startsWith("-")) {
       try {
         if (statSync(arg).isDirectory()) {
