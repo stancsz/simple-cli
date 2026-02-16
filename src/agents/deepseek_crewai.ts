@@ -6,6 +6,9 @@ import process from "process";
 import { join } from "path";
 
 async function main() {
+  console.warn(
+    "DEPRECATION WARNING: 'src/agents/deepseek_crewai.ts' is deprecated and will be removed. Please use the 'crewai-mcp' server instead.",
+  );
   const apiKey = process.env.DEEPSEEK_API_KEY || process.env.OPENAI_API_KEY;
   if (!apiKey) {
     console.error(
