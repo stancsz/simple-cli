@@ -21,7 +21,7 @@ Simple-CLI allows you to "hire" and "equip" specialized digital workers for your
 ```text
 $ simple "Refactor src/legacy.ts to functional style and write tests for it. Do this in parallel."
 
-╭─ 🤖 Simple-CLI v0.2.9 ───────────────────────────────────────────────────────╮
+╭─ 🤖 Simple-CLI v0.2.8 ───────────────────────────────────────────────────────╮
 │                                                                              │
 │  > Plan:                                                                     │
 │  1. Delegate refactoring of src/legacy.ts to DeepSeek Claude (Architect)     │
@@ -54,8 +54,9 @@ Most AI tools trap you in a never-ending chat loop. Simple-CLI is built for **au
 
 *   **Deployable Results**: Give a high-level goal and walk away. The orchestrator handles the planning, delegation, and verification.
 *   **Specialized Workforce**: Hire `Jules` for GitHub PR surgery, `DeepSeek Claude` for architectural heavy lifting, and `Aider` for rapid-fire edits.
+*   **Ghost Mode (New!)**: Your digital co-workers run 24/7. The `Smart Job Delegator` wakes up hourly to check the Roadmap and assign tasks while you sleep.
+*   **The Brain (New!)**: Hybrid Memory Architecture (Vector + Graph) ensures your agents remember past solutions, user preferences, and project context forever.
 *   **Parallel Productivity**: Run a frontend refactor and a backend test suite simultaneously. Simple-CLI manages the threads so you don't have to.
-*   **Persistent Agency**: Your coworkers evolve. They remember your codebase, learn your patterns, and maintain state across sessions via the `.agent` brain.
 
 ---
 
