@@ -30,3 +30,15 @@ This document tracks the migration from ad-hoc internal tools to a strict **MCP-
 
 ### 4. Tests
 - [ ] Update tests to mock MCP servers instead of local file paths.
+
+### 5. Phase 5: The Digital Co-worker (Deployment & Persona)
+- [ ] **Persona Engine**:
+    - [ ] Create `src/persona.ts`: Load `persona.json` and wrap LLM responses.
+    - [ ] Implement `inject_personality()` function in `src/llm.ts`.
+- [ ] **Interfaces**:
+    - [ ] Create `src/interfaces/slack.ts`: Implement Slack Bolt.js adapter.
+    - [ ] Create `src/interfaces/teams.ts`: Implement Microsoft Bot Framework adapter.
+- [ ] **Infrastructure**:
+    - [ ] Create `Dockerfile` for lightweight production image.
+    - [ ] Create `docker-compose.yml` for local "Agency" simulation (Redis + Agent).
+    - [ ] Optimize `src/llm.ts` to support cheaper models (Haiku/Flash) for simple responses.

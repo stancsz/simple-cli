@@ -43,14 +43,17 @@ To transition from a "Wrapper" to a true "Meta-Orchestrator," the following feat
 **Goal:** Enhanced control and review via TUI and Supervisor.
 - **Status:** Interactive TUI and [Supervisor] QA loop are active parts of the core engine.
 
-### Phase 5: The Digital Agency (🔄 In Progress)
-**Goal:** Transition from "Single User Tool" to a "Multi-Employee Agency."
-- **Focus:** Role-based autonomy, persistence, and recursive optimization.
+### Phase 5: The Digital Co-worker (Deployment & Persona) (🔄 In Progress)
+**Goal:** Create a fully functional, human-like digital employee that lives where your team lives (Slack, Teams).
+- **Focus:** Role-based autonomy, human-like persona, and effortless deployment.
 - **Key Features:**
     - **Smart Job Delegator:** (✅ Implemented) Autonomous hourly task manager.
     - **Jules Integration:** (✅ Implemented) Task execution via Jules API.
     - **Reviewer Agent:** (✅ Implemented) Hourly code review automation.
     - **Ghost Mode:** (🔄 In Progress) True 24/7 background operation.
+    - **Persona Engine:** (Mapped) Configurable voice, tone, and response style to mimic human co-workers.
+    - **Multi-Platform Interfaces:** (Planned) Native integrations for Slack, MS Teams, and Discord.
+    - **Containerized Deployment:** (Planned) One-click `docker-compose up` or serverless deployment.
 
 ### Phase 6: Enterprise Cognition (The Brain)
 **Goal:** Deep, persistent memory and learning across all projects.
@@ -59,7 +62,7 @@ To transition from a "Wrapper" to a true "Meta-Orchestrator," the following feat
 
 ---
 
-## 🚀 The 4-Pillar Vision
+## 🚀 The 5-Pillar Vision
 To achieve a true "Digital Agency" capable of consulting for multiple companies:
 
 ### 1. "Company Context" Onboarding (The Briefcase)
@@ -74,7 +77,13 @@ To achieve a true "Digital Agency" capable of consulting for multiple companies:
 *   **Concept:** Employees that work while you sleep.
 *   **Mechanism:** Background agents triggered by CRON (Job Delegator, Reviewer). They perform "Morning Standups" by summarizing their background work (GitHub Issue triage, security scans) before the human wakes up.
 
-### 4. Recursive Self-Optimization (The "HR Loop")
+### 4. The Efficient Frontier (Cheap & Fast)
+*   **Concept:** A super versatile framework that is cheap to run.
+*   **Mechanism:**
+    - **Smart Routing:** Intelligently routing simple tasks to smaller, cheaper models (Gemini Flash, Haiku) and complex reasoning to SOTA models.
+    - **Serverless/Edge:** Architected to run on lightweight containers or Lambda functions to minimize infrastructure costs.
+
+### 5. Recursive Self-Optimization (The "HR Loop")
 *   **Concept:** The agency gets smarter the more it works.
 *   **Mechanism:** Cross-Agent Reflection. A "Manager" agent reviews the logs of "Worker" agents and updates their `AGENT.md` (soul) to fix recurring mistakes or adopt better coding patterns.
 

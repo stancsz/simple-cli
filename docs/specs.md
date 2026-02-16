@@ -399,3 +399,61 @@ The **Molt** represents the **Delegate Agents**.
 *   **Behavior**: Spun up Just-In-Time (JIT). It receives a specific context, creates necessary temporary tools, executes the work, and then terminates.
 *   **Characteristics**: Ephemeral, resource-intensive, disposable.
 *   **The Shedding**: When a Molt dies, it MUST transfer its valuable output (artifacts, new tools, learnings) back to the Claw. The "skin" (temp files, process memory) is discarded to keep the system clean.
+
+---
+
+## 14. The Persona Engine
+To feel like a "real" co-worker, the agent must transcend raw text output.
+
+### 14.1 `persona.json`
+Every deployed instance carries a "Soul" file.
+```json
+{
+  "name": "Sarah_DevOps",
+  "role": "Site Reliability Engineer",
+  "voice": {
+    "tone": "professional_but_casual",
+    "emoji_usage": "moderate",
+    "catchphrases": ["Let's check the logs.", "Shipping it!"]
+  },
+  "working_hours": "09:00-17:00 PST",
+  "response_latency": {
+    "min_ms": 1000,
+    "max_ms": 3000,
+    "simulate_typing": true
+  }
+}
+```
+
+### 14.2 Interaction Simulation
+*   **Typing Indicators**: When connected to Slack/Teams, the agent emits "typing..." events proportional to the response length.
+*   **Reaction Logic**: The agent can react to messages with emojis (👍, 👀) to acknowledge receipt before starting a long task.
+
+## 15. Interfaces & Deployment
+Simple-CLI is "Headless by Default" but "Omnichannel by Design."
+
+### 15.1 Interface Adapters
+The Core Engine exposes a standard `EventStream`. Adapters subscribe to this stream:
+1.  **CLI Adapter**: Prints to stdout (Default).
+2.  **Slack Adapter**: Uses `Bolt.js` to listen to `@mentions`.
+3.  **Teams Adapter**: Uses Bot Framework.
+4.  **GitHub Adapter**: Listens to Issue comments and PR reviews.
+
+### 15.2 Deployment Strategy (The Efficient Frontier)
+To be "Cheap to Run," we support:
+1.  **Local Docker**:
+    *   `docker-compose up -d`: Spins up the Agent, a local Redis (for memory), and the MCP servers.
+2.  **Serverless (Scale to Zero)**:
+    *   The Agent is stateless. Persistence lives in `learnings.json` (S3/Git) or Vector DB.
+    *   Compatible with AWS Lambda / Google Cloud Run.
+    *   **Cost**: $0 when idle.
+
+### 15.3 Container Architecture
+```dockerfile
+FROM node:20-alpine
+WORKDIR /app
+COPY . .
+RUN npm ci --production
+# The "Soul" is mounted at runtime
+CMD ["node", "dist/index.js", "--interface", "slack"]
+```
