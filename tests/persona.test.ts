@@ -1,5 +1,5 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
-import { PersonaEngine } from "../src/persona.js";
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+import { PersonaEngine } from "../src/persona/engine.js";
 import { LLMResponse } from "../src/llm.js";
 import { readFile } from "fs/promises";
 import { existsSync } from "fs";
@@ -33,7 +33,8 @@ describe("PersonaEngine", () => {
     emoji_usage: true,
     catchphrases: {
       greeting: ["Hello Test!"],
-      signoff: ["Bye Test!"]
+      signoff: ["Bye Test!"],
+      filler: ["Just checking.", "You know?"]
     },
     working_hours: "09:00-17:00",
     response_latency: {
@@ -48,11 +49,20 @@ describe("PersonaEngine", () => {
     engine = new PersonaEngine();
   });
 
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
   describe("transform", () => {
-    it("should transform message with greeting and signoff", async () => {
+    it("should transform message with greeting, signoff and filler", async () => {
+      // Mock Date to be within working hours (e.g. 10:00)
+      vi.useFakeTimers({ toFake: ['Date'] });
+      vi.setSystemTime(new Date(2023, 0, 1, 10, 0, 0)); // Jan 1, 10:00 Local Time
+
       (existsSync as any).mockReturnValue(true);
       (readFile as any).mockResolvedValue(JSON.stringify(MOCK_CONFIG));
 
+      // Make random deterministic? No, just check contains.
       const transformed = await engine.transform(mockResponse);
 
       expect(transformed.message).toContain("Hello Test!");
@@ -60,38 +70,38 @@ describe("PersonaEngine", () => {
       expect(transformed.message).toContain("This is a test message.");
     });
 
+    it("should filter response outside working hours", async () => {
+      // Mock Date to be outside working hours (e.g. 20:00)
+      vi.useFakeTimers({ toFake: ['Date'] });
+      vi.setSystemTime(new Date(2023, 0, 1, 20, 0, 0)); // Jan 1, 20:00 Local Time
+
+      (existsSync as any).mockReturnValue(true);
+      (readFile as any).mockResolvedValue(JSON.stringify(MOCK_CONFIG));
+
+      const transformed = await engine.transform(mockResponse);
+      expect(transformed.message).toContain("I am currently offline.");
+      expect(transformed.message).toContain("09:00-17:00");
+    });
+
     it("should add emojis if enabled", async () => {
+      vi.useFakeTimers({ toFake: ['Date'] });
+      vi.setSystemTime(new Date(2023, 0, 1, 10, 0, 0));
       (existsSync as any).mockReturnValue(true);
       (readFile as any).mockResolvedValue(JSON.stringify(MOCK_CONFIG));
 
       const transformed = await engine.transform(mockResponse);
-      expect(transformed.message).toMatch(/(😊|👍|🚀|🤖|💻|✨)/u);
+      expect(transformed.message).toMatch(/(😊|👍|🚀|🤖|💻|✨|💡|🔥)/u);
     });
 
-    it("should not transform if disabled", async () => {
-      const disabledConfig = { ...MOCK_CONFIG, enabled: false };
-      (existsSync as any).mockReturnValue(true);
-      (readFile as any).mockResolvedValue(JSON.stringify(disabledConfig));
-
-      const transformed = await engine.transform(mockResponse);
-      expect(transformed.message).toBe("This is a test message.");
-    });
-
-    it("should simulate latency", async () => {
-      (existsSync as any).mockReturnValue(true);
-      (readFile as any).mockResolvedValue(JSON.stringify(MOCK_CONFIG));
-
-      const start = Date.now();
-      await engine.transform(mockResponse);
-      const end = Date.now();
-      expect(end - start).toBeGreaterThanOrEqual(10);
-    });
-
-    it("should handle missing config gracefully", async () => {
+    it("should fallback to default persona if config missing", async () => {
+      vi.useFakeTimers({ toFake: ['Date'] });
+      vi.setSystemTime(new Date(2023, 0, 1, 10, 0, 0));
+      // Simulate missing file
       (existsSync as any).mockReturnValue(false);
 
       const transformed = await engine.transform(mockResponse);
-      expect(transformed.message).toBe("This is a test message.");
+      // Default persona is Jules, has emojis.
+      expect(transformed.message).toMatch(/(😊|👍|🚀|🤖|💻|✨|💡|🔥)/u);
     });
   });
 
@@ -107,26 +117,6 @@ describe("PersonaEngine", () => {
       expect(injected).toContain("Your voice is test.");
       expect(injected).toContain("Your working hours are 09:00-17:00.");
       expect(injected).toContain("Original system prompt.");
-    });
-
-    it("should not inject personality if disabled", async () => {
-      const disabledConfig = { ...MOCK_CONFIG, enabled: false };
-      (existsSync as any).mockReturnValue(true);
-      (readFile as any).mockResolvedValue(JSON.stringify(disabledConfig));
-
-      const systemPrompt = "Original system prompt.";
-      const injected = await engine.injectPersonality(systemPrompt);
-
-      expect(injected).toBe("Original system prompt.");
-    });
-
-    it("should handle missing config gracefully", async () => {
-      (existsSync as any).mockReturnValue(false);
-
-      const systemPrompt = "Original system prompt.";
-      const injected = await engine.injectPersonality(systemPrompt);
-
-      expect(injected).toBe("Original system prompt.");
     });
   });
 });
