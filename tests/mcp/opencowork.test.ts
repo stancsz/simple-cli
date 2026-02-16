@@ -2,10 +2,10 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { OpenCoworkServer } from "../../src/mcp_servers/opencowork/index.js";
 import { MCP } from "../../src/mcp.js";
 import { createLLM } from "../../src/llm.js";
-import { Engine, Context, Registry } from "../../src/engine.js";
+import { Engine, Context, Registry } from "../../src/engine/orchestrator.js";
 
 // Mock dependencies
-vi.mock("../../src/engine.js", () => {
+vi.mock("../../src/engine/orchestrator.js", () => {
   return {
     Engine: vi.fn().mockImplementation(() => ({
       run: vi.fn().mockImplementation(async (ctx, prompt, options) => {

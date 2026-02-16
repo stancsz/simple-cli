@@ -1,7 +1,7 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { z } from "zod";
-import { Engine, Context, Registry } from "../../engine.js";
+import { Engine, Context, Registry } from "../../engine/orchestrator.js";
 import { MCP } from "../../mcp.js";
 import { createLLM } from "../../llm.js";
 import { builtinSkills } from "../../skills.js";

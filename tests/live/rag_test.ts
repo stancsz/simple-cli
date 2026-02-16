@@ -1,4 +1,4 @@
-import { ContextManager } from '../../src/context_manager';
+import { ContextManager } from '../../src/mcp_servers/context_manager/index';
 import { SimpleToolsServer } from '../../src/mcp_servers/simple_tools/index';
 import { existsSync, mkdirSync, rmSync } from 'fs';
 import { join } from 'path';
