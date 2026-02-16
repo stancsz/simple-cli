@@ -59,6 +59,12 @@ export class LLM {
         } else if (providerName === "google" || providerName === "gemini") {
           model = createGoogleGenerativeAI({ apiKey });
           model = model(modelName);
+        } else if (providerName === "deepseek-claude") {
+          model = createAnthropic({
+            apiKey,
+            baseURL: "https://api.deepseek.com/anthropic"
+          });
+          model = model(modelName);
         } else if (providerName === "moonshot" || providerName === "kimi") {
           model = createOpenAI({
             apiKey,
@@ -212,7 +218,14 @@ export class LLM {
 export const createLLM = (model?: string) => {
   // Primary model
   const m = model || process.env.MODEL || "openai:gpt-5.2-codex";
-  const [p, n] = m.includes(":") ? m.split(":") : ["openai", m];
+  let [p, n] = m.includes(":") ? m.split(":") : ["openai", m];
+
+  // Auto-detect provider if missing
+  if (p === "openai" && n.includes("deepseek")) {
+    p = n.includes("chat") || n.includes("reasoner") ? "deepseek" : "deepseek-claude";
+  }
+  if (p === "openai" && (n.includes("claude") || n.includes("sonnet"))) p = "anthropic";
+  if (p === "openai" && (n.includes("gemini") || n.includes("flash"))) p = "google";
 
   // Define Failover Chain
   const configs: LLMConfig[] = [{ provider: p, model: n }];
