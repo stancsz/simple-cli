@@ -7,7 +7,7 @@ import process from "process";
 
 async function main() {
   console.warn(
-    "DEPRECATION WARNING: 'src/agents/deepseek_aider.ts' is deprecated and will be removed. Please use the 'aider-mcp' server instead (coming soon).",
+    "DEPRECATION WARNING: 'src/agents/deepseek_aider.ts' is deprecated and will be removed. Please use the 'aider-server' MCP server instead.",
   );
   const apiKey = process.env.DEEPSEEK_API_KEY;
   if (!apiKey) {
