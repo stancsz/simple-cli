@@ -119,6 +119,10 @@ export class MCP {
     return this.clients.has(name);
   }
 
+  getClient(name: string): Client | undefined {
+    return this.clients.get(name);
+  }
+
   async stopServer(name: string) {
     const client = this.clients.get(name);
     if (client) {
