@@ -1,6 +1,6 @@
 {
   "name": "@stan-chen/simple-cli",
-  "version": "0.2.8",
+  "version": "0.2.11",
   "description": "A lean, lightweight coding agent. Packs a punch with token efficiency.",
   "type": "module",
   "main": "dist/cli.js",
@@ -9,6 +9,7 @@
   },
   "scripts": {
     "start": "node --loader ts-node/esm src/cli.ts",
+    "start:slack": "node --loader ts-node/esm src/interfaces/slack.ts",
     "dev": "node --loader ts-node/esm --watch src/cli.ts",
     "build": "tsc",
     "typecheck": "tsc --noEmit",
@@ -43,6 +44,7 @@
     "@clack/prompts": "^0.7.0",
     "@modelcontextprotocol/sdk": "^1.0.0",
     "@oclif/core": "^4.0.0",
+    "@slack/bolt": "^4.6.0",
     "@types/cors": "^2.8.19",
     "@types/express": "^5.0.6",
     "@types/node-fetch": "^2.6.13",
