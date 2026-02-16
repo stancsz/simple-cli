@@ -4,7 +4,7 @@ import { createAnthropic } from "@ai-sdk/anthropic";
 import { createGoogleGenerativeAI } from "@ai-sdk/google";
 import { jsonrepair } from "jsonrepair";
 import chalk from "chalk";
-import { PersonaEngine } from "./persona/engine.js";
+import { PersonaEngine } from "./persona.js";
 
 export interface LLMResponse {
   thought: string;
@@ -84,9 +84,10 @@ export class LLM {
           continue; // Skip unsupported
         }
 
+        const systemWithPersona = await this.personaEngine.injectPersonality(system);
         const { text, usage } = await generateText({
           model,
-          system,
+          system: systemWithPersona,
           messages: history as any,
           abortSignal: signal,
         });
