@@ -1,5 +1,5 @@
 import { join } from "path";
-import { existsSync, mkdirSync, writeFileSync, readFileSync } from "fs";
+import { existsSync } from "fs";
 import { SOPParser, SOP } from "./sop_parser.js";
 import { SopMcpClient } from "./SopMcpClient.js";
 import { createLLM, LLM } from "../llm.js";
@@ -26,7 +26,6 @@ export class SOPEngine {
   private sopsDir: string;
   private llm: LLM;
   private contextManager: ContextManager;
-  private workflowAgent: WorkflowAgent;
 
   constructor(client: SopMcpClient, sopsDir: string = join(process.cwd(), ".agent", "sops")) {
     this.client = client;
@@ -34,7 +33,6 @@ export class SOPEngine {
     this.sopsDir = sopsDir;
     this.llm = createLLM();
     this.contextManager = new ContextManager();
-    this.workflowAgent = new WorkflowAgent(this.client);
   }
 
   async loadSOP(name: string): Promise<SOP> {
@@ -92,40 +90,14 @@ export class SOPEngine {
 
   private validateStep(stepName: string, output: any): boolean {
       if (output === null || output === undefined) return false;
+      // Basic check for error strings
       if (typeof output === 'string') {
           if (output.toLowerCase().startsWith("error:")) return false;
       }
       return true;
   }
 
-  private getStatePath(sopName: string): string {
-      const stateDir = join(process.cwd(), ".agent", "sop_states");
-      if (!existsSync(stateDir)) {
-          mkdirSync(stateDir, { recursive: true });
-      }
-      // Sanitize sopName
-      const sanitized = sopName.replace(/[^a-zA-Z0-9]/g, "_");
-      return join(stateDir, `${sanitized}.json`);
-  }
-
-  private saveState(sopName: string, stepIndex: number, context: any) {
-      const path = this.getStatePath(sopName);
-      writeFileSync(path, JSON.stringify({ stepIndex, context }));
-  }
-
-  private loadState(sopName: string): { stepIndex: number, context: any } | null {
-      const path = this.getStatePath(sopName);
-      if (existsSync(path)) {
-          try {
-              return JSON.parse(readFileSync(path, 'utf-8'));
-          } catch (e) {
-              console.error(`Failed to load state for ${sopName}: ${e}`);
-          }
-      }
-      return null;
-  }
-
-  async executeSOP(name: string, params: Record<string, any> = {}, resume: boolean = false): Promise<ExecutionResult> {
+  async executeSOP(name: string, params: Record<string, any> = {}): Promise<ExecutionResult> {
     let sop: SOP;
     try {
         sop = await this.loadSOP(name);
@@ -133,34 +105,18 @@ export class SOPEngine {
         return { success: false, error: e.message, logs: [] };
     }
 
+    // Log start to ContextManager
     await this.contextManager.logChange(`Started execution of SOP '${sop.name}'`);
 
-    let context: Record<string, any> = {
+    const context: Record<string, any> = {
       params,
       steps: {},
     };
-    let startStepIndex = 0;
-
-    if (resume) {
-        const state = this.loadState(name);
-        if (state) {
-            context = state.context;
-            startStepIndex = state.stepIndex + 1;
-            console.log(`[SOPEngine] Resuming SOP '${name}' from step index ${startStepIndex}`);
-        } else {
-            console.warn(`[SOPEngine] Resume requested but no state found for '${name}'. Starting from beginning.`);
-        }
-    } else {
-        // If not resuming, maybe clear previous state?
-        // Optional: unlink(this.getStatePath(name));
-    }
-
     const logs: ExecutionLog[] = [];
 
     console.error(`[SOPEngine] Starting SOP '${sop.name}' with ${sop.steps.length} steps.`);
 
-    for (let i = startStepIndex; i < sop.steps.length; i++) {
-      const step = sop.steps[i];
+    for (const step of sop.steps) {
       console.error(`[SOPEngine] Executing Step: ${step.name}`);
 
       if (step.condition) {
@@ -171,61 +127,116 @@ export class SOPEngine {
                   status: "skipped",
                   timestamp: new Date().toISOString()
               });
-              this.saveState(name, i, context);
               continue;
           }
       }
 
-      try {
-          const output = await this.workflowAgent.executeStep(step, context);
+      if (step.tool) {
+          const args = step.args || {};
+          const interpolatedArgs = this.interpolate(args, context);
 
-          if (!this.validateStep(step.name, output)) {
-               throw new Error(`Validation failed for step '${step.name}'. Output indicates error.`);
+          try {
+              let output: any;
+
+              if (step.tool === 'llm' || step.tool === 'ask_llm') {
+                  // Use LLM
+                  const prompt = interpolatedArgs.prompt || step.description || "No prompt provided.";
+                  // We treat 'system' as generic context here
+                  const response = await this.llm.generate(
+                      `You are executing a step in an SOP named '${sop.name}'. Step description: ${step.description}`,
+                      [{ role: 'user', content: prompt }]
+                  );
+                  output = response.message;
+              } else {
+                  // Use Standard Tool via Client
+                  const result = await this.client.executeTool(step.tool, interpolatedArgs);
+
+                  if (result.isError) {
+                      throw new Error(`Tool execution returned error: ${JSON.stringify(result.content)}`);
+                  }
+
+                  output = result;
+                  if (result && result.content && Array.isArray(result.content)) {
+                      const textContent = result.content.find((c: any) => c.type === 'text')?.text;
+                      if (textContent) {
+                          try {
+                              if (textContent.trim().startsWith('{') || textContent.trim().startsWith('[')) {
+                                  output = JSON.parse(textContent);
+                              } else {
+                                  output = textContent;
+                              }
+                          } catch {
+                              output = textContent;
+                          }
+                      }
+                  }
+              }
+
+              // Validate
+              if (!this.validateStep(step.name, output)) {
+                   throw new Error(`Validation failed for step '${step.name}'. Output indicates error.`);
+              }
+
+              context.steps[step.name] = output;
+              logs.push({
+                  step: step.name,
+                  status: "success",
+                  output: output,
+                  timestamp: new Date().toISOString()
+              });
+
+          } catch (e: any) {
+              console.error(`[SOPEngine] Step execution failed: ${e.message}`);
+
+              // Log failure to ContextManager
+              await this.contextManager.logChange(`SOP '${sop.name}' failed at step '${step.name}': ${e.message}`);
+
+              // ROLLBACK LOGIC
+              if (step.rollback) {
+                  try {
+                      console.log(`[SOPEngine] Initiating Rollback for step '${step.name}'...`);
+                      const rollbackArgs = this.interpolate(step.rollback.args || {}, context);
+
+                      // Rollback tool execution logic
+                      if (step.rollback.tool === 'llm' || step.rollback.tool === 'ask_llm') {
+                           const prompt = rollbackArgs.prompt || "Rollback execution.";
+                           await this.llm.generate(
+                              `You are executing a rollback step for '${step.name}'. Description: ${step.description}`,
+                              [{ role: 'user', content: prompt }]
+                           );
+                      } else {
+                           await this.client.executeTool(step.rollback.tool, rollbackArgs);
+                      }
+
+                      console.log(`[SOPEngine] Rollback executed successfully.`);
+                      await this.contextManager.logChange(`Rollback executed for step '${step.name}'`);
+                  } catch (re: any) {
+                      console.error(`[SOPEngine] Rollback failed: ${re.message}`);
+                      await this.contextManager.logChange(`Rollback failed for step '${step.name}': ${re.message}`);
+                  }
+              }
+
+              logs.push({
+                  step: step.name,
+                  status: "failure",
+                  error: e.message,
+                  timestamp: new Date().toISOString()
+              });
+
+              return { success: false, error: `Step '${step.name}' failed: ${e.message}`, logs };
           }
-
-          context.steps[step.name] = output;
+      } else {
+          console.error(`[SOPEngine] Info Step: ${step.description}`);
           logs.push({
               step: step.name,
               status: "success",
-              output: output,
+              output: "Info step completed",
               timestamp: new Date().toISOString()
           });
-
-          this.saveState(name, i, context);
-
-      } catch (e: any) {
-          console.error(`[SOPEngine] Step execution failed: ${e.message}`);
-          await this.contextManager.logChange(`SOP '${sop.name}' failed at step '${step.name}': ${e.message}`);
-
-          if (step.rollback) {
-             try {
-                 console.log(`[SOPEngine] Initiating Rollback for step '${step.name}'...`);
-                 const rollbackStep = {
-                     name: `Rollback: ${step.name}`,
-                     description: `Rollback for ${step.name}`,
-                     tool: step.rollback.tool,
-                     args: step.rollback.args
-                 };
-                 await this.workflowAgent.executeStep(rollbackStep, context);
-                 console.log(`[SOPEngine] Rollback executed successfully.`);
-                 await this.contextManager.logChange(`Rollback executed for step '${step.name}'`);
-             } catch (re: any) {
-                 console.error(`[SOPEngine] Rollback failed: ${re.message}`);
-                 await this.contextManager.logChange(`Rollback failed for step '${step.name}': ${re.message}`);
-             }
-          }
-
-          logs.push({
-              step: step.name,
-              status: "failure",
-              error: e.message,
-              timestamp: new Date().toISOString()
-          });
-
-          return { success: false, error: `Step '${step.name}' failed: ${e.message}`, logs };
       }
     }
 
+    // Log success to ContextManager
     await this.contextManager.logChange(`Completed execution of SOP '${sop.name}' successfully.`);
 
     return {

@@ -1,8 +1,0 @@
-{"timestamp":"2026-02-16T19:30:33.332Z","step":"Step 1","event":"start","data":{"description":"This is a test step.","args":{"prompt":"Say hello!"}}}
-{"timestamp":"2026-02-16T19:30:37.663Z","step":"Step 1","event":"complete","data":{"output":"I am currently offline. My working hours are 09:00-17:00."}}
-{"timestamp":"2026-02-16T19:30:37.665Z","step":"Step 2","event":"start","data":{"description":"This is another test step.","args":{"prompt":"This should run unless skipped."}}}
-{"timestamp":"2026-02-16T19:30:42.670Z","step":"Step 2","event":"complete","data":{"output":"I am currently offline. My working hours are 09:00-17:00."}}
-{"timestamp":"2026-02-16T19:36:32.349Z","step":"Step 1","event":"start","data":{"description":"This is a test step.","args":{"prompt":"Say hello!"}}}
-{"timestamp":"2026-02-16T19:36:36.264Z","step":"Step 1","event":"complete","data":{"output":"I am currently offline. My working hours are 09:00-17:00."}}
-{"timestamp":"2026-02-16T19:36:36.266Z","step":"Step 2","event":"start","data":{"description":"This is another test step.","args":{"prompt":"This should run unless skipped."}}}
-{"timestamp":"2026-02-16T19:36:41.614Z","step":"Step 2","event":"complete","data":{"output":"I am currently offline. My working hours are 09:00-17:00."}}

@@ -84,10 +84,7 @@ describe('Slack Interface Adapter', () => {
         expect(eventHandler).toBeDefined();
 
         const mockSay = vi.fn();
-        const mockClient = {
-            chat: { postMessage: vi.fn() },
-            reactions: { add: vi.fn() }
-        };
+        const mockClient = { chat: { postMessage: vi.fn() } };
 
         // Invoke handler
         await eventHandler({
@@ -102,8 +99,6 @@ describe('Slack Interface Adapter', () => {
         expect(mocks.EngineRun).toHaveBeenCalledWith(expect.anything(), 'help me', { interactive: false });
 
         // Since mock history is empty, it should say "I couldn't generate a response."
-        expect(mockClient.chat.postMessage).toHaveBeenCalledWith(expect.objectContaining({
-            text: "I couldn't generate a response."
-        }));
+        expect(mockSay).toHaveBeenCalledWith("I couldn't generate a response.");
     });
 });
