@@ -31,7 +31,7 @@ export const daemon = {
 
     const isTs = __filename.endsWith('.ts');
     const ext = isTs ? '.ts' : '.js';
-    const daemonScript = join(__dirname, `scheduler_daemon${ext}`);
+    const daemonScript = join(__dirname, '..', `daemon${ext}`);
 
     // Check if script exists
     if (!existsSync(daemonScript)) {
@@ -52,7 +52,7 @@ export const daemon = {
 
     if (child.pid) {
       writeFileSync(PID_FILE, child.pid.toString());
-      console.log(`Daemon started (PID: ${child.pid}). Logs at .agent/daemon.log`);
+      console.log(`Daemon started (PID: ${child.pid}). Logs at .agent/ghost.log`);
       child.unref(); // Allow parent to exit
     } else {
       console.error("Failed to start daemon.");
