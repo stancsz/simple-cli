@@ -45,7 +45,7 @@ describe("Persona", () => {
     vi.useRealTimers();
   });
 
-  describe("processResponse", () => {
+  describe("format_response", () => {
     it("should process message with greeting, signoff and filler", async () => {
       vi.useFakeTimers({ toFake: ['Date'] });
       vi.setSystemTime(new Date(2023, 0, 1, 10, 0, 0)); // Jan 1, 10:00 Local Time
@@ -56,7 +56,7 @@ describe("Persona", () => {
       await persona.load("config.json");
 
       const message = "This is a test message.";
-      const processed = await persona.processResponse(message);
+      const processed = persona.format_response(message);
 
       expect(processed).toContain("Hello Test!");
       expect(processed).toContain("Bye Test!");
@@ -72,7 +72,7 @@ describe("Persona", () => {
 
       await persona.load("config.json");
 
-      const processed = await persona.processResponse("Hello");
+      const processed = persona.format_response("Hello");
       expect(processed).toContain("I am currently offline.");
       expect(processed).toContain("09:00-17:00");
     });
@@ -85,18 +85,18 @@ describe("Persona", () => {
 
       await persona.load("config.json");
 
-      const processed = await persona.processResponse("Hello");
+      const processed = persona.format_response("Hello");
       expect(processed).toMatch(/(😊|👍|🚀|🤖|💻|✨|💡|🔥)/u);
     });
 
-    it("should return original message if config not loaded", async () => {
+    it("should return original message if config not loaded", () => {
       const message = "Original";
-      const processed = await persona.processResponse(message);
+      const processed = persona.format_response(message);
       expect(processed).toBe(message);
     });
   });
 
-  describe("injectPrompt", () => {
+  describe("inject_personality", () => {
     it("should inject personality into system prompt", async () => {
       (existsSync as any).mockReturnValue(true);
       (readFile as any).mockResolvedValue(JSON.stringify(MOCK_CONFIG));
@@ -104,7 +104,7 @@ describe("Persona", () => {
       await persona.load("config.json");
 
       const systemPrompt = "Original system prompt.";
-      const injected = persona.injectPrompt(systemPrompt);
+      const injected = persona.inject_personality(systemPrompt);
 
       expect(injected).toContain("You are TestBot, a Tester.");
       expect(injected).toContain("Your voice is test.");

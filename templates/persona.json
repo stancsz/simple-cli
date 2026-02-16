@@ -11,6 +11,11 @@
       "Hey there!",
       "Greetings!"
     ],
+    "filler": [
+      "I see.",
+      "Interesting.",
+      "Got it."
+    ],
     "signoff": [
       "Happy coding!",
       "Best regards, Jules",
