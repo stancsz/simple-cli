@@ -1,17 +1,9 @@
 import "dotenv/config";
 import { App } from "@slack/bolt";
-<<<<<<< HEAD
-import { Engine, Context, Registry } from "../engine.js";
-import { createLLM } from "../llm.js";
-import { MCP } from "../mcp.js";
-import { getActiveSkill } from "../skills.js";
-import { allBuiltins } from "../builtins.js";
-=======
 import { Engine, Context, Registry } from "../engine/orchestrator.js";
 import { createLLM } from "../llm.js";
 import { MCP } from "../mcp.js";
 import { getActiveSkill } from "../skills.js";
->>>>>>> main
 import { WorkflowEngine } from "../workflows/workflow_engine.js";
 import { createExecuteSOPTool } from "../workflows/execute_sop_tool.js";
 import { fileURLToPath } from "url";
@@ -95,17 +87,7 @@ let isInitialized = false;
 async function initializeResources() {
   if (isInitialized) return;
 
-<<<<<<< HEAD
-  const cwd = process.cwd();
 
-  // Register built-ins
-  allBuiltins.forEach((t) => baseRegistry.tools.set(t.name, t as any));
-
-  // Load project tools
-  await baseRegistry.loadProjectTools(cwd);
-
-=======
->>>>>>> main
   // Initialize Workflow Engine
   const workflowEngine = new WorkflowEngine(baseRegistry);
   const sopTool = createExecuteSOPTool(workflowEngine);
@@ -116,7 +98,7 @@ async function initializeResources() {
   (await mcp.getTools()).forEach((t) => baseRegistry.tools.set(t.name, t as any));
 
   // Optimization: prevent re-scanning in Engine.run
-  mcp.init = async () => {};
+  mcp.init = async () => { };
 
   isInitialized = true;
 }
@@ -167,21 +149,21 @@ app.event("app_mention", async ({ event, say, client }: any) => {
     // We capture the ts of this message to potentially update it later,
     // or just use the thread for logs.
     await client.chat.postMessage({
-        channel: channel,
-        text: "Thinking...",
-        thread_ts: ts // Reply to the user's message
+      channel: channel,
+      text: "Thinking...",
+      thread_ts: ts // Reply to the user's message
     });
 
     // Ensure global resources are initialized
     if (!isInitialized) {
-        await initializeResources();
+      await initializeResources();
     }
 
     // Create a request-specific registry by cloning the base registry
     const requestRegistry = new Registry();
     // Copy tools from baseRegistry
     for (const [name, tool] of baseRegistry.tools) {
-        requestRegistry.tools.set(name, tool);
+      requestRegistry.tools.set(name, tool);
     }
 
     // Register 'ask_supervisor' specifically for this channel
@@ -230,18 +212,18 @@ app.event("app_mention", async ({ event, say, client }: any) => {
         return new Promise<string>((resolve) => {
           // Register all potential action IDs for this request
           choices.forEach((_: any, idx: number) => {
-             const actionId = `approval_action_${uniqueId}_${idx}`;
-             pendingApprovals.set(actionId, resolve);
+            const actionId = `approval_action_${uniqueId}_${idx}`;
+            pendingApprovals.set(actionId, resolve);
           });
 
           // Timeout after 5 minutes
           setTimeout(() => {
-             resolve("Timeout: No response received.");
-             // Cleanup
-             choices.forEach((_: any, idx: number) => {
-                 const actionId = `approval_action_${uniqueId}_${idx}`;
-                 pendingApprovals.delete(actionId);
-             });
+            resolve("Timeout: No response received.");
+            // Cleanup
+            choices.forEach((_: any, idx: number) => {
+              const actionId = `approval_action_${uniqueId}_${idx}`;
+              pendingApprovals.delete(actionId);
+            });
           }, 300000);
         });
       }
@@ -262,42 +244,42 @@ app.event("app_mention", async ({ event, say, client }: any) => {
     const lastMessage = ctx.history.filter(m => m.role === "assistant").pop();
 
     if (lastMessage) {
-        let content = lastMessage.content;
-        try {
-            const parsed = JSON.parse(content);
-            if (parsed.message) content = parsed.message;
-            else if (parsed.thought) content = parsed.thought; // Fallback
-        } catch {}
+      let content = lastMessage.content;
+      try {
+        const parsed = JSON.parse(content);
+        if (parsed.message) content = parsed.message;
+        else if (parsed.thought) content = parsed.thought; // Fallback
+      } catch { }
 
-        if (content) {
-            // Post final response to the channel (main thread or thread reply)
-            // Using `say` usually posts to channel. Let's reply in thread for consistency with logs.
-            await client.chat.postMessage({
-                channel: channel,
-                thread_ts: ts,
-                text: content
-            });
-        } else {
-             await client.chat.postMessage({
-                 channel: channel,
-                 thread_ts: ts,
-                 text: "Task completed (check logs/artifacts)."
-             });
-        }
-    } else {
+      if (content) {
+        // Post final response to the channel (main thread or thread reply)
+        // Using `say` usually posts to channel. Let's reply in thread for consistency with logs.
         await client.chat.postMessage({
-            channel: channel,
-            thread_ts: ts,
-            text: "I couldn't generate a response."
+          channel: channel,
+          thread_ts: ts,
+          text: content
         });
+      } else {
+        await client.chat.postMessage({
+          channel: channel,
+          thread_ts: ts,
+          text: "Task completed (check logs/artifacts)."
+        });
+      }
+    } else {
+      await client.chat.postMessage({
+        channel: channel,
+        thread_ts: ts,
+        text: "I couldn't generate a response."
+      });
     }
 
   } catch (error: any) {
     console.error("Error processing Slack event:", error);
     await client.chat.postMessage({
-        channel: channel,
-        thread_ts: ts,
-        text: `Error: ${error.message}`
+      channel: channel,
+      thread_ts: ts,
+      text: `Error: ${error.message}`
     });
   }
 });

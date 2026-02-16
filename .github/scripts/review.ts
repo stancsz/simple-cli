@@ -317,6 +317,7 @@ async function main() {
     }
 
     const agentCli = path.join(runtimeDir, 'src/cli.ts');
+    let jobsCreated = 0;
 
 
     for (const pr of prs) {
@@ -329,6 +330,12 @@ async function main() {
             console.log(`⏭️  Skipping PR #${pr.number}: Already reviewed by Simple-CLI/Jules and no new commits.`);
             continue;
         }
+
+        if (jobsCreated >= 1) {
+            console.log("Limit of 1 active job per run reached. Stopping.");
+            break;
+        }
+        jobsCreated++;
 
         const isJules = pr.author.login.toLowerCase().includes('jules') || pr.author.login.toLowerCase().includes('google-labs-jules');
         const mention = isJules ? '@jules ' : '';
@@ -479,7 +486,7 @@ To resolve this accurately, you must retrieve and analyze three versions of each
             const logFile = 'pr_failure.log';
             try {
                 // Capture failure output
-                execSync('npm test', { cwd: CWD, encoding: 'utf-8', shell: true });
+                execSync('npm test', { cwd: CWD, encoding: 'utf-8' });
             } catch (e: any) {
                 fs.writeFileSync(logFile, (e.stdout || '') + '\n' + (e.stderr || ''));
             }

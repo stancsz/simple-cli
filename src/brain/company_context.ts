@@ -57,7 +57,7 @@ export class CompanyContext {
         } finally {
           try {
             await unlink(lockFile);
-          } catch {}
+          } catch { }
         }
       } catch (e: any) {
         if (e.code === "EEXIST") {
@@ -68,9 +68,9 @@ export class CompanyContext {
               try {
                 await unlink(lockFile);
                 continue;
-              } catch {}
+              } catch { }
             }
-          } catch {}
+          } catch { }
           await new Promise((resolve) => setTimeout(resolve, retryDelay));
         } else {
           throw e;
@@ -115,14 +115,14 @@ export class CompanyContext {
 
       if (!this.table) {
         try {
-            // Check if table exists again just in case (race condition handled by lock mostly)
-            this.table = await this.db!.openTable("documents");
-             await this.table.add([doc]);
+          // Check if table exists again just in case (race condition handled by lock mostly)
+          this.table = await this.db!.openTable("documents");
+          await this.table.add([doc as any]);
         } catch {
-            this.table = await this.db!.createTable("documents", [doc]);
+          this.table = await this.db!.createTable("documents", [doc as any]);
         }
       } else {
-          await this.table.add([doc]);
+        await this.table.add([doc as any]);
       }
     });
   }
@@ -131,11 +131,11 @@ export class CompanyContext {
     if (!this.db) await this.init();
 
     if (!this.table) {
-        try {
-            this.table = await this.db!.openTable("documents");
-        } catch {
-            return []; // No table, no data
-        }
+      try {
+        this.table = await this.db!.openTable("documents");
+      } catch {
+        return []; // No table, no data
+      }
     }
 
     const vector = await this.llm.embed(query);
@@ -157,9 +157,9 @@ export class CompanyContext {
   }
 
   async getConfig(): Promise<CompanyConfig> {
-      if (existsSync(this.configPath)) {
-          return JSON.parse(readFileSync(this.configPath, "utf-8"));
-      }
-      return { name: this.companyId, brand_voice: "" };
+    if (existsSync(this.configPath)) {
+      return JSON.parse(readFileSync(this.configPath, "utf-8"));
+    }
+    return { name: this.companyId, brand_voice: "" };
   }
 }

@@ -19,12 +19,12 @@ export class TaskRunner {
     private registry: Registry,
     private mcp: MCP,
     private options: {
-        yoloMode: boolean;
-        timeout?: number;
-        taskId?: string;
-        taskName?: string;
+      yoloMode: boolean;
+      timeout?: number;
+      taskId?: string;
+      taskName?: string;
     } = { yoloMode: true }
-  ) {}
+  ) { }
 
   async run(ctx: Context, initialPrompt: string) {
     let input: string | undefined = initialPrompt;
@@ -61,16 +61,12 @@ export class TaskRunner {
         const signal = controller.signal;
 
         try {
-<<<<<<< HEAD
-          const prompt = await ctx.buildPrompt(this.registry.tools);
-=======
           const prompt = await ctx.buildPrompt(this.registry.tools, this.registry);
->>>>>>> main
           const userHistory = ctx.history.filter(
-              (m) =>
-                m.role === "user" &&
-                !["Continue.", "Fix the error.", "The tool executions were verified. Proceed."].includes(m.content),
-            );
+            (m) =>
+              m.role === "user" &&
+              !["Continue.", "Fix the error.", "The tool executions were verified. Proceed."].includes(m.content),
+          );
 
           const response = await this.llm.generate(prompt, ctx.history, signal);
 
@@ -92,8 +88,8 @@ export class TaskRunner {
             tools && tools.length > 0
               ? tools
               : tool && tool !== "none"
-              ? [{ tool, args }]
-              : [];
+                ? [{ tool, args }]
+                : [];
 
           if (executionList.length > 0) {
             let allExecuted = true;
@@ -153,13 +149,13 @@ export class TaskRunner {
                   );
 
                   if (qaCheck.message && qaCheck.message.toLowerCase().includes("fail")) {
-                      logger.error(`[Supervisor] QA FAILED: ${qaCheck.message || qaCheck.thought}`);
-                      logger.info(`[Supervisor] Retrying...`);
-                      input = "The previous attempt failed. Please retry or fix the issue.";
-                      allExecuted = false;
-                      break; // Stop batch execution on failure
+                    logger.error(`[Supervisor] QA FAILED: ${qaCheck.message || qaCheck.thought}`);
+                    logger.info(`[Supervisor] Retrying...`);
+                    input = "The previous attempt failed. Please retry or fix the issue.";
+                    allExecuted = false;
+                    break; // Stop batch execution on failure
                   } else {
-                      logger.success("[Supervisor] Verified");
+                    logger.success("[Supervisor] Verified");
                   }
 
                 } catch (e: any) {
@@ -173,14 +169,14 @@ export class TaskRunner {
                   break;
                 }
               } else {
-                  logger.warn(`Tool ${tName} not found.`);
-                  ctx.history.push({
-                      role: "user",
-                      content: `Error: Tool ${tName} not found.`,
-                  });
-                  input = "Fix the error.";
-                  allExecuted = false;
-                  break;
+                logger.warn(`Tool ${tName} not found.`);
+                ctx.history.push({
+                  role: "user",
+                  content: `Error: Tool ${tName} not found.`,
+                });
+                input = "Fix the error.";
+                allExecuted = false;
+                break;
               }
             }
 
@@ -201,14 +197,14 @@ export class TaskRunner {
             /(please|you need to|you should|run this) (create|save|write|copy)/.test(rawText) && /(file|code)/.test(rawText);
 
           if (isRefusal || isHallucination || isLazyInstruction) {
-             logger.warn("Lazy/Hallucinating Agent detected. Forcing retry...");
-             if (message) logger.info(logger.dim(`Agent: ${message}`));
-             ctx.history.push({
+            logger.warn("Lazy/Hallucinating Agent detected. Forcing retry...");
+            if (message) logger.info(logger.dim(`Agent: ${message}`));
+            ctx.history.push({
               role: "assistant",
               content: message || response.raw,
-             });
-             input = "System Correction: You MUST use an appropriate tool (e.g., 'write_file', 'aider_edit_files', 'ask_claude') to create or modify files. Do not describe the action or ask the user to do it.";
-             continue;
+            });
+            input = "System Correction: You MUST use an appropriate tool (e.g., 'write_file', 'aider_edit_files', 'ask_claude') to create or modify files. Do not describe the action or ask the user to do it.";
+            continue;
           }
 
           if (message || response.raw) {
@@ -236,23 +232,23 @@ export class TaskRunner {
       throw e;
     } finally {
       if (this.options.taskId && this.options.taskName) {
-         try {
-            const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
-            const logPath = join(ctx.cwd, '.agent/logs', `${timestamp}_${this.options.taskId}.json`);
-            await mkdir(dirname(logPath), { recursive: true });
-            await writeFile(logPath, JSON.stringify({
-                taskId: this.options.taskId,
-                taskName: this.options.taskName,
-                startTime,
-                endTime: Date.now(),
-                status,
-                errorMessage,
-                history: ctx.history
-            }, null, 2));
-            logger.info(`Log saved to ${logPath}`);
-         } catch (logErr) {
-             logger.error(`Failed to save log: ${logErr}`);
-         }
+        try {
+          const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+          const logPath = join(ctx.cwd, '.agent/logs', `${timestamp}_${this.options.taskId}.json`);
+          await mkdir(dirname(logPath), { recursive: true });
+          await writeFile(logPath, JSON.stringify({
+            taskId: this.options.taskId,
+            taskName: this.options.taskName,
+            startTime,
+            endTime: Date.now(),
+            status,
+            errorMessage,
+            history: ctx.history
+          }, null, 2));
+          logger.info(`Log saved to ${logPath}`);
+        } catch (logErr) {
+          logger.error(`Failed to save log: ${logErr}`);
+        }
       }
     }
   }

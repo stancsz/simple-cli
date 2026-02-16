@@ -1,7 +1,7 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { z } from "zod";
-import { analyzeAgent, updateSoul, runHRLoop } from "../../optimization/hr_loop.js";
+import { analyzeAgent, updateSoul, runHRLoop } from "../optimization/hr_loop.js";
 import { readFile, writeFile } from "fs/promises";
 import { join } from "path";
 import { existsSync } from "fs";
@@ -85,7 +85,7 @@ server.tool(
   async ({ schedule }) => {
     try {
       const schedulerPath = join(process.cwd(), ".agent", "scheduler.json");
-      let config = { tasks: [] };
+      let config: any = { tasks: [] };
       if (existsSync(schedulerPath)) {
         config = JSON.parse(await readFile(schedulerPath, "utf-8"));
       }
@@ -96,12 +96,12 @@ server.tool(
       config.tasks = config.tasks.filter((t: any) => t.name !== taskName);
 
       config.tasks.push({
-          id: "hr-review",
-          name: taskName,
-          trigger: "cron",
-          schedule: schedule,
-          prompt: "Run the HR optimization loop to analyze agent performance and update souls.",
-          yoloMode: true
+        id: "hr-review",
+        name: taskName,
+        trigger: "cron",
+        schedule: schedule,
+        prompt: "Run the HR optimization loop to analyze agent performance and update souls.",
+        yoloMode: true
       });
 
       await writeFile(schedulerPath, JSON.stringify(config, null, 2));
