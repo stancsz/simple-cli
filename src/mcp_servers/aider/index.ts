@@ -26,7 +26,11 @@ export class AiderServer {
         files: z.array(z.string()).optional().describe("List of file paths to include in the context."),
       },
       async ({ message, files }) => {
-        return this.runAider(message, files || []);
+        const result = await this.runAider(message, files || []);
+        return {
+          content: result.content.map((c) => ({ type: "text" as const, text: c.text })),
+          isError: result.isError,
+        };
       }
     );
 
@@ -38,7 +42,11 @@ export class AiderServer {
         files: z.array(z.string()).describe("List of file paths to edit."),
       },
       async ({ message, files }) => {
-        return this.runAider(message, files);
+        const result = await this.runAider(message, files);
+        return {
+          content: result.content.map((c) => ({ type: "text" as const, text: c.text })),
+          isError: result.isError,
+        };
       }
     );
   }
