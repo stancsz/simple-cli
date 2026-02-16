@@ -1,4 +1,4 @@
-import { generateText } from "ai";
+import { generateText, embed } from "ai";
 import { createOpenAI } from "@ai-sdk/openai";
 import { createAnthropic } from "@ai-sdk/anthropic";
 import { createGoogleGenerativeAI } from "@ai-sdk/google";
@@ -26,6 +26,52 @@ export class LLM {
 
   constructor(config: LLMConfig | LLMConfig[]) {
     this.configs = Array.isArray(config) ? config : [config];
+  }
+
+  async embed(text: string): Promise<number[]> {
+    for (const config of this.configs) {
+      const providerName = config.provider.toLowerCase();
+      const apiKey = config.apiKey || this.getEnvKey(providerName);
+
+      if (!apiKey) continue;
+
+      let embeddingModel: any;
+
+      try {
+        if (providerName === "openai") {
+          embeddingModel = createOpenAI({ apiKey }).embedding("text-embedding-3-small");
+        } else if (providerName === "google" || providerName === "gemini") {
+          embeddingModel = createGoogleGenerativeAI({ apiKey }).textEmbeddingModel("text-embedding-004");
+        } else {
+          continue;
+        }
+
+        const { embedding } = await embed({
+          model: embeddingModel,
+          value: text,
+        });
+        return embedding;
+      } catch (e) {
+        console.error(`[LLM] Embedding failed with ${providerName}:`, e);
+      }
+    }
+
+    // Fallback: Try OpenAI explicitly if not found in chain or all failed
+    const openaiKey = process.env.OPENAI_API_KEY;
+    if (openaiKey) {
+      try {
+        const embeddingModel = createOpenAI({ apiKey: openaiKey }).embedding("text-embedding-3-small");
+        const { embedding } = await embed({
+          model: embeddingModel,
+          value: text,
+        });
+        return embedding;
+      } catch (e) {
+        console.error(`[LLM] Fallback OpenAI embedding failed:`, e);
+      }
+    }
+
+    throw new Error("Failed to generate embedding: No suitable provider found.");
   }
 
   async generate(

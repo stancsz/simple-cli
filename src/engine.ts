@@ -12,6 +12,7 @@ import { text, isCancel, log, spinner } from "@clack/prompts";
 import { createLLM } from "./llm.js";
 import { MCP } from "./mcp.js";
 import { Skill } from "./skills.js";
+import { CompanyContext } from "./brain/company_context.js";
 
 export interface Message {
   role: "user" | "assistant" | "system";
@@ -132,6 +133,7 @@ export class Registry {
 
 export class Engine {
   private s = spinner();
+  private companyContext: CompanyContext | null = null;
 
   constructor(
     private llm: any,
@@ -158,6 +160,16 @@ export class Engine {
       readline.emitKeypressEvents(process.stdin);
     }
 
+    // Initialize CompanyContext if JULES_COMPANY is set
+    if (process.env.JULES_COMPANY && !this.companyContext) {
+      try {
+        this.companyContext = new CompanyContext(this.llm, process.env.JULES_COMPANY);
+        await this.companyContext.init();
+      } catch (e) {
+        console.error("Failed to initialize CompanyContext:", e);
+      }
+    }
+
     while (true) {
       if (!input) {
         if (!options.interactive || !process.stdout.isTTY) break;
@@ -171,6 +183,21 @@ export class Engine {
       }
 
       ctx.history.push({ role: "user", content: input });
+
+      // Inject RAG context from CompanyContext
+      if (this.companyContext) {
+        try {
+          const relevantContext = await this.companyContext.query(input, 3);
+          if (relevantContext.length > 0) {
+            const contextText = relevantContext.map((c) => `- ${c.text}`).join("\n");
+            const lastMsg = ctx.history[ctx.history.length - 1];
+            lastMsg.content = `[Context Memory]\n${contextText}\n\n[User Request]\n${lastMsg.content}`;
+            log.info(pc.dim(`[RAG] Injected ${relevantContext.length} relevant memories.`));
+          }
+        } catch (e) {
+          console.error("Failed to query company context:", e);
+        }
+      }
 
       const controller = new AbortController();
       const signal = controller.signal;
