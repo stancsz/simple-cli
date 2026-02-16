@@ -56,7 +56,7 @@ export class LLM {
         } else if (providerName === "deepseek") {
           model = createOpenAI({
             apiKey,
-            baseURL: "https://api.deepseek.com",
+            baseURL: "https://api.deepseek.com/v1",
           })(modelName);
         } else if (providerName === "anthropic" || providerName === "claude") {
           model = createAnthropic({ apiKey });
