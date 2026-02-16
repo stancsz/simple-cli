@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { ContextManager } from "../src/context_manager";
+import { ContextManager } from "../src/mcp_servers/context_manager/index";
 import { VectorStore } from "../src/memory/vector_store";
 import { join } from "path";
 

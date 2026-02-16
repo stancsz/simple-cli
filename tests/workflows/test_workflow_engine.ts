@@ -1,5 +1,5 @@
 import { WorkflowEngine } from "../../src/workflows/workflow_engine.js";
-import { Registry, Tool } from "../../src/engine.js";
+import { Registry, Tool } from "../../src/engine/orchestrator.js";
 import { writeFile, unlink, mkdir } from "fs/promises";
 import { join } from "path";
 import { existsSync } from "fs";

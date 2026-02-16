@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach, afterEach } from "vitest";
 import { rm, mkdir } from "fs/promises";
 import { join } from "path";
 import { tmpdir } from "os";
-import { ContextManager } from "../src/context_manager.js";
+import { ContextManager } from "../src/mcp_servers/context_manager/index.js";
 import { existsSync } from "fs";
 
 // Mock embedding model for test

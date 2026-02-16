@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { TaskRunner } from "../../src/daemon/task_runner.js";
-import { Context, Registry } from "../../src/engine.js";
+import { Context, Registry } from "../../src/engine/orchestrator.js";
 import { MCP } from "../../src/mcp.js";
 
 // Mock dependencies

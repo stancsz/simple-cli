@@ -1,5 +1,5 @@
 import pc from "picocolors";
-import { Context, Registry, Message, Tool } from "../engine.js";
+import { Context, Registry, Message, Tool } from "../engine/orchestrator.js";
 import { MCP } from "../mcp.js";
 import { writeFile, mkdir } from "fs/promises";
 import { join, dirname } from "path";
@@ -61,7 +61,11 @@ export class TaskRunner {
         const signal = controller.signal;
 
         try {
+<<<<<<< HEAD
           const prompt = await ctx.buildPrompt(this.registry.tools);
+=======
+          const prompt = await ctx.buildPrompt(this.registry.tools, this.registry);
+>>>>>>> main
           const userHistory = ctx.history.filter(
               (m) =>
                 m.role === "user" &&
