@@ -1,4 +1,4 @@
-import { Engine, Context, Registry } from "../engine.js";
+import { Engine, Context, Registry } from "./orchestrator.js";
 import { MCP } from "../mcp.js";
 import { appendFile, mkdir } from "fs/promises";
 import { join, dirname } from "path";

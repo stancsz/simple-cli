@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { Engine, Context, Registry } from "../../src/engine.js";
+import { Engine, Context, Registry } from "../../src/engine/orchestrator.js";
 import { MCP } from "../../src/mcp.js";
 import { builtinSkills } from "../../src/skills.js";
 

@@ -1,10 +1,10 @@
-import { generateText } from "ai";
+import { generateText, embed } from "ai";
 import { createOpenAI } from "@ai-sdk/openai";
 import { createAnthropic } from "@ai-sdk/anthropic";
 import { createGoogleGenerativeAI } from "@ai-sdk/google";
 import { jsonrepair } from "jsonrepair";
 import chalk from "chalk";
-import { PersonaEngine } from "./persona/engine.js";
+import { Persona } from "./persona.js";
 
 export interface LLMResponse {
   thought: string;
@@ -24,11 +24,57 @@ export type LLMConfig = { provider: string; model: string; apiKey?: string };
 
 export class LLM {
   private configs: LLMConfig[];
-  public personaEngine: PersonaEngine;
+  public persona: Persona;
 
   constructor(config: LLMConfig | LLMConfig[]) {
     this.configs = Array.isArray(config) ? config : [config];
-    this.personaEngine = new PersonaEngine();
+    this.persona = new Persona();
+  }
+
+  async embed(text: string): Promise<number[]> {
+    for (const config of this.configs) {
+      const providerName = config.provider.toLowerCase();
+      const apiKey = config.apiKey || this.getEnvKey(providerName);
+
+      if (!apiKey) continue;
+
+      let embeddingModel: any;
+
+      try {
+        if (providerName === "openai") {
+          embeddingModel = createOpenAI({ apiKey }).embedding("text-embedding-3-small");
+        } else if (providerName === "google" || providerName === "gemini") {
+          embeddingModel = createGoogleGenerativeAI({ apiKey }).textEmbeddingModel("text-embedding-004");
+        } else {
+          continue;
+        }
+
+        const { embedding } = await embed({
+          model: embeddingModel,
+          value: text,
+        });
+        return embedding;
+      } catch (e) {
+        console.error(`[LLM] Embedding failed with ${providerName}:`, e);
+      }
+    }
+
+    // Fallback: Try OpenAI explicitly if not found in chain or all failed
+    const openaiKey = process.env.OPENAI_API_KEY;
+    if (openaiKey) {
+      try {
+        const embeddingModel = createOpenAI({ apiKey: openaiKey }).embedding("text-embedding-3-small");
+        const { embedding } = await embed({
+          model: embeddingModel,
+          value: text,
+        });
+        return embedding;
+      } catch (e) {
+        console.error(`[LLM] Fallback OpenAI embedding failed:`, e);
+      }
+    }
+
+    throw new Error("Failed to generate embedding: No suitable provider found.");
   }
 
   async generate(
@@ -58,11 +104,12 @@ export class LLM {
         if (providerName === "openai" || providerName === "codex") {
           model = createOpenAI({ apiKey })(modelName);
         } else if (providerName === "deepseek") {
-          console.log(chalk.gray(`[LLM] Attempting DeepSeek with baseURL: https://api.deepseek.com/v1`));
-          model = createOpenAI({
+          console.log(chalk.gray(`[LLM] Attempting DeepSeek (via Anthropic SDK) with baseURL: https://api.deepseek.com/anthropic`));
+          model = createAnthropic({
             apiKey,
-            baseURL: "https://api.deepseek.com/v1",
-          })(modelName);
+            baseURL: "https://api.deepseek.com/anthropic",
+          });
+          model = model(modelName);
         } else if (providerName === "anthropic" || providerName === "claude") {
           model = createAnthropic({ apiKey });
           model = model(modelName);
@@ -84,7 +131,12 @@ export class LLM {
           continue; // Skip unsupported
         }
 
-        const systemWithPersona = await this.personaEngine.injectPersonality(system);
+        const configPath = process.env.JULES_COMPANY
+          ? `.agent/companies/${process.env.JULES_COMPANY}/persona.json`
+          : "persona.json";
+        await this.persona.load(configPath);
+
+        const systemWithPersona = this.persona.injectPrompt(system);
         const { text, usage } = await generateText({
           model,
           system: systemWithPersona,
@@ -93,7 +145,8 @@ export class LLM {
         });
 
         const parsed = this.parse(text, usage as any);
-        return await this.personaEngine.transform(parsed);
+        parsed.message = await this.persona.processResponse(parsed.message || "");
+        return parsed;
       } catch (e: any) {
         lastError = e;
         console.error(`[LLM] ${providerName}:${modelName} failed: ${e.message}`);
@@ -232,7 +285,7 @@ export class LLM {
 
 export const createLLM = (model?: string) => {
   // Primary model
-  const m = model || process.env.MODEL || "openai:gpt-5.2-codex";
+  const m = model || process.env.MODEL || "deepseek:deepseek-reasoner";
   let [p, n] = m.includes(":") ? m.split(":") : ["openai", m];
 
   // Auto-detect provider if missing
