@@ -59,6 +59,11 @@ export class LLM {
         } else if (providerName === "google" || providerName === "gemini") {
           model = createGoogleGenerativeAI({ apiKey });
           model = model(modelName);
+        } else if (providerName === "moonshot" || providerName === "kimi") {
+          model = createOpenAI({
+            apiKey,
+            baseURL: "https://api.moonshot.cn/v1",
+          })(modelName);
         } else {
           continue; // Skip unsupported
         }
@@ -94,6 +99,8 @@ export class LLM {
       return process.env.ANTHROPIC_API_KEY;
     if (providerName === "google" || providerName === "gemini")
       return process.env.GOOGLE_API_KEY || process.env.GEMINI_API_KEY;
+    if (providerName === "moonshot" || providerName === "kimi")
+      return process.env.MOONSHOT_API_KEY || process.env.KIMI_API_KEY;
     return undefined;
   }
 
