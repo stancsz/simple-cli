@@ -97,7 +97,7 @@ async function main() {
   await mcp.init();
   // Ensure essential servers are running.
   // 'filesystem' and 'git' should be configured in mcp.json via migration.
-  const coreServers = ["filesystem", "git", "context_manager", "company", "aider", "claude"];
+  const coreServers = ["filesystem", "git", "context_server", "company", "aider", "claude"];
   for (const s of coreServers) {
     try {
       if (mcp.isServerRunning(s)) continue; // Already running
@@ -105,12 +105,6 @@ async function main() {
     } catch (e: any) {
       // Server might not be discovered or failed to start.
       // We fail silently for optional servers.
-      if (s === "context_manager") {
-        // Try 'context' if 'context_manager' fails (backward compatibility if index.ts name differs)
-        // But we created context_manager/index.ts, so name is 'context_manager' (directory name)
-        try { await mcp.startServer("context"); } catch { }
-      }
-
     }
   }
 

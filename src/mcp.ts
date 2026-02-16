@@ -48,8 +48,9 @@ export class MCP {
       try {
         const entries = await readdir(localServersDir, { withFileTypes: true });
         for (const entry of entries) {
+          const name = entry.name;
+
           if (entry.isDirectory()) {
-            const name = entry.name;
             if (this.discoveredServers.has(name)) continue; // Skip if already loaded from config
 
             const serverScript = join(localServersDir, name, "index.ts");
@@ -62,6 +63,18 @@ export class MCP {
                  source: 'local'
                });
             }
+          } else if (entry.isFile() && name.endsWith(".ts")) {
+            const serverName = name.replace(/\.ts$/, "");
+            if (this.discoveredServers.has(serverName)) continue;
+
+            const serverScript = join(localServersDir, name);
+            this.discoveredServers.set(serverName, {
+                name: serverName,
+                command: "npx",
+                args: ["tsx", serverScript],
+                env: process.env as any,
+                source: 'local'
+            });
           }
         }
       } catch (e) {

@@ -68,7 +68,7 @@ export class Executor {
         const signal = controller.signal;
 
         try {
-          const prompt = await ctx.buildPrompt(this.registry.tools);
+          const prompt = await ctx.buildPrompt(this.registry.tools, this.registry);
           const userHistory = ctx.history.filter(
               (m) =>
                 m.role === "user" &&

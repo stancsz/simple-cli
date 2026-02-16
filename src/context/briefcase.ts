@@ -30,12 +30,12 @@ export class Briefcase {
     await this.registry.loadCompanyTools(company);
 
     // 5. Restart context and company servers if running
-    if (this.mcp.isServerRunning("context")) {
-        await this.mcp.stopServer("context");
+    if (this.mcp.isServerRunning("context_server")) {
+        await this.mcp.stopServer("context_server");
         try {
-            await this.mcp.startServer("context");
+            await this.mcp.startServer("context_server");
         } catch (e) {
-            console.warn(`Failed to restart context server for company ${company}:`, e);
+            console.warn(`Failed to restart context_server for company ${company}:`, e);
         }
     }
 
