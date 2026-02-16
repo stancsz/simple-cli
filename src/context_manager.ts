@@ -1,7 +1,8 @@
 import { readFile, writeFile, mkdir, unlink, stat } from "fs/promises";
 import { existsSync } from "fs";
 import { join, dirname } from "path";
-import { VectorStore } from "./memory/vector_store.js";
+import { Client } from "@modelcontextprotocol/sdk/client/index.js";
+import { SSEClientTransport } from "@modelcontextprotocol/sdk/client/sse.js";
 
 export interface ContextData {
   goals: string[];
@@ -11,50 +12,57 @@ export interface ContextData {
 
 export class ContextManager {
   private contextFile: string;
-  private vectorStore: VectorStore | null = null;
+  private brainClient: Client | null = null;
   private data: ContextData = {
     goals: [],
     constraints: [],
     recent_changes: [],
   };
   private cwd: string;
-  private embeddingModel: any;
 
   constructor(cwd: string = process.cwd(), embeddingModel?: any) {
     this.cwd = cwd;
-    this.embeddingModel = embeddingModel;
     const company = process.env.JULES_COMPANY;
     if (company) {
       this.contextFile = join(cwd, ".agent", "companies", company, "context.json");
     } else {
       this.contextFile = join(cwd, ".agent", "context.json");
     }
-
-    try {
-      this.vectorStore = new VectorStore(cwd, embeddingModel, company);
-    } catch (e) {
-      console.warn("Failed to initialize vector store:", e);
-    }
   }
 
   setCompany(company: string) {
-    // Close existing vector store
-    if (this.vectorStore) {
-      this.vectorStore.close();
-      this.vectorStore = null;
-    }
-
     // Update contextFile path
     this.contextFile = join(this.cwd, ".agent", "companies", company, "context.json");
 
     // Reset data
     this.data = { goals: [], constraints: [], recent_changes: [] };
 
-    // Initialize new VectorStore
+    // Reset brain client to ensure we get a new connection if needed (though SSE is stateless-ish, the transport is stateful)
+    if (this.brainClient) {
+        this.brainClient.close().catch(() => {});
+        this.brainClient = null;
+    }
+  }
+
+  private async getBrain() {
+    if (this.brainClient) return this.brainClient;
+
+    const url = process.env.BRAIN_MCP_URL || "http://localhost:3002/sse";
+    const transport = new SSEClientTransport(new URL(url));
+
+    const client = new Client(
+      { name: "context-manager", version: "1.0.0" },
+      { capabilities: {} }
+    );
+
     try {
-      this.vectorStore = new VectorStore(this.cwd, this.embeddingModel, company);
+        await client.connect(transport);
+        this.brainClient = client;
+        return client;
     } catch (e) {
-      console.warn("Failed to initialize vector store:", e);
+        // Log warning but don't crash, caller will handle
+        console.warn(`Failed to connect to Brain MCP server at ${url}. Ensure it is running.`);
+        throw e;
     }
   }
 
@@ -142,12 +150,18 @@ export class ContextManager {
       if (!this.data.goals.includes(goal)) {
         this.data.goals.push(goal);
         await this.internalSave();
-        if (this.vectorStore) {
-          try {
-            await this.vectorStore.add(`Goal: ${goal}`, { type: "goal" });
-          } catch (e) {
-            // Ignore vector store errors
-          }
+
+        try {
+            const brain = await this.getBrain();
+            await brain.callTool({
+                name: "store_episodic_memory",
+                arguments: {
+                    text: `Goal: ${goal}`,
+                    metadata: JSON.stringify({ type: "goal", company: process.env.JULES_COMPANY })
+                }
+            });
+        } catch (e) {
+            console.warn("Failed to sync goal to brain:", e);
         }
       }
     });
@@ -159,14 +173,18 @@ export class ContextManager {
       if (!this.data.constraints.includes(constraint)) {
         this.data.constraints.push(constraint);
         await this.internalSave();
-        if (this.vectorStore) {
-          try {
-            await this.vectorStore.add(`Constraint: ${constraint}`, {
-              type: "constraint",
+
+        try {
+            const brain = await this.getBrain();
+            await brain.callTool({
+                name: "store_episodic_memory",
+                arguments: {
+                    text: `Constraint: ${constraint}`,
+                    metadata: JSON.stringify({ type: "constraint", company: process.env.JULES_COMPANY })
+                }
             });
-          } catch (e) {
-            // Ignore vector store errors
-          }
+        } catch (e) {
+            console.warn("Failed to sync constraint to brain:", e);
         }
       }
     });
@@ -181,13 +199,19 @@ export class ContextManager {
         this.data.recent_changes = this.data.recent_changes.slice(-10);
       }
       await this.internalSave();
-      if (this.vectorStore) {
-        try {
-          await this.vectorStore.add(`Change: ${change}`, { type: "change" });
+
+      try {
+            const brain = await this.getBrain();
+            await brain.callTool({
+                name: "store_episodic_memory",
+                arguments: {
+                    text: `Change: ${change}`,
+                    metadata: JSON.stringify({ type: "change", company: process.env.JULES_COMPANY })
+                }
+            });
         } catch (e) {
-          // Ignore vector store errors
+            console.warn("Failed to sync change to brain:", e);
         }
-      }
     });
   }
 
@@ -226,21 +250,40 @@ export class ContextManager {
   }
 
   async searchMemory(query: string, limit: number = 5): Promise<string> {
-    if (!this.vectorStore) return "Memory not available.";
-    const results = await this.vectorStore.search(query, limit);
-    if (results.length === 0) return "No relevant memory found.";
-    return results.map(r => `- ${r.text} (Similarity: ${(1 - (r.distance || 0)).toFixed(2)})`).join("\n");
+    try {
+        const brain = await this.getBrain();
+        const result: any = await brain.callTool({
+            name: "query_episodic_memory",
+            arguments: { query, limit }
+        });
+
+        if (result && result.content && result.content[0] && result.content[0].text) {
+            return result.content[0].text;
+        }
+        return "No relevant memory found.";
+    } catch (e) {
+        console.warn("Failed to search brain memory:", e);
+        return "Memory unavailable.";
+    }
   }
 
   async addMemory(text: string, metadata: any = {}): Promise<void> {
-    if (this.vectorStore) {
-      await this.vectorStore.add(text, metadata);
+    try {
+        const brain = await this.getBrain();
+        const metaStr = typeof metadata === 'string' ? metadata : JSON.stringify(metadata);
+
+        await brain.callTool({
+            name: "store_episodic_memory",
+            arguments: { text, metadata: metaStr }
+        });
+    } catch (e) {
+        console.warn("Failed to add memory to brain:", e);
     }
   }
 
   close() {
-    if (this.vectorStore) {
-      this.vectorStore.close();
+    if (this.brainClient) {
+        this.brainClient.close().catch(() => {});
     }
   }
 }

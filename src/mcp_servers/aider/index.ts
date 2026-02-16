@@ -4,6 +4,8 @@ import { z } from "zod";
 import { spawn } from "child_process";
 import { fileURLToPath } from "url";
 import process from "process";
+import { readFile } from "fs/promises";
+import { join } from "path";
 
 export class AiderServer {
   private server: McpServer;
@@ -60,12 +62,22 @@ export class AiderServer {
       };
     }
 
+    let finalMessage = message;
+    const soulPath = join(process.cwd(), "src", "agents", "souls", "aider.md");
+    try {
+      const soul = await readFile(soulPath, "utf-8");
+      finalMessage = `${soul}\n\nTask:\n${message}`;
+    } catch (e) {
+      // Create soul if not exists, but here we just warn
+      // console.warn("Could not load Aider soul:", e);
+    }
+
     // Construct arguments
     const args = [
       "--model", "deepseek/deepseek-chat",
       "--api-key", `deepseek=${apiKey}`,
       "--yes", // Automatically confirm changes
-      "--message", message,
+      "--message", finalMessage,
       ...files
     ];
 

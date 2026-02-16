@@ -3,6 +3,7 @@ import { join, basename } from "path";
 import { existsSync } from "fs";
 import { createLLM } from "../llm.js";
 import { jsonrepair } from "jsonrepair";
+import { analyzePerformancePrompt, updateSoulPrompt } from "../hr/prompts.js";
 
 interface LogEntry {
   taskId: string;
@@ -29,7 +30,7 @@ const LOGS_DIR = join(process.cwd(), ".agent", "logs");
 const SOULS_DIR = join(process.cwd(), "src", "agents", "souls");
 const SKILLS_FILE = join(process.cwd(), ".agent", "skills.json");
 
-async function scanLogs(days: number = 7): Promise<LogEntry[]> {
+export async function scanLogs(days: number = 7): Promise<LogEntry[]> {
   if (!existsSync(LOGS_DIR)) return [];
 
   const files = await readdir(LOGS_DIR);
@@ -61,7 +62,7 @@ async function scanLogs(days: number = 7): Promise<LogEntry[]> {
   return logs;
 }
 
-async function updateSkillsGraph(logs: LogEntry[]) {
+export async function updateSkillsGraph(logs: LogEntry[]) {
   let skills: SkillsGraph = {};
   if (existsSync(SKILLS_FILE)) {
     try {
@@ -70,21 +71,6 @@ async function updateSkillsGraph(logs: LogEntry[]) {
       console.error("Failed to parse skills.json, starting fresh.");
     }
   }
-
-  // Update existing stats with new logs?
-  // Since we scan last 7 days, we might re-process logs.
-  // Ideally we should have a 'processed' flag or DB.
-  // But given constraints, let's just re-calculate stats for the last 7 days window
-  // and merge/overwrite?
-  // Or just update the "lastRun" and counts.
-
-  // Simple approach: Recalculate based on currently scanned logs (last 7 days).
-  // This means historical data > 7 days is lost if we overwrite.
-  // Better: Read existing, and merge.
-  // But how to avoid double counting?
-  // We can't easily without log IDs.
-  // I will just use the scanned logs to REPRESENT the current skill graph.
-  // So "skills.json" represents "Recent Performance (7 days)".
 
   skills = {};
   for (const log of logs) {
@@ -110,7 +96,7 @@ async function updateSkillsGraph(logs: LogEntry[]) {
   console.log("Updated skills graph.");
 }
 
-async function analyzeAndOptimize(logs: LogEntry[]) {
+export async function analyzeAndOptimize(logs: LogEntry[]) {
   const llm = createLLM();
   const logsByAgent: Record<string, LogEntry[]> = {};
 
@@ -138,25 +124,7 @@ async function analyzeAndOptimize(logs: LogEntry[]) {
         last_steps: l.history.slice(-3)
     })).join("\n---\n");
 
-    const prompt = `
-You are a Senior Agent Manager. Review the following execution logs for the agent "${agentName}".
-Identify patterns of failure, recurring errors, or inefficient behaviors.
-If you find actionable improvements, draft a set of concise, high-impact instructions to be added to the agent's "Soul" (System Prompt).
-Focus on:
-1. Handling specific errors that occurred.
-2. Improving tool usage.
-3. Clarifying ambiguity.
-
-Logs:
-${logSummaries}
-
-Return your response in JSON format:
-{
-  "analysis": "Brief analysis of performance",
-  "improvement_needed": boolean,
-  "suggested_instructions": "Markdown text of instructions to add/update"
-}
-`;
+    const prompt = analyzePerformancePrompt(agentName, logSummaries);
 
     try {
         const response = await llm.generate(prompt, []);
@@ -186,7 +154,21 @@ Return your response in JSON format:
   }
 }
 
-async function updateSoul(agentName: string, newInstructions: string, analysis: string) {
+export async function analyzeAgent(agentName: string, days: number = 7) {
+  console.log(`Analyzing single agent: ${agentName} for last ${days} days.`);
+  const logs = await scanLogs(days);
+  const agentLogs = logs.filter(l => l.taskName === agentName);
+
+  if (agentLogs.length === 0) {
+      console.log(`No logs found for agent ${agentName} in last ${days} days.`);
+      return `No logs found for agent ${agentName}.`;
+  }
+
+  await analyzeAndOptimize(agentLogs);
+  return `Analysis completed for ${agentName}.`;
+}
+
+export async function updateSoul(agentName: string, newInstructions: string, analysis: string) {
     if (!existsSync(SOULS_DIR)) {
         await mkdir(SOULS_DIR, { recursive: true });
     }
@@ -201,24 +183,7 @@ async function updateSoul(agentName: string, newInstructions: string, analysis: 
     }
 
     const llm = createLLM();
-    const prompt = `
-You are editing the "Soul" (System Instructions) for the agent "${agentName}".
-Current Soul:
-${currentSoul}
-
-Analysis of recent performance:
-${analysis}
-
-New Instructions to Incorporate:
-${newInstructions}
-
-Task:
-Merge the new instructions into the current soul.
-- Keep existing useful instructions.
-- Update or replace instructions that were causing errors.
-- Ensure the tone is consistent.
-- Output ONLY the new Soul content in Markdown. Do not wrap in JSON.
-`;
+    const prompt = updateSoulPrompt(agentName, currentSoul, analysis, newInstructions);
 
     const response = await llm.generate(prompt, []);
     const newSoulContent = response.message || response.raw;
