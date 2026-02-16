@@ -165,6 +165,73 @@ async function delegateComment(agentCli: string, pr: any, context: string, error
     }
 }
 
+function shouldSkipPR(prNumber: number): boolean {
+    console.log(`Checking if PR #${prNumber} should be skipped...`);
+    try {
+        const prJson = run(`gh pr view ${prNumber} --json commits,comments,reviews,latestReviews`, { ignoreErrors: true });
+
+        if (!prJson) {
+            console.warn(`Could not fetch PR details for #${prNumber}. Proceeding...`);
+            return false;
+        }
+
+        const data = JSON.parse(prJson);
+        const commits = data.commits || [];
+        const comments = data.comments || [];
+        const reviews = data.reviews || []; // reviews might be empty or different structure
+
+        if (commits.length === 0) return false;
+
+        const latestCommit = commits[commits.length - 1];
+        const latestCommitDate = new Date(latestCommit.committedDate);
+        // console.log(`Latest commit date: ${latestCommitDate.toISOString()}`);
+
+        let lastBotActivityDate = new Date(0);
+
+        // Check comments
+        for (const comment of comments) {
+            const isBot = comment.author.login === 'github-actions' ||
+                comment.author.login === 'Simple-CLI Bot' ||
+                comment.body.includes('Simple Code Review') ||
+                comment.body.includes('Jules task created');
+
+            if (isBot) {
+                const date = new Date(comment.createdAt);
+                if (date > lastBotActivityDate) {
+                    lastBotActivityDate = date;
+                }
+            }
+        }
+
+        // Check reviews if any
+        if (reviews && reviews.length > 0) {
+            for (const review of reviews) {
+                const isBot = review.author.login === 'github-actions' ||
+                    review.author.login === 'Simple-CLI Bot' ||
+                    review.author.login.includes('jules'); // Be safer
+
+                if (isBot) {
+                    const date = new Date(review.submittedAt);
+                    if (date > lastBotActivityDate) {
+                        lastBotActivityDate = date;
+                    }
+                }
+            }
+        }
+
+        // console.log(`Last bot activity: ${lastBotActivityDate.toISOString()}`);
+
+        if (lastBotActivityDate > latestCommitDate) {
+            return true;
+        }
+
+        return false;
+    } catch (e: any) {
+        console.error(`Error checking skip status: ${e.message}`);
+        return false;
+    }
+}
+
 async function main() {
     console.log("🔍 Simple Code Review");
     console.log("===============================");
@@ -256,8 +323,12 @@ async function main() {
         console.log(`\n---------------------------------------------------`);
         console.log(`PR #${pr.number}: ${pr.title}`);
         console.log(`Author: ${pr.author.login} | Branch: ${pr.headRefName}`);
-        console.log(`Author: ${pr.author.login} | Branch: ${pr.headRefName}`);
         console.log(`Mergeable: ${pr.mergeable}`);
+
+        if (shouldSkipPR(pr.number)) {
+            console.log(`⏭️  Skipping PR #${pr.number}: Already reviewed by Simple-CLI/Jules and no new commits.`);
+            continue;
+        }
 
         const isJules = pr.author.login.toLowerCase().includes('jules') || pr.author.login.toLowerCase().includes('google-labs-jules');
         const mention = isJules ? '@jules ' : '';
