@@ -50,6 +50,7 @@ Important Rules:
 
 5. **Tool Discovery (MCP)**:
    - Check 'mcp_list_servers' for additional capabilities.
+   - Use 'skillsmp' tools to search, download, and use community skills (e.g., from SkillsMP or GitHub).
 
 6. If a task requires multiple steps, perform them one by one.
 7. Do not ask for confirmation if you have enough information to proceed.
