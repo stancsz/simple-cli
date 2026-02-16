@@ -153,13 +153,30 @@ export class Registry {
 
 
 export class Engine {
-  private s = spinner();
+  protected s = spinner();
 
   constructor(
-    private llm: any,
-    private registry: Registry,
-    private mcp: MCP,
+    protected llm: any,
+    protected registry: Registry,
+    protected mcp: MCP,
   ) { }
+
+  protected async getUserInput(initialValue: string, interactive: boolean): Promise<string | undefined> {
+    if (!interactive || !process.stdout.isTTY) return undefined;
+    const res = await text({
+      message: pc.cyan("Chat"),
+      initialValue,
+    });
+    if (isCancel(res)) return undefined;
+    return res as string;
+  }
+
+  protected log(type: 'info' | 'success' | 'warn' | 'error', message: string) {
+    if (type === 'info') log.info(message);
+    else if (type === 'success') log.success(message);
+    else if (type === 'warn') log.warn(message);
+    else if (type === 'error') log.error(message);
+  }
 
   async run(
     ctx: Context,
@@ -187,14 +204,9 @@ export class Engine {
 
     while (true) {
       if (!input) {
-        if (!options.interactive || !process.stdout.isTTY) break;
-        const res = await text({
-          message: pc.cyan("Chat"),
-          initialValue: bufferedInput,
-        });
+        input = await this.getUserInput(bufferedInput, options.interactive);
         bufferedInput = "";
-        if (isCancel(res)) break;
-        input = res as string;
+        if (!input) break;
       }
 
       ctx.history.push({ role: "user", content: input });
@@ -249,7 +261,8 @@ export class Engine {
         if (response.usage) {
           const { promptTokens, completionTokens, totalTokens } =
             response.usage;
-          log.info(
+          this.log(
+            "info",
             pc.dim(
               `Tokens: ${promptTokens ?? "?"} prompt + ${completionTokens ?? "?"} completion = ${totalTokens ?? "?"} total`,
             ),
@@ -258,7 +271,7 @@ export class Engine {
 
         const { thought, tool, args, message, tools } = response;
 
-        if (thought) log.info(pc.dim(thought));
+        if (thought) this.log("info", pc.dim(thought));
 
         // Determine execution list
         const executionList =
@@ -289,7 +302,7 @@ export class Engine {
                 // Reload tools if create_tool was used
                 if (tName === "create_tool") {
                   await this.registry.loadProjectTools(ctx.cwd);
-                  log.success("Tools reloaded.");
+                  this.log("success", "Tools reloaded.");
                 }
 
                 // Reload tools if mcp_start_server was used
@@ -297,7 +310,7 @@ export class Engine {
                   (await this.mcp.getTools()).forEach((t) =>
                     this.registry.tools.set(t.name, t as any),
                   );
-                  log.success("MCP tools updated.");
+                  this.log("success", "MCP tools updated.");
                 }
 
                 // Add individual tool execution to history to keep context updated
@@ -332,10 +345,10 @@ export class Engine {
                   qaCheck.message.toLowerCase().includes("fail")
                 ) {
                   this.s.stop(`[Supervisor] QA FAILED`);
-                  log.error(
+                  this.log("error",
                     `[Supervisor] Reason: ${qaCheck.message || qaCheck.thought}`,
                   );
-                  log.error(`[Supervisor] Asking for retry...`);
+                  this.log("error", `[Supervisor] Asking for retry...`);
                   input =
                     "The previous attempt failed. Please retry or fix the issue.";
                   allExecuted = false;
@@ -348,9 +361,9 @@ export class Engine {
                 if (!toolExecuted) this.s.stop(`Error executing ${tName}`);
                 else if (qaStarted) {
                   this.s.stop("Verification Error");
-                  log.error(`Error during verification: ${e.message}`);
+                  this.log("error", `Error during verification: ${e.message}`);
                 } else {
-                  log.error(`Error: ${e.message}`);
+                  this.log("error", `Error: ${e.message}`);
                 }
 
                 ctx.history.push({
@@ -397,8 +410,8 @@ export class Engine {
           ) && /(file|code)/.test(rawText);
 
         if (isRefusal || isHallucination || isLazyInstruction) {
-          log.warn("Lazy/Hallucinating Agent detected. Forcing retry...");
-          if (message) log.info(pc.dim(`Agent: ${message}`));
+          this.log("warn", "Lazy/Hallucinating Agent detected. Forcing retry...");
+          if (message) this.log("info", pc.dim(`Agent: ${message}`));
 
           ctx.history.push({
             role: "assistant",
@@ -429,7 +442,7 @@ export class Engine {
           continue;
         }
         // Log actual errors
-        log.error(`Error: ${e.message}`);
+        this.log("error", `Error: ${e.message}`);
 
         if (!options.interactive) {
           throw e;
