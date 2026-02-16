@@ -5,6 +5,9 @@ import { spawn } from "child_process";
 import process from "process";
 
 async function main() {
+  console.warn(
+    "DEPRECATION WARNING: 'src/agents/deepseek_claude.ts' is deprecated and will be removed. Please use the 'claude-mcp' server instead (coming soon).",
+  );
   const apiKey = process.env.DEEPSEEK_API_KEY;
   if (!apiKey) {
     console.error("Error: DEEPSEEK_API_KEY environment variable is not set.");

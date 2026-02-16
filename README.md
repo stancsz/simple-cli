@@ -77,12 +77,12 @@ The core engine runs a "Game Loop" that uses an **Asynchronous Task Manager** to
 4.  **Reviews**: Verifies the work (files, PRs) via a Supervisor loop.
 
 ### The "Workers" (Sub-Agents)
-Simple-CLI wraps powerful industry CLIs into a unified interface:
+Simple-CLI wraps powerful industry CLIs into a unified interface. **Note: We are currently migrating these to standalone MCP Servers.**
 *   **Jules (`jules`)**: An autonomous agent for GitHub PRs and full-stack tasks.
-*   **DeepSeek Claude (`deepseek_claude`)**: Wraps Anthropic's Claude CLI, optimized for DeepSeek's reasoning.
-*   **DeepSeek Aider (`deepseek_aider`)**: Wraps the popular `aider` CLI for code editing.
+*   **DeepSeek Claude (`deepseek_claude`)** *(Deprecated)*: Wraps Anthropic's Claude CLI. Transitioning to `claude-mcp`.
+*   **DeepSeek Aider (`deepseek_aider`)** *(Deprecated)*: Wraps the popular `aider` CLI. Transitioning to `aider-mcp`.
+*   **DeepSeek CrewAI (`deepseek_crewai`)** *(Deprecated)*: Delegates to CrewAI. Please use the `crewai` MCP server instead.
 *   **DeepSeek OpenCode (`deepseek_opencode`)**: Fast, open-source model generation.
-*   **DeepSeek CrewAI (`deepseek_crewai`)**: Delegates complex research and writing tasks to a CrewAI team.
 
 ---
 

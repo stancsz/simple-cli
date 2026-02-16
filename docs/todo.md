@@ -8,23 +8,25 @@ This document tracks the migration from ad-hoc internal tools to a strict **MCP-
 - [ ] **Filesystem**: Replace `simple_tools/read_file` with `@modelcontextprotocol/server-filesystem`.
 - [ ] **Git**: Replace `simple_tools` git commands with `@modelcontextprotocol/server-git`.
 - [ ] **Agents as MCP Servers**:
-    - [ ] Create `crewai-mcp`: Wrap `src/agents/deepseek_crewai.ts` into a standalone server.
+    - [x] Create `crewai-mcp`: Wrapped `src/agents/deepseek_crewai.ts` into a standalone server in `src/mcp_servers/crewai`.
     - [ ] Create `aider-mcp`: Wrap `src/agents/deepseek_aider.ts` into a standalone server.
     - [ ] Create `claude-mcp`: Wrap `src/agents/deepseek_claude.ts` into a standalone server.
-    - [ ] Refine `devin-mcp`: Complete `src/mcp_servers/devin`.
+    - [x] Refine `devin-mcp`: Completed `src/mcp_servers/devin` with session management tools.
 
 ### 2. Digest Phase (Simplify Core Engine)
 - [ ] **Remove Logic Duplication**:
     - [ ] Delete `delegate_cli` from `src/builtins.ts`. The engine should just call `run_crew_task` or `aider_edit`.
     - [ ] Remove manual tool loading in `engine.ts`. Use standard MCP discovery.
 - [ ] **Context Management**:
+    - [x] Implement Concurrency Control: Added file locking to `ContextManager` to prevent race conditions.
     - [ ] Implement a **Context MCP Server** (singleton) to handle `context.json` updates securely (fix race conditions).
     - [ ] Update `engine.ts` to push/pull context via this server.
 
 ### 3. Cleanup & Polishing
-- [ ] **Security**: Re-enable path validation in the Filesystem MCP server (sandboxing).
+- [x] **Security**: Re-enabled path validation in `src/builtins.ts` (sandboxing to CWD).
 - [ ] **Configuration**: Move all agent configurations from `src/config.ts` to `mcp.json`.
 - [ ] **Deprecation**: Delete `src/mcp_servers/simple_tools`, `src/agents/*.ts` (once migrated).
+    - [x] Marked `src/agents/*.ts` as deprecated with console warnings.
 
 ### 4. Tests
 - [ ] Update tests to mock MCP servers instead of local file paths.

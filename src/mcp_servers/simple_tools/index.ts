@@ -120,6 +120,9 @@ export class SimpleToolsServer {
         command: z.string().describe("The command to execute."),
       },
       async ({ command }) => {
+        console.warn(
+          `[Security Warning] Executing arbitrary command: ${command}`,
+        );
         const { stdout, stderr } = await execAsync(command);
         return {
           content: [

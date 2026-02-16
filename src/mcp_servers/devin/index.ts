@@ -77,64 +77,95 @@ export class DevinServer {
   }
 
   private async createSession(prompt: string) {
-    const response = await fetch(`${API_BASE_URL}/sessions`, {
-      method: "POST",
-      headers: {
-        "Authorization": `Bearer ${this.apiKey}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({ prompt }),
-    });
+    try {
+      const response = await fetch(`${API_BASE_URL}/sessions`, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${this.apiKey}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ prompt }),
+      });
 
-    if (!response.ok) {
-      const errorText = await response.text();
-      throw new Error(`API request failed: ${response.status} ${errorText}`);
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`API request failed: ${response.status} ${errorText}`);
+      }
+
+      const data = await response.json();
+      return {
+        content: [
+          { type: "text" as const, text: JSON.stringify(data, null, 2) },
+        ],
+      };
+    } catch (error: any) {
+      return {
+        content: [
+          { type: "text" as const, text: `Error creating session: ${error.message}` },
+        ],
+        isError: true,
+      };
     }
-
-    const data = await response.json();
-    return {
-      content: [{ type: "text" as const, text: JSON.stringify(data, null, 2) }],
-    } as { content: { type: "text"; text: string }[] };
   }
 
   private async getSession(sessionId: string) {
-    const response = await fetch(`${API_BASE_URL}/sessions/${sessionId}`, {
-      method: "GET",
-      headers: {
-        "Authorization": `Bearer ${this.apiKey}`,
-      },
-    });
+    try {
+      const response = await fetch(`${API_BASE_URL}/sessions/${sessionId}`, {
+        method: "GET",
+        headers: {
+          Authorization: `Bearer ${this.apiKey}`,
+        },
+      });
 
-    if (!response.ok) {
-      const errorText = await response.text();
-      throw new Error(`API request failed: ${response.status} ${errorText}`);
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`API request failed: ${response.status} ${errorText}`);
+      }
+
+      const data = await response.json();
+      return {
+        content: [
+          { type: "text" as const, text: JSON.stringify(data, null, 2) },
+        ],
+      };
+    } catch (error: any) {
+      return {
+        content: [
+          { type: "text" as const, text: `Error getting session: ${error.message}` },
+        ],
+        isError: true,
+      };
     }
-
-    const data = await response.json();
-    return {
-      content: [{ type: "text" as const, text: JSON.stringify(data, null, 2) }],
-    } as { content: { type: "text"; text: string }[] };
   }
 
   private async listSessions(limit: number = 10) {
-    // Assuming GET /sessions lists sessions
-    // Note: limit might be a query param
-    const response = await fetch(`${API_BASE_URL}/sessions?limit=${limit}`, {
-      method: "GET",
-      headers: {
-        "Authorization": `Bearer ${this.apiKey}`,
-      },
-    });
+    try {
+      const response = await fetch(`${API_BASE_URL}/sessions?limit=${limit}`, {
+        method: "GET",
+        headers: {
+          Authorization: `Bearer ${this.apiKey}`,
+        },
+      });
 
-    if (!response.ok) {
-      const errorText = await response.text();
-      throw new Error(`API request failed: ${response.status} ${errorText}`);
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`API request failed: ${response.status} ${errorText}`);
+      }
+
+      const data = await response.json();
+      return {
+        content: [
+          { type: "text" as const, text: JSON.stringify(data, null, 2) },
+        ],
+      };
+    } catch (error: any) {
+      return {
+        content: [
+          { type: "text" as const, text: `Error listing sessions: ${error.message}` },
+        ],
+        isError: true,
+      };
     }
-
-    const data = await response.json();
-    return {
-      content: [{ type: "text" as const, text: JSON.stringify(data, null, 2) }],
-    } as { content: { type: "text"; text: string }[] };
   }
 
   async run() {
