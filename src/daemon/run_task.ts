@@ -6,6 +6,9 @@ import { Registry, Context } from "../engine.js";
 import { getActiveSkill } from "../skills.js";
 import { TaskDefinition } from "./task_definitions.js";
 import { allBuiltins } from "../builtins.js";
+import { join } from "path";
+import { existsSync } from "fs";
+import { readFile } from "fs/promises";
 
 async function main() {
   const taskDefStr = process.env.JULES_TASK_DEF;
@@ -36,10 +39,25 @@ async function main() {
 
   const runner = new TaskRunner(provider, registry, mcp, {
     yoloMode: taskDef.yoloMode ?? true,
-    timeout: taskDef.autoDecisionTimeout
+    timeout: taskDef.autoDecisionTimeout,
+    taskId: taskDef.id,
+    taskName: taskDef.name
   });
 
   const skill = await getActiveSkill(cwd);
+
+  // Load and inject Agent Soul if exists
+  const soulPath = join(cwd, "src", "agents", "souls", `${taskDef.name}.md`);
+  if (existsSync(soulPath)) {
+      try {
+          const soulContent = await readFile(soulPath, "utf-8");
+          skill.systemPrompt += `\n\n## Agent Instructions (Soul)\n${soulContent}`;
+          console.log(`Loaded soul for agent: ${taskDef.name}`);
+      } catch (e) {
+          console.error(`Failed to load soul for agent ${taskDef.name}:`, e);
+      }
+  }
+
   const ctx = new Context(cwd, skill);
 
   console.log(`Starting task: ${taskDef.name} (ID: ${taskDef.id})`);

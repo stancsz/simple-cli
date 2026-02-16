@@ -1,0 +1,13 @@
+{
+  "tasks": [
+    {
+      "id": "hr-manager-weekly",
+      "name": "HR Manager",
+      "trigger": "cron",
+      "schedule": "0 0 * * 0",
+      "prompt": "You are the HR Manager. Your goal is to review agent performance and optimize their instructions.\n\nStart the 'hr-manager' MCP server if not already running (use 'mcp_start_server' with name 'hr-manager').\nThen run the 'run_hr_optimization' tool to execute the HR loop.\n\nReport the result.",
+      "yoloMode": true,
+      "autoDecisionTimeout": 300000
+    }
+  ]
+}
