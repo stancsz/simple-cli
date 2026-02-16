@@ -294,11 +294,6 @@ export class Engine {
 
                 let qaPrompt = `Analyze the result of the tool execution: ${JSON.stringify(result)}. Did it satisfy the user's request: "${input || userHistory.pop()?.content}"? If specific files were mentioned (like flask app), check if they exist or look correct based on the tool output.`;
 
-                if (tName === "delegate_cli") {
-                  qaPrompt +=
-                    " Since this was delegated to an external CLI, be extra critical. Does the output explicitly confirm file creation?";
-                }
-
                 const qaCheck = await this.llm.generate(
                   qaPrompt,
                   [...ctx.history, { role: "user", content: qaPrompt }],
@@ -384,7 +379,7 @@ export class Engine {
           });
 
           input =
-            "System Correction: You MUST use the 'delegate_cli' tool to create or modify files via subagents. Do not describe the action or ask the user to do it. Use the tool now.";
+            "System Correction: You MUST use an appropriate tool (e.g., 'write_file', 'aider_edit_files', 'ask_claude') to create or modify files. Do not describe the action or ask the user to do it.";
           continue;
         }
         // ----------------------------

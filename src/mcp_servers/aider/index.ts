@@ -63,6 +63,7 @@ export class AiderServer {
     // Construct arguments
     const args = [
       "--model", "deepseek/deepseek-chat",
+      "--api-key", `deepseek=${apiKey}`,
       "--yes", // Automatically confirm changes
       "--message", message,
       ...files
@@ -71,6 +72,7 @@ export class AiderServer {
     return new Promise<{ content: { type: "text", text: string }[], isError?: boolean }>((resolve) => {
       console.error(`[Aider] Running: aider ${args.join(" ")}`);
 
+      // We assume 'aider' is in the PATH, as in deepseek_aider.ts
       const child = spawn("aider", args, {
         env: { ...process.env, DEEPSEEK_API_KEY: apiKey },
         shell: false
@@ -102,7 +104,7 @@ export class AiderServer {
 
       child.on("error", (err) => {
         resolve({
-          content: [{ type: "text", text: `Failed to start aider: ${err.message}` }],
+          content: [{ type: "text", text: `Failed to start aider: ${err.message}. Make sure 'aider' is installed and in your PATH.` }],
           isError: true,
         });
       });

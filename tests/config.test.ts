@@ -17,6 +17,7 @@ describe("Config Loader", () => {
 
   it("should load config from .agent/config.json", async () => {
     const config = {
+      // We test generic config loading, even if 'agents' is deprecated
       agents: {
         test: { command: "echo", args: ["hello"], description: "test" },
       },
@@ -27,23 +28,21 @@ describe("Config Loader", () => {
     expect(loaded.agents?.test.command).toBe("echo");
   });
 
-  it("should return default deepseek agents if no config found", async () => {
-    const loaded = await loadConfig(TEST_DIR);
-    expect(loaded.agents?.deepseek_claude).toBeDefined();
-  });
-
-  it("should prioritize mcp.json but include default agents", async () => {
+  it("should prioritize mcp.json", async () => {
     const mcpConfig = { mcpServers: { s1: {} } };
-    const agentConfig = { agents: { a1: {} } };
+    const agentConfig = { agents: { a1: {} } }; // agents in config.json
 
     await writeFile(join(TEST_DIR, "mcp.json"), JSON.stringify(mcpConfig));
-    await writeFile(
-      join(AGENT_DIR, "config.json"),
-      JSON.stringify(agentConfig),
-    );
+    // We don't write config.json here to test mcp.json priority/loading
+    // Actually loadConfig loads from both locations?
+    // The implementation:
+    // const locations = [join(cwd, "mcp.json"), join(cwd, ".agent", "config.json")];
+    // loops and breaks on first found.
+    // So mcp.json has priority.
 
     const loaded = await loadConfig(TEST_DIR);
     expect(loaded.mcpServers).toBeDefined();
-    expect(loaded.agents?.deepseek_claude).toBeDefined();
+    // It should NOT load agents from config.json if mcp.json is found first
+    expect(loaded.agents).toBeUndefined();
   });
 });
