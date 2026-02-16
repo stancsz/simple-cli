@@ -54,8 +54,8 @@ Most AI tools trap you in a never-ending chat loop. Simple-CLI is built for **au
 
 *   **Deployable Results**: Give a high-level goal and walk away. The orchestrator handles the planning, delegation, and verification.
 *   **Specialized Workforce**: Hire `Jules` for GitHub PR surgery, `DeepSeek Claude` for architectural heavy lifting, and `Aider` for rapid-fire edits.
-*   **Ghost Mode (New!)**: Your digital co-workers run 24/7. The `Smart Job Delegator` wakes up hourly to check the Roadmap and assign tasks while you sleep.
-*   **The Brain (New!)**: Hybrid Memory Architecture (Vector + Graph) ensures your agents remember past solutions, user preferences, and project context forever.
+*   **Ghost Mode**: Your digital co-workers run 24/7. The `Smart Job Delegator` wakes up hourly to check the Roadmap and assign tasks while you sleep.
+*   **The Brain**: Hybrid Memory Architecture (Vector + Graph) ensures your agents remember past solutions, user preferences, and project context forever.
 *   **Parallel Productivity**: Run a frontend refactor and a backend test suite simultaneously. Simple-CLI manages the threads so you don't have to.
 
 ---
@@ -70,12 +70,11 @@ The core engine runs a "Game Loop" that uses an **Asynchronous Task Manager** to
 4.  **Reviews**: Verifies the work (files, PRs) via a Supervisor loop.
 
 ### The "Workers" (Sub-Agents)
-Simple-CLI wraps powerful industry CLIs into a unified interface. **Note: We are currently migrating these to standalone MCP Servers.**
+Simple-CLI wraps powerful industry CLIs into a unified interface via **MCP Servers**:
 *   **Jules (`jules`)**: An autonomous agent for GitHub PRs and full-stack tasks.
-*   **DeepSeek Claude (`deepseek_claude`)** *(Deprecated)*: Wraps Anthropic's Claude CLI. Transitioning to `claude-mcp`.
-*   **DeepSeek Aider (`deepseek_aider`)** *(Deprecated)*: Wraps the popular `aider` CLI. Transitioning to `aider-mcp`.
-*   **DeepSeek CrewAI (`deepseek_crewai`)** *(Deprecated)*: Delegates to CrewAI. Please use the `crewai` MCP server instead.
-*   **DeepSeek OpenCode (`deepseek_opencode`)**: Fast, open-source model generation.
+*   **Claude (`claude`)**: Wraps Anthropic's Claude for architectural reasoning.
+*   **Aider (`aider`)**: Wraps the popular `aider` CLI for rapid code editing.
+*   **CrewAI (`crewai`)**: Orchestrates multi-agent research crews.
 
 ---
 
@@ -114,6 +113,8 @@ simple "Delegate the UI fix to Jules and the API tests to Aider in parallel."
 
 Simple-CLI extends its capabilities via the Model Context Protocol (MCP). It includes several built-in MCP servers located in `src/mcp_servers/`:
 
+*   **Brain (`brain`)**: Provides episodic and semantic memory via Vector DB and Graph.
+*   **SOP (`sop`)**: Manages and executes Standard Operating Procedures.
 *   **CapRover (`caprover`)**: Manages CapRover deployments.
 *   **Cloudflare Browser (`cloudflare_browser`)**: Web browsing capabilities via Cloudflare.
 *   **Coolify (`coolify`)**: Integrates with Coolify for self-hosting.
@@ -124,12 +125,11 @@ Simple-CLI extends its capabilities via the Model Context Protocol (MCP). It inc
 *   **Kimi (`kimi`)**: Integrates Kimi AI capabilities.
 *   **OpenClaw (`openclaw`)**: Integrates OpenClaw skills (e.g., system tools, GitHub) into the workflow.
 *   **OpenCowork (`opencowork`)**: Enables hierarchical agency by allowing the hiring and delegation of tasks to worker agents.
-*   **Simple Tools (`simple_tools`)**: Core system tools for the orchestrator.
 
 ## 🧠 The `.agent` Brain
 Simple-CLI persists its memory and configuration in your project:
 *   **`.agent/state.json`**: The Psyche (Personality, Trust, Irritation).
-*   **`.agent/tools/`**: Custom tools the agent has written for itself (`create_tool`).
+*   **`.agent/brain/`**: The Core Memory (Vector DB + Graph) managed by the Brain MCP server.
 *   **`.agent/learnings.json`**: Long-term memory of what works and what doesn't.
 
 ---
