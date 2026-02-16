@@ -1,12 +1,18 @@
-# 🚀 Simple-CLI: The AI Meta-Orchestrator
-**Turn your terminal into an autonomous software development agency.**
+# 🚀 Simple-CLI: The Digital Coworker
+**Stop chatting with AI. Start deploying coworkers.**
 
-![License](https://img.shields.io/badge/license-MIT-blue.svg) ![Version](https://img.shields.io/badge/version-0.2.9-green.svg) ![NPM Downloads](https://img.shields.io/npm/dw/@stan-chen/simple-cli)
-
-Simple-CLI is not just another coding assistant. It is a **Meta-Orchestrator** with **sqlite-vec RAG memory implemented** that coordinates a fleet of specialized AI agents (Jules, DeepSeek Claude, DeepSeek Aider, OpenCode) to build software for you—**in parallel.**
+Simple-CLI is a **Meta-Orchestrator** designed to build and manage a fleet of autonomous digital employees. It doesn't just answer questions; it coordinates specialized agents (Jules, Claude, Aider, Kimi) to execute complex, multi-threaded workflows in parallel.
 
 ## 🎯 Goal
-The goal is to build the best general purpose agent, high leverage on most successful framework into its skills and mcp backpacks.
+**Simple-CLI is your Digital Coworker and Autonomous Consulting Agency.**
+
+The goal is to evolve beyond a simple coding assistant into a fleet of **Digital Employees** that you can deploy across multiple companies. By leveraging the best-in-class models and frameworks, Simple-CLI acts as a high-leverage manager that thinks boldly, acts creatively, and executes with precision.
+
+## 🏢 Digital Employee Framework
+Simple-CLI allows you to "hire" and "equip" specialized digital workers for your projects:
+*   **Persona-Driven Work (Skills)**: Define specialized roles like `LeadStrategist`, `SecurityAuditor`, or `UXResearcher` using the Skill system.
+*   **Hierarchical Delegation (OpenCowork)**: Spawn sub-agents with specific namespaces and toolsets to handle complex, specialized workstreams.
+*   **Autonomous Evolution (ClawJit & ClawBrain)**: Agents that self-initialize their souls based on task intent and maintain persistent memory across sessions.
 
 ## 🎥 See it in Action
 
@@ -43,27 +49,13 @@ $ simple "Refactor src/legacy.ts to functional style and write tests for it. Do 
 
 ---
 
-## ⚡ Why Simple-CLI?
+## ⚡ The Vision: Results, Not Conversations
+Most AI tools trap you in a never-ending chat loop. Simple-CLI is built for **autonomous execution**.
 
-**We don't try to reinvent the wheel.**
-
-**Simple-CLI takes a different approach.** We believe in using the **best tool for the job**.
-Instead of building a "Jack of all trades" model, Simple-CLI acts as a Meta-Orchestrator that directly commands the industry's most powerful, specialized CLIs:
-
-*   **Need complex reasoning?** We delegate to `DeepSeek Claude`.
-*   **Need rapid refactoring?** We delegate to `DeepSeek Aider`.
-*   **Need quick snippets?** We delegate to `OpenCode`.
-*   **Need PR management?** We delegate to `Jules`.
-
-By orchestrating these giants rather than competing with them, Simple-CLI delivers a **super-team** that outperforms any single "all-in-one" agent.
-
-### The Engineering Manager for AI
-Most AI tools are single-threaded: you ask one question, you wait for one answer. **Simple-CLI is asynchronous.** It breaks your project into tasks and delegates them to these specialized workers in the background.
-
-*   **Parallel Execution**: Fix a bug in the frontend while writing tests for the backend.
-*   **Specialized Roles**: Assign `Jules` to handle GitHub PRs and `Claude` for architecture.
-*   **Non-Blocking Workflow**: The orchestrator stays responsive while sub-agents do the heavy lifting.
-*   **Psyche Module**: Persistent personality and state that evolves based on your interactions.
+*   **Deployable Results**: Give a high-level goal and walk away. The orchestrator handles the planning, delegation, and verification.
+*   **Specialized Workforce**: Hire `Jules` for GitHub PR surgery, `DeepSeek Claude` for architectural heavy lifting, and `Aider` for rapid-fire edits.
+*   **Parallel Productivity**: Run a frontend refactor and a backend test suite simultaneously. Simple-CLI manages the threads so you don't have to.
+*   **Persistent Agency**: Your coworkers evolve. They remember your codebase, learn your patterns, and maintain state across sessions via the `.agent` brain.
 
 ---
 
@@ -140,22 +132,6 @@ Simple-CLI persists its memory and configuration in your project:
 *   **`.agent/learnings.json`**: Long-term memory of what works and what doesn't.
 
 ---
-
-## 📊 Benchmarks
-
-**Simple-CLI consistently outperforms single-agent systems by orchestrating the best models for each specific sub-task.**
-
-> **Disclaimer**: *Scores below are based on internal evaluation of the Meta-Orchestrator architecture against the SWE-bench dataset.*
-
-| Agent Architecture | Internal Benchmark (Projected) | Cost / Solved Issue |
-| :--- | :--- | :--- |
-| **Simple-CLI (Meta-Orchestrated)** | **81.5%** 🏆 | $2.15 |
-| **SOTA Single Agent (e.g. Claude 3.5)** | ~50-60% | $1.50 |
-| **Open Source Agents (e.g. SWE-agent)** | ~40-50% | $1.20 |
-| *Human avg. (Junior Dev)* | *~70-85%* | *$150+* |
-
-> **Why the difference?**
-> A single model, no matter how smart, eventually gets "stuck" in a loop. Simple-CLI's orchestrator detects these loops, kills the task, and respawns it with a different strategy or agent.
 
 ---
 

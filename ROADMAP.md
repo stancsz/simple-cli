@@ -1,29 +1,15 @@
-# Simple CLI: The Future of AI Coding Orchestration
+# Simple CLI: The Roadmap to Digital Coworkers
 
 ## Project Overview
 
-**Simple CLI** is currently positioned as a lightweight "Meta-Orchestrator" for AI coding tools. Unlike monolithic agents that attempt to solve every problem with a single model or strategy, Simple CLI acts as a force multiplier by delegating tasks to specialized sub-agents (e.g., Claude Code, Aider, custom scripts) while maintaining a unified interface.
+**Simple CLI** is a Meta-Orchestrator for autonomous digital employees. Unlike traditional AI tools that require constant hand-holding and chat-based guidance, Simple CLI is designed to ingest a goal, hire a specialized team, and execute until the objective is achieved.
 
 ### Core Philosophy
-- **Delegation over Monolith:** Use the right tool for the job.
-- **Cost Efficiency:** Leverage cheaper models (DeepSeek V3) for routine tasks and expensive models (Claude 3.7 Sonnet, DeepSeek R1) only when necessary.
-- **Unified Interface:** One CLI to rule them all. The user shouldn't need to remember the syntax for five different tools.
+- **Autonomy over Interaction:** We aim for "set it and forget it" deployments.
+- **Role-Based Intelligence:** Don't build one model; build an agency of specialized workers (Architects, Engineers, Researchers).
+- **Tool-Integrated Workforce:** Every employee comes with a "backpack" of MCP tools, allowing them to interact directly with the world (Git, Cloud, Databases).
 
 ---
-
-## Competitive Analysis
-
-| Feature | Simple CLI | OpenClaw / OpenDevin | Claude Code (Anthropic) | Aider |
-| :--- | :--- | :--- | :--- | :--- |
-| **Primary Role** | Orchestrator / Manager | Autonomous Developer | Polished Assistant | Code Editor |
-| **Model Support** | Multi-Model (via routing) | Multi-Model | Claude Only | Multi-Model |
-| **Cost** | Optimized (tier-based) | High (heavy usage) | High (premium models) | Variable |
-| **Complexity** | Low (Wrapper) | High (Full Sandbox) | Low (SaaS-like) | Medium (CLI) |
-| **Key Strength** | Flexibility & Routing | Autonomy & Scope | UX & Reliability | Git Integration |
-| **Weakness** | Dependency on others | Resource Intensive | Closed Ecosystem | UX (Command line) |
-
-### Why Simple CLI Wins
-While OpenClaw aims to *replace* the developer and Claude Code aims to be the *best* assistant, Simple CLI aims to be the **Manager**. It empowers the developer to direct a team of AI agents without getting bogged down in the details of each tool's implementation.
 
 ---
 
@@ -48,22 +34,41 @@ To transition from a "Wrapper" to a true "Meta-Orchestrator," the following feat
     - Global constraints.
 - **Mechanism:** `delegate_cli` automatically injects this context (goals, constraints, changes) into the prompt or file context of every sub-agent.
 
-### Phase 3: The Universal Tool Interface (MCP)
-**Goal:** Standardize how agents call tools.
-- **Adoption:** Implement the **Model Context Protocol (MCP)**.
-- **Benefit:**
-    - Simple CLI can expose its own tools (e.g., specific testing scripts, database migrations) to *any* sub-agent.
-    - Sub-agents can expose their capabilities back to the Orchestrator.
-    - Plug-and-play compatibility with external MCP servers (e.g., Brave Search, Google Drive).
+### Phase 3: The Universal Tool Interface (MCP) (🔄 In Progress)
+**Goal:** Standardize how agents call tools via the Model Context Protocol.
+- **Status:** Core MCP server logic implemented. Numerous specialized servers (CapRover, Cloudflare, Kimi, etc.) integrated.
+- **Benefit:** Direct, high-bandwidth tool access for sub-agents without regex parsing or manual wrapper overhead.
 
-### Phase 4: Human-in-the-Loop 2.0
-**Goal:** Enhanced control and review.
-- **Features:**
-    - **Interactive TUI:** A better terminal UI for reviewing agent plans before execution.
-    - **Diff Review:** A unified diff viewer that works across all agents (even those that don't natively support it well).
-    - **Undo/Redo:** A global undo stack that can revert changes made by *any* agent.
+### Phase 4: Human-in-the-Loop 2.0 (✅ Implemented)
+**Goal:** Enhanced control and review via TUI and Supervisor.
+- **Status:** Interactive TUI and [Supervisor] QA loop are active parts of the core engine.
+
+### Phase 5: The Digital Agency (Digital Coworkers)
+**Goal:** Transition from "Single User Tool" to a "Multi-Employee Agency."
+- **Focus:** Role-based autonomy, persistence, and recursive optimization.
+
+---
+
+## 🚀 The 4-Pillar Vision
+To achieve a true "Digital Agency" capable of consulting for multiple companies:
+
+### 1. "Company Context" Onboarding (The Briefcase)
+*   **Concept:** Agents shouldn't just run in a folder; they should understand the "Client Profile."
+*   **Mechanism:** Multi-tenant RAG (Vector DB) per company. When you run `simple --company client-a`, the agent loads specific brand voices, internal docs, and past decisions.
+
+### 2. SOP-as-Code (The Operating Manual)
+*   **Concept:** Automating professional workflows.
+*   **Mechanism:** Workflow agents that take an SOP (Standard Operating Procedure) and execute it autonomously—from scraping market data to writing a PR review script.
+
+### 3. "Ghost Mode" Persistence (The 24/7 Employee)
+*   **Concept:** Employees that work while you sleep.
+*   **Mechanism:** Background agents triggered by CRON or Webhooks. They perform "Morning Standups" by summarizing their background work (GitHub Issue triage, security scans) before the human wakes up.
+
+### 4. Recursive Self-Optimization (The "HR Loop")
+*   **Concept:** The agency gets smarter the more it works.
+*   **Mechanism:** Cross-Agent Reflection. A "Manager" agent reviews the logs of "Worker" agents and updates their `AGENT.md` (soul) to fix recurring mistakes or adopt better coding patterns.
 
 ---
 
 ## Conclusion
-The future of Simple CLI is not to build a better code editor than Aider or a smarter model than Claude. It is to build the **intelligence layer** that sits above them, managing context, cost, and workflow to deliver a seamless developer experience.
+The objective of Simple CLI is to create a **deployable workforce**. We aren't building just another chat interface; we are building the infrastructure for autonomous agency—where AI "employees" work, learn, and deliver results with minimal human intervention.
