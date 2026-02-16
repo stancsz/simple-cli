@@ -41,4 +41,13 @@ This document tracks the migration from ad-hoc internal tools to a strict **MCP-
 - [ ] **Infrastructure**:
     - [ ] Create `Dockerfile` for lightweight production image.
     - [ ] Create `docker-compose.yml` for local "Agency" simulation (Redis + Agent).
-    - [ ] Optimize `src/llm.ts` to support cheaper models (Haiku/Flash) for simple responses.
+### 6. Phase 6: Enterprise Cognition (The Brain)
+- [ ] **Episodic Memory (Vector DB)**:
+    - [ ] Evaluate `lancedb` vs `chromadb` (node-compatible).
+    - [ ] Create `src/brain/episodic.ts`: Implement embedding generation + storage.
+- [ ] **Semantic Memory (Graph)**:
+    - [ ] Create `src/brain/semantic.ts`: JSON-based graph store.
+    - [ ] Implement entity extraction prompt in `src/llm/prompts.ts`.
+- [ ] **Integration**:
+    - [ ] Update `ContextManager` to query "The Brain" on initialization.
+    - [ ] Create `src/mcp_servers/brain`: Expose memory via MCP for sub-agents.

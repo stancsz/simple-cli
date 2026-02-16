@@ -160,23 +160,37 @@ If the agent supports structured output, it should output a JSON object on the l
 
 ---
 
-## 5. Memory & Self-Evolution
+## 5. The Brain: Hybrid Memory Architecture
+To enable "long-term cognition," we reject simple text files in favor of a robust **Hybrid Memory System** stored in `.agent/brain/`.
 
-### 5.1 Learning Memory (RAG)
-The system employs a simple RAG (Retrieval-Augmented Generation) mechanism to "learn" from its experiences.
+### 5.1 Memory Types
+1.  **Episodic Memory (Vector DB)**:
+    *   **What**: "I remember fixing a similar bug in `auth.ts` last week."
+    *   **Tech**: Local Vector Store (LanceDB or ChromaDB) running in-process.
+    *   **Storage**: Embeddings of User Requests + Final Code Diffs + Reasoning Chains.
+2.  **Semantic Memory (Knowledge Graph)**:
+    *   **What**: "The user prefers functional programming. `auth.ts` depends on `user.ts`."
+    *   **Tech**: JSON-based Graph or SQLite key-value store.
+    *   **Schema**: Entities (User, File, Concept) and Edges (PREFERS, IMPORTS, SOLVES).
+3.  **Procedural Memory (SOPs)**:
+    *   **What**: "To deploy to AWS, I execute these 5 steps."
+    *   **Tech**: `sops/` directory containing standard markdown checklists which the agent can read and execute.
 
-*   **Storage Location**: `.agent/learnings.json`
-*   **Structure**:
-    ```typescript
-    interface Learning {
-        id: string;
-        task: string;      // The original user request
-        reflection: string; // "To fix X, I had to use tool Y with args Z..."
-        timestamp: number;
-    }
-    ```
-*   **Write Trigger**: When the Supervisor **PASSES** a task, it triggers a "Reflection" step. The LLM summarizes *why* the attempt was successful. This summary is committed to `learnings.json`.
-*   **Read Trigger**: At the start of every turn, the engine searches `learnings.json` for keywords matching the current request. Relevant reflections are injected into the context window under `## Past Learnings`.
+### 5.2 The "Recall" Protocol
+Before acting, the Agent MUST query The Brain:
+1.  **Search**: `query_memory(task_description)`
+2.  **Synthesis**: Retrieve top-k relevant past episodes and related graph entities.
+3.  **Context Injection**: Prepend "Relevant Past Experience" to the system prompt.
+    > "You have solved a similar problem before. In task #102, you used `fs.writeFileSync`. User prefers `fs.promises`."
+
+### 5.3 Learning (The Append Cycle)
+Memory is immutable but additive.
+*   **Trigger**: Successful Task Completion.
+*   **Action**: The "Cortex" (background thread) digests the interaction:
+    1.  Summarize the User Intent + Solution.
+    2.  Embed the summary -> Vector DB.
+    3.  Extract facts ("User hates semicolons") -> Update Knowledge Graph.
+    4.  Update `learnings.md` for human-readable audit.
 
 ### 5.2 The "Reflective" Loop
 Learning is more than just data storage; it requires active contemplation.
