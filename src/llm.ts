@@ -4,6 +4,7 @@ import { createAnthropic } from "@ai-sdk/anthropic";
 import { createGoogleGenerativeAI } from "@ai-sdk/google";
 import { jsonrepair } from "jsonrepair";
 import chalk from "chalk";
+import { PersonaEngine } from "./persona/engine.js";
 
 export interface LLMResponse {
   thought: string;
@@ -23,9 +24,11 @@ export type LLMConfig = { provider: string; model: string; apiKey?: string };
 
 export class LLM {
   private configs: LLMConfig[];
+  private personaEngine: PersonaEngine;
 
   constructor(config: LLMConfig | LLMConfig[]) {
     this.configs = Array.isArray(config) ? config : [config];
+    this.personaEngine = new PersonaEngine();
   }
 
   async generate(
@@ -88,7 +91,8 @@ export class LLM {
           abortSignal: signal,
         });
 
-        return this.parse(text, usage as any);
+        const parsed = this.parse(text, usage as any);
+        return await this.personaEngine.transform(parsed);
       } catch (e: any) {
         lastError = e;
         console.error(`[LLM] ${providerName}:${modelName} failed: ${e.message}`);
