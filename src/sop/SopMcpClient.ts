@@ -13,8 +13,11 @@ interface McpServerConfig {
 export class SopMcpClient {
   private clients: Map<string, Client> = new Map();
   private tools: Map<string, { server: string; execute: (args: any) => Promise<any> }> = new Map();
+  private initialized: boolean = false;
 
   async init(cwd: string = process.cwd()) {
+    if (this.initialized) return;
+
     // 1. Load from mcp.json
     const configPath = join(cwd, "mcp.json");
     if (existsSync(configPath)) {
@@ -36,38 +39,39 @@ export class SopMcpClient {
     }
 
     // 2. Auto-discover local MCP servers in src/mcp_servers/
-    if (process.env.SOP_DISABLE_AUTO_DISCOVERY) {
-        console.error("[SopMcpClient] Auto-discovery disabled by SOP_DISABLE_AUTO_DISCOVERY.");
-        return;
-    }
+    if (!process.env.SOP_DISABLE_AUTO_DISCOVERY) {
+        const localServersDir = join(cwd, "src", "mcp_servers");
+        if (existsSync(localServersDir)) {
+          try {
+            const entries = await readdir(localServersDir, { withFileTypes: true });
+            for (const entry of entries) {
+              if (entry.isDirectory()) {
+                const name = entry.name;
+                if (name === "sop") continue; // Skip self to avoid recursion
+                if (this.clients.has(name)) continue; // Skip if already loaded via mcp.json
 
-    const localServersDir = join(cwd, "src", "mcp_servers");
-    if (existsSync(localServersDir)) {
-      try {
-        const entries = await readdir(localServersDir, { withFileTypes: true });
-        for (const entry of entries) {
-          if (entry.isDirectory()) {
-            const name = entry.name;
-            if (name === "sop") continue; // Skip self to avoid recursion
-            if (this.clients.has(name)) continue; // Skip if already loaded via mcp.json
-
-            const serverScript = join(localServersDir, name, "index.ts");
-            if (existsSync(serverScript)) {
-               await this.connectToServer(name, {
-                 command: "npx", // Assumes npx is available
-                 args: ["tsx", serverScript],
-                 env: process.env as any,
-               });
+                const serverScript = join(localServersDir, name, "index.ts");
+                if (existsSync(serverScript)) {
+                   await this.connectToServer(name, {
+                     command: "npx", // Assumes npx is available
+                     args: ["tsx", serverScript],
+                     env: process.env as any,
+                   });
+                }
+              }
             }
+          } catch (e) {
+            console.error(`[SopMcpClient] Error scanning local MCP servers: ${e}`);
           }
         }
-      } catch (e) {
-        console.error(`[SopMcpClient] Error scanning local MCP servers: ${e}`);
-      }
     }
+
+    this.initialized = true;
   }
 
   private async connectToServer(name: string, config: McpServerConfig) {
+      if (this.clients.has(name)) return; // Prevent duplicate connection if logic changes
+
       try {
         const client = new Client(
           { name: "sop-client", version: "1.0.0" },
@@ -123,5 +127,8 @@ export class SopMcpClient {
               console.error(`[SopMcpClient] Error closing client ${name}: ${e}`);
           }
       }
+      this.clients.clear();
+      this.tools.clear();
+      this.initialized = false;
   }
 }

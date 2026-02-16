@@ -61,13 +61,18 @@ Analyze the roadmap against current progress and identify the absolute next step
     - **Logic**: Briefly explain the architectural approach (e.g., "Implement as an MCP server in src/mcp_servers/...").
     - **Constraints**: Mention existing patterns (e.g., "Use the LLM class from src/llm.ts").
 4. **INDEPENDENCE**: Suggest tasks that can be worked on concurrently if possible. Limit your response to a MAXIMUM of 3 high-priority tasks per run.
+5. **DOCUMENTATION MAINTENANCE**: When delegating tasks to Jules, ALWAYS instruct them to:
+    - **Update docs/todo.md**: Cross off completed checklist items and add new ones as needed.
+    - **Update docs/ROADMAP.md**: Mark completed milestones and update progress indicators.
+    - **Cross off checklists**: Mark any completed items with [x] in both todo and roadmap files.
+    - **LEAVE docs/specs.md ALONE**: Do NOT modify the specs file - it is the source of truth for architecture.
 
 ### OUTPUT FORMAT (JSON ONLY):
 {
   "thought": "A detailed analysis of what is missing based on the roadmap vs current state.",
   "tasks": [
     {
-      "description": "A comprehensive, 2-3 paragraph instruction for Jules, including specific file paths and technical requirements.",
+      "description": "A comprehensive, 2-3 paragraph instruction for Jules, including specific file paths and technical requirements. MUST include: 'After completing this task, update docs/todo.md and docs/ROADMAP.md to reflect your progress by crossing off completed items. Do NOT modify docs/specs.md.'",
       "priority": "high/medium/low"
     }
   ],
