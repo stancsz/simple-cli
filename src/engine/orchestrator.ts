@@ -8,7 +8,6 @@ import { pathToFileURL } from "url";
 import { relative, join } from "path";
 import { MCP } from "../mcp.js";
 import { Skill } from "../skills.js";
-import { ContextManager } from "../context/manager.js";
 
 export interface Message {
   role: "user" | "assistant" | "system";
@@ -170,22 +169,24 @@ export class Engine {
     let bufferedInput = "";
     await this.mcp.init();
 
-    // Auto-start Brain server
+    // Auto-start Brain and Context servers
     try {
       const servers = this.mcp.listServers();
       if (servers.find((s) => s.name === "brain" && s.status === "stopped")) {
         await this.mcp.startServer("brain");
         this.log("success", "Brain server started.");
       }
+      if (servers.find((s) => s.name === "context" && s.status === "stopped")) {
+        await this.mcp.startServer("context");
+        this.log("success", "Context server started.");
+      }
     } catch (e) {
-      console.error("Failed to start Brain server:", e);
+      console.error("Failed to start core servers:", e);
     }
 
     (await this.mcp.getTools()).forEach((t) =>
       this.registry.tools.set(t.name, t as any),
     );
-
-    const contextManager = new ContextManager(this.registry);
 
     // Legacy loading removed
     // await this.registry.loadProjectTools(ctx.cwd);
@@ -211,8 +212,23 @@ export class Engine {
 
       // Brain: Recall similar past experiences
       const userRequest = input; // Capture original request
-      const pastMemory = await contextManager.recallSimilar(userRequest);
-      if (pastMemory) {
+      let pastMemory: string | null = null;
+      try {
+        const contextClient = this.mcp.getClient("context");
+        if (contextClient) {
+            const result: any = await contextClient.callTool({
+                name: "search_memory",
+                arguments: { query: userRequest }
+            });
+            if (result && result.content && result.content[0]) {
+                 pastMemory = result.content[0].text;
+            }
+        }
+      } catch (e) {
+         // Ignore context errors
+      }
+
+      if (pastMemory && !pastMemory.includes("No relevant memory found")) {
         this.log("info", pc.dim(`[Brain] Recalled past experience.`));
         input = `[Past Experience]\n${pastMemory}\n\n[User Request]\n${input}`;
       }
@@ -425,7 +441,21 @@ export class Engine {
 
           if (allExecuted) {
             // Store successful memory
-            await contextManager.storeMemory(userRequest, message || response.thought || "Task completed.", currentArtifacts);
+            try {
+                const contextClient = this.mcp.getClient("context");
+                if (contextClient) {
+                    await contextClient.callTool({
+                        name: "store_memory",
+                        arguments: {
+                            userPrompt: userRequest,
+                            agentResponse: message || response.thought || "Task completed.",
+                            artifacts: JSON.stringify(currentArtifacts)
+                        }
+                    });
+                }
+            } catch (e) {
+                console.warn("Failed to store memory via context server:", e);
+            }
             input = "The tool executions were verified. Proceed.";
           }
           continue;

@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { ContextManager } from "./mcp_servers/context_manager/index.js";
+import { ContextManager } from "./mcp_servers/context/index.js";
 
 export const change_dir = {
   name: "change_dir",
