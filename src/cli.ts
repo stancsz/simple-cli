@@ -59,7 +59,7 @@ async function main() {
 
   if (startDaemon) {
     try {
-      const { daemon } = await import("./daemon/daemon_cli.js");
+      const { daemon } = await import("./cli/daemonCommand.js");
       await daemon.start();
     } catch (e: any) {
       console.error("Failed to load daemon module:", e.message);
@@ -69,7 +69,7 @@ async function main() {
 
   if (remainingArgs[0] === "daemon") {
     try {
-      const { daemon } = await import("./daemon/daemon_cli.js");
+      const { daemon } = await import("./cli/daemonCommand.js");
       const subCmd = remainingArgs[1];
       if (subCmd === "start") await daemon.start();
       else if (subCmd === "stop") await daemon.stop();
