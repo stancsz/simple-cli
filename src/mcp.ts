@@ -1,5 +1,6 @@
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { StdioClientTransport } from "@modelcontextprotocol/sdk/client/stdio.js";
+import { SSEClientTransport } from "@modelcontextprotocol/sdk/client/sse.js";
 import { existsSync, readFileSync, writeFileSync } from "fs";
 import { readdir } from "fs/promises";
 import { join } from "path";
@@ -7,9 +8,10 @@ import { log } from "@clack/prompts";
 
 interface DiscoveredServer {
   name: string;
-  command: string;
-  args: string[];
+  command?: string;
+  args?: string[];
   env?: Record<string, string>;
+  url?: string;
   source: 'config' | 'local';
 }
 
@@ -31,6 +33,7 @@ export class MCP {
             command: (cfg as any).command,
             args: (cfg as any).args || [],
             env: (cfg as any).env || {},
+            url: (cfg as any).url,
             source: 'config'
           });
         }
@@ -89,11 +92,18 @@ export class MCP {
           { capabilities: {} },
         );
 
-        const transport = new StdioClientTransport({
-          command: config.command,
-          args: config.args,
-          env: { ...process.env, ...config.env } as any,
-        });
+        let transport;
+        if (config.url) {
+            transport = new SSEClientTransport(new URL(config.url));
+        } else if (config.command) {
+            transport = new StdioClientTransport({
+              command: config.command,
+              args: config.args || [],
+              env: { ...process.env, ...config.env } as any,
+            });
+        } else {
+            throw new Error(`Server '${name}' has no command or url configured.`);
+        }
 
         await client.connect(transport);
         this.clients.set(name, client);
