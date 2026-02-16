@@ -2,6 +2,8 @@ import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { z } from "zod";
 import { fileURLToPath } from "url";
+import { readFile } from "fs/promises";
+import { join } from "path";
 
 const API_BASE_URL = "https://api.devin.ai/v1";
 
@@ -77,6 +79,15 @@ export class DevinServer {
   }
 
   private async createSession(prompt: string) {
+    let finalPrompt = prompt;
+    const soulPath = join(process.cwd(), "src", "agents", "souls", "devin.md");
+    try {
+      const soul = await readFile(soulPath, "utf-8");
+      finalPrompt = `${soul}\n\nTask:\n${prompt}`;
+    } catch (e) {
+      // console.warn("Could not load Devin soul:", e);
+    }
+
     try {
       const response = await fetch(`${API_BASE_URL}/sessions`, {
         method: "POST",
@@ -84,7 +95,7 @@ export class DevinServer {
           Authorization: `Bearer ${this.apiKey}`,
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ prompt }),
+        body: JSON.stringify({ prompt: finalPrompt }),
       });
 
       if (!response.ok) {

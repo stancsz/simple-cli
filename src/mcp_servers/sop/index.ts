@@ -2,6 +2,9 @@ import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { z } from "zod";
 import { fileURLToPath } from "url";
+import { join } from "path";
+import { readdir } from "fs/promises";
+import { existsSync } from "fs";
 import { SOPEngine } from "../../sop/SOPEngine.js";
 import { SopMcpClient } from "../../sop/SopMcpClient.js";
 
@@ -9,6 +12,7 @@ export class SOPServer {
   private server: McpServer;
   private client: SopMcpClient;
   private engine: SOPEngine;
+  private sopsDir: string;
 
   constructor() {
     this.server = new McpServer({
@@ -16,20 +20,49 @@ export class SOPServer {
       version: "1.0.0",
     });
 
-    // Initialize client and engine
-    // We assume the server is running from the repo root or can find mcp.json there.
+    this.sopsDir = join(process.cwd(), ".agent", "sops");
     this.client = new SopMcpClient();
-    this.engine = new SOPEngine(this.client);
+    this.engine = new SOPEngine(this.client, this.sopsDir);
 
     this.setupTools();
   }
 
   private setupTools() {
     this.server.tool(
-      "load_sop",
-      "Load and parse an SOP definition.",
+      "list_sops",
+      "List all available Standard Operating Procedures (SOPs).",
+      {},
+      async () => {
+        try {
+          if (!existsSync(this.sopsDir)) {
+            return { content: [{ type: "text", text: "No SOP directory found." }] };
+          }
+          const files = await readdir(this.sopsDir);
+          const sops = files
+            .filter(f => f.endsWith(".md"))
+            .map(f => f.replace(".md", ""));
+          return {
+            content: [
+              {
+                type: "text",
+                text: JSON.stringify(sops, null, 2),
+              },
+            ],
+          };
+        } catch (e: any) {
+          return {
+            isError: true,
+            content: [{ type: "text", text: `Error listing SOPs: ${e.message}` }],
+          };
+        }
+      }
+    );
+
+    this.server.tool(
+      "read_sop",
+      "Read and parse an SOP definition.",
       {
-        name: z.string().describe("The name of the SOP to load (e.g. 'market_research')."),
+        name: z.string().describe("The name of the SOP to read (e.g. 'market_research')."),
       },
       async ({ name }) => {
         try {
@@ -45,7 +78,7 @@ export class SOPServer {
         } catch (e: any) {
           return {
             isError: true,
-            content: [{ type: "text", text: `Error loading SOP: ${e.message}` }],
+            content: [{ type: "text", text: `Error reading SOP: ${e.message}` }],
           };
         }
       }

@@ -4,6 +4,8 @@ import { z } from "zod";
 import { spawn } from "child_process";
 import { fileURLToPath } from "url";
 import process from "process";
+import { readFile } from "fs/promises";
+import { join } from "path";
 
 export class ClaudeServer {
   private server: McpServer;
@@ -44,6 +46,15 @@ export class ClaudeServer {
       };
     }
 
+    let finalTask = task;
+    const soulPath = join(process.cwd(), "src", "agents", "souls", "claude.md");
+    try {
+      const soul = await readFile(soulPath, "utf-8");
+      finalTask = `${soul}\n\nTask:\n${task}`;
+    } catch (e) {
+      // console.warn("Could not load Claude soul:", e);
+    }
+
     // Construct arguments for claude code
     const args = ["@anthropic-ai/claude-code"];
 
@@ -53,7 +64,7 @@ export class ClaudeServer {
       }
     }
 
-    args.push(task);
+    args.push(finalTask);
 
     return new Promise<{ content: { type: "text", text: string }[], isError?: boolean }>((resolve) => {
       console.error(`[Claude] Running: npx ${args.join(" ")}`);
