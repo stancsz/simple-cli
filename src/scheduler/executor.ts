@@ -1,6 +1,6 @@
 import "dotenv/config";
 import { fileURLToPath } from "url";
-import { Context, Registry } from "../engine.js";
+import { Context, Registry } from "../engine/orchestrator.js";
 import { MCP } from "../mcp.js";
 import { createLLM } from "../llm.js";
 import { TaskDefinition } from "../interfaces/daemon.js";
@@ -41,7 +41,7 @@ export class Executor {
     (await this.mcp.getTools()).forEach((t) =>
       this.registry.tools.set(t.name, t as any),
     );
-    await this.registry.loadProjectTools(ctx.cwd);
+    // await this.registry.loadProjectTools(ctx.cwd);
 
     const startTime = Date.now();
     let status = "success";
@@ -114,7 +114,7 @@ export class Executor {
 
                   // Reload tools if create_tool was used
                   if (tName === "create_tool") {
-                    await this.registry.loadProjectTools(ctx.cwd);
+                    // await this.registry.loadProjectTools(ctx.cwd);
                     logger.success("Tools reloaded.");
                   }
 
@@ -279,7 +279,7 @@ if (import.meta.url ===  "file://" + process.argv[1] || process.argv[1].endsWith
         const registry = new Registry();
         allBuiltins.forEach((t) => registry.tools.set(t.name, t as any));
 
-        await registry.loadProjectTools(cwd);
+        // await registry.loadProjectTools(cwd);
 
         const mcp = new MCP();
         const provider = createLLM();

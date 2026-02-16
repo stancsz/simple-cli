@@ -15,6 +15,7 @@ interface ContextDocument {
   metadata: string; // JSON string
   vector: number[];
   created_at: number;
+  [key: string]: unknown;
 }
 
 export class CompanyContext {

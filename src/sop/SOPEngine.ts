@@ -3,7 +3,7 @@ import { existsSync } from "fs";
 import { SOPParser, SOP } from "./sop_parser.js";
 import { SopMcpClient } from "./SopMcpClient.js";
 import { createLLM, LLM } from "../llm.js";
-import { ContextManager } from "../context_manager.js";
+import { ContextManager } from "../mcp_servers/context_manager/index.js";
 
 export interface ExecutionLog {
   step: string;
