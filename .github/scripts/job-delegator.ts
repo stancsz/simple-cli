@@ -28,6 +28,7 @@ async function main() {
 
     // Ensure we use the correct model format if provided in env
     const modelStr = process.env.MODEL || "deepseek:deepseek-reasoner";
+    console.log(chalk.gray(`[Config] Using model string: ${modelStr}`));
     const llm = createLLM(modelStr);
 
     const systemPrompt = `You are the "Principal Architect & Manager" for the Simple CLI project.

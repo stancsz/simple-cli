@@ -46,6 +46,11 @@ export class LLM {
         let model: any;
         const apiKey = config.apiKey || this.getEnvKey(providerName);
 
+        if (!apiKey) {
+          console.warn(`[LLM] Skipping ${providerName}:${modelName} - API key not found.`);
+          continue;
+        }
+
         if (providerName === "openai" || providerName === "codex") {
           model = createOpenAI({ apiKey })(modelName);
         } else if (providerName === "deepseek") {
