@@ -2,12 +2,15 @@
   "goals": [],
   "constraints": [],
   "recent_changes": [
-    "Started execution of SOP 'Market Research'",
-    "Completed execution of SOP 'Market Research' successfully.",
-    "Started execution of SOP 'Market Research'",
-    "Completed execution of SOP 'Market Research' successfully.",
-    "Started execution of SOP 'RollbackTest'",
-    "SOP 'RollbackTest' failed at step 'FailingStep': Tool 'non_existent_tool' not found.",
-    "Rollback executed for step 'FailingStep'"
+    "Started execution of SOP 'Conditional SOP'",
+    "Completed execution of SOP 'Conditional SOP' successfully.",
+    "Started execution of SOP 'Conditional SOP'",
+    "Completed execution of SOP 'Conditional SOP' successfully.",
+    "Started execution of SOP 'Sequential SOP'",
+    "Completed execution of SOP 'Sequential SOP' successfully.",
+    "Started execution of SOP 'Conditional SOP'",
+    "Completed execution of SOP 'Conditional SOP' successfully.",
+    "Started execution of SOP 'Conditional SOP'",
+    "Completed execution of SOP 'Conditional SOP' successfully."
   ]
 }

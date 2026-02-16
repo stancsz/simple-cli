@@ -1,9 +1,12 @@
-# Conditional SOP
-- [ ] Step 1
-  Tool: tool1
-  Args: {}
+---
+name: Conditional SOP
+steps:
+  - name: Step 1
+    tool: tool1
+    args: {}
 
-- [ ] Step 2
-  Condition: {{ steps.Step 1.value }} == "yes"
-  Tool: tool2
-  Args: {}
+  - name: Step 2
+    condition: "{{ steps.Step 1.value }} == 'yes'"
+    tool: tool2
+    args: {}
+---

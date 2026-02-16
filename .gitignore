@@ -78,3 +78,5 @@ temp_product_director_test/
 jules_work_*
 .aider*
 report.txt
+.agent/sop_logs.json
+.agent/sop_logs.jsonl

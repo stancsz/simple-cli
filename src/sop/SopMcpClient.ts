@@ -23,6 +23,7 @@ export class SopMcpClient {
         const servers = config.mcpServers || config.servers || {};
 
         for (const [name, cfg] of Object.entries(servers)) {
+          if (name === "sop") continue; // Skip self to avoid recursion
           await this.connectToServer(name, {
             command: (cfg as any).command,
             args: (cfg as any).args || [],
@@ -35,6 +36,11 @@ export class SopMcpClient {
     }
 
     // 2. Auto-discover local MCP servers in src/mcp_servers/
+    if (process.env.SOP_DISABLE_AUTO_DISCOVERY) {
+        console.error("[SopMcpClient] Auto-discovery disabled by SOP_DISABLE_AUTO_DISCOVERY.");
+        return;
+    }
+
     const localServersDir = join(cwd, "src", "mcp_servers");
     if (existsSync(localServersDir)) {
       try {
