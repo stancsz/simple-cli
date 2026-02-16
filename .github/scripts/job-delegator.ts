@@ -9,7 +9,7 @@ import chalk from "chalk";
 async function main() {
     console.log(chalk.blue.bold("🤖 Smart Job Delegator: Initializing..."));
 
-    const roadmapPath = path.resolve(process.cwd(), "ROADMAP.md");
+    const roadmapPath = path.resolve(process.cwd(), "docs/ROADMAP.md");
     const specsPath = path.resolve(process.cwd(), "docs/specs.md");
     const todoPath = path.resolve(process.cwd(), "docs/todo.md");
 
