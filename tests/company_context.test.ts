@@ -1,54 +1,62 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { ContextManager } from "../src/mcp_servers/context_manager/index";
-import { VectorStore } from "../src/memory/vector_store";
+import { describe, it, expect, beforeEach, afterEach } from "vitest";
+import { CompanyManager } from "../src/company_context/manager.js";
+import { writeFile, mkdir, rm } from "fs/promises";
 import { join } from "path";
+import { existsSync } from "fs";
 
-// Mock VectorStore to avoid actual DB operations and focus on path logic
-vi.mock("../src/memory/vector_store", () => {
-  return {
-    VectorStore: vi.fn().mockImplementation((cwd, model, company) => {
-      return {
-        add: vi.fn(),
-        search: vi.fn(),
-        close: vi.fn(),
-        company: company
-      };
-    })
-  };
-});
+const TEST_COMPANY = "test-company";
+const TEST_DIR = join(process.cwd(), ".companies", TEST_COMPANY);
 
-describe("ContextManager with Company Context", () => {
-  const testDir = process.cwd();
-  const companyName = "test-company-123";
-  const companyContextFile = join(testDir, ".agent", "companies", companyName, "context.json");
-
-  beforeEach(() => {
-    vi.resetModules();
-    delete process.env.JULES_COMPANY;
-    vi.clearAllMocks();
+describe("CompanyManager", () => {
+  beforeEach(async () => {
+    if (existsSync(TEST_DIR)) {
+      await rm(TEST_DIR, { recursive: true, force: true });
+    }
+    await mkdir(join(TEST_DIR, "docs"), { recursive: true });
   });
 
-  afterEach(() => {
-    delete process.env.JULES_COMPANY;
+  afterEach(async () => {
+    if (existsSync(TEST_DIR)) {
+      await rm(TEST_DIR, { recursive: true, force: true });
+    }
   });
 
-  it("should use default context file when JULES_COMPANY is not set", () => {
-    const cm = new ContextManager(testDir);
-    // access private property via any
-    expect((cm as any).contextFile).toBe(join(testDir, ".agent", "context.json"));
+  it("should load config and docs", async () => {
+    // Setup
+    await writeFile(
+      join(TEST_DIR, "config.json"),
+      JSON.stringify({ name: "Test Company", brand_voice: "Test Voice" })
+    );
+    await writeFile(
+      join(TEST_DIR, "docs", "doc1.md"),
+      "This is a test document."
+    );
+
+    const manager = new CompanyManager(TEST_COMPANY);
+    await manager.load();
+
+    const config = manager.getConfig();
+    expect(config).toEqual({ name: "Test Company", brand_voice: "Test Voice" });
+
+    const voice = manager.getBrandVoice();
+    expect(voice).toBe("Test Voice");
+
+    const results = await manager.searchDocs("test");
+    expect(results.length).toBeGreaterThan(0);
+    expect(results[0]).toContain("This is a test document.");
   });
 
-  it("should use company-specific context file when JULES_COMPANY is set", () => {
-    process.env.JULES_COMPANY = companyName;
-    const cm = new ContextManager(testDir);
-    expect((cm as any).contextFile).toBe(companyContextFile);
-  });
+  it("should return context string", async () => {
+    // Setup
+    await writeFile(
+      join(TEST_DIR, "config.json"),
+      JSON.stringify({ name: "Test Company", brand_voice: "Test Voice" })
+    );
 
-  it("should pass company name to VectorStore when JULES_COMPANY is set", () => {
-    process.env.JULES_COMPANY = companyName;
-    // @ts-ignore: Mocking allows extra args
-    new ContextManager(testDir);
-    // Check if VectorStore was called with the company name as 3rd argument
-    expect(VectorStore).toHaveBeenCalledWith(testDir, undefined, companyName);
+    const manager = new CompanyManager(TEST_COMPANY);
+    const context = await manager.getContext("query");
+
+    expect(context).toContain("## Company Context: Test Company");
+    expect(context).toContain("### Brand Voice\nTest Voice");
   });
 });

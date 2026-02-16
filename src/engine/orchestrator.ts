@@ -8,7 +8,6 @@ import { pathToFileURL } from "url";
 import { relative, join } from "path";
 import { MCP } from "../mcp.js";
 import { Skill } from "../skills.js";
-import { CompanyContext } from "../brain/company_context.js";
 import { ContextManager } from "../context/manager.js";
 
 export interface Message {
@@ -138,7 +137,6 @@ export class Registry {
 
 export class Engine {
   protected s = spinner();
-  private companyContext: CompanyContext | null = null;
 
   constructor(
     protected llm: any,
@@ -202,14 +200,7 @@ export class Engine {
     }
 
     // Initialize CompanyContext if JULES_COMPANY is set
-    if (process.env.JULES_COMPANY && !this.companyContext) {
-      try {
-        this.companyContext = new CompanyContext(this.llm, process.env.JULES_COMPANY);
-        await this.companyContext.init();
-      } catch (e) {
-        console.error("Failed to initialize CompanyContext:", e);
-      }
-    }
+    // (Removed: CompanyContext is now handled by 'company' MCP server)
 
     while (true) {
       if (!input) {
@@ -228,18 +219,27 @@ export class Engine {
 
       ctx.history.push({ role: "user", content: input });
 
-      // Inject RAG context from CompanyContext
-      if (this.companyContext) {
+      // Inject RAG context from Company MCP Server
+      if (process.env.JULES_COMPANY) {
         try {
-          const relevantContext = await this.companyContext.query(input, 3);
-          if (relevantContext.length > 0) {
-            const contextText = relevantContext.map((c) => `- ${c.text}`).join("\n");
-            const lastMsg = ctx.history[ctx.history.length - 1];
-            lastMsg.content = `[Context Memory]\n${contextText}\n\n[User Request]\n${lastMsg.content}`;
-            log.info(pc.dim(`[RAG] Injected ${relevantContext.length} relevant memories.`));
+          const client = this.mcp.getClient("company");
+          if (client) {
+             const result: any = await client.callTool({
+                name: "company_get_context",
+                arguments: { query: input }
+             });
+
+             if (result && result.content && result.content[0] && result.content[0].text) {
+                const contextText = result.content[0].text;
+                if (!contextText.includes("No company context active")) {
+                   const lastMsg = ctx.history[ctx.history.length - 1];
+                   lastMsg.content = `${contextText}\n\n[User Request]\n${lastMsg.content}`;
+                   this.log("info", pc.dim(`[RAG] Injected company context.`));
+                }
+             }
           }
-        } catch (e) {
-          console.error("Failed to query company context:", e);
+        } catch (e: any) {
+          console.error("Failed to query company context:", e.message);
         }
       }
 
