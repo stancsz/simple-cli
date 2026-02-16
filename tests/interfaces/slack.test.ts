@@ -18,11 +18,7 @@ vi.mock('@slack/bolt', () => ({
     App: vi.fn(() => ({ event: mocks.AppEvent, action: mocks.AppAction, start: mocks.AppStart }))
 }));
 
-<<<<<<< HEAD
-vi.mock('../../src/engine.js', () => ({
-=======
 vi.mock('../../src/engine/orchestrator.js', () => ({
->>>>>>> main
     Engine: vi.fn().mockImplementation(() => ({
         run: mocks.EngineRun
     })),
@@ -88,7 +84,10 @@ describe('Slack Interface Adapter', () => {
         expect(eventHandler).toBeDefined();
 
         const mockSay = vi.fn();
-        const mockClient = { chat: { postMessage: vi.fn() } };
+        const mockClient = {
+            chat: { postMessage: vi.fn() },
+            reactions: { add: vi.fn() }
+        };
 
         // Invoke handler
         await eventHandler({
@@ -98,15 +97,13 @@ describe('Slack Interface Adapter', () => {
         });
 
         // Verify Engine flow
-<<<<<<< HEAD
-        expect(mocks.RegistryLoadProjectTools).toHaveBeenCalled();
-=======
->>>>>>> main
         expect(mocks.McpInit).toHaveBeenCalled();
         expect(mocks.CreateLLM).toHaveBeenCalled();
         expect(mocks.EngineRun).toHaveBeenCalledWith(expect.anything(), 'help me', { interactive: false });
 
         // Since mock history is empty, it should say "I couldn't generate a response."
-        expect(mockSay).toHaveBeenCalledWith("I couldn't generate a response.");
+        expect(mockClient.chat.postMessage).toHaveBeenCalledWith(expect.objectContaining({
+            text: "I couldn't generate a response."
+        }));
     });
 });
