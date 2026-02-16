@@ -2,9 +2,13 @@
 import readline from "readline";
 import pc from "picocolors";
 import { text, isCancel, log, spinner } from "@clack/prompts";
+import { existsSync } from "fs";
+import { readdir } from "fs/promises";
+import { pathToFileURL } from "url";
 import { relative, join } from "path";
 import { MCP } from "../mcp.js";
 import { Skill } from "../skills.js";
+import { CompanyContext } from "../brain/company_context.js";
 
 export interface Message {
   role: "user" | "assistant" | "system";
@@ -32,7 +36,7 @@ async function getRepoMap(cwd: string, registry: Registry): Promise<string> {
     // If it's standard MCP, it returns text or resource.
     // Let's assume text for now.
     if (result && result.content && Array.isArray(result.content)) {
-        return result.content.map((c: any) => c.text).join("\n");
+      return result.content.map((c: any) => c.text).join("\n");
     }
     return String(result);
   } catch (e: any) {
@@ -81,13 +85,59 @@ export class Registry {
     // No-op
   }
 
-  async loadCompanyTools(_company: string) {
-    // No-op
+  async loadCompanyTools(company: string) {
+    const cwd = process.cwd();
+    const toolsDir = join(cwd, ".agent", "companies", company, "tools");
+    if (existsSync(toolsDir)) {
+      for (const f of await readdir(toolsDir)) {
+        if (f.endsWith(".ts") || f.endsWith(".js")) {
+          try {
+            const mod = await import(pathToFileURL(join(toolsDir, f)).href);
+            const t = mod.tool || mod.default;
+            if (Array.isArray(t)) {
+              t.forEach(tool => { if (tool?.name) this.tools.set(tool.name, tool); });
+            } else if (t?.name) {
+              this.tools.set(t.name, t);
+            }
+          } catch (e) {
+            console.error(`Failed to load company tool ${f}:`, e);
+          }
+        }
+      }
+    }
+
+    // 2. Scan Skill-Based Tools (.agent/skills/*/tools.ts)
+    const skillsDir = join(cwd, ".agent", "skills");
+    if (existsSync(skillsDir)) {
+      for (const skillName of await readdir(skillsDir)) {
+        const skillPath = join(skillsDir, skillName);
+        // Look for tools.ts or index.ts
+        const potentialFiles = ["tools.ts", "index.ts", "tools.js", "index.js"];
+
+        for (const file of potentialFiles) {
+          const filePath = join(skillPath, file);
+          if (existsSync(filePath)) {
+            try {
+              const mod = await import(pathToFileURL(filePath).href);
+              const t = mod.tool || mod.default;
+              if (Array.isArray(t)) {
+                t.forEach(tool => { if (tool?.name) this.tools.set(tool.name, tool); });
+              } else if (t?.name) {
+                this.tools.set(t.name, t);
+              }
+            } catch (e) {
+              console.error(`Failed to load tools for skill ${skillName}:`, e);
+            }
+          }
+        }
+      }
+    }
   }
 }
 
 export class Engine {
   protected s = spinner();
+  private companyContext: CompanyContext | null = null;
 
   constructor(
     protected llm: any,
@@ -136,6 +186,16 @@ export class Engine {
       readline.emitKeypressEvents(process.stdin);
     }
 
+    // Initialize CompanyContext if JULES_COMPANY is set
+    if (process.env.JULES_COMPANY && !this.companyContext) {
+      try {
+        this.companyContext = new CompanyContext(this.llm, process.env.JULES_COMPANY);
+        await this.companyContext.init();
+      } catch (e) {
+        console.error("Failed to initialize CompanyContext:", e);
+      }
+    }
+
     while (true) {
       if (!input) {
         input = await this.getUserInput(bufferedInput, options.interactive);
@@ -144,6 +204,21 @@ export class Engine {
       }
 
       ctx.history.push({ role: "user", content: input });
+
+      // Inject RAG context from CompanyContext
+      if (this.companyContext) {
+        try {
+          const relevantContext = await this.companyContext.query(input, 3);
+          if (relevantContext.length > 0) {
+            const contextText = relevantContext.map((c) => `- ${c.text}`).join("\n");
+            const lastMsg = ctx.history[ctx.history.length - 1];
+            lastMsg.content = `[Context Memory]\n${contextText}\n\n[User Request]\n${lastMsg.content}`;
+            log.info(pc.dim(`[RAG] Injected ${relevantContext.length} relevant memories.`));
+          }
+        } catch (e) {
+          console.error("Failed to query company context:", e);
+        }
+      }
 
       const controller = new AbortController();
       const signal = controller.signal;
@@ -238,11 +313,11 @@ export class Engine {
                 // Since legacy tools are gone, create_tool would likely create an MCP server or file.
                 // We should refresh MCP tools.
                 if (tName === "create_tool" || tName === "mcp_start_server" || tName === "mcp_install_server") {
-                   // Refresh tools
-                   (await this.mcp.getTools()).forEach((t) =>
-                      this.registry.tools.set(t.name, t as any),
-                   );
-                   this.log("success", "MCP tools updated.");
+                  // Refresh tools
+                  (await this.mcp.getTools()).forEach((t) =>
+                    this.registry.tools.set(t.name, t as any),
+                  );
+                  this.log("success", "MCP tools updated.");
                 }
 
                 // Add individual tool execution to history to keep context updated
@@ -306,11 +381,11 @@ export class Engine {
                 break;
               }
             } else {
-                this.log("warn", `Tool '${tName}' not found.`);
-                ctx.history.push({
-                  role: "user",
-                  content: `Tool '${tName}' not found. Please verify available tools.`,
-                });
+              this.log("warn", `Tool '${tName}' not found.`);
+              ctx.history.push({
+                role: "user",
+                content: `Tool '${tName}' not found. Please verify available tools.`,
+              });
             }
           }
 

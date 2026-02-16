@@ -1,9 +1,17 @@
 import "dotenv/config";
 import { App } from "@slack/bolt";
+<<<<<<< HEAD
+import { Engine, Context, Registry } from "../engine.js";
+import { createLLM } from "../llm.js";
+import { MCP } from "../mcp.js";
+import { getActiveSkill } from "../skills.js";
+import { allBuiltins } from "../builtins.js";
+=======
 import { Engine, Context, Registry } from "../engine/orchestrator.js";
 import { createLLM } from "../llm.js";
 import { MCP } from "../mcp.js";
 import { getActiveSkill } from "../skills.js";
+>>>>>>> main
 import { WorkflowEngine } from "../workflows/workflow_engine.js";
 import { createExecuteSOPTool } from "../workflows/execute_sop_tool.js";
 import { fileURLToPath } from "url";
@@ -25,6 +33,17 @@ let isInitialized = false;
 async function initializeResources() {
   if (isInitialized) return;
 
+<<<<<<< HEAD
+  const cwd = process.cwd();
+
+  // Register built-ins
+  allBuiltins.forEach((t) => baseRegistry.tools.set(t.name, t as any));
+
+  // Load project tools
+  await baseRegistry.loadProjectTools(cwd);
+
+=======
+>>>>>>> main
   // Initialize Workflow Engine
   const workflowEngine = new WorkflowEngine(baseRegistry);
   const sopTool = createExecuteSOPTool(workflowEngine);

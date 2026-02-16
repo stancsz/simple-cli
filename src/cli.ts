@@ -106,11 +106,11 @@ async function main() {
       // Server might not be discovered or failed to start.
       // We fail silently for optional servers.
       if (s === "context_manager") {
-          // Try 'context' if 'context_manager' fails (backward compatibility if index.ts name differs)
-          // But we created context_manager/index.ts, so name is 'context_manager' (directory name)
-          try { await mcp.startServer("context"); } catch {}
+        // Try 'context' if 'context_manager' fails (backward compatibility if index.ts name differs)
+        // But we created context_manager/index.ts, so name is 'context_manager' (directory name)
+        try { await mcp.startServer("context"); } catch { }
       }
-      // console.warn(`[Warning] Server '${s}' failed to start:`, e.message);
+
     }
   }
 

@@ -61,7 +61,11 @@ export class TaskRunner {
         const signal = controller.signal;
 
         try {
+<<<<<<< HEAD
+          const prompt = await ctx.buildPrompt(this.registry.tools);
+=======
           const prompt = await ctx.buildPrompt(this.registry.tools, this.registry);
+>>>>>>> main
           const userHistory = ctx.history.filter(
               (m) =>
                 m.role === "user" &&

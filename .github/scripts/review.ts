@@ -368,7 +368,46 @@ async function main() {
             } else {
                 console.log(`Conflicting files:\n${conflicts}`);
 
-                const prompt = `You are a Senior Developer. We have merge conflicts in these files:\n${conflicts}\n\nRead these files, find conflict markers (<<<<<<<, =======, >>>>>>>), and resolve them. Keep the PR's intent but incorporate changes from main. Remove all markers. Ensure the code is valid typescript and logic is preserved.`;
+                const prompt = `You are a Senior Staff Engineer resolving a high-stakes merge conflict.
+
+**Context:**
+We have conflicting files:
+${conflicts}
+
+**Strategy (Three-Copy Logic):**
+To resolve this accurately, you must retrieve and analyze three versions of each conflicting file:
+1. **BASE** (Common Ancestor): \`git show $(git merge-base HEAD MERGE_HEAD):path/to/file\`
+2. **OURS** (Current/Target): \`git show HEAD:path/to/file\`
+3. **THEIRS** (Incoming/Source): \`git show MERGE_HEAD:path/to/file\`
+
+**Task:**
+
+1. **Intent Deconstruction**: 
+   - Analyze the delta between BASE vs. OURS and BASE vs. THEIRS. 
+   - Identify the specific functional intent of both changes.
+
+2. **Conflict Analysis**: 
+   - Locate textual overlaps. 
+   - Determine if this is a simple "both-added" conflict or a "logic-clash" where one change invalidates the other's assumptions.
+
+3. **Resolution Execution**: 
+   - Propose a unified version that preserves the logic of both (or choose the superior logic if they are mutually exclusive).
+   - If a function was renamed in OURS and modified in THEIRS, apply THEIRS' modification to the new name in OURS.
+   - If imports were added in both, combine them.
+
+4. **Verification Step**: 
+   - Write the synthesized content to the file (overwriting the conflict markers).
+   - Provide a list of "Sanity Tests"—specific functions or variables that must be checked.
+   - Run \`npm test\` to ensure no semantic breakage occurred.
+
+5. **Commit**: 
+   - If verification passes, use \`git add\` and \`git commit\`.
+
+**Constraints:**
+- If the merge breaks the AST (syntax), you must iterate until it is valid.
+- Prioritize 80/20 leverage: if a conflict is ambiguous, flag it for human intervention instead of guessing.
+
+**Goal**: Resolve the conflicts in ${conflicts.replace(/\n/g, ', ')} avoiding syntax errors and logical regressions.`;
 
                 // Allow the agent to use tools (read_file, write_file)
                 // Usr the Isolated Runtime Agent !!
