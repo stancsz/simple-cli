@@ -53,6 +53,23 @@ describe('Scheduler Integration', () => {
   }, 10000); // Increase timeout
 });
 
+// Mock child_process for Scheduler Integration test too
+vi.mock('child_process', () => {
+  return {
+    spawn: vi.fn().mockReturnValue({
+      stdout: { on: vi.fn() },
+      stderr: { on: vi.fn() },
+      on: vi.fn((event, cb) => {
+        if (event === 'close') {
+          setTimeout(() => cb(0), 10);
+        }
+      }),
+      kill: vi.fn(),
+      unref: vi.fn(),
+    }),
+  };
+});
+
 describe('AutonomousOrchestrator', () => {
     beforeEach(async () => {
         if (existsSync(TEST_DIR)) await rm(TEST_DIR, { recursive: true, force: true });
@@ -73,7 +90,9 @@ describe('AutonomousOrchestrator', () => {
         const mockRegistry = new Registry();
         const mockMCP = {
             init: vi.fn(),
-            getTools: vi.fn().mockResolvedValue([])
+            getTools: vi.fn().mockResolvedValue([]),
+            listServers: vi.fn().mockReturnValue([]),
+            startServer: vi.fn()
         } as any;
 
         const logPath = join(TEST_DIR, 'autonomous.log');
