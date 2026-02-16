@@ -99,6 +99,28 @@ export class Registry {
         }
       }
     }
+  }
+
+  async loadCompanyTools(company: string) {
+    const cwd = process.cwd();
+    const toolsDir = join(cwd, ".agent", "companies", company, "tools");
+    if (existsSync(toolsDir)) {
+      for (const f of await readdir(toolsDir)) {
+        if (f.endsWith(".ts") || f.endsWith(".js")) {
+          try {
+            const mod = await import(pathToFileURL(join(toolsDir, f)).href);
+            const t = mod.tool || mod.default;
+            if (Array.isArray(t)) {
+              t.forEach(tool => { if (tool?.name) this.tools.set(tool.name, tool); });
+            } else if (t?.name) {
+              this.tools.set(t.name, t);
+            }
+          } catch (e) {
+            console.error(`Failed to load company tool ${f}:`, e);
+          }
+        }
+      }
+    }
 
     // 2. Scan Skill-Based Tools (.agent/skills/*/tools.ts)
     const skillsDir = join(cwd, ".agent", "skills");

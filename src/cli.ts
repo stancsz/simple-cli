@@ -9,7 +9,9 @@ import { getActiveSkill } from "./skills.js";
 import { showBanner } from "./tui.js";
 import { outro } from "@clack/prompts";
 import { WorkflowEngine } from "./workflows/workflow_engine.js";
+import { SOPRegistry } from "./workflows/sop_registry.js";
 import { createExecuteSOPTool } from "./workflows/execute_sop_tool.js";
+import { Briefcase, createSwitchCompanyTool } from "./context/briefcase.js";
 
 async function main() {
   const args = process.argv.slice(2);
@@ -86,7 +88,8 @@ async function main() {
   allBuiltins.forEach((t) => registry.tools.set(t.name, t as any));
 
   // Initialize Workflow Engine and register execute_sop tool
-  const workflowEngine = new WorkflowEngine(registry);
+  const sopRegistry = new SOPRegistry();
+  const workflowEngine = new WorkflowEngine(registry, sopRegistry);
   const sopTool = createExecuteSOPTool(workflowEngine);
   registry.tools.set(sopTool.name, sopTool as any);
 
@@ -132,6 +135,16 @@ async function main() {
   }
 
   const provider = createLLM();
+
+  const briefcase = new Briefcase(registry, provider, sopRegistry, mcp);
+  const switchTool = createSwitchCompanyTool(briefcase);
+  registry.tools.set(switchTool.name, switchTool as any);
+
+  // Apply initial company context if env var is set
+  if (process.env.JULES_COMPANY) {
+    await briefcase.switchCompany(process.env.JULES_COMPANY);
+  }
+
   const engine = new Engine(provider, registry, mcp);
 
   showBanner();

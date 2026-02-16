@@ -24,7 +24,7 @@ export type LLMConfig = { provider: string; model: string; apiKey?: string };
 
 export class LLM {
   private configs: LLMConfig[];
-  private personaEngine: PersonaEngine;
+  public personaEngine: PersonaEngine;
 
   constructor(config: LLMConfig | LLMConfig[]) {
     this.configs = Array.isArray(config) ? config : [config];
