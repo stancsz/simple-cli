@@ -16,9 +16,9 @@
     "brain": {
       "url": "http://localhost:3002/sse"
     },
-    "context_manager": {
+    "context_server": {
       "command": "node",
-      "args": ["/app/dist/mcp_servers/context_manager/index.js"]
+      "args": ["/app/dist/mcp_servers/context_server.js"]
     },
     "company": {
       "command": "node",

@@ -176,8 +176,8 @@ export class Engine {
         await this.mcp.startServer("brain");
         this.log("success", "Brain server started.");
       }
-      if (servers.find((s) => s.name === "context" && s.status === "stopped")) {
-        await this.mcp.startServer("context");
+      if (servers.find((s) => s.name === "context_server" && s.status === "stopped")) {
+        await this.mcp.startServer("context_server");
         this.log("success", "Context server started.");
       }
     } catch (e) {
@@ -214,7 +214,7 @@ export class Engine {
       const userRequest = input; // Capture original request
       let pastMemory: string | null = null;
       try {
-        const contextClient = this.mcp.getClient("context");
+        const contextClient = this.mcp.getClient("context_server");
         if (contextClient) {
             const result: any = await contextClient.callTool({
                 name: "search_memory",
@@ -442,7 +442,7 @@ export class Engine {
           if (allExecuted) {
             // Store successful memory
             try {
-                const contextClient = this.mcp.getClient("context");
+                const contextClient = this.mcp.getClient("context_server");
                 if (contextClient) {
                     await contextClient.callTool({
                         name: "store_memory",

@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { ContextManager } from "./mcp_servers/context/index.js";
+import { ContextServer } from "./mcp_servers/context_server.js";
 
 export const change_dir = {
   name: "change_dir",
@@ -36,21 +36,33 @@ export const update_context = {
     constraint?: string;
     change?: string;
   }) => {
-    const cm = new ContextManager();
-    const updates = [];
+    const cm = new ContextServer();
+    const current = await cm.readContext();
+    const updates: any = {};
+    const logUpdates = [];
+
     if (goal) {
-      await cm.addGoal(goal);
-      updates.push(`Added goal: ${goal}`);
+      if (!current.goals.includes(goal)) {
+        updates.goals = [...current.goals, goal];
+        logUpdates.push(`Added goal: ${goal}`);
+      }
     }
     if (constraint) {
-      await cm.addConstraint(constraint);
-      updates.push(`Added constraint: ${constraint}`);
+        if (!current.constraints.includes(constraint)) {
+            updates.constraints = [...current.constraints, constraint];
+            logUpdates.push(`Added constraint: ${constraint}`);
+        }
     }
     if (change) {
-      await cm.logChange(change);
-      updates.push(`Logged change: ${change}`);
+        updates.recent_changes = [...current.recent_changes, change].slice(-10);
+        logUpdates.push(`Logged change: ${change}`);
     }
-    return updates.length > 0 ? updates.join("\n") : "No updates made.";
+
+    if (Object.keys(updates).length > 0) {
+        await cm.updateContext(updates);
+    }
+
+    return logUpdates.length > 0 ? logUpdates.join("\n") : "No updates made.";
   },
 };
 
