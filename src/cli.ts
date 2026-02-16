@@ -8,6 +8,8 @@ import { MCP } from "./mcp.js";
 import { getActiveSkill } from "./skills.js";
 import { showBanner } from "./tui.js";
 import { outro } from "@clack/prompts";
+import { WorkflowEngine } from "./workflows/workflow_engine.js";
+import { createExecuteSOPTool } from "./workflows/execute_sop_tool.js";
 
 async function main() {
   const args = process.argv.slice(2);
@@ -66,6 +68,11 @@ async function main() {
 
   const registry = new Registry();
   allBuiltins.forEach((t) => registry.tools.set(t.name, t as any));
+
+  // Initialize Workflow Engine and register execute_sop tool
+  const workflowEngine = new WorkflowEngine(registry);
+  const sopTool = createExecuteSOPTool(workflowEngine);
+  registry.tools.set(sopTool.name, sopTool as any);
 
   // 1. Load tools from Target Workspace (CWD) - The project being worked on
   await registry.loadProjectTools(cwd);
