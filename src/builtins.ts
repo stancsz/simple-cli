@@ -4,7 +4,7 @@ import { z } from "zod";
 import { loadConfig } from "./config.js";
 import { existsSync } from "fs";
 import { readFile, writeFile } from "fs/promises";
-import { join } from "path";
+import { join, resolve, relative, isAbsolute } from "path";
 import { ContextManager } from "./context_manager.js";
 
 const execFileAsync = promisify(execFile);
@@ -38,12 +38,12 @@ process.on("SIGTERM", () => {
 });
 
 // Helper function to validate path is within allowed workspace
-// Per user request "full power", we disable this restriction.
 const isPathAllowed = (p: string): boolean => {
-  // TODO: [Security] This bypasses all sandboxing for "full power".
-  // In the MCP architecture, file access should be handled by a secure Filesystem MCP Server
-  // that enforces allowed directories (e.g., only CWD).
-  return true;
+  const resolvedPath = resolve(p);
+  const cwd = process.cwd();
+  const rel = relative(cwd, resolvedPath);
+  // Ensure the path is not outside the CWD (no leading ..) and not absolute (different drive)
+  return !rel.startsWith("..") && !isAbsolute(rel);
 };
 
 export const change_dir = {

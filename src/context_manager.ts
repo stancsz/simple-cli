@@ -1,4 +1,4 @@
-import { readFile, writeFile, mkdir } from "fs/promises";
+import { readFile, writeFile, mkdir, unlink } from "fs/promises";
 import { existsSync } from "fs";
 import { join, dirname } from "path";
 import { VectorStore } from "./memory/vector_store.js";
@@ -10,9 +10,6 @@ export interface ContextData {
 }
 
 export class ContextManager {
-  // TODO: [Concurrency] This class is instantiated multiple times across different processes
-  // (engine, MCP servers) without file locking.
-  // Converting this to a centralized 'Context MCP Server' or using a lockfile is critical.
   private contextFile: string;
   private vectorStore: VectorStore | null = null;
   private data: ContextData = {
@@ -30,7 +27,35 @@ export class ContextManager {
     }
   }
 
-  async loadContext(): Promise<void> {
+  private async withLock<T>(action: () => Promise<T>): Promise<T> {
+    const lockFile = this.contextFile + ".lock";
+    const maxRetries = 100; // 10 seconds
+    const retryDelay = 100;
+
+    for (let i = 0; i < maxRetries; i++) {
+      try {
+        await writeFile(lockFile, "", { flag: "wx" });
+        try {
+          return await action();
+        } finally {
+          try {
+            await unlink(lockFile);
+          } catch {}
+        }
+      } catch (e: any) {
+        if (e.code === "EEXIST") {
+          await new Promise((resolve) => setTimeout(resolve, retryDelay));
+        } else {
+          throw e;
+        }
+      }
+    }
+    throw new Error(
+      `Failed to acquire lock for ${this.contextFile} after ${maxRetries} attempts.`,
+    );
+  }
+
+  private async internalLoad(): Promise<void> {
     if (existsSync(this.contextFile)) {
       try {
         const content = await readFile(this.contextFile, "utf-8");
@@ -41,7 +66,7 @@ export class ContextManager {
     }
   }
 
-  async saveContext(): Promise<void> {
+  private async internalSave(): Promise<void> {
     try {
       await mkdir(dirname(this.contextFile), { recursive: true });
       await writeFile(this.contextFile, JSON.stringify(this.data, null, 2));
@@ -50,60 +75,97 @@ export class ContextManager {
     }
   }
 
+  async loadContext(): Promise<void> {
+    return this.withLock(() => this.internalLoad());
+  }
+
+  async saveContext(): Promise<void> {
+    return this.withLock(() => this.internalSave());
+  }
+
   async addGoal(goal: string): Promise<void> {
-    await this.loadContext();
-    if (!this.data.goals.includes(goal)) {
-      this.data.goals.push(goal);
-      await this.saveContext();
-      if (this.vectorStore) await this.vectorStore.add(`Goal: ${goal}`, { type: 'goal' });
-    }
+    await this.withLock(async () => {
+      await this.internalLoad();
+      if (!this.data.goals.includes(goal)) {
+        this.data.goals.push(goal);
+        await this.internalSave();
+        if (this.vectorStore) {
+          try {
+            await this.vectorStore.add(`Goal: ${goal}`, { type: "goal" });
+          } catch (e) {
+            // Ignore vector store errors
+          }
+        }
+      }
+    });
   }
 
   async addConstraint(constraint: string): Promise<void> {
-    await this.loadContext();
-    if (!this.data.constraints.includes(constraint)) {
-      this.data.constraints.push(constraint);
-      await this.saveContext();
-      if (this.vectorStore) await this.vectorStore.add(`Constraint: ${constraint}`, { type: 'constraint' });
-    }
+    await this.withLock(async () => {
+      await this.internalLoad();
+      if (!this.data.constraints.includes(constraint)) {
+        this.data.constraints.push(constraint);
+        await this.internalSave();
+        if (this.vectorStore) {
+          try {
+            await this.vectorStore.add(`Constraint: ${constraint}`, {
+              type: "constraint",
+            });
+          } catch (e) {
+            // Ignore vector store errors
+          }
+        }
+      }
+    });
   }
 
   async logChange(change: string): Promise<void> {
-    await this.loadContext();
-    this.data.recent_changes.push(change);
-    // Keep only last 10 changes
-    if (this.data.recent_changes.length > 10) {
-      this.data.recent_changes = this.data.recent_changes.slice(-10);
-    }
-    await this.saveContext();
-    if (this.vectorStore) await this.vectorStore.add(`Change: ${change}`, { type: 'change' });
+    await this.withLock(async () => {
+      await this.internalLoad();
+      this.data.recent_changes.push(change);
+      // Keep only last 10 changes
+      if (this.data.recent_changes.length > 10) {
+        this.data.recent_changes = this.data.recent_changes.slice(-10);
+      }
+      await this.internalSave();
+      if (this.vectorStore) {
+        try {
+          await this.vectorStore.add(`Change: ${change}`, { type: "change" });
+        } catch (e) {
+          // Ignore vector store errors
+        }
+      }
+    });
   }
 
   async getContextSummary(): Promise<string> {
-    await this.loadContext();
-    const parts: string[] = [];
+    return this.withLock(async () => {
+      await this.internalLoad();
+      const parts: string[] = [];
 
-    if (this.data.goals.length > 0) {
-      parts.push(
-        "## Current Goals\n" + this.data.goals.map((g) => `- ${g}`).join("\n"),
-      );
-    }
+      if (this.data.goals.length > 0) {
+        parts.push(
+          "## Current Goals\n" +
+            this.data.goals.map((g) => `- ${g}`).join("\n"),
+        );
+      }
 
-    if (this.data.constraints.length > 0) {
-      parts.push(
-        "## Constraints & Guidelines\n" +
-        this.data.constraints.map((c) => `- ${c}`).join("\n"),
-      );
-    }
+      if (this.data.constraints.length > 0) {
+        parts.push(
+          "## Constraints & Guidelines\n" +
+            this.data.constraints.map((c) => `- ${c}`).join("\n"),
+        );
+      }
 
-    if (this.data.recent_changes.length > 0) {
-      parts.push(
-        "## Recent Architectural Changes\n" +
-        this.data.recent_changes.map((c) => `- ${c}`).join("\n"),
-      );
-    }
+      if (this.data.recent_changes.length > 0) {
+        parts.push(
+          "## Recent Architectural Changes\n" +
+            this.data.recent_changes.map((c) => `- ${c}`).join("\n"),
+        );
+      }
 
-    return parts.join("\n\n");
+      return parts.join("\n\n");
+    });
   }
 
   getContextData(): ContextData {
