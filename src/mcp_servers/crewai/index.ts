@@ -4,6 +4,7 @@ import { z } from "zod";
 import { spawn } from "child_process";
 import { join } from "path";
 import { fileURLToPath } from "url";
+import { readFile } from "fs/promises";
 
 export class CrewAIServer {
   private server: McpServer;
@@ -58,6 +59,15 @@ export class CrewAIServer {
       };
     }
 
+    let finalTask = task;
+    const soulPath = join(process.cwd(), "src", "agents", "souls", "crewai.md");
+    try {
+      const soul = await readFile(soulPath, "utf-8");
+      finalTask = `${soul}\n\nTask:\n${task}`;
+    } catch (e) {
+      // console.warn("Could not load CrewAI soul:", e);
+    }
+
     // Set up environment
     const apiKey = process.env.DEEPSEEK_API_KEY || process.env.OPENAI_API_KEY;
     const env = {
@@ -72,7 +82,7 @@ export class CrewAIServer {
     };
 
     return new Promise<any>((resolve, reject) => {
-      const child = spawn("python3", [scriptPath, task], {
+      const child = spawn("python3", [scriptPath, finalTask], {
         env,
       });
 

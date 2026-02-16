@@ -2,6 +2,8 @@ import { join } from "path";
 import { existsSync } from "fs";
 import { SOPParser, SOP } from "./sop_parser.js";
 import { SopMcpClient } from "./SopMcpClient.js";
+import { createLLM, LLM } from "../llm.js";
+import { ContextManager } from "../context_manager.js";
 
 export interface ExecutionLog {
   step: string;
@@ -22,11 +24,15 @@ export class SOPEngine {
   private parser: SOPParser;
   private client: SopMcpClient;
   private sopsDir: string;
+  private llm: LLM;
+  private contextManager: ContextManager;
 
   constructor(client: SopMcpClient, sopsDir: string = join(process.cwd(), ".agent", "sops")) {
     this.client = client;
     this.parser = new SOPParser();
     this.sopsDir = sopsDir;
+    this.llm = createLLM();
+    this.contextManager = new ContextManager();
   }
 
   async loadSOP(name: string): Promise<SOP> {
@@ -99,6 +105,9 @@ export class SOPEngine {
         return { success: false, error: e.message, logs: [] };
     }
 
+    // Log start to ContextManager
+    await this.contextManager.logChange(`Started execution of SOP '${sop.name}'`);
+
     const context: Record<string, any> = {
       params,
       steps: {},
@@ -122,29 +131,43 @@ export class SOPEngine {
           }
       }
 
-      if (step.tool_call) {
-          const { tool, args } = step.tool_call;
+      if (step.tool) {
+          const args = step.args || {};
           const interpolatedArgs = this.interpolate(args, context);
 
           try {
-              const result = await this.client.executeTool(tool, interpolatedArgs);
+              let output: any;
 
-              if (result.isError) {
-                  throw new Error(`Tool execution returned error: ${JSON.stringify(result.content)}`);
-              }
+              if (step.tool === 'llm' || step.tool === 'ask_llm') {
+                  // Use LLM
+                  const prompt = interpolatedArgs.prompt || step.description || "No prompt provided.";
+                  // We treat 'system' as generic context here
+                  const response = await this.llm.generate(
+                      `You are executing a step in an SOP named '${sop.name}'. Step description: ${step.description}`,
+                      [{ role: 'user', content: prompt }]
+                  );
+                  output = response.message;
+              } else {
+                  // Use Standard Tool via Client
+                  const result = await this.client.executeTool(step.tool, interpolatedArgs);
 
-              let output = result;
-              if (result && result.content && Array.isArray(result.content)) {
-                  const textContent = result.content.find((c: any) => c.type === 'text')?.text;
-                  if (textContent) {
-                      try {
-                          if (textContent.trim().startsWith('{') || textContent.trim().startsWith('[')) {
-                              output = JSON.parse(textContent);
-                          } else {
+                  if (result.isError) {
+                      throw new Error(`Tool execution returned error: ${JSON.stringify(result.content)}`);
+                  }
+
+                  output = result;
+                  if (result && result.content && Array.isArray(result.content)) {
+                      const textContent = result.content.find((c: any) => c.type === 'text')?.text;
+                      if (textContent) {
+                          try {
+                              if (textContent.trim().startsWith('{') || textContent.trim().startsWith('[')) {
+                                  output = JSON.parse(textContent);
+                              } else {
+                                  output = textContent;
+                              }
+                          } catch {
                               output = textContent;
                           }
-                      } catch {
-                          output = textContent;
                       }
                   }
               }
@@ -163,13 +186,43 @@ export class SOPEngine {
               });
 
           } catch (e: any) {
-              console.error(`[SOPEngine] Tool execution failed: ${e.message}`);
+              console.error(`[SOPEngine] Step execution failed: ${e.message}`);
+
+              // Log failure to ContextManager
+              await this.contextManager.logChange(`SOP '${sop.name}' failed at step '${step.name}': ${e.message}`);
+
+              // ROLLBACK LOGIC
+              if (step.rollback) {
+                  try {
+                      console.log(`[SOPEngine] Initiating Rollback for step '${step.name}'...`);
+                      const rollbackArgs = this.interpolate(step.rollback.args || {}, context);
+
+                      // Rollback tool execution logic
+                      if (step.rollback.tool === 'llm' || step.rollback.tool === 'ask_llm') {
+                           const prompt = rollbackArgs.prompt || "Rollback execution.";
+                           await this.llm.generate(
+                              `You are executing a rollback step for '${step.name}'. Description: ${step.description}`,
+                              [{ role: 'user', content: prompt }]
+                           );
+                      } else {
+                           await this.client.executeTool(step.rollback.tool, rollbackArgs);
+                      }
+
+                      console.log(`[SOPEngine] Rollback executed successfully.`);
+                      await this.contextManager.logChange(`Rollback executed for step '${step.name}'`);
+                  } catch (re: any) {
+                      console.error(`[SOPEngine] Rollback failed: ${re.message}`);
+                      await this.contextManager.logChange(`Rollback failed for step '${step.name}': ${re.message}`);
+                  }
+              }
+
               logs.push({
                   step: step.name,
                   status: "failure",
                   error: e.message,
                   timestamp: new Date().toISOString()
               });
+
               return { success: false, error: `Step '${step.name}' failed: ${e.message}`, logs };
           }
       } else {
@@ -182,6 +235,9 @@ export class SOPEngine {
           });
       }
     }
+
+    // Log success to ContextManager
+    await this.contextManager.logChange(`Completed execution of SOP '${sop.name}' successfully.`);
 
     return {
         success: true,

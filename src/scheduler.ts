@@ -1,7 +1,7 @@
 import { EventEmitter } from 'events';
 import cron from 'node-cron';
 import chokidar from 'chokidar';
-import { readFile } from 'fs/promises';
+import { readFile, writeFile } from 'fs/promises';
 import { existsSync } from 'fs';
 import { join } from 'path';
 import { ScheduleConfig, TaskDefinition } from './daemon/task_definitions.js';
@@ -18,6 +18,7 @@ export class Scheduler extends EventEmitter {
   }
 
   async start() {
+    await this.ensureHRTask();
     await this.applySchedule();
 
     // Watch schedule file for changes
@@ -35,6 +36,40 @@ export class Scheduler extends EventEmitter {
                  }
              });
         }
+    }
+  }
+
+  private async ensureHRTask() {
+    let config: ScheduleConfig = { tasks: [] };
+    if (existsSync(this.scheduleFile)) {
+      try {
+        const content = await readFile(this.scheduleFile, 'utf-8');
+        config = JSON.parse(content);
+      } catch (e) {
+        // invalid file, start fresh
+        config = { tasks: [] };
+      }
+    }
+
+    const taskName = "Weekly HR Review";
+    const hasHRTask = config.tasks?.some((t: any) => t.name === taskName);
+
+    if (!hasHRTask) {
+      console.log("Adding default Weekly HR Review task.");
+      if (!config.tasks) config.tasks = [];
+      config.tasks.push({
+          id: "hr-review",
+          name: taskName,
+          trigger: "cron",
+          schedule: "0 0 * * 0", // Weekly on Sunday
+          prompt: "Run the HR optimization loop to analyze agent performance and update souls.",
+          yoloMode: true
+      });
+      try {
+          await writeFile(this.scheduleFile, JSON.stringify(config, null, 2));
+      } catch (e) {
+          console.error("Failed to write scheduler.json with default task:", e);
+      }
     }
   }
 
