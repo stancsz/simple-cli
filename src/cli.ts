@@ -8,6 +8,8 @@ import { MCP } from "./mcp.js";
 import { getActiveSkill } from "./skills.js";
 import { showBanner } from "./tui.js";
 import { outro } from "@clack/prompts";
+import { WorkflowEngine } from "./workflows/workflow_engine.js";
+import { createExecuteSOPTool } from "./workflows/execute_sop_tool.js";
 
 async function main() {
   const args = process.argv.slice(2);
@@ -48,10 +50,29 @@ async function main() {
     remainingArgs.push(arg);
   }
 
+  if (remainingArgs[0] === "daemon") {
+    try {
+      const { daemon } = await import("./daemon/daemon_cli.js");
+      const subCmd = remainingArgs[1];
+      if (subCmd === "start") await daemon.start();
+      else if (subCmd === "stop") await daemon.stop();
+      else if (subCmd === "status") await daemon.status();
+      else console.log("Usage: simple daemon <start|stop|status>");
+    } catch (e: any) {
+      console.error("Failed to load daemon module:", e.message);
+    }
+    return;
+  }
+
   const prompt = remainingArgs.filter((a) => !a.startsWith("-")).join(" ");
 
   const registry = new Registry();
   allBuiltins.forEach((t) => registry.tools.set(t.name, t as any));
+
+  // Initialize Workflow Engine and register execute_sop tool
+  const workflowEngine = new WorkflowEngine(registry);
+  const sopTool = createExecuteSOPTool(workflowEngine);
+  registry.tools.set(sopTool.name, sopTool as any);
 
   // 1. Load tools from Target Workspace (CWD) - The project being worked on
   await registry.loadProjectTools(cwd);
