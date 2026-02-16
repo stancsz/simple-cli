@@ -19,9 +19,15 @@ export class ContextManager {
   };
 
   constructor(cwd: string = process.cwd(), embeddingModel?: any) {
-    this.contextFile = join(cwd, ".agent", "context.json");
+    const company = process.env.JULES_COMPANY;
+    if (company) {
+      this.contextFile = join(cwd, ".agent", "companies", company, "context.json");
+    } else {
+      this.contextFile = join(cwd, ".agent", "context.json");
+    }
+
     try {
-      this.vectorStore = new VectorStore(cwd, embeddingModel);
+      this.vectorStore = new VectorStore(cwd, embeddingModel, company);
     } catch (e) {
       console.warn("Failed to initialize vector store:", e);
     }
