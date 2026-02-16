@@ -3,6 +3,7 @@ import { createOpenAI } from "@ai-sdk/openai";
 import { createAnthropic } from "@ai-sdk/anthropic";
 import { createGoogleGenerativeAI } from "@ai-sdk/google";
 import { jsonrepair } from "jsonrepair";
+import chalk from "chalk";
 
 export interface LLMResponse {
   thought: string;
@@ -54,6 +55,7 @@ export class LLM {
         if (providerName === "openai" || providerName === "codex") {
           model = createOpenAI({ apiKey })(modelName);
         } else if (providerName === "deepseek") {
+          console.log(chalk.gray(`[LLM] Attempting DeepSeek with baseURL: https://api.deepseek.com/v1`));
           model = createOpenAI({
             apiKey,
             baseURL: "https://api.deepseek.com/v1",
@@ -107,6 +109,8 @@ export class LLM {
     if (providerName === "openai" || providerName === "codex")
       return process.env.OPENAI_API_KEY;
     if (providerName === "deepseek") return process.env.DEEPSEEK_API_KEY;
+    if (providerName === "deepseek-claude")
+      return process.env.DEEPSEEK_API_KEY;
     if (providerName === "anthropic" || providerName === "claude")
       return process.env.ANTHROPIC_API_KEY;
     if (providerName === "google" || providerName === "gemini")
@@ -236,17 +240,18 @@ export const createLLM = (model?: string) => {
   // Define Failover Chain
   const configs: LLMConfig[] = [{ provider: p, model: n }];
 
-  // Add fallbacks if they aren't the primary
-  const fallbacks: LLMConfig[] = [
-    { provider: "anthropic", model: "claude-3-7-sonnet-latest" },
-    { provider: "google", model: "gemini-2.0-flash-001" },
-    { provider: "openai", model: "gpt-4o" },
-  ];
+  // Only add fallbacks if no specific provider was explicitly requested via colon
+  if (!m.includes(":")) {
+    const fallbacks: LLMConfig[] = [
+      { provider: "anthropic", model: "claude-3-7-sonnet-latest" },
+      { provider: "google", model: "gemini-2.0-flash-001" },
+      { provider: "openai", model: "gpt-4o" },
+    ];
 
-  for (const f of fallbacks) {
-    // Prevent duplicate provider/model combinations
-    if (!(f.provider === p && f.model === n)) {
-      configs.push(f);
+    for (const f of fallbacks) {
+      if (!(f.provider === p && f.model === n)) {
+        configs.push(f);
+      }
     }
   }
 
