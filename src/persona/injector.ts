@@ -3,7 +3,7 @@ import { PersonaConfig } from "./loader.js";
 
 const DEFAULT_EMOJIS = ["😊", "👍", "🚀", "🤖", "💻", "✨", "💡", "🔥"];
 
-function isWithinWorkingHours(workingHours: string): boolean {
+export function isWithinWorkingHours(workingHours: string): boolean {
   if (!workingHours) return true;
   const match = workingHours.match(/^(\d{2}):(\d{2})-(\d{2}):(\d{2})$/);
   if (!match) return true;
@@ -33,7 +33,6 @@ function insertCatchphrases(text: string, phrases: string[]): string {
   if (!phrases || phrases.length === 0) return text;
 
   // Insert a catchphrase after a sentence ending with roughly 20% probability
-  // Use a replace with a callback
   return text.replace(/([.!?])\s+/g, (match, p1) => {
     if (Math.random() < 0.2) {
       const phrase = getRandomElement(phrases);
@@ -59,7 +58,8 @@ export function injectPersonality(systemPrompt: string, config: PersonaConfig): 
 
 export async function transformResponse(
   response: LLMResponse,
-  config: PersonaConfig
+  config: PersonaConfig,
+  onTyping?: () => void
 ): Promise<LLMResponse> {
   if (!config.enabled) return response;
 
@@ -69,6 +69,7 @@ export async function transformResponse(
     if (config.response_latency) {
        const { min, max } = config.response_latency;
        const delay = Math.floor(Math.random() * (max - min + 1)) + min;
+       if (onTyping && delay > 500) onTyping();
        await new Promise((resolve) => setTimeout(resolve, delay));
     }
     return {
@@ -83,12 +84,10 @@ export async function transformResponse(
 
   // Inject Greeting
   if (config.catchphrases?.greeting?.length > 0) {
-    // Only inject greeting if it looks like the start of a conversation?
-    // For now, always prepend if configured.
-    // Optimization: Check if message already starts with a greeting?
-    // Skipping optimization for simplicity as requested.
     const greeting = getRandomElement(config.catchphrases.greeting);
-    message = `${greeting} ${message}`;
+    if (!message.trim().startsWith(greeting)) {
+       message = `${greeting} ${message}`;
+    }
   }
 
   // Inject Filler Catchphrases
@@ -98,7 +97,6 @@ export async function transformResponse(
 
   // Inject Emojis
   if (config.emoji_usage) {
-    // Basic emoji injection at end
     if (!/[\u{1F600}-\u{1F64F}]/u.test(message)) {
       message += ` ${getRandomElement(DEFAULT_EMOJIS)}`;
     }
@@ -114,6 +112,12 @@ export async function transformResponse(
   if (config.response_latency) {
     const { min, max } = config.response_latency;
     const delay = Math.floor(Math.random() * (max - min + 1)) + min;
+
+    // Only show typing if delay is substantial
+    if (onTyping && delay > 100) {
+        onTyping();
+    }
+
     await new Promise((resolve) => setTimeout(resolve, delay));
   }
 

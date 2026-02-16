@@ -8,6 +8,8 @@ import { pathToFileURL } from "url";
 import { relative, join } from "path";
 import { MCP } from "../mcp.js";
 import { Skill } from "../skills.js";
+import { LLM } from "../llm.js";
+import { PersonaEngine } from "../persona/engine.js";
 
 export interface Message {
   role: "user" | "assistant" | "system";
@@ -136,12 +138,15 @@ export class Registry {
 
 export class Engine {
   protected s = spinner();
+  protected personaEngine: PersonaEngine;
 
   constructor(
-    protected llm: any,
+    protected llm: LLM,
     protected registry: Registry,
     protected mcp: MCP,
-  ) { }
+  ) {
+    this.personaEngine = new PersonaEngine(llm);
+  }
 
   protected async getUserInput(initialValue: string, interactive: boolean): Promise<string | undefined> {
     if (!interactive || !process.stdout.isTTY) return undefined;
@@ -192,9 +197,7 @@ export class Engine {
     // await this.registry.loadProjectTools(ctx.cwd);
 
     // Initialize Persona Engine
-    if (this.llm.personaEngine) {
-      await this.llm.personaEngine.loadConfig();
-    }
+    await this.personaEngine.loadConfig();
 
     if (process.stdin.isTTY) {
       readline.emitKeypressEvents(process.stdin);
@@ -305,7 +308,17 @@ export class Engine {
         );
 
         // Pass signal to LLM
-        const response = await this.llm.generate(prompt, ctx.history, signal);
+        let typingStarted = false;
+        const onTyping = () => {
+          this.s.start("Typing...");
+          typingStarted = true;
+        };
+
+        const response = await this.personaEngine.generate(prompt, ctx.history, signal, onTyping);
+
+        if (typingStarted) {
+          this.s.stop("Response received");
+        }
 
         if (response.usage) {
           const { promptTokens, completionTokens, totalTokens } =

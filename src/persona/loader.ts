@@ -14,11 +14,11 @@ export const PersonaConfigSchema = z.object({
     signoff: z.array(z.string()),
     filler: z.array(z.string()).optional(),
   }),
-  working_hours: z.string().regex(/^\d{2}:\d{2}-\d{2}:\d{2}$/, "Invalid working hours format (HH:mm-HH:mm)"),
+  working_hours: z.string().regex(/^\d{2}:\d{2}-\d{2}:\d{2}$/, "Invalid working hours format (HH:mm-HH:mm)").optional(),
   response_latency: z.object({
     min: z.number(),
     max: z.number(),
-  }),
+  }).optional(),
   enabled: z.boolean().optional().default(true),
 });
 
