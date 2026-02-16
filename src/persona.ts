@@ -2,7 +2,7 @@ import { z } from "zod";
 import { readFile } from "fs/promises";
 import { existsSync } from "fs";
 import { join } from "path";
-import { LLMResponse } from "../llm.js";
+import { LLMResponse } from "./llm.js";
 
 const PersonaConfigSchema = z.object({
   name: z.string(),
@@ -46,6 +46,26 @@ export class PersonaEngine {
       console.error("Failed to load persona config:", e);
       this.config = null;
     }
+  }
+
+  async injectPersonality(systemPrompt: string): Promise<string> {
+    if (!this.config) {
+      await this.loadConfig();
+    }
+
+    if (!this.config || !this.config.enabled) {
+      return systemPrompt;
+    }
+
+    let personalityPrompt = `You are ${this.config.name}, a ${this.config.role}.`;
+    if (this.config.voice.tone) {
+      personalityPrompt += ` Your voice is ${this.config.voice.tone}.`;
+    }
+    if (this.config.working_hours) {
+      personalityPrompt += ` Your working hours are ${this.config.working_hours}.`;
+    }
+
+    return `${personalityPrompt}\n\n${systemPrompt}`;
   }
 
   async transform(response: LLMResponse): Promise<LLMResponse> {
