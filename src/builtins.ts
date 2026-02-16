@@ -54,4 +54,19 @@ export const update_context = {
   },
 };
 
-export const allBuiltins = [change_dir, update_context];
+export const delegate_cli = {
+  name: "delegate_cli",
+  description: "DEPRECATED: Use specific MCP tools (e.g., aider_chat, aider_edit) instead. Run a CLI command.",
+  inputSchema: z.object({
+    command: z.string().describe("The CLI command to run."),
+    args: z.array(z.string()).optional().describe("Arguments for the command.")
+  }),
+  execute: async ({ command, args }: { command: string; args?: string[] }) => {
+    if (command === "aider") {
+      return "Error: delegate_cli for 'aider' is deprecated. Please use 'aider_chat' or 'aider_edit' tools directly.";
+    }
+    return `Warning: delegate_cli is deprecated. Please use MCP tools if available. Command '${command}' was requested but not executed by this shim.`;
+  },
+};
+
+export const allBuiltins = [change_dir, update_context, delegate_cli];
