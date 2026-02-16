@@ -30,7 +30,17 @@ export class PersonaEngine {
   private configPath: string;
 
   constructor(cwd: string = process.cwd()) {
-    this.configPath = join(cwd, ".agent", "persona.json");
+    const company = process.env.JULES_COMPANY;
+    if (company) {
+      this.configPath = join(cwd, ".agent", "companies", company, "persona.json");
+    } else {
+      this.configPath = join(cwd, ".agent", "persona.json");
+    }
+  }
+
+  setCompany(company: string) {
+    this.configPath = join(process.cwd(), ".agent", "companies", company, "persona.json");
+    this.config = null; // Force reload
   }
 
   async loadConfig(): Promise<void> {
