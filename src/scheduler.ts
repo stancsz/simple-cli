@@ -5,20 +5,42 @@ import { readFile, writeFile } from 'fs/promises';
 import { existsSync } from 'fs';
 import { join } from 'path';
 import { ScheduleConfig, TaskDefinition } from './daemon/task_definitions.js';
+import { JobDelegator } from './scheduler/job_delegator.js';
+
+interface SchedulerState {
+  pendingTasks: TaskDefinition[];
+}
 
 export class Scheduler extends EventEmitter {
   private cronJobs: any[] = [];
   private taskFileWatchers: any[] = [];
   private scheduleWatcher: any;
   private scheduleFile: string;
+  private stateFile: string;
+  private delegator: JobDelegator;
+  private pendingTasks: Map<string, TaskDefinition> = new Map();
 
   constructor(private agentDir: string) {
     super();
     this.scheduleFile = join(agentDir, 'scheduler.json');
+    this.stateFile = join(agentDir, 'scheduler_state.json');
+    this.delegator = new JobDelegator(agentDir);
   }
 
   async start() {
+    await this.loadState();
     await this.ensureHRTask();
+    await this.ensureMorningStandupTask();
+
+    // Resume pending tasks
+    if (this.pendingTasks.size > 0) {
+        console.log(`Resuming ${this.pendingTasks.size} pending tasks...`);
+        const tasks = Array.from(this.pendingTasks.values());
+        for (const task of tasks) {
+            this.runTask(task).catch(e => console.error(`Resumed task failed: ${e}`));
+        }
+    }
+
     await this.applySchedule();
 
     // Watch schedule file for changes
@@ -73,6 +95,81 @@ export class Scheduler extends EventEmitter {
     }
   }
 
+  private async ensureMorningStandupTask() {
+    let config: ScheduleConfig = { tasks: [] };
+    if (existsSync(this.scheduleFile)) {
+      try {
+        const content = await readFile(this.scheduleFile, 'utf-8');
+        config = JSON.parse(content);
+      } catch (e) {
+        config = { tasks: [] };
+      }
+    }
+
+    const taskName = "Morning Standup";
+    const hasTask = config.tasks?.some((t: any) => t.name === taskName);
+
+    if (!hasTask) {
+      console.log("Adding default Morning Standup task.");
+      if (!config.tasks) config.tasks = [];
+      config.tasks.push({
+          id: "morning-standup",
+          name: taskName,
+          trigger: "cron",
+          schedule: "0 9 * * *", // Daily at 9 AM
+          prompt: "Run the Morning Standup review using the 'run_morning_standup' tool.",
+          yoloMode: true
+      });
+      try {
+          await writeFile(this.scheduleFile, JSON.stringify(config, null, 2));
+      } catch (e) {
+          console.error("Failed to write scheduler.json with default Morning Standup task:", e);
+      }
+    }
+  }
+
+  private async runTask(task: TaskDefinition) {
+      console.log(`Running task: ${task.name}`);
+      this.pendingTasks.set(task.id, task);
+      await this.saveState();
+
+      try {
+          await this.delegator.delegateTask(task);
+      } catch (e) {
+          console.error(`Task ${task.name} failed:`, e);
+      } finally {
+          this.pendingTasks.delete(task.id);
+          await this.saveState();
+      }
+      this.emit('task-triggered', task);
+  }
+
+  private async saveState() {
+      const state: SchedulerState = {
+          pendingTasks: Array.from(this.pendingTasks.values())
+      };
+      try {
+          await writeFile(this.stateFile, JSON.stringify(state, null, 2));
+      } catch (e) {
+          console.error("Failed to save scheduler state:", e);
+      }
+  }
+
+  private async loadState() {
+      if (!existsSync(this.stateFile)) return;
+      try {
+          const content = await readFile(this.stateFile, 'utf-8');
+          const state: SchedulerState = JSON.parse(content);
+          if (state.pendingTasks) {
+              for (const task of state.pendingTasks) {
+                  this.pendingTasks.set(task.id, task);
+              }
+          }
+      } catch (e) {
+          console.error("Failed to load scheduler state:", e);
+      }
+  }
+
   private watchScheduleFile() {
       if (this.scheduleWatcher) return;
       this.scheduleWatcher = chokidar.watch(this.scheduleFile, { persistent: true, ignoreInitial: true });
@@ -124,7 +221,7 @@ export class Scheduler extends EventEmitter {
                 if (cron.validate(task.schedule)) {
                     const job = cron.schedule(task.schedule, () => {
                         console.log(`Cron triggered for task: ${task.name}`);
-                        this.emit('task-triggered', task);
+                        this.runTask(task);
                     });
                     this.cronJobs.push(job);
                     console.log(`Scheduled cron task: ${task.name} at "${task.schedule}"`);
@@ -136,7 +233,7 @@ export class Scheduler extends EventEmitter {
                 const watcher = chokidar.watch(watchPath, { persistent: true, ignoreInitial: true });
                 watcher.on('change', (path) => {
                     console.log(`File changed: ${path}. Triggering task ${task.name}`);
-                    this.emit('task-triggered', task);
+                    this.runTask(task);
                 });
                 this.taskFileWatchers.push(watcher);
                 console.log(`Watching file: ${watchPath} for task: ${task.name}`);

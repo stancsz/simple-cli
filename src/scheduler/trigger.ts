@@ -11,7 +11,7 @@ const ext = isTs ? '.ts' : '.js';
 // State tracking
 const activeChildren = new Set<ChildProcess>();
 
-export async function handleTaskTrigger(task: TaskDefinition) {
+export async function handleTaskTrigger(task: TaskDefinition): Promise<{ exitCode: number | null }> {
   console.log(`Triggering task: ${task.name} (${task.id})`);
 
   const env: NodeJS.ProcessEnv = {
@@ -31,35 +31,37 @@ export async function handleTaskTrigger(task: TaskDefinition) {
        ? ['--loader', 'ts-node/esm', runTaskScript]
        : [runTaskScript];
 
-  const child = spawn('node', args, {
-    env,
-    cwd: process.cwd(),
-    stdio: 'pipe' // Capture stdout/stderr
+  return new Promise((resolve, reject) => {
+    const child = spawn('node', args, {
+      env,
+      cwd: process.cwd(),
+      stdio: 'pipe' // Capture stdout/stderr
+    });
+
+    activeChildren.add(child);
+
+    child.stdout?.on('data', (d) => {
+      const output = d.toString().trim();
+      if (output) console.log(`[${task.name}] STDOUT: ${output}`);
+    });
+
+    child.stderr?.on('data', (d) => {
+      const output = d.toString().trim();
+      if (output) console.log(`[${task.name}] STDERR: ${output}`);
+    });
+
+    child.on('close', (code) => {
+      activeChildren.delete(child);
+      console.log(`Task ${task.name} exited with code ${code}`);
+      resolve({ exitCode: code });
+    });
+
+    child.on('error', (err) => {
+      activeChildren.delete(child);
+      console.error(`Failed to spawn task ${task.name}: ${err.message}`);
+      reject(err);
+    });
   });
-
-  activeChildren.add(child);
-
-  child.stdout?.on('data', (d) => {
-    const output = d.toString().trim();
-    if (output) console.log(`[${task.name}] STDOUT: ${output}`);
-  });
-
-  child.stderr?.on('data', (d) => {
-    const output = d.toString().trim();
-    if (output) console.log(`[${task.name}] STDERR: ${output}`);
-  });
-
-  child.on('close', (code) => {
-    activeChildren.delete(child);
-    console.log(`Task ${task.name} exited with code ${code}`);
-  });
-
-  child.on('error', (err) => {
-    activeChildren.delete(child);
-    console.error(`Failed to spawn task ${task.name}: ${err.message}`);
-  });
-
-  return child;
 }
 
 export function killAllChildren() {
