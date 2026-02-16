@@ -29,9 +29,9 @@ async function main() {
     // Ensure we use the correct model format if provided in env
     const modelStr = process.env.MODEL || "deepseek:deepseek-reasoner";
     console.log(chalk.gray(`[Config] Using model string: ${modelStr}`));
+    const llm = createLLM(modelStr);
     console.log(chalk.gray(`[Env Check] DEEPSEEK_API_KEY: ${process.env.DEEPSEEK_API_KEY ? "Present" : "Missing"}`));
     console.log(chalk.gray(`[Env Check] ANTHROPIC_API_KEY: ${process.env.ANTHROPIC_API_KEY ? "Present" : "Missing"}`));
-    const llm = createLLM(modelStr);
 
     const systemPrompt = `You are the "Principal Architect & Manager" for the Simple CLI project.
 Your mission is to orchestrate the evolution of the project from a CLI tool into a true "Digital Agency" of autonomous coworkers.
@@ -60,7 +60,7 @@ Analyze the roadmap against current progress and identify the absolute next step
     - **Files to touch/create**: Suggest paths based on the project structure.
     - **Logic**: Briefly explain the architectural approach (e.g., "Implement as an MCP server in src/mcp_servers/...").
     - **Constraints**: Mention existing patterns (e.g., "Use the LLM class from src/llm.ts").
-4. **INDEPENDENCE**: Suggest tasks that can be worked on concurrently if possible.
+4. **INDEPENDENCE**: Suggest tasks that can be worked on concurrently if possible. Limit your response to a MAXIMUM of 3 high-priority tasks per run.
 
 ### OUTPUT FORMAT (JSON ONLY):
 {
@@ -101,7 +101,10 @@ Analyze the roadmap against current progress and identify the absolute next step
     if (decision.should_delegate && decision.tasks && decision.tasks.length > 0) {
         const jules = new JulesClient();
 
-        for (const taskObj of decision.tasks) {
+        // Limit to 3 tasks per run to avoid spamming
+        const tasksToDelegate = decision.tasks.slice(0, 3);
+
+        for (const taskObj of tasksToDelegate) {
             console.log(chalk.white("\nNext Task:"), chalk.yellow(taskObj.description));
             console.log(chalk.cyan("📤 Delegating to Jules..."));
 

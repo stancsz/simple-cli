@@ -1,7 +1,7 @@
 name: Simple Code Review
 on:
   schedule:
-    - cron: '*/20 6-23 * * *'
+    - cron: '0 * * * *'
   workflow_dispatch:
 
 permissions:
