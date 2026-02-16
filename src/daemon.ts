@@ -5,7 +5,7 @@ import { join, dirname } from 'path';
 import { readFile, appendFile } from 'fs/promises';
 import { existsSync } from 'fs';
 import { fileURLToPath } from 'url';
-import { ScheduleConfig, TaskDefinition } from './task_definitions.js';
+import { ScheduleConfig, TaskDefinition } from './daemon/task_definitions.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -14,8 +14,8 @@ const ext = isTs ? '.ts' : '.js';
 
 const CWD = process.cwd();
 const AGENT_DIR = join(CWD, '.agent');
-const LOG_FILE = join(AGENT_DIR, 'daemon.log');
-const SCHEDULE_FILE = join(AGENT_DIR, 'schedule.json');
+const LOG_FILE = join(AGENT_DIR, 'ghost.log');
+const SCHEDULE_FILE = join(AGENT_DIR, 'scheduler.json');
 
 // State tracking
 const activeChildren = new Set<ChildProcess>();
@@ -63,8 +63,8 @@ async function runTask(task: TaskDefinition) {
     env.JULES_COMPANY = task.company;
   }
 
-  // Use run_task in the same directory as this script
-  const runTaskScript = join(__dirname, `run_task${ext}`);
+  // Use run_task in src/daemon/ directory
+  const runTaskScript = join(__dirname, 'daemon', `run_task${ext}`);
 
   const args = isTs
        ? ['--loader', 'ts-node/esm', runTaskScript]

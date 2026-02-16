@@ -20,10 +20,16 @@ async function main() {
   // Handle optional directory argument
   let cwd = initialCwd;
   let interactive = true;
+  let startDaemon = false;
   const remainingArgs = [];
 
   for (let i = 0; i < args.length; i++) {
     const arg = args[i];
+
+    if (arg === "--daemon") {
+      startDaemon = true;
+      continue;
+    }
 
     if (arg === "--non-interactive") {
       interactive = false;
@@ -48,6 +54,16 @@ async function main() {
       } catch { }
     }
     remainingArgs.push(arg);
+  }
+
+  if (startDaemon) {
+    try {
+      const { daemon } = await import("./daemon/daemon_cli.js");
+      await daemon.start();
+    } catch (e: any) {
+      console.error("Failed to load daemon module:", e.message);
+    }
+    return;
   }
 
   if (remainingArgs[0] === "daemon") {
