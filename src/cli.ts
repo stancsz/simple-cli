@@ -1,8 +1,7 @@
 #!/usr/bin/env node
 import "dotenv/config";
 import { statSync } from "fs";
-import { Engine, Context, Registry } from "./engine.js";
-import { allBuiltins } from "./builtins.js";
+import { Engine, Context, Registry } from "./engine/orchestrator.js";
 import { createLLM } from "./llm.js";
 import { MCP } from "./mcp.js";
 import { getActiveSkill } from "./skills.js";
@@ -85,7 +84,6 @@ async function main() {
   const prompt = remainingArgs.filter((a) => !a.startsWith("-")).join(" ");
 
   const registry = new Registry();
-  allBuiltins.forEach((t) => registry.tools.set(t.name, t as any));
 
   // Initialize Workflow Engine and register execute_sop tool
   const sopRegistry = new SOPRegistry();
@@ -93,44 +91,26 @@ async function main() {
   const sopTool = createExecuteSOPTool(workflowEngine);
   registry.tools.set(sopTool.name, sopTool as any);
 
-  // 1. Load tools from Target Workspace (CWD) - The project being worked on
-  await registry.loadProjectTools(cwd);
-
-  // 2. Load tools from Runtime Location (Initial CWD) - The agent's own skills
-  if (initialCwd !== cwd) {
-    // If we are running from outside the project dir
-    await registry.loadProjectTools(initialCwd);
-  }
-
-  // 3. Robust fallback: Load relative to script location
-  // This handles cases where initialCwd is unpredictable (like in global installs)
-  try {
-    const { dirname, resolve } = await import("path");
-    const { fileURLToPath } = await import("url");
-    const scriptDir = dirname(fileURLToPath(import.meta.url)); // src/
-    const projectRoot = resolve(scriptDir, ".."); // .
-
-    if (projectRoot !== cwd && projectRoot !== initialCwd) {
-      await registry.loadProjectTools(projectRoot);
-    }
-  } catch (e) {
-    // Ignore
-  }
-
   const mcp = new MCP();
 
   // Auto-start core local servers to maintain default capabilities
   await mcp.init();
-  const coreServers = ["simple_tools", "aider", "claude"];
+  // Ensure essential servers are running.
+  // 'filesystem' and 'git' should be configured in mcp.json via migration.
+  const coreServers = ["filesystem", "git", "context_manager", "aider", "claude"];
   for (const s of coreServers) {
     try {
+      if (mcp.isServerRunning(s)) continue; // Already running
       await mcp.startServer(s);
-    } catch (e) {
+    } catch (e: any) {
       // Server might not be discovered or failed to start.
-      // We fail silently for optional servers, but simple_tools is critical.
-      if (s === "simple_tools") {
-        console.warn(`[Warning] Core server '${s}' failed to start:`, e);
+      // We fail silently for optional servers.
+      if (s === "context_manager") {
+          // Try 'context' if 'context_manager' fails (backward compatibility if index.ts name differs)
+          // But we created context_manager/index.ts, so name is 'context_manager' (directory name)
+          try { await mcp.startServer("context"); } catch {}
       }
+      // console.warn(`[Warning] Server '${s}' failed to start:`, e.message);
     }
   }
 

@@ -1,11 +1,10 @@
 import "dotenv/config";
 import { createLLM } from "../llm.js";
 import { MCP } from "../mcp.js";
-import { Registry, Context } from "../engine.js";
+import { Registry, Context } from "../engine/orchestrator.js";
 import { AutonomousOrchestrator } from "../engine/autonomous.js";
 import { getActiveSkill } from "../skills.js";
 import { TaskDefinition } from "./task_definitions.js";
-import { allBuiltins } from "../builtins.js";
 import { join, dirname } from "path";
 import { existsSync } from "fs";
 import { readFile, writeFile, mkdir } from "fs/promises";
@@ -28,9 +27,6 @@ async function main() {
   const cwd = process.cwd();
 
   const registry = new Registry();
-  allBuiltins.forEach((t) => registry.tools.set(t.name, t as any));
-
-  await registry.loadProjectTools(cwd);
 
   const mcp = new MCP();
   const provider = createLLM();

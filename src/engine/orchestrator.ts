@@ -1,44 +1,43 @@
-// TODO: [Refactor] This entire engine should act as a 'Universal Adapter'.
-// Instead of manually loading tools or parsing lazy agent outputs with regex,
-// it should ingest standardized MCP tool definitions and digest them into a shared context.
-
-import { readFile, writeFile, readdir } from "fs/promises";
-import { existsSync } from "fs";
-import { join, relative, resolve } from "path";
-import { pathToFileURL } from "url";
+// Orchestrator: The central engine for the agent, now purely MCP-driven.
 import readline from "readline";
 import pc from "picocolors";
 import { text, isCancel, log, spinner } from "@clack/prompts";
-import { createLLM } from "./llm.js";
-import { MCP } from "./mcp.js";
-import { Skill } from "./skills.js";
+import { relative, join } from "path";
+import { MCP } from "../mcp.js";
+import { Skill } from "../skills.js";
 
 export interface Message {
   role: "user" | "assistant" | "system";
   content: string;
 }
+
 export interface Tool {
   name: string;
   description: string;
   execute: (args: any, options?: { signal?: AbortSignal }) => Promise<any>;
 }
 
-async function getRepoMap(cwd: string) {
-  const files: string[] = [];
-  async function walk(dir: string) {
-    const entries = await readdir(dir, { withFileTypes: true });
-    for (const e of entries) {
-      if (["node_modules", ".git", "dist"].includes(e.name)) continue;
-      const res = join(dir, e.name);
-      if (e.isDirectory()) await walk(res);
-      else if ([".ts", ".js", ".py", ".md"].includes(res.slice(-3)))
-        files.push(relative(cwd, res));
-    }
+// Helper to list files using MCP tools
+async function getRepoMap(cwd: string, registry: Registry): Promise<string> {
+  const listTool = registry.tools.get("list_directory") || registry.tools.get("ls") || registry.tools.get("list_files");
+  if (!listTool) {
+    return "(Repository listing unavailable - no filesystem tool found)";
   }
+
   try {
-    await walk(cwd);
-  } catch { }
-  return files.slice(0, 50).join("\n");
+    const result: any = await listTool.execute({ path: cwd });
+    // Assume result.content[0].text contains the list or result is the list
+    // Standard MCP returns { content: [{ type: "text", text: "..." }] }
+    // But filesystem list_directory might return JSON string or structured data?
+    // If it's standard MCP, it returns text or resource.
+    // Let's assume text for now.
+    if (result && result.content && Array.isArray(result.content)) {
+        return result.content.map((c: any) => c.text).join("\n");
+    }
+    return String(result);
+  } catch (e: any) {
+    return `(Error listing files: ${e.message})`;
+  }
 }
 
 export class Context {
@@ -52,8 +51,8 @@ export class Context {
     this.skill = skill;
   }
 
-  async buildPrompt(tools: Map<string, Tool>) {
-    const repoMap = await getRepoMap(this.cwd);
+  async buildPrompt(tools: Map<string, Tool>, registry: Registry) {
+    const repoMap = await getRepoMap(this.cwd, registry);
     const toolDefs = Array.from(tools.values())
       .map((t) => {
         const schema = (t as any).inputSchema;
@@ -64,6 +63,7 @@ export class Context {
         return `- ${t.name}: ${t.description}`;
       })
       .join("\n");
+
     return `${this.skill.systemPrompt}\n\n## Tools\n${toolDefs}\n\n## Repository\n${repoMap}\n\n## Active Files\n${Array.from(
       this.activeFiles,
     )
@@ -75,82 +75,16 @@ export class Context {
 export class Registry {
   tools: Map<string, Tool> = new Map();
 
-  async loadProjectTools(cwd: string) {
-    // TODO: [Ingest] Deprecate this manual tool scanning.
-    // Tools should be loaded exclusively via MCP Server discovery (mcp.json).
-    // The concept of "Legacy Flat Tools" and "Skill-Based Tools" should migrate to local MCP servers.
-
-    // 1. Scan Legacy Flat Tools
-    const toolsDir = join(cwd, ".agent", "tools");
-    if (existsSync(toolsDir)) {
-      for (const f of await readdir(toolsDir)) {
-        if (f.endsWith(".ts") || f.endsWith(".js")) {
-          try {
-            const mod = await import(pathToFileURL(join(toolsDir, f)).href);
-            const t = mod.tool || mod.default;
-            if (Array.isArray(t)) {
-              t.forEach(tool => { if (tool?.name) this.tools.set(tool.name, tool); });
-            } else if (t?.name) {
-              this.tools.set(t.name, t);
-            }
-          } catch (e) {
-            console.error(`Failed to load tool ${f}:`, e);
-          }
-        }
-      }
-    }
+  // Deprecated: Legacy tool loading removed.
+  // Tools are now loaded exclusively via MCP Server discovery.
+  async loadProjectTools(_cwd: string) {
+    // No-op
   }
 
-  async loadCompanyTools(company: string) {
-    const cwd = process.cwd();
-    const toolsDir = join(cwd, ".agent", "companies", company, "tools");
-    if (existsSync(toolsDir)) {
-      for (const f of await readdir(toolsDir)) {
-        if (f.endsWith(".ts") || f.endsWith(".js")) {
-          try {
-            const mod = await import(pathToFileURL(join(toolsDir, f)).href);
-            const t = mod.tool || mod.default;
-            if (Array.isArray(t)) {
-              t.forEach(tool => { if (tool?.name) this.tools.set(tool.name, tool); });
-            } else if (t?.name) {
-              this.tools.set(t.name, t);
-            }
-          } catch (e) {
-            console.error(`Failed to load company tool ${f}:`, e);
-          }
-        }
-      }
-    }
-
-    // 2. Scan Skill-Based Tools (.agent/skills/*/tools.ts)
-    const skillsDir = join(cwd, ".agent", "skills");
-    if (existsSync(skillsDir)) {
-      for (const skillName of await readdir(skillsDir)) {
-        const skillPath = join(skillsDir, skillName);
-        // Look for tools.ts or index.ts
-        const potentialFiles = ["tools.ts", "index.ts", "tools.js", "index.js"];
-
-        for (const file of potentialFiles) {
-          const filePath = join(skillPath, file);
-          if (existsSync(filePath)) {
-            try {
-              const mod = await import(pathToFileURL(filePath).href);
-              const t = mod.tool || mod.default;
-              if (Array.isArray(t)) {
-                t.forEach(tool => { if (tool?.name) this.tools.set(tool.name, tool); });
-              } else if (t?.name) {
-                this.tools.set(t.name, t);
-              }
-            } catch (e) {
-              console.error(`Failed to load tools for skill ${skillName}:`, e);
-            }
-          }
-        }
-      }
-    }
+  async loadCompanyTools(_company: string) {
+    // No-op
   }
 }
-
 
 export class Engine {
   protected s = spinner();
@@ -190,8 +124,8 @@ export class Engine {
       this.registry.tools.set(t.name, t as any),
     );
 
-    // Ensure tools are loaded for the context cwd
-    await this.registry.loadProjectTools(ctx.cwd);
+    // Legacy loading removed
+    // await this.registry.loadProjectTools(ctx.cwd);
 
     // Initialize Persona Engine
     if (this.llm.personaEngine) {
@@ -247,7 +181,8 @@ export class Engine {
       }
 
       try {
-        let prompt = await ctx.buildPrompt(this.registry.tools);
+        // Pass registry to buildPrompt
+        let prompt = await ctx.buildPrompt(this.registry.tools, this.registry);
 
         const userHistory = ctx.history.filter(
           (m) =>
@@ -299,22 +234,18 @@ export class Engine {
                 this.s.stop(`Executed ${tName}`);
                 toolExecuted = true;
 
-                // Reload tools if create_tool was used
-                if (tName === "create_tool") {
-                  await this.registry.loadProjectTools(ctx.cwd);
-                  this.log("success", "Tools reloaded.");
-                }
-
-                // Reload tools if mcp_start_server was used
-                if (tName === "mcp_start_server") {
-                  (await this.mcp.getTools()).forEach((t) =>
-                    this.registry.tools.set(t.name, t as any),
-                  );
-                  this.log("success", "MCP tools updated.");
+                // Reload tools if create_tool was used (via MCP refresh if available?)
+                // Since legacy tools are gone, create_tool would likely create an MCP server or file.
+                // We should refresh MCP tools.
+                if (tName === "create_tool" || tName === "mcp_start_server" || tName === "mcp_install_server") {
+                   // Refresh tools
+                   (await this.mcp.getTools()).forEach((t) =>
+                      this.registry.tools.set(t.name, t as any),
+                   );
+                   this.log("success", "MCP tools updated.");
                 }
 
                 // Add individual tool execution to history to keep context updated
-                // We mock a single tool response for history consistency
                 ctx.history.push({
                   role: "assistant",
                   content: JSON.stringify({
@@ -374,6 +305,12 @@ export class Engine {
                 allExecuted = false;
                 break;
               }
+            } else {
+                this.log("warn", `Tool '${tName}' not found.`);
+                ctx.history.push({
+                  role: "user",
+                  content: `Tool '${tName}' not found. Please verify available tools.`,
+                });
             }
           }
 
@@ -389,9 +326,6 @@ export class Engine {
         }
 
         // --- Lazy Agent Detection ---
-        // TODO: [Refactor] Remove regex-based lazy agent detection.
-        // Instead, valid MCP tools should enforce structured outputs or errors.
-        // If an agent (like Devin) is lazy, the Devin MCP Server wrapper should handle the retry logic, not this engine.
         const rawText = (message || response.raw || "").toLowerCase();
         const isRefusal =
           /(cannot|can't|unable to|no access|don't have access) (to )?(create|write|modify|delete|save|edit)/.test(

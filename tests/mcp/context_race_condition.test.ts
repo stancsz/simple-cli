@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { ContextManager } from "../../src/context_manager.js";
+import { ContextManager } from "../../src/mcp_servers/context_manager/index.js";
 import { rm, mkdir } from "fs/promises";
 import { join } from "path";
 import { existsSync } from "fs";

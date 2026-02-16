@@ -18,7 +18,7 @@ vi.mock('@slack/bolt', () => ({
     App: vi.fn(() => ({ event: mocks.AppEvent, action: mocks.AppAction, start: mocks.AppStart }))
 }));
 
-vi.mock('../../src/engine.js', () => ({
+vi.mock('../../src/engine/orchestrator.js', () => ({
     Engine: vi.fn().mockImplementation(() => ({
         run: mocks.EngineRun
     })),
@@ -94,7 +94,6 @@ describe('Slack Interface Adapter', () => {
         });
 
         // Verify Engine flow
-        expect(mocks.RegistryLoadProjectTools).toHaveBeenCalled();
         expect(mocks.McpInit).toHaveBeenCalled();
         expect(mocks.CreateLLM).toHaveBeenCalled();
         expect(mocks.EngineRun).toHaveBeenCalledWith(expect.anything(), 'help me', { interactive: false });

@@ -21,7 +21,7 @@ describe("ContextServer Live", () => {
     // Connect to server
     const serverScript = join(
       process.cwd(),
-      "src/mcp_servers/context/index.ts",
+      "src/mcp_servers/context_manager/index.ts",
     );
 
     transport = new StdioClientTransport({

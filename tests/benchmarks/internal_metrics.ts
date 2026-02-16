@@ -1,4 +1,4 @@
-import { ContextManager } from '../../src/context_manager';
+import { ContextManager } from '../../src/mcp_servers/context_manager/index';
 import { getActiveSkill, buildSkillPrompt } from '../../src/skills';
 import { performance } from 'perf_hooks';
 import { unlinkSync, existsSync, mkdirSync, rmSync } from 'fs';

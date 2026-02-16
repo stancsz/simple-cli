@@ -58,11 +58,12 @@ export class LLM {
         if (providerName === "openai" || providerName === "codex") {
           model = createOpenAI({ apiKey })(modelName);
         } else if (providerName === "deepseek") {
-          console.log(chalk.gray(`[LLM] Attempting DeepSeek with baseURL: https://api.deepseek.com/v1`));
-          model = createOpenAI({
+          console.log(chalk.gray(`[LLM] Attempting DeepSeek (via Anthropic SDK) with baseURL: https://api.deepseek.com/anthropic`));
+          model = createAnthropic({
             apiKey,
-            baseURL: "https://api.deepseek.com/v1",
-          })(modelName);
+            baseURL: "https://api.deepseek.com/anthropic",
+          });
+          model = model(modelName);
         } else if (providerName === "anthropic" || providerName === "claude") {
           model = createAnthropic({ apiKey });
           model = model(modelName);
@@ -232,7 +233,7 @@ export class LLM {
 
 export const createLLM = (model?: string) => {
   // Primary model
-  const m = model || process.env.MODEL || "openai:gpt-5.2-codex";
+  const m = model || process.env.MODEL || "deepseek:deepseek-reasoner";
   let [p, n] = m.includes(":") ? m.split(":") : ["openai", m];
 
   // Auto-detect provider if missing

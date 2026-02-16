@@ -1,4 +1,4 @@
-import { Registry } from "../engine.js";
+import { Registry } from "../engine/orchestrator.js";
 import { SOPRegistry } from "./sop_registry.js";
 import { SOPDefinition, SOPStep } from "./sop_definition_schema.js";
 

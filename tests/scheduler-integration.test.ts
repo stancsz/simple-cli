@@ -4,7 +4,7 @@ import { AutonomousOrchestrator } from '../src/engine/autonomous.js';
 import { join } from 'path';
 import { writeFile, rm, mkdir } from 'fs/promises';
 import { existsSync } from 'fs';
-import { Context, Registry } from '../src/engine.js';
+import { Context, Registry } from '../src/engine/orchestrator.js';
 
 const TEST_DIR = join(process.cwd(), '.agent-test');
 const SCHEDULE_FILE = join(TEST_DIR, 'scheduler.json');
