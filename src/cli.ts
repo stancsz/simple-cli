@@ -99,6 +99,22 @@ async function main() {
   }
 
   const mcp = new MCP();
+
+  // Auto-start core local servers to maintain default capabilities
+  await mcp.init();
+  const coreServers = ["simple_tools", "aider", "claude"];
+  for (const s of coreServers) {
+    try {
+      await mcp.startServer(s);
+    } catch (e) {
+      // Server might not be discovered or failed to start.
+      // We fail silently for optional servers, but simple_tools is critical.
+      if (s === "simple_tools") {
+        console.warn(`[Warning] Core server '${s}' failed to start:`, e);
+      }
+    }
+  }
+
   const provider = createLLM();
   const engine = new Engine(provider, registry, mcp);
 

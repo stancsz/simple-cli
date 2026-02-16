@@ -13,7 +13,7 @@ export interface AgentConfig {
 
 export interface Config {
   mcpServers?: Record<string, any>;
-  agents?: Record<string, AgentConfig>;
+  agents?: Record<string, AgentConfig>; // Deprecated
   yoloMode?: boolean;
   autoDecisionTimeout?: number;
 }
@@ -35,49 +35,8 @@ export async function loadConfig(cwd: string = process.cwd()): Promise<Config> {
     }
   }
 
-  if (!config.agents) config.agents = {};
-
-  if (!config.agents.deepseek_crewai) {
-    // TODO: [Config] Hardcoded path to 'src/agents/deepseek_crewai.ts'.
-    // This assumes the user has the source code.
-    // Instead, this agent should be an installable MCP server (npm package or similar),
-    // configured in mcp.json, not here.
-    config.agents.deepseek_crewai = {
-      command: "npx",
-      args: ["tsx", "src/agents/deepseek_crewai.ts"],
-      description:
-        "Delegate tasks to a generic CrewAI crew (Researcher + Writer).",
-      supports_stdin: false,
-    };
-  }
-
-  if (!config.agents.deepseek_aider) {
-    config.agents.deepseek_aider = {
-      command: "npx",
-      args: ["tsx", "src/agents/deepseek_aider.ts"],
-      description: "Delegate coding tasks to Aider using DeepSeek V3.",
-      supports_stdin: false,
-      context_flag: "", // Aider accepts files as positional arguments
-    };
-  }
-
-  if (!config.agents.deepseek_opencode) {
-    config.agents.deepseek_opencode = {
-      command: "npx",
-      args: ["tsx", "src/agents/deepseek_opencode.ts"],
-      description: "Delegate tasks to OpenCode using DeepSeek V3.",
-      supports_stdin: false,
-    };
-  }
-
-  if (!config.agents.deepseek_claude) {
-    config.agents.deepseek_claude = {
-      command: "npx",
-      args: ["tsx", "src/agents/deepseek_claude.ts"],
-      description: "Delegate tasks to Claude Code using DeepSeek V3.",
-      supports_stdin: false,
-    };
-  }
+  // Legacy agent configuration is removed.
+  // Agents should be configured via MCP servers in mcp.json.
 
   return config;
 }
