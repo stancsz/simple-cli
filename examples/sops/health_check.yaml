@@ -1,0 +1,15 @@
+name: health-check
+description: Basic system health check
+steps:
+  - name: Check Node Version
+    type: command
+    command: node -v
+  - name: Check NPM Version
+    type: command
+    command: npm -v
+  - name: Check Disk Space
+    type: command
+    command: df -h .
+  - name: List Directory
+    type: command
+    command: ls -la
