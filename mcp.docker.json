@@ -23,6 +23,10 @@
     "company": {
       "command": "node",
       "args": ["/app/dist/mcp_servers/company/index.js"]
+    },
+    "sop-executor": {
+      "command": "node",
+      "args": ["/app/dist/mcp_servers/sop-executor/index.js"]
     }
   },
   "agents": {
