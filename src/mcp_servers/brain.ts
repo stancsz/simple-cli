@@ -9,7 +9,7 @@ import { readFile, readdir } from "fs/promises";
 import { existsSync } from "fs";
 
 export class BrainServer {
-  private server: McpServer;
+  public server: McpServer;
   private episodic: EpisodicMemory;
   private semantic: SemanticGraph;
   private sopsDir: string;
@@ -76,6 +76,43 @@ export class BrainServer {
           )
           .join("\n\n---\n\n");
         return { content: [{ type: "text", text }] };
+      }
+    );
+
+    // Context Management Tools (Long-term Memory)
+    this.server.tool(
+      "brain_store_context",
+      "Store a snapshot of the global context/memory.",
+      {
+        context: z.string().describe("The JSON string representation of the context."),
+        company: z.string().optional().describe("The company/client identifier for namespacing."),
+      },
+      async ({ context, company }) => {
+        // Use a fixed taskId 'global_context' to represent the shared memory state
+        await this.episodic.store("global_context", "context_update", context, [], company);
+        return {
+          content: [{ type: "text", text: "Context stored successfully." }],
+        };
+      }
+    );
+
+    this.server.tool(
+      "brain_get_context",
+      "Retrieve the latest global context/memory snapshot.",
+      {
+        company: z.string().optional().describe("The company/client identifier for namespacing."),
+      },
+      async ({ company }) => {
+        const result = await this.episodic.retrieve("global_context", company);
+        if (result) {
+          return {
+            content: [{ type: "text", text: result.agentResponse }],
+          };
+        }
+        return {
+          content: [{ type: "text", text: "No context found." }],
+          isError: true,
+        };
       }
     );
 

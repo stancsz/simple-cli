@@ -192,6 +192,14 @@ Memory is immutable but additive.
     3.  Extract facts ("User hates semicolons") -> Update Knowledge Graph.
     4.  Update `learnings.md` for human-readable audit.
 
+### 5.4 Unified Context Flow
+To ensure consistency across all agents (CLI, Sub-agents, Tools), we enforce a strict memory flow:
+1.  **ContextManager**: The client-side library used by agents to read/write state.
+2.  **Brain MCP Server**: The central authority that validates and persists state.
+3.  **Vector/Graph DB**: The underlying storage engine (LanceDB/JSON Graph).
+    *   *Write Path*: `ContextManager.save()` -> `Brain.store_context()` -> `EpisodicMemory.store()` -> LanceDB.
+    *   *Read Path*: `ContextManager.load()` -> `Brain.get_context()` -> `EpisodicMemory.retrieve()` -> LanceDB.
+
 ### 5.2 The "Reflective" Loop
 Learning is more than just data storage; it requires active contemplation.
 

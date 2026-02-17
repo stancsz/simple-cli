@@ -6,5 +6,14 @@
       "description": "OpenClaw Personal AI Assistant. Use this for complex tasks requiring conversation, browsing, or multi-step reasoning.",
       "supports_stdin": false
     }
+  },
+  "mcpServers": {
+    "brain": {
+      "command": "npx",
+      "args": [
+        "tsx",
+        "src/mcp_servers/brain.ts"
+      ]
+    }
   }
 }

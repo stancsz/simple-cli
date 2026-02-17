@@ -114,4 +114,26 @@ export class EpisodicMemory {
 
     return results as unknown as PastEpisode[];
   }
+
+  async retrieve(taskId: string, company?: string): Promise<PastEpisode | null> {
+    if (!this.db) await this.init();
+
+    const table = await this.getTable(company);
+    if (!table) return null;
+
+    try {
+      const results = await table.query()
+        .where(`taskId = '${taskId}'`)
+        .orderBy("timestamp", "DESC")
+        .limit(1)
+        .toArray();
+
+      if (results.length > 0) {
+        return results[0] as unknown as PastEpisode;
+      }
+    } catch (e) {
+      console.warn(`Failed to retrieve task ${taskId}:`, e);
+    }
+    return null;
+  }
 }
