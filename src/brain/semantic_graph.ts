@@ -21,71 +21,98 @@ export interface GraphData {
 }
 
 export class SemanticGraph {
-  private filePath: string;
-  private data: GraphData = { nodes: [], edges: [] };
+  private baseDir: string;
+  private cache: Map<string, GraphData> = new Map();
 
   constructor(baseDir: string = process.cwd()) {
-    this.filePath = join(baseDir, ".agent", "brain", "graph.json");
-    this.init();
+    this.baseDir = baseDir;
   }
 
-  private async init() {
-    if (existsSync(this.filePath)) {
+  private getFilePath(company?: string): string {
+    if (company && !/^[a-zA-Z0-9_-]+$/.test(company)) {
+      console.warn(`Invalid company name for graph: ${company}, falling back to default.`);
+      return join(this.baseDir, ".agent", "brain", "graph.json");
+    }
+    const filename = company ? `graph_${company}.json` : "graph.json";
+    return join(this.baseDir, ".agent", "brain", filename);
+  }
+
+  private async load(company?: string): Promise<GraphData> {
+    const key = company || "default";
+    if (this.cache.has(key)) {
+        return this.cache.get(key)!;
+    }
+
+    const filePath = this.getFilePath(company);
+    let data: GraphData = { nodes: [], edges: [] };
+
+    if (existsSync(filePath)) {
       try {
-        const content = await readFile(this.filePath, "utf-8");
-        this.data = JSON.parse(content);
+        const content = await readFile(filePath, "utf-8");
+        data = JSON.parse(content);
       } catch (e) {
-        console.error("Failed to load semantic graph:", e);
+        console.error(`Failed to load semantic graph for ${key}:`, e);
       }
     } else {
-      await this.save();
+       // Create directory if it doesn't exist
+       await mkdir(dirname(filePath), { recursive: true });
+       await writeFile(filePath, JSON.stringify(data, null, 2));
     }
+
+    this.cache.set(key, data);
+    return data;
   }
 
-  private async save() {
+  private async save(data: GraphData, company?: string) {
+    const filePath = this.getFilePath(company);
     try {
-      await mkdir(dirname(this.filePath), { recursive: true });
-      await writeFile(this.filePath, JSON.stringify(this.data, null, 2));
+      await mkdir(dirname(filePath), { recursive: true });
+      await writeFile(filePath, JSON.stringify(data, null, 2));
+      // Update cache
+      this.cache.set(company || "default", data);
     } catch (e) {
       console.error("Failed to save semantic graph:", e);
     }
   }
 
-  async addNode(id: string, type: string, properties: Record<string, any> = {}): Promise<void> {
-    const existing = this.data.nodes.find((n) => n.id === id);
+  async addNode(id: string, type: string, properties: Record<string, any> = {}, company?: string): Promise<void> {
+    const data = await this.load(company);
+    const existing = data.nodes.find((n) => n.id === id);
     if (existing) {
       existing.properties = { ...existing.properties, ...properties };
       existing.type = type; // Update type if provided
     } else {
-      this.data.nodes.push({ id, type, properties });
+      data.nodes.push({ id, type, properties });
     }
-    await this.save();
+    await this.save(data, company);
   }
 
-  async addEdge(from: string, to: string, relation: string, properties: Record<string, any> = {}): Promise<void> {
+  async addEdge(from: string, to: string, relation: string, properties: Record<string, any> = {}, company?: string): Promise<void> {
+    const data = await this.load(company);
     // Check if edge exists
-    const existingIndex = this.data.edges.findIndex(
+    const existingIndex = data.edges.findIndex(
       (e) => e.from === from && e.to === to && e.relation === relation
     );
 
     if (existingIndex >= 0) {
-        this.data.edges[existingIndex].properties = { ...this.data.edges[existingIndex].properties, ...properties };
+        data.edges[existingIndex].properties = { ...data.edges[existingIndex].properties, ...properties };
     } else {
-      this.data.edges.push({ from, to, relation, properties });
+      data.edges.push({ from, to, relation, properties });
     }
-    await this.save();
+    await this.save(data, company);
   }
 
-  async query(query: string): Promise<any> {
+  async query(query: string, company?: string): Promise<any> {
+      const data = await this.load(company);
       // Simple keyword search for now
       const q = query.toLowerCase();
-      const nodes = this.data.nodes.filter(n =>
+      const nodes = data.nodes.filter(n =>
           n.id.toLowerCase().includes(q) ||
           n.type.toLowerCase().includes(q) ||
           JSON.stringify(n.properties).toLowerCase().includes(q)
       );
 
-      const edges = this.data.edges.filter(e =>
+      const edges = data.edges.filter(e =>
         e.from.toLowerCase().includes(q) ||
         e.to.toLowerCase().includes(q) ||
         e.relation.toLowerCase().includes(q) ||
@@ -95,7 +122,7 @@ export class SemanticGraph {
       return { nodes, edges };
   }
 
-  getGraphData(): GraphData {
-    return this.data;
+  async getGraphData(company?: string): Promise<GraphData> {
+    return this.load(company);
   }
 }

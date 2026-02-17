@@ -37,8 +37,9 @@ export class BrainServer {
         request: z.string().describe("The user's original request."),
         solution: z.string().describe("The agent's final solution or response."),
         artifacts: z.string().optional().describe("JSON string array of modified file paths."),
+        company: z.string().optional().describe("The company/client identifier for namespacing."),
       },
-      async ({ taskId, request, solution, artifacts }) => {
+      async ({ taskId, request, solution, artifacts, company }) => {
         let artifactList: string[] = [];
         if (artifacts) {
           try {
@@ -48,7 +49,7 @@ export class BrainServer {
             artifactList = [];
           }
         }
-        await this.episodic.store(taskId, request, solution, artifactList);
+        await this.episodic.store(taskId, request, solution, artifactList, company);
         return {
           content: [{ type: "text", text: "Memory stored successfully." }],
         };
@@ -61,9 +62,10 @@ export class BrainServer {
       {
         query: z.string().describe("The search query."),
         limit: z.number().optional().default(3).describe("Max number of results."),
+        company: z.string().optional().describe("The company/client identifier for namespacing."),
       },
-      async ({ query, limit = 3 }) => {
-        const results = await this.episodic.recall(query, limit);
+      async ({ query, limit = 3, company }) => {
+        const results = await this.episodic.recall(query, limit, company);
         if (results.length === 0) {
           return { content: [{ type: "text", text: "No relevant memories found." }] };
         }
@@ -115,9 +117,10 @@ export class BrainServer {
       "Query the semantic graph (nodes and edges) for relationships.",
       {
         query: z.string().describe("Search term to find relevant nodes and edges."),
+        company: z.string().optional().describe("The company/client identifier for namespacing."),
       },
-      async ({ query }) => {
-        const result = await this.semantic.query(query);
+      async ({ query, company }) => {
+        const result = await this.semantic.query(query, company);
         return {
           content: [
             {
@@ -137,8 +140,9 @@ export class BrainServer {
           .enum(["add_node", "add_edge"])
           .describe("The operation to perform."),
         args: z.string().describe("JSON string containing arguments for the operation."),
+        company: z.string().optional().describe("The company/client identifier for namespacing."),
       },
-      async ({ operation, args }) => {
+      async ({ operation, args, company }) => {
         let parsedArgs;
         try {
           parsedArgs = JSON.parse(args);
@@ -162,7 +166,7 @@ export class BrainServer {
               isError: true,
             };
           }
-          await this.semantic.addNode(id, type, properties || {});
+          await this.semantic.addNode(id, type, properties || {}, company);
           return {
             content: [{ type: "text", text: `Node '${id}' added/updated.` }],
           };
@@ -179,7 +183,7 @@ export class BrainServer {
               isError: true,
             };
           }
-          await this.semantic.addEdge(from, to, relation, properties || {});
+          await this.semantic.addEdge(from, to, relation, properties || {}, company);
           return {
             content: [
               {

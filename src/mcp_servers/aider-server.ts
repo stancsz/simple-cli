@@ -41,11 +41,11 @@ export class AiderServer {
       "aider_edit",
       "Instruct Aider to edit specific files based on a request.",
       {
-        message: z.string().describe("The instruction describing the changes to make."),
-        files: z.array(z.string()).describe("List of file paths to edit."),
+        task: z.string().describe("The instruction describing the changes to make."),
+        context_files: z.array(z.string()).describe("List of file paths to edit."),
       },
-      async ({ message, files }) => {
-        const result = await this.runAider(message, files);
+      async ({ task, context_files }) => {
+        const result = await this.runAider(task, context_files);
         return {
           content: result.content.map((c) => ({ type: "text" as const, text: c.text })),
           isError: result.isError,

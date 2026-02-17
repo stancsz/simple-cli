@@ -186,6 +186,14 @@ export class Engine {
         await this.mcp.startServer("context_server");
         this.log("success", "Context server started.");
       }
+      if (servers.find((s) => s.name === "aider" && s.status === "stopped")) {
+        await this.mcp.startServer("aider");
+        this.log("success", "Aider server started.");
+      }
+      if (servers.find((s) => s.name === "claude" && s.status === "stopped")) {
+        await this.mcp.startServer("claude");
+        this.log("success", "Claude server started.");
+      }
     } catch (e) {
       console.error("Failed to start core servers:", e);
     }
@@ -202,7 +210,37 @@ export class Engine {
     }
 
     // Initialize CompanyContext if JULES_COMPANY is set
-    // (Removed: CompanyContext is now handled by 'company' MCP server)
+    let sharedContext = "";
+    if (process.env.JULES_COMPANY) {
+      try {
+        const { CompanyLoader } = await import("../context/company_loader.js");
+        const loader = new CompanyLoader();
+        await loader.load(process.env.JULES_COMPANY);
+        this.log("success", `Loaded company context for ${process.env.JULES_COMPANY}`);
+      } catch (e: any) {
+        console.error("Failed to load company context:", e.message);
+      }
+    }
+
+    // Fetch shared context for injection
+    try {
+        const contextClient = this.mcp.getClient("context_server");
+        if (contextClient) {
+             const res: any = await contextClient.callTool({ name: "read_context", arguments: {} });
+             if (res && res.content && res.content[0]) {
+                 const data = JSON.parse(res.content[0].text);
+                 if (data.company_context) {
+                     sharedContext = data.company_context;
+                     // Inject into system prompt once
+                     if (!ctx.skill.systemPrompt.includes("## Company Context")) {
+                        ctx.skill.systemPrompt = `${ctx.skill.systemPrompt}\n\n${sharedContext}`;
+                     }
+                 }
+             }
+        }
+    } catch (e) {
+        // Ignore if context server is not available or empty
+    }
 
     while (true) {
       if (!input) {
@@ -221,10 +259,20 @@ export class Engine {
         this.log("info", pc.dim(`[Brain] Recalled past experience.`));
       }
 
+      // Inject Company Profile Context
+      if (companyProfile) {
+         let profileContext = `[Company Context: ${companyProfile.name}]\n`;
+         if (companyProfile.brandVoice) profileContext += `Brand Voice: ${companyProfile.brandVoice}\n`;
+         if (companyProfile.internalDocs?.length) profileContext += `Docs: ${companyProfile.internalDocs.join(", ")}\n`;
+         if (companyProfile.sops?.length) profileContext += `Recommended SOPs: ${companyProfile.sops.join(", ")}\n`;
+
+         input = `${profileContext}\n${input}`;
+      }
+
       ctx.history.push({ role: "user", content: input });
 
       // Inject RAG context from Company MCP Server
-      if (process.env.JULES_COMPANY) {
+      if (companyName) {
         try {
           const client = this.mcp.getClient("company");
           if (client) {
@@ -336,6 +384,16 @@ export class Engine {
 
             const tName = item.tool;
             const tArgs = item.args;
+
+            // Inject company context into sub-agents (Delegate CLI replacement logic)
+            if ((tName === "aider_chat" || tName === "aider_edit" || tName === "ask_claude") && sharedContext) {
+                 if (tArgs.message) {
+                     tArgs.message = `${sharedContext}\n\nTask:\n${tArgs.message}`;
+                 } else if (tArgs.task) {
+                     tArgs.task = `${sharedContext}\n\nTask:\n${tArgs.task}`;
+                 }
+            }
+
             const t = this.registry.tools.get(tName);
 
             if (t) {
@@ -448,7 +506,8 @@ export class Engine {
                             taskId: "task-" + Date.now(),
                             request: userRequest,
                             solution: message || response.thought || "Task completed.",
-                            artifacts: JSON.stringify(currentArtifacts)
+                            artifacts: JSON.stringify(currentArtifacts),
+                            company: companyName
                         }
                     });
                 }

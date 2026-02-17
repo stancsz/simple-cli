@@ -1,6 +1,6 @@
 {
   "name": "@stan-chen/simple-cli",
-  "version": "0.2.9",
+  "version": "0.2.11",
   "description": "A lean, lightweight coding agent. Packs a punch with token efficiency.",
   "type": "module",
   "main": "dist/cli.js",

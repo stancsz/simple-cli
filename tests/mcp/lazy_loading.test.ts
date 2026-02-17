@@ -37,9 +37,9 @@ describe("MCP Lazy Loading", () => {
     it("should list discovered servers", async () => {
         await mcp.init();
         const servers = mcp.listServers();
-        // We expect some servers to be found in src/mcp_servers/ (e.g. aider)
+        // We expect some servers to be found in src/mcp_servers/ (e.g. aider-server)
         expect(servers.length).toBeGreaterThan(0);
-        const server = servers.find(s => s.name === "aider");
+        const server = servers.find(s => s.name === "aider-server");
         expect(server).toBeDefined();
         expect(server?.status).toBe("stopped");
     });
@@ -55,14 +55,14 @@ describe("MCP Lazy Loading", () => {
 
     it("should start a server and expose its tools", async () => {
         await mcp.init();
-        const res = await mcp.startServer("aider");
+        const res = await mcp.startServer("aider-server");
         expect(res).toContain("Successfully started");
 
         expect(Client).toHaveBeenCalledTimes(1);
         expect(StdioClientTransport).toHaveBeenCalledTimes(1);
 
         const servers = mcp.listServers();
-        const server = servers.find(s => s.name === "aider");
+        const server = servers.find(s => s.name === "aider-server");
         expect(server?.status).toBe("running");
 
         const tools = await mcp.getTools();
