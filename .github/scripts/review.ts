@@ -71,14 +71,9 @@ async function main() {
     for (const pr of prs) {
         console.log(`\n---------------------------------------------------`);
         console.log(`PR #${pr.number}: ${pr.title}`);
-        console.log(`Mergeable Status: ${pr.mergeable}`);
+        console.log(`Author: ${pr.author?.login || 'unknown'}`);
 
-        if (pr.mergeable === 'CONFLICTING') {
-            console.log(`❌ PR #${pr.number} is conflicting. Closing...`);
-            run(`gh pr close ${pr.number} --comment "Closing PR because it has merge conflicts."`);
-            continue;
-        }
-
+        // Try to merge first as requested by the user
         console.log(`Checking out PR #${pr.number}...`);
         try {
             run(`gh pr checkout ${pr.number}`);
@@ -87,25 +82,26 @@ async function main() {
             continue;
         }
 
-        // Try local merge of main to be absolutely sure
-        let isMergeable = true;
+        // Try local merge of main to be absolutely sure it's mergeable
+        let mergeSuccess = true;
         try {
-            console.log("Verifying mergeability with origin/main...");
+            console.log("Attempting to merge origin/main into PR branch...");
             run('git fetch origin main');
             execSync('git merge origin/main', { cwd: CWD, stdio: 'pipe' });
-            console.log("✅ PR is mergeable.");
+            console.log("✅ Local merge successful.");
         } catch (e) {
-            console.log("❌ PR has conflicts or merge failed.");
-            isMergeable = false;
+            console.log("❌ Local merge failed (conflicts).");
+            mergeSuccess = false;
         }
 
-        if (!isMergeable) {
-            console.log(`Closing PR #${pr.number} (not mergeable)...`);
-            run(`gh pr close ${pr.number} --comment "Closing PR because it is not mergeable with main branch."`);
+        if (!mergeSuccess) {
+            console.log(`Closing PR #${pr.number} because it's not mergeable...`);
+            run(`gh pr close ${pr.number} --comment "Closing PR because it has merge conflicts with the main branch. Please resolve conflicts and try again."`);
 
-            // Clean up and reset
+            // Clean up
             run('git merge --abort', { ignoreErrors: true });
             run('git checkout main');
+            run('git clean -fd');
             continue;
         }
 
@@ -121,20 +117,25 @@ async function main() {
             console.log("❌ Dependency installation failed.");
         }
 
-        if (testsPassed) {
-            console.log(`✅ Tests Passed for PR #${pr.number}.`);
-        } else {
-            console.log(`❌ Tests Failed (or build failed) for PR #${pr.number}.`);
+        if (!testsPassed) {
+            console.log(`❌ Tests Failed for PR #${pr.number}. Closing...`);
+            run(`gh pr close ${pr.number} --comment "Closing PR because tests or build failed. Please fix the issues and try again."`);
+
+            run('git checkout main');
+            run('git clean -fd');
+            continue;
         }
 
+        console.log(`✅ Tests Passed for PR #${pr.number}.`);
         console.log(`Merging PR #${pr.number}...`);
+
         const merged = runSafe('gh', ['pr', 'merge', pr.number.toString(), '--merge', '--delete-branch']);
         if (merged) {
             console.log(`[Result] PR #${pr.number} Merged.`);
         } else {
             console.log(`[Result] PR #${pr.number} Merge Failed.`);
             console.log(`Closing PR #${pr.number}...`);
-            run(`gh pr close ${pr.number} --comment "Closing PR because merge failed."`);
+            run(`gh pr close ${pr.number} --comment "Closing PR because the final merge attempt failed. It might be due to branch protection rules or a race condition."`);
         }
 
         // Reset to main for next iteration
