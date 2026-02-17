@@ -79,6 +79,39 @@ export class BrainServer {
       }
     );
 
+    this.server.tool(
+      "brain_store_context",
+      "Store the current context snapshot.",
+      {
+        context: z.string().describe("The context JSON string."),
+        company: z.string().optional().describe("The company/client identifier for namespacing."),
+      },
+      async ({ context, company }) => {
+        // We use a fixed taskId "current-context" to identify context snapshots
+        await this.episodic.store("current-context", "Context Snapshot", context, [], company);
+        return {
+          content: [{ type: "text", text: "Context stored successfully." }],
+        };
+      }
+    );
+
+    this.server.tool(
+      "brain_retrieve_context",
+      "Retrieve the latest context snapshot.",
+      {
+        company: z.string().optional().describe("The company/client identifier for namespacing."),
+      },
+      async ({ company }) => {
+        const result = await this.episodic.retrieve("current-context", company);
+        if (!result) {
+           return { content: [{ type: "text", text: "{}" }] }; // Return empty JSON if no context found
+        }
+        return {
+          content: [{ type: "text", text: result.agentResponse }], // The context is stored in the 'solution' field
+        };
+      }
+    );
+
     // Semantic Graph Tools
     this.server.tool(
       "brain_query_graph",

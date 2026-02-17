@@ -47,6 +47,7 @@ To transition from a "Wrapper" to a true "Universal AI Integration Platform," th
     - Recent architectural decisions.
     - Global constraints.
 - **Mechanism:** `delegate_cli` automatically injects this context (goals, constraints, changes) into the prompt or file context of every sub-agent.
+- **Note:** UCP fully integrated: ContextManager now uses Brain MCP for persistence, and delegate_cli auto-injects context into all sub-agents.
 
 ### Phase 3: The Universal Tool Interface (MCP) (✅ Implemented)
 **Goal:** Standardize how agents call tools via the Model Context Protocol.

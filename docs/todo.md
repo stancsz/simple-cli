@@ -53,7 +53,7 @@
     - [x] Implement Concurrency Control: Added file locking to `ContextManager` to prevent race conditions.
     - [x] Implement a **Context MCP Server** (singleton) to handle `context.json` updates securely (fix race conditions).
     - [x] Update `engine.ts` to push/pull context via this server.
-    - [ ] Verify `ContextManager` uses `Brain` MCP for long-term storage.
+    - [x] Verify `ContextManager` uses `Brain` MCP for long-term storage.
 
 ### 3. Cleanup & Polishing
 - [x] **Security**: Re-enabled path validation in `src/builtins.ts` (sandboxing to CWD).
@@ -85,7 +85,7 @@
     - [x] Create `src/brain/semantic.ts`: JSON-based graph store.
     - [x] Implement entity extraction prompt in `src/llm/prompts.ts`.
 - [ ] **Integration**:
-    - [ ] Update `ContextManager` to query "The Brain" on initialization.
+    - [x] Update `ContextManager` to query "The Brain" on initialization.
     - [x] Create `src/mcp_servers/brain`: Expose memory via MCP for sub-agents.
 
 ### 7. Phase 7: The Hive Mind (Planned)
