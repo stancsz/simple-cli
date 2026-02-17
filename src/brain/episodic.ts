@@ -18,9 +18,8 @@ export interface PastEpisode {
 export class EpisodicMemory {
   private dbPath: string;
   private db: lancedb.Connection | null = null;
-  private table: lancedb.Table | null = null;
   private llm: ReturnType<typeof createLLM>;
-  private tableName = "episodic_memories";
+  private defaultTableName = "episodic_memories";
 
   constructor(baseDir: string = process.cwd(), llm?: ReturnType<typeof createLLM>) {
     // Store vector data in .agent/brain/episodic/
@@ -38,19 +37,32 @@ export class EpisodicMemory {
 
     // Connect to DB
     this.db = await lancedb.connect(this.dbPath);
-
-    // Check if table exists
-    try {
-        const tableNames = await this.db.tableNames();
-        if (tableNames.includes(this.tableName)) {
-            this.table = await this.db.openTable(this.tableName);
-        }
-    } catch (e) {
-      console.warn("Failed to open table, will create on first write:", e);
-    }
   }
 
-  async store(taskId: string, request: string, solution: string, artifacts: string[] = []): Promise<void> {
+  private async getTable(company?: string): Promise<lancedb.Table | null> {
+    if (!this.db) await this.init();
+
+    let tableName = this.defaultTableName;
+    if (company) {
+        if (/^[a-zA-Z0-9_-]+$/.test(company)) {
+            tableName = `episodic_memories_${company}`;
+        } else {
+            console.warn(`Invalid company name: ${company}, falling back to default table.`);
+        }
+    }
+
+    try {
+      const tableNames = await this.db!.tableNames();
+      if (tableNames.includes(tableName)) {
+        return await this.db!.openTable(tableName);
+      }
+    } catch (e) {
+      console.warn(`Failed to open table ${tableName}:`, e);
+    }
+    return null;
+  }
+
+  async store(taskId: string, request: string, solution: string, artifacts: string[] = [], company?: string): Promise<void> {
     if (!this.db) await this.init();
 
     // Embed the interaction (request + solution)
@@ -71,35 +83,32 @@ export class EpisodicMemory {
       vector: embedding,
     };
 
-    if (!this.table) {
-      this.table = await this.db!.createTable(this.tableName, [data]);
+    let tableName = this.defaultTableName;
+    if (company) {
+        if (/^[a-zA-Z0-9_-]+$/.test(company)) {
+            tableName = `episodic_memories_${company}`;
+        }
+    }
+
+    let table = await this.getTable(company);
+
+    if (!table) {
+      table = await this.db!.createTable(tableName, [data]);
     } else {
-      await this.table.add([data]);
+      await table.add([data]);
     }
   }
 
-  async recall(query: string, limit: number = 3): Promise<PastEpisode[]> {
+  async recall(query: string, limit: number = 3, company?: string): Promise<PastEpisode[]> {
     if (!this.db) await this.init();
 
-    if (!this.table) {
-        // Try to open again if it was created by another process?
-        // Or if it simply doesn't exist, return empty.
-        try {
-             const tableNames = await this.db!.tableNames();
-             if (tableNames.includes(this.tableName)) {
-                 this.table = await this.db!.openTable(this.tableName);
-             } else {
-                 return [];
-             }
-        } catch {
-            return [];
-        }
-    }
+    const table = await this.getTable(company);
+    if (!table) return [];
 
     const embedding = await this.llm.embed(query);
     if (!embedding) return [];
 
-    const results = await this.table!.search(embedding)
+    const results = await table.search(embedding)
       .limit(limit)
       .toArray();
 
