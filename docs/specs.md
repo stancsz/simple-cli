@@ -178,9 +178,10 @@ To enable "long-term cognition," we reject simple text files in favor of a robus
 
 ### 5.2 The "Recall" Protocol
 Before acting, the Agent MUST query The Brain:
-1.  **Search**: `query_memory(task_description)`
-2.  **Synthesis**: Retrieve top-k relevant past episodes and related graph entities.
-3.  **Context Injection**: Prepend "Relevant Past Experience" to the system prompt.
+1.  **Mechanism**: The `ContextManager` acts as the interface between the Orchestrator and the Brain.
+2.  **Search**: When loading context (`loadContext`), the system calls the `brain_query` MCP tool with the current task description.
+3.  **Synthesis**: The Brain returns relevant past episodes (vector similarity search).
+4.  **Context Injection**: These memories are appended to the `ContextData` under `relevant_past_experiences` and injected into the agent's prompt.
     > "You have solved a similar problem before. In task #102, you used `fs.writeFileSync`. User prefers `fs.promises`."
 
 ### 5.3 Learning (The Append Cycle)
