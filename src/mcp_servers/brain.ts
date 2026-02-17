@@ -4,6 +4,7 @@ import { z } from "zod";
 import { fileURLToPath } from "url";
 import { EpisodicMemory } from "../brain/episodic.js";
 import { SemanticGraph } from "../brain/semantic_graph.js";
+import { BrainUsageTracker } from "../brain/usage-tracker.js";
 import { join } from "path";
 import { readFile, readdir } from "fs/promises";
 import { existsSync } from "fs";
@@ -13,6 +14,7 @@ export class BrainServer {
   private episodic: EpisodicMemory;
   private semantic: SemanticGraph;
   private sopsDir: string;
+  private usageTracker: BrainUsageTracker;
 
   constructor() {
     this.server = new McpServer({
@@ -23,11 +25,25 @@ export class BrainServer {
     this.episodic = new EpisodicMemory();
     this.semantic = new SemanticGraph();
     this.sopsDir = join(process.cwd(), ".agent", "sops");
+    this.usageTracker = BrainUsageTracker.getInstance();
 
     this.setupTools();
   }
 
   private setupTools() {
+    // Usage Stats
+    this.server.tool(
+      "brain_get_stats",
+      "Retrieve usage statistics for the Brain (hits, misses, writes per agent).",
+      {},
+      async () => {
+        const stats = this.usageTracker.getStats();
+        return {
+          content: [{ type: "text", text: JSON.stringify(stats, null, 2) }],
+        };
+      },
+    );
+
     // Episodic Memory Tools
     this.server.tool(
       "brain_store",
@@ -35,10 +51,19 @@ export class BrainServer {
       {
         taskId: z.string().describe("The unique ID of the task."),
         request: z.string().describe("The user's original request."),
-        solution: z.string().describe("The agent's final solution or response."),
-        artifacts: z.string().optional().describe("JSON string array of modified file paths."),
+        solution: z
+          .string()
+          .describe("The agent's final solution or response."),
+        artifacts: z
+          .string()
+          .optional()
+          .describe("JSON string array of modified file paths."),
+        agentId: z
+          .string()
+          .optional()
+          .describe("The agent or tool performing the action."),
       },
-      async ({ taskId, request, solution, artifacts }) => {
+      async ({ taskId, request, solution, artifacts, agentId }) => {
         let artifactList: string[] = [];
         if (artifacts) {
           try {
@@ -48,11 +73,16 @@ export class BrainServer {
             artifactList = [];
           }
         }
-        await this.episodic.store(taskId, request, solution, artifactList);
+        try {
+          await this.episodic.store(taskId, request, solution, artifactList);
+        } catch (e) {
+          console.error("[Brain] Store failed:", e);
+        }
+        this.usageTracker.trackWrite(agentId || "unknown");
         return {
           content: [{ type: "text", text: "Memory stored successfully." }],
         };
-      }
+      },
     );
 
     this.server.tool(
@@ -60,21 +90,32 @@ export class BrainServer {
       "Search episodic memory for relevant past experiences.",
       {
         query: z.string().describe("The search query."),
-        limit: z.number().optional().default(3).describe("Max number of results."),
+        limit: z
+          .number()
+          .optional()
+          .default(3)
+          .describe("Max number of results."),
+        agentId: z
+          .string()
+          .optional()
+          .describe("The agent or tool requesting memory."),
       },
-      async ({ query, limit = 3 }) => {
+      async ({ query, limit = 3, agentId }) => {
         const results = await this.episodic.recall(query, limit);
+        this.usageTracker.trackQuery(agentId || "unknown", results.length > 0);
         if (results.length === 0) {
-          return { content: [{ type: "text", text: "No relevant memories found." }] };
+          return {
+            content: [{ type: "text", text: "No relevant memories found." }],
+          };
         }
         const text = results
           .map(
             (r) =>
-              `[Task: ${r.taskId}]\nTimestamp: ${new Date(r.timestamp).toISOString()}\nRequest: ${r.userPrompt}\nSolution: ${r.agentResponse}\nArtifacts: ${r.artifacts.join(", ") || "None"}`
+              `[Task: ${r.taskId}]\nTimestamp: ${new Date(r.timestamp).toISOString()}\nRequest: ${r.userPrompt}\nSolution: ${r.agentResponse}\nArtifacts: ${r.artifacts.join(", ") || "None"}`,
           )
           .join("\n\n---\n\n");
         return { content: [{ type: "text", text }] };
-      }
+      },
     );
 
     // Semantic Graph Tools
@@ -82,10 +123,19 @@ export class BrainServer {
       "brain_query_graph",
       "Query the semantic graph (nodes and edges) for relationships.",
       {
-        query: z.string().describe("Search term to find relevant nodes and edges."),
+        query: z
+          .string()
+          .describe("Search term to find relevant nodes and edges."),
+        agentId: z
+          .string()
+          .optional()
+          .describe("The agent or tool requesting graph data."),
       },
-      async ({ query }) => {
+      async ({ query, agentId }) => {
         const result = await this.semantic.query(query);
+        // Assuming result is always object, simplistic hit tracking
+        const hasResults = Object.keys(result.nodes || {}).length > 0;
+        this.usageTracker.trackQuery(agentId || "unknown", hasResults);
         return {
           content: [
             {
@@ -94,7 +144,7 @@ export class BrainServer {
             },
           ],
         };
-      }
+      },
     );
 
     this.server.tool(
@@ -104,9 +154,15 @@ export class BrainServer {
         operation: z
           .enum(["add_node", "add_edge"])
           .describe("The operation to perform."),
-        args: z.string().describe("JSON string containing arguments for the operation."),
+        args: z
+          .string()
+          .describe("JSON string containing arguments for the operation."),
+        agentId: z
+          .string()
+          .optional()
+          .describe("The agent or tool updating the graph."),
       },
-      async ({ operation, args }) => {
+      async ({ operation, args, agentId }) => {
         let parsedArgs;
         try {
           parsedArgs = JSON.parse(args);
@@ -131,6 +187,7 @@ export class BrainServer {
             };
           }
           await this.semantic.addNode(id, type, properties || {});
+          this.usageTracker.trackWrite(agentId || "unknown");
           return {
             content: [{ type: "text", text: `Node '${id}' added/updated.` }],
           };
@@ -148,6 +205,7 @@ export class BrainServer {
             };
           }
           await this.semantic.addEdge(from, to, relation, properties || {});
+          this.usageTracker.trackWrite(agentId || "unknown");
           return {
             content: [
               {
@@ -158,7 +216,7 @@ export class BrainServer {
           };
         }
         return { content: [{ type: "text", text: "Unknown operation." }] };
-      }
+      },
     );
 
     // Procedural Memory (SOPs)
@@ -178,23 +236,25 @@ export class BrainServer {
             content: [{ type: "text", text: content }],
           };
         } else {
-            // List available SOPs
-            let available: string[] = [];
-            if (existsSync(this.sopsDir)) {
-                const files = await readdir(this.sopsDir);
-                available = files.filter(f => f.endsWith(".md")).map(f => f.replace(".md", ""));
-            }
-            return {
-                content: [
-                    {
-                        type: "text",
-                        text: `SOP '${name}' not found. Available SOPs: ${available.join(", ") || "None"}.`
-                    }
-                ],
-                isError: true
-            };
+          // List available SOPs
+          let available: string[] = [];
+          if (existsSync(this.sopsDir)) {
+            const files = await readdir(this.sopsDir);
+            available = files
+              .filter((f) => f.endsWith(".md"))
+              .map((f) => f.replace(".md", ""));
+          }
+          return {
+            content: [
+              {
+                type: "text",
+                text: `SOP '${name}' not found. Available SOPs: ${available.join(", ") || "None"}.`,
+              },
+            ],
+            isError: true,
+          };
         }
-      }
+      },
     );
   }
 

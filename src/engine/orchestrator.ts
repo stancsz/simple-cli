@@ -23,7 +23,10 @@ export interface Tool {
 
 // Helper to list files using MCP tools
 async function getRepoMap(cwd: string, registry: Registry): Promise<string> {
-  const listTool = registry.tools.get("list_directory") || registry.tools.get("ls") || registry.tools.get("list_files");
+  const listTool =
+    registry.tools.get("list_directory") ||
+    registry.tools.get("ls") ||
+    registry.tools.get("list_files");
   if (!listTool) {
     return "(Repository listing unavailable - no filesystem tool found)";
   }
@@ -95,7 +98,9 @@ export class Registry {
             const mod = await import(pathToFileURL(join(toolsDir, f)).href);
             const t = mod.tool || mod.default;
             if (Array.isArray(t)) {
-              t.forEach(tool => { if (tool?.name) this.tools.set(tool.name, tool); });
+              t.forEach((tool) => {
+                if (tool?.name) this.tools.set(tool.name, tool);
+              });
             } else if (t?.name) {
               this.tools.set(t.name, t);
             }
@@ -121,7 +126,9 @@ export class Registry {
               const mod = await import(pathToFileURL(filePath).href);
               const t = mod.tool || mod.default;
               if (Array.isArray(t)) {
-                t.forEach(tool => { if (tool?.name) this.tools.set(tool.name, tool); });
+                t.forEach((tool) => {
+                  if (tool?.name) this.tools.set(tool.name, tool);
+                });
               } else if (t?.name) {
                 this.tools.set(t.name, t);
               }
@@ -144,7 +151,10 @@ export class Engine {
     protected mcp: MCP,
   ) {}
 
-  protected async getUserInput(initialValue: string, interactive: boolean): Promise<string | undefined> {
+  protected async getUserInput(
+    initialValue: string,
+    interactive: boolean,
+  ): Promise<string | undefined> {
     if (!interactive || !process.stdout.isTTY) return undefined;
     const res = await text({
       message: pc.cyan("Chat"),
@@ -154,11 +164,11 @@ export class Engine {
     return res as string;
   }
 
-  protected log(type: 'info' | 'success' | 'warn' | 'error', message: string) {
-    if (type === 'info') log.info(message);
-    else if (type === 'success') log.success(message);
-    else if (type === 'warn') log.warn(message);
-    else if (type === 'error') log.error(message);
+  protected log(type: "info" | "success" | "warn" | "error", message: string) {
+    if (type === "info") log.info(message);
+    else if (type === "success") log.success(message);
+    else if (type === "warn") log.warn(message);
+    else if (type === "error") log.error(message);
   }
 
   async run(
@@ -177,7 +187,11 @@ export class Engine {
         await this.mcp.startServer("brain");
         this.log("success", "Brain server started.");
       }
-      if (servers.find((s) => s.name === "context_server" && s.status === "stopped")) {
+      if (
+        servers.find(
+          (s) => s.name === "context_server" && s.status === "stopped",
+        )
+      ) {
         await this.mcp.startServer("context_server");
         this.log("success", "Context server started.");
       }
@@ -212,16 +226,16 @@ export class Engine {
       try {
         const brainClient = this.mcp.getClient("brain");
         if (brainClient) {
-            const result: any = await brainClient.callTool({
-                name: "brain_query",
-                arguments: { query: userRequest }
-            });
-            if (result && result.content && result.content[0]) {
-                 pastMemory = result.content[0].text;
-            }
+          const result: any = await brainClient.callTool({
+            name: "brain_query",
+            arguments: { query: userRequest, agentId: "orchestrator" },
+          });
+          if (result && result.content && result.content[0]) {
+            pastMemory = result.content[0].text;
+          }
         }
       } catch (e) {
-         // Ignore context errors
+        // Ignore context errors
       }
 
       if (pastMemory && !pastMemory.includes("No relevant memory found")) {
@@ -236,19 +250,24 @@ export class Engine {
         try {
           const client = this.mcp.getClient("company");
           if (client) {
-             const result: any = await client.callTool({
-                name: "company_get_context",
-                arguments: { query: input }
-             });
+            const result: any = await client.callTool({
+              name: "company_get_context",
+              arguments: { query: input },
+            });
 
-             if (result && result.content && result.content[0] && result.content[0].text) {
-                const contextText = result.content[0].text;
-                if (!contextText.includes("No company context active")) {
-                   const lastMsg = ctx.history[ctx.history.length - 1];
-                   lastMsg.content = `${contextText}\n\n[User Request]\n${lastMsg.content}`;
-                   this.log("info", pc.dim(`[RAG] Injected company context.`));
-                }
-             }
+            if (
+              result &&
+              result.content &&
+              result.content[0] &&
+              result.content[0].text
+            ) {
+              const contextText = result.content[0].text;
+              if (!contextText.includes("No company context active")) {
+                const lastMsg = ctx.history[ctx.history.length - 1];
+                lastMsg.content = `${contextText}\n\n[User Request]\n${lastMsg.content}`;
+                this.log("info", pc.dim(`[RAG] Injected company context.`));
+              }
+            }
           }
         } catch (e: any) {
           console.error("Failed to query company context:", e.message);
@@ -307,7 +326,12 @@ export class Engine {
           typingStarted = true;
         };
 
-        const response = await this.llm.generate(prompt, ctx.history, signal, onTyping);
+        const response = await this.llm.generate(
+          prompt,
+          ctx.history,
+          signal,
+          onTyping,
+        );
 
         if (typingStarted) {
           this.s.stop("Response received");
@@ -339,10 +363,12 @@ export class Engine {
         if (executionList.length > 0) {
           let allExecuted = true;
           const currentArtifacts: string[] = [];
+          let lastToolName = "";
           for (const item of executionList) {
             if (signal.aborted) break;
 
             const tName = item.tool;
+            lastToolName = tName;
             const tArgs = item.args;
             const t = this.registry.tools.get(tName);
 
@@ -357,13 +383,17 @@ export class Engine {
 
                 // Track artifacts
                 if (tArgs && (tArgs.filepath || tArgs.path)) {
-                   currentArtifacts.push(tArgs.filepath || tArgs.path);
+                  currentArtifacts.push(tArgs.filepath || tArgs.path);
                 }
 
                 // Reload tools if create_tool was used (via MCP refresh if available?)
                 // Since legacy tools are gone, create_tool would likely create an MCP server or file.
                 // We should refresh MCP tools.
-                if (tName === "create_tool" || tName === "mcp_start_server" || tName === "mcp_install_server") {
+                if (
+                  tName === "create_tool" ||
+                  tName === "mcp_start_server" ||
+                  tName === "mcp_install_server"
+                ) {
                   // Refresh tools
                   (await this.mcp.getTools()).forEach((t) =>
                     this.registry.tools.set(t.name, t as any),
@@ -402,7 +432,8 @@ export class Engine {
                   qaCheck.message.toLowerCase().includes("fail")
                 ) {
                   this.s.stop(`[Supervisor] QA FAILED`);
-                  this.log("error",
+                  this.log(
+                    "error",
                     `[Supervisor] Reason: ${qaCheck.message || qaCheck.thought}`,
                   );
                   this.log("error", `[Supervisor] Asking for retry...`);
@@ -448,20 +479,21 @@ export class Engine {
           if (allExecuted) {
             // Store successful memory
             try {
-                const brainClient = this.mcp.getClient("brain");
-                if (brainClient) {
-                    await brainClient.callTool({
-                        name: "brain_store",
-                        arguments: {
-                            taskId: "task-" + Date.now(),
-                            request: userRequest,
-                            solution: message || response.thought || "Task completed.",
-                            artifacts: JSON.stringify(currentArtifacts)
-                        }
-                    });
-                }
+              const brainClient = this.mcp.getClient("brain");
+              if (brainClient) {
+                await brainClient.callTool({
+                  name: "brain_store",
+                  arguments: {
+                    taskId: "task-" + Date.now(),
+                    request: userRequest,
+                    solution: message || response.thought || "Task completed.",
+                    artifacts: JSON.stringify(currentArtifacts),
+                    agentId: lastToolName || "orchestrator",
+                  },
+                });
+              }
             } catch (e) {
-                console.warn("Failed to store memory via brain server:", e);
+              console.warn("Failed to store memory via brain server:", e);
             }
             input = "The tool executions were verified. Proceed.";
           }
@@ -487,7 +519,10 @@ export class Engine {
           ) && /(file|code)/.test(rawText);
 
         if (isRefusal || isHallucination || isLazyInstruction) {
-          this.log("warn", "Lazy/Hallucinating Agent detected. Forcing retry...");
+          this.log(
+            "warn",
+            "Lazy/Hallucinating Agent detected. Forcing retry...",
+          );
           if (message) this.log("info", pc.dim(`Agent: ${message}`));
 
           ctx.history.push({

@@ -52,7 +52,7 @@ async function main() {
           process.chdir(cwd);
           continue;
         }
-      } catch { }
+      } catch {}
     }
     remainingArgs.push(arg);
   }
@@ -81,6 +81,55 @@ async function main() {
     return;
   }
 
+  if (remainingArgs[0] === "dashboard") {
+    try {
+      const { renderDashboard } = await import("./tui/dashboard.js");
+      const mcp = new MCP();
+      await mcp.init();
+
+      // Ensure brain is running
+      // Note: In local mode with Stdio, this spawns a new instance with isolated memory.
+      // In Docker/Enterprise mode with SSE/URL, this connects to the shared Brain.
+      if (!mcp.isServerRunning("brain")) {
+        try {
+          await mcp.startServer("brain");
+        } catch (e) {
+          console.warn(
+            "Could not start brain server, attempting to connect if running...",
+          );
+        }
+      }
+
+      const brainClient = mcp.getClient("brain");
+      if (!brainClient) {
+        console.error(
+          "Failed to connect to Brain server. Is it configured in mcp.json?",
+        );
+        return;
+      }
+
+      console.clear();
+      while (true) {
+        try {
+          const result: any = await brainClient.callTool({
+            name: "brain_get_stats",
+            arguments: {},
+          });
+          if (result && result.content && result.content[0]) {
+            const stats = JSON.parse(result.content[0].text);
+            renderDashboard(stats);
+          }
+        } catch (e: any) {
+          // Ignore abort errors or temporary failures
+        }
+        await new Promise((resolve) => setTimeout(resolve, 2000));
+      }
+    } catch (e: any) {
+      console.error("Dashboard failed:", e.message);
+    }
+    return;
+  }
+
   const prompt = remainingArgs.filter((a) => !a.startsWith("-")).join(" ");
 
   const registry = new Registry();
@@ -97,7 +146,14 @@ async function main() {
   await mcp.init();
   // Ensure essential servers are running.
   // 'filesystem' and 'git' should be configured in mcp.json via migration.
-  const coreServers = ["filesystem", "git", "context_server", "company", "aider", "claude"];
+  const coreServers = [
+    "filesystem",
+    "git",
+    "context_server",
+    "company",
+    "aider",
+    "claude",
+  ];
   for (const s of coreServers) {
     try {
       if (mcp.isServerRunning(s)) continue; // Already running

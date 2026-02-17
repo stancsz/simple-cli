@@ -36,15 +36,21 @@ export class LLM {
       const providerName = config.provider.toLowerCase();
       const apiKey = config.apiKey || this.getEnvKey(providerName);
 
-      if (!apiKey) continue;
+      if (!apiKey && providerName !== "mock") continue;
 
       let embeddingModel: any;
 
       try {
         if (providerName === "openai") {
-          embeddingModel = createOpenAI({ apiKey }).embedding("text-embedding-3-small");
+          embeddingModel = createOpenAI({ apiKey }).embedding(
+            "text-embedding-3-small",
+          );
         } else if (providerName === "google" || providerName === "gemini") {
-          embeddingModel = createGoogleGenerativeAI({ apiKey }).textEmbeddingModel("text-embedding-004");
+          embeddingModel = createGoogleGenerativeAI({
+            apiKey,
+          }).textEmbeddingModel("text-embedding-004");
+        } else if (providerName === "mock") {
+          return new Array(1536).fill(0);
         } else {
           continue;
         }
@@ -63,7 +69,9 @@ export class LLM {
     const openaiKey = process.env.OPENAI_API_KEY;
     if (openaiKey) {
       try {
-        const embeddingModel = createOpenAI({ apiKey: openaiKey }).embedding("text-embedding-3-small");
+        const embeddingModel = createOpenAI({ apiKey: openaiKey }).embedding(
+          "text-embedding-3-small",
+        );
         const { embedding } = await embed({
           model: embeddingModel,
           value: text,
@@ -74,7 +82,9 @@ export class LLM {
       }
     }
 
-    throw new Error("Failed to generate embedding: No suitable provider found.");
+    throw new Error(
+      "Failed to generate embedding: No suitable provider found.",
+    );
   }
 
   async generate(
@@ -83,6 +93,18 @@ export class LLM {
     signal?: AbortSignal,
     onTyping?: () => void,
   ): Promise<LLMResponse> {
+    // Instrumentation: Track Brain Context Injection
+    if (
+      history.some(
+        (m) =>
+          m.content &&
+          typeof m.content === "string" &&
+          m.content.includes("[Past Experience]"),
+      )
+    ) {
+      console.log(chalk.blue("[LLM] Brain Context Injected"));
+    }
+
     await this.personaEngine.loadConfig();
     const systemWithPersona = this.personaEngine.injectPersonality(system);
 
@@ -101,14 +123,20 @@ export class LLM {
         const apiKey = config.apiKey || this.getEnvKey(providerName);
 
         if (!apiKey) {
-          console.warn(`[LLM] Skipping ${providerName}:${modelName} - API key not found.`);
+          console.warn(
+            `[LLM] Skipping ${providerName}:${modelName} - API key not found.`,
+          );
           continue;
         }
 
         if (providerName === "openai" || providerName === "codex") {
           model = createOpenAI({ apiKey })(modelName);
         } else if (providerName === "deepseek") {
-          console.log(chalk.gray(`[LLM] Attempting DeepSeek (via Anthropic SDK) with baseURL: https://api.deepseek.com/anthropic`));
+          console.log(
+            chalk.gray(
+              `[LLM] Attempting DeepSeek (via Anthropic SDK) with baseURL: https://api.deepseek.com/anthropic`,
+            ),
+          );
           model = createAnthropic({
             apiKey,
             baseURL: "https://api.deepseek.com/anthropic",
@@ -123,7 +151,7 @@ export class LLM {
         } else if (providerName === "deepseek-claude") {
           model = createAnthropic({
             apiKey,
-            baseURL: "https://api.deepseek.com/anthropic"
+            baseURL: "https://api.deepseek.com/anthropic",
           });
           model = model(modelName);
         } else if (providerName === "moonshot" || providerName === "kimi") {
@@ -146,7 +174,9 @@ export class LLM {
         return await this.personaEngine.transformResponse(parsed, onTyping);
       } catch (e: any) {
         lastError = e;
-        console.error(`[LLM] ${providerName}:${modelName} failed: ${e.message}`);
+        console.error(
+          `[LLM] ${providerName}:${modelName} failed: ${e.message}`,
+        );
         if (this.configs.indexOf(config) === 0) {
           console.warn(
             `[LLM] Primary provider failed, switching to fallbacks...`,
@@ -164,8 +194,7 @@ export class LLM {
     if (providerName === "openai" || providerName === "codex")
       return process.env.OPENAI_API_KEY;
     if (providerName === "deepseek") return process.env.DEEPSEEK_API_KEY;
-    if (providerName === "deepseek-claude")
-      return process.env.DEEPSEEK_API_KEY;
+    if (providerName === "deepseek-claude") return process.env.DEEPSEEK_API_KEY;
     if (providerName === "anthropic" || providerName === "claude")
       return process.env.ANTHROPIC_API_KEY;
     if (providerName === "google" || providerName === "gemini")
@@ -287,10 +316,15 @@ export const createLLM = (model?: string) => {
 
   // Auto-detect provider if missing
   if (p === "openai" && n.includes("deepseek")) {
-    p = n.includes("chat") || n.includes("reasoner") ? "deepseek" : "deepseek-claude";
+    p =
+      n.includes("chat") || n.includes("reasoner")
+        ? "deepseek"
+        : "deepseek-claude";
   }
-  if (p === "openai" && (n.includes("claude") || n.includes("sonnet"))) p = "anthropic";
-  if (p === "openai" && (n.includes("gemini") || n.includes("flash"))) p = "google";
+  if (p === "openai" && (n.includes("claude") || n.includes("sonnet")))
+    p = "anthropic";
+  if (p === "openai" && (n.includes("gemini") || n.includes("flash")))
+    p = "google";
 
   // Define Failover Chain
   const configs: LLMConfig[] = [{ provider: p, model: n }];
