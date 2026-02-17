@@ -1,3 +1,7 @@
+<div align="center">
+  <img src="docs/assets/logo.jpeg" alt="Simple CLI Logo" width="200"/>
+</div>
+
 # 🚀 Simple-CLI: The Universal AI Framework Integrator
 **The only orchestrator that learns any AI framework and turns it into a subordinate agent.**
 
