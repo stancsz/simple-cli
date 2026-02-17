@@ -32,7 +32,7 @@ export class EpisodicMemory {
         console.warn(`Invalid company name: ${this.company}, falling back to global.`);
         this.dbPath = join(baseDir, ".agent", "brain", "episodic");
       } else {
-        this.dbPath = join(baseDir, ".agent", "brain", "clients", this.company, "vector_db");
+        this.dbPath = join(baseDir, ".agent", "brain", "companies", this.company, "vector_db");
       }
     } else {
         this.dbPath = join(baseDir, ".agent", "brain", "episodic");

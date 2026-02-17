@@ -38,7 +38,7 @@ export class SemanticGraph {
         console.warn(`Invalid company name for graph: ${company}, falling back to default.`);
         return join(this.baseDir, ".agent", "brain", "graph.json");
       }
-      return join(this.baseDir, ".agent", "brain", "clients", company, "graph_db", "graph.json");
+      return join(this.baseDir, ".agent", "brain", "companies", company, "graph_db", "graph.json");
     }
     return join(this.baseDir, ".agent", "brain", "graph.json");
   }

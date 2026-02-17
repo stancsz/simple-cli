@@ -31,7 +31,7 @@ describe('Brain Company Isolation', () => {
 
     await brain.store('task-1', 'req', 'sol', ['file.txt'], company);
 
-    const expectedPath = join(TEST_DIR, '.agent', 'brain', 'clients', company, 'vector_db');
+    const expectedPath = join(TEST_DIR, '.agent', 'brain', 'companies', company, 'vector_db');
     expect(existsSync(expectedPath)).toBe(true);
   });
 
@@ -75,7 +75,7 @@ describe('Brain Company Isolation', () => {
 
     await graphA.addNode('NodeA', 'TypeA', {}, companyA);
 
-    const expectedPath = join(TEST_DIR, '.agent', 'brain', 'clients', companyA, 'graph_db', 'graph.json');
+    const expectedPath = join(TEST_DIR, '.agent', 'brain', 'companies', companyA, 'graph_db', 'graph.json');
     expect(existsSync(expectedPath)).toBe(true);
 
     const companyB = 'client-b';
