@@ -13,7 +13,7 @@ export interface AgentConfig {
 
 export interface Config {
   mcpServers?: Record<string, any>;
-  agents?: Record<string, AgentConfig>; // Deprecated
+  agents?: Record<string, AgentConfig>;
   yoloMode?: boolean;
   autoDecisionTimeout?: number;
 }
@@ -35,8 +35,13 @@ export async function loadConfig(cwd: string = process.cwd()): Promise<Config> {
     }
   }
 
-  // Legacy agent configuration is removed.
-  // Agents should be configured via MCP servers in mcp.json.
+  if (config.agents) {
+    for (const [name, agent] of Object.entries(config.agents)) {
+      if (!agent.command || !Array.isArray(agent.args) || !agent.description) {
+        console.warn(`Warning: Agent '${name}' is missing required fields (command, args, description).`);
+      }
+    }
+  }
 
   return config;
 }
