@@ -5,6 +5,7 @@ import { fileURLToPath } from "url";
 import { readFile, writeFile, mkdir } from "fs/promises";
 import { existsSync } from "fs";
 import { join, dirname } from "path";
+// @ts-ignore - No type definitions available
 import { lock } from "proper-lockfile";
 import { ContextSchema, ContextData, ContextManager } from "../core/context.js";
 
@@ -48,21 +49,21 @@ export class ContextServer implements ContextManager {
   private async withLock<T>(action: () => Promise<T>): Promise<T> {
     // Ensure directory exists
     if (!existsSync(dirname(this.contextFile))) {
-        await mkdir(dirname(this.contextFile), { recursive: true });
+      await mkdir(dirname(this.contextFile), { recursive: true });
     }
     // Ensure file exists for locking
     if (!existsSync(this.contextFile)) {
-         await writeFile(this.contextFile, "{}");
+      await writeFile(this.contextFile, "{}");
     }
 
     let release: () => Promise<void>;
     try {
-        release = await lock(this.contextFile, {
-            retries: { retries: 10, minTimeout: 100, maxTimeout: 1000 },
-            stale: 10000
-        });
+      release = await lock(this.contextFile, {
+        retries: { retries: 10, minTimeout: 100, maxTimeout: 1000 },
+        stale: 10000
+      });
     } catch (e: any) {
-        throw new Error(`Failed to acquire lock for ${this.contextFile}: ${e.message}`);
+      throw new Error(`Failed to acquire lock for ${this.contextFile}: ${e.message}`);
     }
 
     try {
@@ -82,8 +83,8 @@ export class ContextServer implements ContextManager {
           if (parsed.success) {
             return parsed.data;
           } else {
-             console.warn("Context schema validation failed, returning default/partial:", parsed.error);
-             return ContextSchema.parse(json);
+            console.warn("Context schema validation failed, returning default/partial:", parsed.error);
+            return ContextSchema.parse(json);
           }
         } catch {
           return ContextSchema.parse({});
@@ -107,7 +108,7 @@ export class ContextServer implements ContextManager {
 
       const parsed = ContextSchema.safeParse(merged);
       if (!parsed.success) {
-          throw new Error(`Invalid context update: ${parsed.error.message}`);
+        throw new Error(`Invalid context update: ${parsed.error.message}`);
       }
 
       const finalContext = parsed.data;
@@ -120,8 +121,8 @@ export class ContextServer implements ContextManager {
 
   async clearContext(lockId?: string): Promise<void> {
     return this.withLock(async () => {
-       const empty = ContextSchema.parse({});
-       await writeFile(this.contextFile, JSON.stringify(empty, null, 2));
+      const empty = ContextSchema.parse({});
+      await writeFile(this.contextFile, JSON.stringify(empty, null, 2));
     });
   }
 }
@@ -163,15 +164,15 @@ server.tool(
     }
 
     try {
-        const newContext = await manager.updateContext(parsedUpdates);
-        return {
-          content: [{ type: "text", text: JSON.stringify(newContext, null, 2) }],
-        };
+      const newContext = await manager.updateContext(parsedUpdates);
+      return {
+        content: [{ type: "text", text: JSON.stringify(newContext, null, 2) }],
+      };
     } catch (e: any) {
-        return {
-            content: [{ type: "text", text: `Error updating context: ${e.message}` }],
-            isError: true
-        };
+      return {
+        content: [{ type: "text", text: `Error updating context: ${e.message}` }],
+        isError: true
+      };
     }
   }
 );

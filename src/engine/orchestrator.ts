@@ -9,6 +9,7 @@ import { relative, join } from "path";
 import { MCP } from "../mcp.js";
 import { Skill } from "../skills.js";
 import { LLM } from "../llm.js";
+import { loadCompanyProfile, CompanyProfile } from "../context/company-profile.js";
 
 export interface Message {
   role: "user" | "assistant" | "system";
@@ -181,6 +182,14 @@ export class Engine {
         await this.mcp.startServer("context_server");
         this.log("success", "Context server started.");
       }
+      if (servers.find((s) => s.name === "aider" && s.status === "stopped")) {
+        await this.mcp.startServer("aider");
+        this.log("success", "Aider server started.");
+      }
+      if (servers.find((s) => s.name === "claude" && s.status === "stopped")) {
+        await this.mcp.startServer("claude");
+        this.log("success", "Claude server started.");
+      }
     } catch (e) {
       console.error("Failed to start core servers:", e);
     }
@@ -244,7 +253,10 @@ export class Engine {
         if (brainClient) {
             const result: any = await brainClient.callTool({
                 name: "brain_query",
-                arguments: { query: userRequest }
+                arguments: {
+                  query: userRequest,
+                  company: companyName
+                }
             });
             if (result && result.content && result.content[0]) {
                  pastMemory = result.content[0].text;
@@ -259,10 +271,20 @@ export class Engine {
         input = `[Past Experience]\n${pastMemory}\n\n[User Request]\n${input}`;
       }
 
+      // Inject Company Profile Context
+      if (companyProfile) {
+         let profileContext = `[Company Context: ${companyProfile.name}]\n`;
+         if (companyProfile.brandVoice) profileContext += `Brand Voice: ${companyProfile.brandVoice}\n`;
+         if (companyProfile.internalDocs?.length) profileContext += `Docs: ${companyProfile.internalDocs.join(", ")}\n`;
+         if (companyProfile.sops?.length) profileContext += `Recommended SOPs: ${companyProfile.sops.join(", ")}\n`;
+
+         input = `${profileContext}\n${input}`;
+      }
+
       ctx.history.push({ role: "user", content: input });
 
       // Inject RAG context from Company MCP Server
-      if (process.env.JULES_COMPANY) {
+      if (companyName) {
         try {
           const client = this.mcp.getClient("company");
           if (client) {
@@ -496,7 +518,8 @@ export class Engine {
                             taskId: "task-" + Date.now(),
                             request: userRequest,
                             solution: message || response.thought || "Task completed.",
-                            artifacts: JSON.stringify(currentArtifacts)
+                            artifacts: JSON.stringify(currentArtifacts),
+                            company: companyName
                         }
                     });
                 }
