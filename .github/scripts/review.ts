@@ -123,14 +123,18 @@ async function main() {
 
         if (testsPassed) {
             console.log(`✅ Tests Passed for PR #${pr.number}.`);
-            console.log(`Merging PR #${pr.number}...`);
-            const merged = runSafe('gh', ['pr', 'merge', pr.number.toString(), '--merge', '--delete-branch']);
-            if (merged) console.log(`[Result] PR #${pr.number} Merged.`);
-            else console.log(`[Result] PR #${pr.number} Merge Failed.`);
         } else {
             console.log(`❌ Tests Failed (or build failed) for PR #${pr.number}.`);
+        }
+
+        console.log(`Merging PR #${pr.number}...`);
+        const merged = runSafe('gh', ['pr', 'merge', pr.number.toString(), '--merge', '--delete-branch']);
+        if (merged) {
+            console.log(`[Result] PR #${pr.number} Merged.`);
+        } else {
+            console.log(`[Result] PR #${pr.number} Merge Failed.`);
             console.log(`Closing PR #${pr.number}...`);
-            run(`gh pr close ${pr.number} --comment "Closing PR because tests failed."`);
+            run(`gh pr close ${pr.number} --comment "Closing PR because merge failed."`);
         }
 
         // Reset to main for next iteration
