@@ -46,19 +46,27 @@ export class SopMcpClient {
       try {
         const entries = await readdir(localServersDir, { withFileTypes: true });
         for (const entry of entries) {
-          if (entry.isDirectory()) {
-            const name = entry.name;
-            if (name === "sop") continue; // Skip self to avoid recursion
-            if (this.clients.has(name)) continue; // Skip if already loaded via mcp.json
+          const name = entry.name;
+          if (name === "sop" || name === "index.ts") continue; // Skip self and index
 
-            const serverScript = join(localServersDir, name, "index.ts");
-            if (existsSync(serverScript)) {
-               await this.connectToServer(name, {
-                 command: "npx", // Assumes npx is available
-                 args: ["tsx", serverScript],
-                 env: process.env as any,
-               });
-            }
+          let serverScript: string | undefined;
+          let serverName = name;
+
+          if (entry.isDirectory()) {
+            serverScript = join(localServersDir, name, "index.ts");
+          } else if (entry.isFile() && name.endsWith(".ts")) {
+            serverName = name.replace(/\.ts$/, "");
+            serverScript = join(localServersDir, name);
+          }
+
+          if (serverScript && existsSync(serverScript)) {
+            if (this.clients.has(serverName)) continue; // Skip if already loaded via mcp.json
+
+            await this.connectToServer(serverName, {
+              command: "npx", // Assumes npx is available
+              args: ["tsx", serverScript],
+              env: process.env as any,
+            });
           }
         }
       } catch (e) {
