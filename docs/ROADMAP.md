@@ -39,14 +39,13 @@ To transition from a "Wrapper" to a true "Universal AI Integration Platform," th
     - *Research:* -> DeepSeek R1 / CrewAI.
 - **Benefit:** Drastic cost reduction for users while maintaining high quality for complex tasks.
 
-### Phase 2: Unified Context Protocol (UCP) (✅ Implemented)
+### Phase 2: Unified Context Protocol (UCP) (✅ Completed)
 **Goal:** Share memory and state between disparate agents.
-- **Problem:** Currently, if Agent A (Claude) modifies a file, Agent B (Aider) might not know *why*.
-- **Solution:** Implemented via `ContextManager` and shared `.agent/context.json`.
-    - Tracks High-level goals.
-    - Recent architectural decisions.
-    - Global constraints.
-- **Mechanism:** `delegate_cli` automatically injects this context (goals, constraints, changes) into the prompt or file context of every sub-agent.
+- **Problem:** Agents need a shared understanding of project goals and constraints to avoid conflicting actions.
+- **Solution:** `ContextManager` acts as a client to the `Brain` MCP server, providing persistent, shared context storage.
+    - **Architecture:** `ContextManager` <-> `Brain MCP` (Primary) <-> Local Cache (Fallback).
+    - **Data:** Tracks high-level goals, recent architectural decisions, global constraints, and working memory.
+- **Mechanism:** The Orchestrator automatically fetches the latest context via `ContextManager` and injects it into the system prompt of every sub-agent (Aider, Claude, etc.), ensuring alignment across the workforce.
 
 ### Phase 3: The Universal Tool Interface (MCP) (✅ Implemented)
 **Goal:** Standardize how agents call tools via the Model Context Protocol.

@@ -4,8 +4,8 @@ import { z } from "zod";
 import { fileURLToPath } from "url";
 import { EpisodicMemory } from "../brain/episodic.js";
 import { SemanticGraph } from "../brain/semantic_graph.js";
-import { join } from "path";
-import { readFile, readdir } from "fs/promises";
+import { join, dirname } from "path";
+import { readFile, readdir, writeFile, mkdir } from "fs/promises";
 import { existsSync } from "fs";
 
 export class BrainServer {
@@ -13,6 +13,7 @@ export class BrainServer {
   private episodic: EpisodicMemory;
   private semantic: SemanticGraph;
   private sopsDir: string;
+  private contextsDir: string;
 
   constructor() {
     this.server = new McpServer({
@@ -23,6 +24,7 @@ export class BrainServer {
     this.episodic = new EpisodicMemory();
     this.semantic = new SemanticGraph();
     this.sopsDir = join(process.cwd(), ".agent", "sops");
+    this.contextsDir = join(process.cwd(), ".agent", "brain", "contexts");
 
     this.setupTools();
   }
@@ -162,6 +164,69 @@ export class BrainServer {
           };
         }
         return { content: [{ type: "text", text: "Unknown operation." }] };
+      }
+    );
+
+    // Context Management Tools
+    this.server.tool(
+      "brain_store_context",
+      "Store the shared agency context (goals, constraints, etc.).",
+      {
+        context: z.string().describe("JSON string of the context object."),
+        company: z.string().optional().describe("The company/client identifier for namespacing."),
+      },
+      async ({ context, company }) => {
+        try {
+          // Validate JSON
+          JSON.parse(context);
+        } catch {
+          return {
+            content: [{ type: "text", text: "Error: Invalid JSON context." }],
+            isError: true
+          };
+        }
+
+        let targetFile;
+        if (company) {
+            targetFile = join(this.contextsDir, company, "context.json");
+        } else {
+            // Global context if no company specified
+             targetFile = join(this.contextsDir, "global", "context.json");
+        }
+
+        await mkdir(dirname(targetFile), { recursive: true });
+        await writeFile(targetFile, context, "utf-8");
+
+        return {
+          content: [{ type: "text", text: "Context stored successfully." }],
+        };
+      }
+    );
+
+    this.server.tool(
+      "brain_get_context",
+      "Retrieve the shared agency context.",
+      {
+        company: z.string().optional().describe("The company/client identifier for namespacing."),
+      },
+      async ({ company }) => {
+        let targetFile;
+        if (company) {
+            targetFile = join(this.contextsDir, company, "context.json");
+        } else {
+            targetFile = join(this.contextsDir, "global", "context.json");
+        }
+
+        if (existsSync(targetFile)) {
+            const content = await readFile(targetFile, "utf-8");
+            return {
+                content: [{ type: "text", text: content }]
+            };
+        }
+
+        return {
+            content: [{ type: "text", text: "{}" }] // Return empty object if not found
+        };
       }
     );
 

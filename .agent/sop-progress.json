@@ -1,0 +1,27 @@
+{
+  "test": {
+    "sop_name": "test",
+    "current_step_index": 1,
+    "status": "completed",
+    "history": [
+      {
+        "step_index": 0,
+        "instruction": "Step 1",
+        "status": "success",
+        "timestamp": "2026-02-17T18:05:01.492Z",
+        "tool": "tool1",
+        "args": {
+          "val": 1
+        },
+        "output": {
+          "content": [
+            {
+              "type": "text",
+              "text": "ok"
+            }
+          ]
+        }
+      }
+    ]
+  }
+}

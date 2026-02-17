@@ -10,6 +10,7 @@ import { MCP } from "../mcp.js";
 import { Skill } from "../skills.js";
 import { LLM } from "../llm.js";
 import { loadCompanyProfile, CompanyProfile } from "../context/company-profile.js";
+import { ContextManager } from "../context/ContextManager.js";
 
 export interface Message {
   role: "user" | "assistant" | "system";
@@ -31,11 +32,6 @@ async function getRepoMap(cwd: string, registry: Registry): Promise<string> {
 
   try {
     const result: any = await listTool.execute({ path: cwd });
-    // Assume result.content[0].text contains the list or result is the list
-    // Standard MCP returns { content: [{ type: "text", text: "..." }] }
-    // But filesystem list_directory might return JSON string or structured data?
-    // If it's standard MCP, it returns text or resource.
-    // Let's assume text for now.
     if (result && result.content && Array.isArray(result.content)) {
       return result.content.map((c: any) => c.text).join("\n");
     }
@@ -80,12 +76,6 @@ export class Context {
 export class Registry {
   tools: Map<string, Tool> = new Map();
 
-  // Deprecated: Legacy tool loading removed.
-  // Tools are now loaded exclusively via MCP Server discovery.
-  async loadProjectTools(_cwd: string) {
-    // No-op
-  }
-
   async loadCompanyTools(company: string) {
     const cwd = process.cwd();
     const toolsDir = join(cwd, ".agent", "companies", company, "tools");
@@ -107,12 +97,10 @@ export class Registry {
       }
     }
 
-    // 2. Scan Skill-Based Tools (.agent/skills/*/tools.ts)
     const skillsDir = join(cwd, ".agent", "skills");
     if (existsSync(skillsDir)) {
       for (const skillName of await readdir(skillsDir)) {
         const skillPath = join(skillsDir, skillName);
-        // Look for tools.ts or index.ts
         const potentialFiles = ["tools.ts", "index.ts", "tools.js", "index.js"];
 
         for (const file of potentialFiles) {
@@ -198,44 +186,47 @@ export class Engine {
       this.registry.tools.set(t.name, t as any),
     );
 
-    // Legacy loading removed
-    // await this.registry.loadProjectTools(ctx.cwd);
-
     if (process.stdin.isTTY) {
       readline.emitKeypressEvents(process.stdin);
     }
 
+    const companyName = process.env.JULES_COMPANY;
+    let companyProfile: CompanyProfile | undefined;
+
     // Initialize CompanyContext if JULES_COMPANY is set
-    let sharedContext = "";
-    if (process.env.JULES_COMPANY) {
+    if (companyName) {
       try {
         const { CompanyLoader } = await import("../context/company_loader.js");
         const loader = new CompanyLoader();
-        await loader.load(process.env.JULES_COMPANY);
-        this.log("success", `Loaded company context for ${process.env.JULES_COMPANY}`);
+        companyProfile = await loader.load(companyName);
+        this.log("success", `Loaded company context for ${companyName}`);
       } catch (e: any) {
         console.error("Failed to load company context:", e.message);
       }
     }
 
-    // Fetch shared context for injection
+    let sharedContext = "";
+    // Fetch shared context via ContextManager (Brain MCP)
     try {
-        const contextClient = this.mcp.getClient("context_server");
-        if (contextClient) {
-             const res: any = await contextClient.callTool({ name: "read_context", arguments: {} });
-             if (res && res.content && res.content[0]) {
-                 const data = JSON.parse(res.content[0].text);
-                 if (data.company_context) {
-                     sharedContext = data.company_context;
-                     // Inject into system prompt once
-                     if (!ctx.skill.systemPrompt.includes("## Company Context")) {
-                        ctx.skill.systemPrompt = `${ctx.skill.systemPrompt}\n\n${sharedContext}`;
-                     }
-                 }
-             }
+        const contextManager = new ContextManager(this.mcp);
+        const contextData = await contextManager.readContext();
+
+        let contextParts: string[] = [];
+        if (contextData.goals && contextData.goals.length > 0) contextParts.push(`Goals: ${contextData.goals.join(", ")}`);
+        if (contextData.constraints && contextData.constraints.length > 0) contextParts.push(`Constraints: ${contextData.constraints.join(", ")}`);
+        if (contextData.recent_changes && contextData.recent_changes.length > 0) contextParts.push(`Recent Changes: ${contextData.recent_changes.join(", ")}`);
+        if (contextData.working_memory) contextParts.push(`Working Memory: ${contextData.working_memory}`);
+        if (contextData.company_context) contextParts.push(`Company Context: ${contextData.company_context}`);
+
+        if (contextParts.length > 0) {
+            sharedContext = contextParts.join("\n\n");
+            // Inject into system prompt once
+            if (!ctx.skill.systemPrompt.includes("## Shared Agency Context")) {
+               ctx.skill.systemPrompt = `${ctx.skill.systemPrompt}\n\n## Shared Agency Context\n${sharedContext}`;
+            }
         }
     } catch (e) {
-        // Ignore if context server is not available or empty
+        console.warn("Failed to load shared context via ContextManager:", e);
     }
 
     while (true) {
@@ -325,12 +316,10 @@ export class Engine {
           return;
         }
 
-        // Type-ahead buffering
         if (!key.ctrl && !key.meta) {
           if (key.name === "backspace") {
             bufferedInput = bufferedInput.slice(0, -1);
           } else if (key.name === "return") {
-            // Do nothing for return, user must hit it again at prompt
           } else if (str && str.length === 1) {
             bufferedInput += str;
           }
@@ -343,7 +332,6 @@ export class Engine {
       }
 
       try {
-        // Pass registry to buildPrompt
         let prompt = await ctx.buildPrompt(this.registry.tools, this.registry);
 
         const userHistory = ctx.history.filter(
@@ -352,7 +340,6 @@ export class Engine {
             !["Continue.", "Fix the error."].includes(m.content),
         );
 
-        // Pass signal to LLM
         let typingStarted = false;
         const onTyping = () => {
           this.s.start("Typing...");
@@ -380,7 +367,6 @@ export class Engine {
 
         if (thought) this.log("info", pc.dim(thought));
 
-        // Determine execution list
         const executionList =
           tools && tools.length > 0
             ? tools
@@ -397,12 +383,12 @@ export class Engine {
             const tName = item.tool;
             const tArgs = item.args;
 
-            // Inject company context into sub-agents (Delegate CLI replacement logic)
+            // Inject company context into sub-agents
             if ((tName === "aider_chat" || tName === "aider_edit" || tName === "ask_claude") && sharedContext) {
                  if (tArgs.message) {
-                     tArgs.message = `${sharedContext}\n\nTask:\n${tArgs.message}`;
+                     tArgs.message = `## Shared Agency Context\n${sharedContext}\n\nTask:\n${tArgs.message}`;
                  } else if (tArgs.task) {
-                     tArgs.task = `${sharedContext}\n\nTask:\n${tArgs.task}`;
+                     tArgs.task = `## Shared Agency Context\n${sharedContext}\n\nTask:\n${tArgs.task}`;
                  }
             }
 
@@ -417,23 +403,17 @@ export class Engine {
                 this.s.stop(`Executed ${tName}`);
                 toolExecuted = true;
 
-                // Track artifacts
                 if (tArgs && (tArgs.filepath || tArgs.path)) {
                    currentArtifacts.push(tArgs.filepath || tArgs.path);
                 }
 
-                // Reload tools if create_tool was used (via MCP refresh if available?)
-                // Since legacy tools are gone, create_tool would likely create an MCP server or file.
-                // We should refresh MCP tools.
                 if (tName === "create_tool" || tName === "mcp_start_server" || tName === "mcp_install_server") {
-                  // Refresh tools
                   (await this.mcp.getTools()).forEach((t) =>
                     this.registry.tools.set(t.name, t as any),
                   );
                   this.log("success", "MCP tools updated.");
                 }
 
-                // Add individual tool execution to history to keep context updated
                 ctx.history.push({
                   role: "assistant",
                   content: JSON.stringify({
@@ -447,7 +427,6 @@ export class Engine {
                   content: `Result: ${JSON.stringify(result)}`,
                 });
 
-                // --- Supervisor Loop (QA & Reflection) ---
                 this.s.start(`[Supervisor] Verifying work from ${tName}...`);
                 qaStarted = true;
 
@@ -471,12 +450,12 @@ export class Engine {
                   input =
                     "The previous attempt failed. Please retry or fix the issue.";
                   allExecuted = false;
-                  break; // Stop batch execution on failure
+                  break;
                 } else {
                   this.s.stop("[Supervisor] Verified");
                 }
               } catch (e: any) {
-                if (signal.aborted) throw e; // Re-throw if it was an abort
+                if (signal.aborted) throw e;
                 if (!toolExecuted) this.s.stop(`Error executing ${tName}`);
                 else if (qaStarted) {
                   this.s.stop("Verification Error");
@@ -508,7 +487,6 @@ export class Engine {
           }
 
           if (allExecuted) {
-            // Store successful memory
             try {
                 const brainClient = this.mcp.getClient("brain");
                 if (brainClient) {
@@ -531,7 +509,6 @@ export class Engine {
           continue;
         }
 
-        // --- Lazy Agent Detection ---
         const rawText = (message || response.raw || "").toLowerCase();
         const isRefusal =
           /(cannot|can't|unable to|no access|don't have access) (to )?(create|write|modify|delete|save|edit)/.test(
@@ -562,7 +539,6 @@ export class Engine {
             "System Correction: You MUST use an appropriate tool (e.g., 'write_file', 'aider_edit_files', 'ask_claude') to create or modify files. Do not describe the action or ask the user to do it.";
           continue;
         }
-        // ----------------------------
 
         if (message || response.raw) {
           console.log();
@@ -577,18 +553,15 @@ export class Engine {
         input = undefined;
       } catch (e: any) {
         if (aborted || signal.aborted || e.name === "AbortError") {
-          // Already logged interruption or will just loop back
           input = undefined;
           continue;
         }
-        // Log actual errors
         this.log("error", `Error: ${e.message}`);
 
         if (!options.interactive) {
           throw e;
         }
 
-        // Break or continue? Probably continue to prompt
         input = undefined;
       } finally {
         if (process.stdin.isTTY) {
