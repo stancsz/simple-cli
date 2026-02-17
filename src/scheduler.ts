@@ -27,6 +27,14 @@ export class Scheduler extends EventEmitter {
     this.delegator = new JobDelegator(agentDir);
   }
 
+  setTestMode(enabled: boolean) {
+    this.delegator.setTestMode(enabled);
+  }
+
+  getPendingTasks(): TaskDefinition[] {
+    return Array.from(this.pendingTasks.values());
+  }
+
   async start() {
     await this.loadState();
     await this.ensureHRTask();

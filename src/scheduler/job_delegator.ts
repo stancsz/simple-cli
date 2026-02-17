@@ -5,9 +5,14 @@ import { handleTaskTrigger } from './trigger.js';
 
 export class JobDelegator {
   private logsDir: string;
+  private testMode: boolean = false;
 
   constructor(agentDir: string) {
     this.logsDir = join(agentDir, 'ghost_logs');
+  }
+
+  setTestMode(enabled: boolean) {
+    this.testMode = enabled;
   }
 
   async delegateTask(task: TaskDefinition): Promise<void> {
@@ -18,10 +23,15 @@ export class JobDelegator {
     let errorMessage = '';
 
     try {
-      const result = await handleTaskTrigger(task);
-      if (result.exitCode !== 0) {
-        status = 'failed';
-        errorMessage = `Process exited with code ${result.exitCode}`;
+      if (this.testMode) {
+        console.log(`[Test Mode] Skipping execution for task: ${task.name}`);
+        status = 'test-skipped';
+      } else {
+        const result = await handleTaskTrigger(task);
+        if (result.exitCode !== 0) {
+          status = 'failed';
+          errorMessage = `Process exited with code ${result.exitCode}`;
+        }
       }
     } catch (e: any) {
       status = 'failed';
