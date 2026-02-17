@@ -10,6 +10,7 @@ import { MCP } from "../mcp.js";
 import { Skill } from "../skills.js";
 import { LLM } from "../llm.js";
 import { loadCompanyProfile, CompanyProfile } from "../context/company-profile.js";
+import { ContextManager } from "../context/manager.js";
 
 export interface Message {
   role: "user" | "assistant" | "system";
@@ -138,12 +139,15 @@ export class Registry {
 
 export class Engine {
   protected s = spinner();
+  protected contextManager: ContextManager;
 
   constructor(
     protected llm: LLM,
     protected registry: Registry,
     protected mcp: MCP,
-  ) {}
+  ) {
+    this.contextManager = new ContextManager();
+  }
 
   protected async getUserInput(initialValue: string, interactive: boolean): Promise<string | undefined> {
     if (!interactive || !process.stdout.isTTY) return undefined;
@@ -206,37 +210,22 @@ export class Engine {
     }
 
     // Initialize CompanyContext if JULES_COMPANY is set
+    const companyName = process.env.JULES_COMPANY;
     let sharedContext = "";
-    if (process.env.JULES_COMPANY) {
+
+    if (companyName) {
       try {
         const { CompanyLoader } = await import("../context/company_loader.js");
         const loader = new CompanyLoader();
-        await loader.load(process.env.JULES_COMPANY);
-        this.log("success", `Loaded company context for ${process.env.JULES_COMPANY}`);
+        await loader.load(companyName);
+        this.log("success", `Loaded company context for ${companyName}`);
       } catch (e: any) {
         console.error("Failed to load company context:", e.message);
       }
     }
 
-    // Fetch shared context for injection
-    try {
-        const contextClient = this.mcp.getClient("context_server");
-        if (contextClient) {
-             const res: any = await contextClient.callTool({ name: "read_context", arguments: {} });
-             if (res && res.content && res.content[0]) {
-                 const data = JSON.parse(res.content[0].text);
-                 if (data.company_context) {
-                     sharedContext = data.company_context;
-                     // Inject into system prompt once
-                     if (!ctx.skill.systemPrompt.includes("## Company Context")) {
-                        ctx.skill.systemPrompt = `${ctx.skill.systemPrompt}\n\n${sharedContext}`;
-                     }
-                 }
-             }
-        }
-    } catch (e) {
-        // Ignore if context server is not available or empty
-    }
+    // Pre-fetch shared context for sub-agents
+    sharedContext = await this.contextManager.getContext(this.mcp);
 
     while (true) {
       if (!input) {
@@ -245,8 +234,8 @@ export class Engine {
         if (!input) break;
       }
 
-      // Brain: Recall similar past experiences
-      const userRequest = input; // Capture original request
+      // Brain: Recall similar past experiences (Episodic)
+      const userRequest = input;
       let pastMemory: string | null = null;
       try {
         const brainClient = this.mcp.getClient("brain");
@@ -271,41 +260,14 @@ export class Engine {
         input = `[Past Experience]\n${pastMemory}\n\n[User Request]\n${input}`;
       }
 
-      // Inject Company Profile Context
-      if (companyProfile) {
-         let profileContext = `[Company Context: ${companyProfile.name}]\n`;
-         if (companyProfile.brandVoice) profileContext += `Brand Voice: ${companyProfile.brandVoice}\n`;
-         if (companyProfile.internalDocs?.length) profileContext += `Docs: ${companyProfile.internalDocs.join(", ")}\n`;
-         if (companyProfile.sops?.length) profileContext += `Recommended SOPs: ${companyProfile.sops.join(", ")}\n`;
-
-         input = `${profileContext}\n${input}`;
+      // Load Unified Context (Shared + Company RAG)
+      const unifiedContext = await this.contextManager.getContext(this.mcp, companyName, userRequest);
+      if (unifiedContext) {
+         input = `${unifiedContext}\n\n${input}`;
+         this.log("info", pc.dim(`[Context] Injected unified context.`));
       }
 
       ctx.history.push({ role: "user", content: input });
-
-      // Inject RAG context from Company MCP Server
-      if (companyName) {
-        try {
-          const client = this.mcp.getClient("company");
-          if (client) {
-             const result: any = await client.callTool({
-                name: "company_get_context",
-                arguments: { query: input }
-             });
-
-             if (result && result.content && result.content[0] && result.content[0].text) {
-                const contextText = result.content[0].text;
-                if (!contextText.includes("No company context active")) {
-                   const lastMsg = ctx.history[ctx.history.length - 1];
-                   lastMsg.content = `${contextText}\n\n[User Request]\n${lastMsg.content}`;
-                   this.log("info", pc.dim(`[RAG] Injected company context.`));
-                }
-             }
-          }
-        } catch (e: any) {
-          console.error("Failed to query company context:", e.message);
-        }
-      }
 
       const controller = new AbortController();
       const signal = controller.signal;

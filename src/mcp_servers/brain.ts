@@ -4,6 +4,7 @@ import { z } from "zod";
 import { fileURLToPath } from "url";
 import { EpisodicMemory } from "../brain/episodic.js";
 import { SemanticGraph } from "../brain/semantic_graph.js";
+import { CompanyContextMemory } from "../brain/company_context.js";
 import { join } from "path";
 import { readFile, readdir } from "fs/promises";
 import { existsSync } from "fs";
@@ -12,6 +13,7 @@ export class BrainServer {
   private server: McpServer;
   private episodic: EpisodicMemory;
   private semantic: SemanticGraph;
+  private companyContext: CompanyContextMemory;
   private sopsDir: string;
 
   constructor() {
@@ -22,6 +24,7 @@ export class BrainServer {
 
     this.episodic = new EpisodicMemory();
     this.semantic = new SemanticGraph();
+    this.companyContext = new CompanyContextMemory();
     this.sopsDir = join(process.cwd(), ".agent", "sops");
 
     this.setupTools();
@@ -162,6 +165,50 @@ export class BrainServer {
           };
         }
         return { content: [{ type: "text", text: "Unknown operation." }] };
+      }
+    );
+
+    // Company Context Tools (RAG)
+    this.server.tool(
+      "store_company_context",
+      "Store generic context for a specific company (e.g. docs, wiki, policies).",
+      {
+        company: z.string().describe("The company identifier."),
+        text: z.string().describe("The text content to store."),
+        metadata: z.string().optional().describe("JSON string of metadata (e.g. source, timestamp)."),
+      },
+      async ({ company, text, metadata }) => {
+        let meta = {};
+        if (metadata) {
+          try {
+            meta = JSON.parse(metadata);
+          } catch {
+            meta = {};
+          }
+        }
+        await this.companyContext.store(company, text, meta);
+        return {
+          content: [{ type: "text", text: "Company context stored successfully." }],
+        };
+      }
+    );
+
+    this.server.tool(
+      "query_company_context",
+      "Retrieve relevant company context based on a query.",
+      {
+        company: z.string().describe("The company identifier."),
+        query: z.string().describe("The search query."),
+      },
+      async ({ company, query }) => {
+        const results = await this.companyContext.query(company, query);
+        if (results.length === 0) {
+          return { content: [{ type: "text", text: "No relevant company context found." }] };
+        }
+        const text = results
+          .map((r) => `[Source: ${JSON.parse(r.metadata).source || "Unknown"}]\n${r.text}`)
+          .join("\n\n---\n\n");
+        return { content: [{ type: "text", text }] };
       }
     );
 
