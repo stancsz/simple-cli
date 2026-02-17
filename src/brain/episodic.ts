@@ -50,14 +50,17 @@ export class EpisodicMemory {
     }
   }
 
-  async store(taskId: string, request: string, solution: string, artifacts: string[] = []): Promise<void> {
+  async store(taskId: string, request: string, solution: string, artifacts: string[] = [], embedding?: number[]): Promise<void> {
     if (!this.db) await this.init();
 
-    // Embed the interaction (request + solution)
-    const textToEmbed = `Task: ${taskId}\nRequest: ${request}\nSolution: ${solution}`;
-    const embedding = await this.llm.embed(textToEmbed);
+    let vector = embedding;
+    if (!vector) {
+      // Embed the interaction (request + solution)
+      const textToEmbed = `Task: ${taskId}\nRequest: ${request}\nSolution: ${solution}`;
+      vector = await this.llm.embed(textToEmbed);
+    }
 
-    if (!embedding) {
+    if (!vector) {
         throw new Error("Failed to generate embedding for memory.");
     }
 
@@ -68,7 +71,7 @@ export class EpisodicMemory {
       userPrompt: request,
       agentResponse: solution,
       artifacts,
-      vector: embedding,
+      vector,
     };
 
     if (!this.table) {

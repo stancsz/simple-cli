@@ -6,6 +6,7 @@ import { join } from 'path';
 // Mock lancedb
 vi.mock('@lancedb/lancedb', () => ({
   connect: vi.fn().mockReturnValue({
+    tableNames: vi.fn().mockResolvedValue([]),
     openTable: vi.fn().mockReturnValue({
       add: vi.fn(),
       search: vi.fn().mockReturnThis(),
@@ -18,19 +19,19 @@ vi.mock('@lancedb/lancedb', () => ({
   }),
 }));
 
-// Mock embedder
-vi.mock('../src/brain/embedder.js', () => ({
-  getEmbedder: vi.fn().mockResolvedValue({
+// Mock LLM
+vi.mock('../src/llm.js', () => ({
+  createLLM: vi.fn().mockReturnValue({
     embed: vi.fn().mockResolvedValue([0.1, 0.2, 0.3]),
-    init: vi.fn(),
+    generate: vi.fn().mockResolvedValue({ text: 'response' }),
   }),
 }));
 
 describe('EpisodicMemory', () => {
-  it('should initialize and add memory', async () => {
+  it('should initialize and store memory', async () => {
     const memory = new EpisodicMemory('test_dir');
     await memory.init();
-    await memory.add('test', 'response', []);
+    await memory.store('taskId', 'request', 'solution', []);
     expect(lancedb.connect).toHaveBeenCalled();
   });
 });
