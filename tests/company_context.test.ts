@@ -5,7 +5,7 @@ import { join } from "path";
 import { existsSync } from "fs";
 
 const TEST_COMPANY = "test-company";
-const TEST_DIR = join(process.cwd(), ".companies", TEST_COMPANY);
+const TEST_DIR = join(process.cwd(), ".agent", "brain", "companies", TEST_COMPANY);
 
 describe("CompanyManager", () => {
   beforeEach(async () => {

@@ -21,7 +21,7 @@ describe("ContextServer Live", () => {
     // Connect to server
     const serverScript = join(
       process.cwd(),
-      "src/mcp_servers/context_manager/index.ts",
+      "src/mcp_servers/context_server.ts",
     );
 
     transport = new StdioClientTransport({
@@ -62,14 +62,13 @@ describe("ContextServer Live", () => {
     const toolNames = tools.tools.map((t) => t.name);
     expect(toolNames).toContain("update_context");
     expect(toolNames).toContain("read_context");
-    expect(toolNames).toContain("search_memory");
-    expect(toolNames).toContain("add_memory");
+    expect(toolNames).toContain("clear_context");
   });
 
   it("should update_context and read_context", async () => {
     await client.callTool({
       name: "update_context",
-      arguments: { goal: "Live Test Goal" },
+      arguments: { updates: JSON.stringify({ goals: ["Live Test Goal"] }) },
     });
 
     const result = await client.callTool({

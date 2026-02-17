@@ -83,10 +83,16 @@ const baseRegistry = new Registry();
 const mcp = new MCP();
 let isInitialized = false;
 
+// For testing
+export function resetInitialization() {
+  isInitialized = false;
+}
+
+export { isInitialized };
+
 // Initialize global resources once
 async function initializeResources() {
   if (isInitialized) return;
-
 
   // Initialize Workflow Engine
   const workflowEngine = new WorkflowEngine(baseRegistry);
@@ -96,9 +102,6 @@ async function initializeResources() {
   // Register MCP tools
   await mcp.init();
   (await mcp.getTools()).forEach((t) => baseRegistry.tools.set(t.name, t as any));
-
-  // Optimization: prevent re-scanning in Engine.run
-  mcp.init = async () => { };
 
   isInitialized = true;
 }

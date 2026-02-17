@@ -143,7 +143,7 @@ export class Engine {
     protected llm: LLM,
     protected registry: Registry,
     protected mcp: MCP,
-  ) {}
+  ) { }
 
   protected async getUserInput(initialValue: string, interactive: boolean): Promise<string | undefined> {
     if (!interactive || !process.stdout.isTTY) return undefined;
@@ -206,13 +206,17 @@ export class Engine {
     }
 
     // Initialize CompanyContext if JULES_COMPANY is set
+    let companyName = process.env.JULES_COMPANY || "";
+    let companyProfile: CompanyProfile | null = null;
     let sharedContext = "";
-    if (process.env.JULES_COMPANY) {
+
+    if (companyName) {
       try {
         const { CompanyLoader } = await import("../context/company_loader.js");
         const loader = new CompanyLoader();
-        await loader.load(process.env.JULES_COMPANY);
-        this.log("success", `Loaded company context for ${process.env.JULES_COMPANY}`);
+        await loader.load(companyName);
+        companyProfile = await loadCompanyProfile(companyName);
+        this.log("success", `Loaded company context for ${companyName}`);
       } catch (e: any) {
         console.error("Failed to load company context:", e.message);
       }
@@ -220,22 +224,22 @@ export class Engine {
 
     // Fetch shared context for injection
     try {
-        const contextClient = this.mcp.getClient("context_server");
-        if (contextClient) {
-             const res: any = await contextClient.callTool({ name: "read_context", arguments: {} });
-             if (res && res.content && res.content[0]) {
-                 const data = JSON.parse(res.content[0].text);
-                 if (data.company_context) {
-                     sharedContext = data.company_context;
-                     // Inject into system prompt once
-                     if (!ctx.skill.systemPrompt.includes("## Company Context")) {
-                        ctx.skill.systemPrompt = `${ctx.skill.systemPrompt}\n\n${sharedContext}`;
-                     }
-                 }
-             }
+      const contextClient = this.mcp.getClient("context_server");
+      if (contextClient) {
+        const res: any = await contextClient.callTool({ name: "read_context", arguments: {} });
+        if (res && res.content && res.content[0]) {
+          const data = JSON.parse(res.content[0].text);
+          if (data.company_context) {
+            sharedContext = data.company_context;
+            // Inject into system prompt once
+            if (!ctx.skill.systemPrompt.includes("## Company Context")) {
+              ctx.skill.systemPrompt = `${ctx.skill.systemPrompt}\n\n${sharedContext}`;
+            }
+          }
         }
+      }
     } catch (e) {
-        // Ignore if context server is not available or empty
+      // Ignore if context server is not available or empty
     }
 
     while (true) {
@@ -251,19 +255,19 @@ export class Engine {
       try {
         const brainClient = this.mcp.getClient("brain");
         if (brainClient) {
-            const result: any = await brainClient.callTool({
-                name: "brain_query",
-                arguments: {
-                  query: userRequest,
-                  company: companyName
-                }
-            });
-            if (result && result.content && result.content[0]) {
-                 pastMemory = result.content[0].text;
+          const result: any = await brainClient.callTool({
+            name: "brain_query",
+            arguments: {
+              query: userRequest,
+              company: companyName
             }
+          });
+          if (result && result.content && result.content[0]) {
+            pastMemory = result.content[0].text;
+          }
         }
       } catch (e) {
-         // Ignore context errors
+        // Ignore context errors
       }
 
       if (pastMemory && !pastMemory.includes("No relevant memory found")) {
@@ -273,12 +277,12 @@ export class Engine {
 
       // Inject Company Profile Context
       if (companyProfile) {
-         let profileContext = `[Company Context: ${companyProfile.name}]\n`;
-         if (companyProfile.brandVoice) profileContext += `Brand Voice: ${companyProfile.brandVoice}\n`;
-         if (companyProfile.internalDocs?.length) profileContext += `Docs: ${companyProfile.internalDocs.join(", ")}\n`;
-         if (companyProfile.sops?.length) profileContext += `Recommended SOPs: ${companyProfile.sops.join(", ")}\n`;
+        let profileContext = `[Company Context: ${companyProfile.name}]\n`;
+        if (companyProfile.brandVoice) profileContext += `Brand Voice: ${companyProfile.brandVoice}\n`;
+        if (companyProfile.internalDocs?.length) profileContext += `Docs: ${companyProfile.internalDocs.join(", ")}\n`;
+        if (companyProfile.sops?.length) profileContext += `Recommended SOPs: ${companyProfile.sops.join(", ")}\n`;
 
-         input = `${profileContext}\n${input}`;
+        input = `${profileContext}\n${input}`;
       }
 
       ctx.history.push({ role: "user", content: input });
@@ -288,19 +292,19 @@ export class Engine {
         try {
           const client = this.mcp.getClient("company");
           if (client) {
-             const result: any = await client.callTool({
-                name: "company_get_context",
-                arguments: { query: input }
-             });
+            const result: any = await client.callTool({
+              name: "company_get_context",
+              arguments: { query: input }
+            });
 
-             if (result && result.content && result.content[0] && result.content[0].text) {
-                const contextText = result.content[0].text;
-                if (!contextText.includes("No company context active")) {
-                   const lastMsg = ctx.history[ctx.history.length - 1];
-                   lastMsg.content = `${contextText}\n\n[User Request]\n${lastMsg.content}`;
-                   this.log("info", pc.dim(`[RAG] Injected company context.`));
-                }
-             }
+            if (result && result.content && result.content[0] && result.content[0].text) {
+              const contextText = result.content[0].text;
+              if (!contextText.includes("No company context active")) {
+                const lastMsg = ctx.history[ctx.history.length - 1];
+                lastMsg.content = `${contextText}\n\n[User Request]\n${lastMsg.content}`;
+                this.log("info", pc.dim(`[RAG] Injected company context.`));
+              }
+            }
           }
         } catch (e: any) {
           console.error("Failed to query company context:", e.message);
@@ -399,11 +403,11 @@ export class Engine {
 
             // Inject company context into sub-agents (Delegate CLI replacement logic)
             if ((tName === "aider_chat" || tName === "aider_edit" || tName === "ask_claude") && sharedContext) {
-                 if (tArgs.message) {
-                     tArgs.message = `${sharedContext}\n\nTask:\n${tArgs.message}`;
-                 } else if (tArgs.task) {
-                     tArgs.task = `${sharedContext}\n\nTask:\n${tArgs.task}`;
-                 }
+              if (tArgs.message) {
+                tArgs.message = `${sharedContext}\n\nTask:\n${tArgs.message}`;
+              } else if (tArgs.task) {
+                tArgs.task = `${sharedContext}\n\nTask:\n${tArgs.task}`;
+              }
             }
 
             const t = this.registry.tools.get(tName);
@@ -419,7 +423,7 @@ export class Engine {
 
                 // Track artifacts
                 if (tArgs && (tArgs.filepath || tArgs.path)) {
-                   currentArtifacts.push(tArgs.filepath || tArgs.path);
+                  currentArtifacts.push(tArgs.filepath || tArgs.path);
                 }
 
                 // Reload tools if create_tool was used (via MCP refresh if available?)
@@ -510,21 +514,21 @@ export class Engine {
           if (allExecuted) {
             // Store successful memory
             try {
-                const brainClient = this.mcp.getClient("brain");
-                if (brainClient) {
-                    await brainClient.callTool({
-                        name: "brain_store",
-                        arguments: {
-                            taskId: "task-" + Date.now(),
-                            request: userRequest,
-                            solution: message || response.thought || "Task completed.",
-                            artifacts: JSON.stringify(currentArtifacts),
-                            company: companyName
-                        }
-                    });
-                }
+              const brainClient = this.mcp.getClient("brain");
+              if (brainClient) {
+                await brainClient.callTool({
+                  name: "brain_store",
+                  arguments: {
+                    taskId: "task-" + Date.now(),
+                    request: userRequest,
+                    solution: message || response.thought || "Task completed.",
+                    artifacts: JSON.stringify(currentArtifacts),
+                    company: companyName
+                  }
+                });
+              }
             } catch (e) {
-                console.warn("Failed to store memory via brain server:", e);
+              console.warn("Failed to store memory via brain server:", e);
             }
             input = "The tool executions were verified. Proceed.";
           }

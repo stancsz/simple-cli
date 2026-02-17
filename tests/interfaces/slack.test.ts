@@ -1,4 +1,4 @@
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 const mocks = vi.hoisted(() => ({
     EngineRun: vi.fn(),
@@ -68,9 +68,15 @@ vi.mock('../../src/workflows/execute_sop_tool.js', () => ({
 }));
 
 // Import the module under test
-import { app } from '../../src/interfaces/slack.js';
+import { app, resetInitialization } from '../../src/interfaces/slack.js';
 
 describe('Slack Interface Adapter', () => {
+    beforeEach(() => {
+        // Don't clear all mocks as it clears module-level registrations
+        mocks.EngineRun.mockClear();
+        resetInitialization();
+    });
+
     it('should initialize Bolt App', () => {
         expect(app).toBeDefined();
         // Check if event listener was registered
@@ -79,12 +85,17 @@ describe('Slack Interface Adapter', () => {
 
     it('should handle app_mention event', async () => {
         // Extract the event handler
-        const calls = mocks.AppEvent.mock.calls;
-        const eventHandler = calls.find((call: any[]) => call[0] === 'app_mention')[1];
+        const calls = (mocks.AppEvent as any).mock.calls;
+        const call = calls.find((c: any[]) => c[0] === 'app_mention');
+        expect(call).toBeDefined();
+        const eventHandler = call![1];
         expect(eventHandler).toBeDefined();
 
         const mockSay = vi.fn();
-        const mockClient = { chat: { postMessage: vi.fn() } };
+        const mockClient = {
+            chat: { postMessage: vi.fn().mockResolvedValue({}) },
+            reactions: { add: vi.fn().mockResolvedValue({}) }
+        };
 
         // Invoke handler
         await eventHandler({
@@ -99,6 +110,8 @@ describe('Slack Interface Adapter', () => {
         expect(mocks.EngineRun).toHaveBeenCalledWith(expect.anything(), 'help me', { interactive: false });
 
         // Since mock history is empty, it should say "I couldn't generate a response."
-        expect(mockSay).toHaveBeenCalledWith("I couldn't generate a response.");
+        expect(mockClient.chat.postMessage).toHaveBeenCalledWith(expect.objectContaining({
+            text: "I couldn't generate a response."
+        }));
     });
 });
