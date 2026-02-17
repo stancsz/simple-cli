@@ -53,7 +53,7 @@
     - [x] Implement Concurrency Control: Added file locking to `ContextManager` to prevent race conditions.
     - [x] Implement a **Context MCP Server** (singleton) to handle `context.json` updates securely (fix race conditions).
     - [x] Update `engine.ts` to push/pull context via this server.
-    - [ ] Verify `ContextManager` uses `Brain` MCP for long-term storage.
+    - [x] Verify `ContextManager` uses `Brain` MCP for long-term storage.
 
 ### 3. Cleanup & Polishing
 - [x] **Security**: Re-enabled path validation in `src/builtins.ts` (sandboxing to CWD).
