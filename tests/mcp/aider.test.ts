@@ -2,9 +2,15 @@ import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { AiderServer } from "../../src/mcp_servers/aider/index.js";
 import { spawn } from "child_process";
 import { EventEmitter } from "events";
+import * as fs from "fs/promises";
 
 vi.mock("child_process", () => ({
   spawn: vi.fn(),
+}));
+
+// Mock fs/promises
+vi.mock("fs/promises", () => ({
+  readFile: vi.fn(),
 }));
 
 describe("AiderServer", () => {
@@ -12,7 +18,11 @@ describe("AiderServer", () => {
   const originalEnv = process.env;
 
   beforeEach(() => {
-    vi.resetAllMocks();
+    vi.resetAllMocks(); // Wipes implementations
+
+    // Setup readFile mock
+    (fs.readFile as any).mockResolvedValue("MOCK_SOUL");
+
     process.env = { ...originalEnv, DEEPSEEK_API_KEY: "test-key" };
     server = new AiderServer();
   });
@@ -23,7 +33,9 @@ describe("AiderServer", () => {
 
   const callTool = async (name: string, args: any) => {
     const mcpServer = (server as any).server as any;
-    const tool = mcpServer._registeredTools[name];
+    const registeredTools = (mcpServer as any)._registeredTools;
+    const tool = registeredTools ? registeredTools[name] : undefined;
+
     if (!tool) throw new Error(`Tool ${name} not found`);
     return tool.handler(args);
   };
@@ -53,7 +65,7 @@ describe("AiderServer", () => {
         "--model", "deepseek/deepseek-chat",
         "--api-key", "deepseek=test-key",
         "--yes",
-        "--message", "Hello Aider",
+        "--message", "MOCK_SOUL\n\nTask:\nHello Aider",
         "file1.ts"
       ],
       expect.objectContaining({
@@ -89,10 +101,13 @@ describe("AiderServer", () => {
         "--model", "deepseek/deepseek-chat",
         "--api-key", "deepseek=test-key",
         "--yes",
-        "--message", "Edit this file",
+        "--message", "MOCK_SOUL\n\nTask:\nEdit this file",
         "file2.ts"
       ],
-      expect.any(Object)
+      expect.objectContaining({
+        env: expect.objectContaining({ DEEPSEEK_API_KEY: "test-key" }),
+        shell: false
+      })
     );
     expect((result as any).content[0].text).toBe("Edit Output");
   });
