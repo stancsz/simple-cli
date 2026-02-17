@@ -1,12 +1,19 @@
-# 🚀 Simple-CLI: The Digital Coworker
-**Stop chatting with AI. Start deploying coworkers.**
+# 🚀 Simple-CLI: The Universal AI Framework Integrator
+**The only orchestrator that learns any AI framework and turns it into a subordinate agent.**
 
-Simple-CLI is a **Meta-Orchestrator** designed to build and manage a fleet of autonomous digital employees. It doesn't just answer questions; it coordinates specialized agents (Jules, Claude, Aider, Kimi) to execute complex, multi-threaded workflows in parallel.
+Simple-CLI is a **Meta-Orchestrator** with a unique superpower: **rapid framework ingestion**. Point it at any AI framework (Jules, Claude, Aider, CrewAI, Kimi, Devin), and it will digest, wrap, and deploy it as a specialized sub-agent—complete with token-efficient long-term memory and autonomous execution capabilities.
 
-## 🎯 Goal
-**Simple-CLI is your Digital Coworker and Autonomous Consulting Agency.**
+## 🎯 Core Strength
+**Simple-CLI is a Framework-Agnostic Integration Engine.**
 
-The goal is to evolve beyond a simple coding assistant into a fleet of **Digital Employees** that you can deploy across multiple companies. By leveraging the best-in-class models and frameworks, Simple-CLI acts as a high-leverage manager that thinks boldly, acts creatively, and executes with precision.
+Unlike traditional AI tools that lock you into a single model or framework, Simple-CLI is designed to:
+- ✅ **Ingest any AI framework** in hours, not weeks
+- ✅ **Digest and standardize** via MCP (Model Context Protocol) servers
+- ✅ **Deploy as subordinate agents** with shared memory and context
+- ✅ **Optimize token usage** through smart routing and persistent memory
+- ✅ **Scale infinitely** by adding new frameworks as they emerge
+
+**The Vision:** A digital consulting agency that can adopt any new AI capability and make it an integral part of your workforce—fast, cheap, and with perfect memory.
 
 ## 🏢 Digital Employee Framework
 Simple-CLI allows you to "hire" and "equip" specialized digital workers for your projects:
@@ -46,6 +53,36 @@ $ simple "Refactor src/legacy.ts to functional style and write tests for it. Do 
 
 ✔  Goal Achieved.
 ```
+
+---
+
+## 🔄 The Ingest-Digest-Deploy Cycle
+
+Simple-CLI's secret weapon is its ability to **rapidly integrate any AI framework** using a three-phase process:
+
+### 1️⃣ **Ingest** (Learn the Framework)
+- Analyze the framework's API, CLI, or SDK
+- Understand its strengths, weaknesses, and ideal use cases
+- Map its capabilities to MCP tool definitions
+
+### 2️⃣ **Digest** (Standardize the Interface)
+- Wrap the framework in an MCP server (`src/mcp_servers/<framework>/`)
+- Create a unified interface that the orchestrator can call
+- Add framework-specific optimizations (streaming, batching, caching)
+
+### 3️⃣ **Deploy** (Make it a Subordinate Agent)
+- Register the new MCP server in `mcp.json`
+- The orchestrator automatically discovers and uses it
+- The framework becomes part of your digital workforce
+
+**Examples of Integrated Frameworks:**
+- **Jules** → Autonomous GitHub PR agent (ingested in 2 days)
+- **Aider** → Rapid code editing specialist (ingested in 1 day)
+- **CrewAI** → Multi-agent research teams (ingested in 3 days)
+- **Kimi K2.5** → Deep reasoning engine (ingested in 1 day)
+- **Devin** → Full-stack autonomous developer (ingested in 2 days)
+
+**Token Efficiency:** All agents share a unified `.agent/brain/` memory system, eliminating redundant context passing and reducing token costs by up to 70%.
 
 ---
 

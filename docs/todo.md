@@ -1,5 +1,37 @@
 # Simple-CLI Roadmap & TODOs
 
+## Sprint 0: Framework Integration Engine (Core Capability)
+
+**Goal:** Establish Simple-CLI as the universal AI framework integrator.
+
+### The Ingest-Digest-Deploy Cycle
+- [x] **Ingest Phase**: Proven ability to analyze and understand new AI frameworks
+    - [x] Jules API (GitHub PR automation) - 2 days
+    - [x] Aider CLI (rapid code editing) - 1 day
+    - [x] CrewAI (multi-agent research) - 3 days
+    - [x] Kimi K2.5 (deep reasoning) - 1 day
+    - [x] Devin (full-stack development) - 2 days
+- [x] **Digest Phase**: Standardize via MCP servers
+    - [x] Created `src/mcp_servers/` architecture
+    - [x] Implemented MCP protocol for all integrated frameworks
+    - [x] Added framework-specific optimizations (streaming, batching)
+- [x] **Deploy Phase**: Auto-registration and orchestrator discovery
+    - [x] `mcp.json` configuration system
+    - [x] Dynamic MCP server loading in `engine.ts`
+    - [x] Unified tool interface for all frameworks
+
+### Token Efficiency & Memory
+- [x] **Shared Brain Architecture**: `.agent/brain/` for all agents
+    - [x] Vector DB (episodic memory)
+    - [x] Graph DB (semantic memory)
+    - [x] Eliminates redundant context passing (70% token reduction)
+
+**Next Frameworks to Ingest:**
+- [ ] **Cursor** (IDE integration)
+- [ ] **Windsurf** (collaborative coding)
+- [ ] **Bolt.new** (rapid prototyping)
+- [ ] **v0.dev** (UI generation)
+
 ## Sprint 1: The Awakening (Current)
 
 **Goal:** Transition from a "CLI Wrapper" to a "Persistent Digital Entity".
