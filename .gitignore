@@ -80,3 +80,20 @@ jules_work_*
 report.txt
 .agent/sop_logs.json
 .agent/sop_logs.jsonl
+
+# Additional cleanup patterns
+*.txt
+!README.txt
+!LICENSE.txt
+!docs/**/*.txt
+!examples/**/*.txt
+kimi_*.txt
+openclaw_*.txt
+debug_*.log
+review_*.log
+run_*.log
+test_*.log
+tsc_output.txt
+full_run.log
+pr_failure.log
+.test_agent_*/
