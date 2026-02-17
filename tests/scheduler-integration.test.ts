@@ -92,7 +92,8 @@ describe('AutonomousOrchestrator', () => {
             init: vi.fn(),
             getTools: vi.fn().mockResolvedValue([]),
             listServers: vi.fn().mockReturnValue([]),
-            startServer: vi.fn()
+            startServer: vi.fn(),
+            getClient: vi.fn().mockReturnValue(null)
         } as any;
 
         const logPath = join(TEST_DIR, 'autonomous.log');

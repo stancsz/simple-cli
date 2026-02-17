@@ -6,15 +6,20 @@ import { fileURLToPath } from "url";
 import process from "process";
 import { readFile } from "fs/promises";
 import { join } from "path";
+import { BrainClient } from "../brain/client.js";
 
 export class ClaudeServer {
   private server: McpServer;
+  private brain: BrainClient;
 
   constructor() {
     this.server = new McpServer({
       name: "claude-server",
       version: "1.0.0",
     });
+
+    // Initialize BrainClient
+    this.brain = new BrainClient();
 
     this.setupTools();
   }
@@ -46,13 +51,25 @@ export class ClaudeServer {
       };
     }
 
+    // Query Brain
+    let memoryContext = "";
+    try {
+        const company = process.env.JULES_COMPANY;
+        const memory = await this.brain.query(task, company);
+        if (memory && !memory.includes("No relevant memories found")) {
+            memoryContext = `[Relevant Past Experience]\n${memory}\n\n`;
+        }
+    } catch (e) {
+        // Ignore brain errors
+    }
+
     let finalTask = task;
     const soulPath = join(process.cwd(), "src", "agents", "souls", "claude.md");
     try {
       const soul = await readFile(soulPath, "utf-8");
-      finalTask = `${soul}\n\nTask:\n${task}`;
+      finalTask = `${soul}\n\n${memoryContext}Task:\n${task}`;
     } catch (e) {
-      // console.warn("Could not load Claude soul:", e);
+      finalTask = `${memoryContext}Task:\n${task}`;
     }
 
     // Construct arguments for claude code
@@ -98,14 +115,30 @@ export class ClaudeServer {
         errorOutput += data.toString();
       });
 
-      child.on("close", (code) => {
+      child.on("close", async (code) => {
+        const fullOutput = output + (errorOutput ? `\nStderr:\n${errorOutput}` : "");
+
         if (code === 0) {
+          // Store successful execution
+          try {
+             const company = process.env.JULES_COMPANY;
+             await this.brain.store(
+                 `claude-${Date.now()}`,
+                 task,
+                 output || "Task completed.",
+                 files,
+                 company
+             );
+          } catch (e) {
+             // Ignore
+          }
+
           resolve({
-            content: [{ type: "text", text: output + (errorOutput ? `\nStderr:\n${errorOutput}` : "") }],
+            content: [{ type: "text", text: fullOutput }],
           });
         } else {
           resolve({
-            content: [{ type: "text", text: `Claude failed with exit code ${code}.\nStdout:\n${output}\nStderr:\n${errorOutput}` }],
+            content: [{ type: "text", text: `Claude failed with exit code ${code}.\n${fullOutput}` }],
             isError: true,
           });
         }
@@ -121,6 +154,9 @@ export class ClaudeServer {
   }
 
   async run() {
+    // Connect to Brain
+    await this.brain.connect();
+
     const transport = new StdioServerTransport();
     await this.server.connect(transport);
     console.error("Claude MCP Server running on stdio");

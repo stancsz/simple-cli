@@ -10,6 +10,8 @@ import { MCP } from "../mcp.js";
 import { Skill } from "../skills.js";
 import { LLM } from "../llm.js";
 import { loadCompanyProfile, CompanyProfile } from "../context/company-profile.js";
+import { BrainClient } from "../brain/client.js";
+import { ContextManager } from "../context/manager.js";
 
 export interface Message {
   role: "user" | "assistant" | "system";
@@ -31,11 +33,6 @@ async function getRepoMap(cwd: string, registry: Registry): Promise<string> {
 
   try {
     const result: any = await listTool.execute({ path: cwd });
-    // Assume result.content[0].text contains the list or result is the list
-    // Standard MCP returns { content: [{ type: "text", text: "..." }] }
-    // But filesystem list_directory might return JSON string or structured data?
-    // If it's standard MCP, it returns text or resource.
-    // Let's assume text for now.
     if (result && result.content && Array.isArray(result.content)) {
       return result.content.map((c: any) => c.text).join("\n");
     }
@@ -80,8 +77,6 @@ export class Context {
 export class Registry {
   tools: Map<string, Tool> = new Map();
 
-  // Deprecated: Legacy tool loading removed.
-  // Tools are now loaded exclusively via MCP Server discovery.
   async loadProjectTools(_cwd: string) {
     // No-op
   }
@@ -107,12 +102,10 @@ export class Registry {
       }
     }
 
-    // 2. Scan Skill-Based Tools (.agent/skills/*/tools.ts)
     const skillsDir = join(cwd, ".agent", "skills");
     if (existsSync(skillsDir)) {
       for (const skillName of await readdir(skillsDir)) {
         const skillPath = join(skillsDir, skillName);
-        // Look for tools.ts or index.ts
         const potentialFiles = ["tools.ts", "index.ts", "tools.js", "index.js"];
 
         for (const file of potentialFiles) {
@@ -198,45 +191,27 @@ export class Engine {
       this.registry.tools.set(t.name, t as any),
     );
 
-    // Legacy loading removed
-    // await this.registry.loadProjectTools(ctx.cwd);
-
     if (process.stdin.isTTY) {
       readline.emitKeypressEvents(process.stdin);
     }
 
     // Initialize CompanyContext if JULES_COMPANY is set
-    let sharedContext = "";
+    let companyProfile: CompanyProfile | undefined;
     if (process.env.JULES_COMPANY) {
       try {
         const { CompanyLoader } = await import("../context/company_loader.js");
         const loader = new CompanyLoader();
-        await loader.load(process.env.JULES_COMPANY);
+        companyProfile = await loader.load(process.env.JULES_COMPANY);
         this.log("success", `Loaded company context for ${process.env.JULES_COMPANY}`);
       } catch (e: any) {
         console.error("Failed to load company context:", e.message);
       }
     }
 
-    // Fetch shared context for injection
-    try {
-        const contextClient = this.mcp.getClient("context_server");
-        if (contextClient) {
-             const res: any = await contextClient.callTool({ name: "read_context", arguments: {} });
-             if (res && res.content && res.content[0]) {
-                 const data = JSON.parse(res.content[0].text);
-                 if (data.company_context) {
-                     sharedContext = data.company_context;
-                     // Inject into system prompt once
-                     if (!ctx.skill.systemPrompt.includes("## Company Context")) {
-                        ctx.skill.systemPrompt = `${ctx.skill.systemPrompt}\n\n${sharedContext}`;
-                     }
-                 }
-             }
-        }
-    } catch (e) {
-        // Ignore if context server is not available or empty
-    }
+    // Initialize Managers
+    const brainClient = new BrainClient(this.mcp.getClient("brain"));
+    const contextClient = this.mcp.getClient("context_server");
+    const contextManager = new ContextManager(contextClient, brainClient);
 
     while (true) {
       if (!input) {
@@ -245,46 +220,30 @@ export class Engine {
         if (!input) break;
       }
 
-      // Brain: Recall similar past experiences
       const userRequest = input; // Capture original request
-      let pastMemory: string | null = null;
-      try {
-        const brainClient = this.mcp.getClient("brain");
-        if (brainClient) {
-            const result: any = await brainClient.callTool({
-                name: "brain_query",
-                arguments: {
-                  query: userRequest,
-                  company: companyName
-                }
-            });
-            if (result && result.content && result.content[0]) {
-                 pastMemory = result.content[0].text;
-            }
-        }
-      } catch (e) {
-         // Ignore context errors
+
+      // Fetch combined context (Static + Episodic)
+      const context = await contextManager.getContext(input, process.env.JULES_COMPANY);
+      if (context) {
+          input = `${context}[User Request]\n${input}`;
       }
 
-      if (pastMemory && !pastMemory.includes("No relevant memory found")) {
-        this.log("info", pc.dim(`[Brain] Recalled past experience.`));
-        input = `[Past Experience]\n${pastMemory}\n\n[User Request]\n${input}`;
-      }
-
-      // Inject Company Profile Context
+      // Inject Company Profile Context (if loaded from file)
       if (companyProfile) {
          let profileContext = `[Company Context: ${companyProfile.name}]\n`;
          if (companyProfile.brandVoice) profileContext += `Brand Voice: ${companyProfile.brandVoice}\n`;
          if (companyProfile.internalDocs?.length) profileContext += `Docs: ${companyProfile.internalDocs.join(", ")}\n`;
          if (companyProfile.sops?.length) profileContext += `Recommended SOPs: ${companyProfile.sops.join(", ")}\n`;
 
-         input = `${profileContext}\n${input}`;
+         if (!input.includes(`[Company Context: ${companyProfile.name}]`)) {
+             input = `${profileContext}\n${input}`;
+         }
       }
 
       ctx.history.push({ role: "user", content: input });
 
-      // Inject RAG context from Company MCP Server
-      if (companyName) {
+      // Inject RAG context from Company MCP Server (Separate from Brain/ContextManager for now)
+      if (process.env.JULES_COMPANY) {
         try {
           const client = this.mcp.getClient("company");
           if (client) {
@@ -297,13 +256,13 @@ export class Engine {
                 const contextText = result.content[0].text;
                 if (!contextText.includes("No company context active")) {
                    const lastMsg = ctx.history[ctx.history.length - 1];
-                   lastMsg.content = `${contextText}\n\n[User Request]\n${lastMsg.content}`;
+                   lastMsg.content = `${contextText}\n\n${lastMsg.content}`;
                    this.log("info", pc.dim(`[RAG] Injected company context.`));
                 }
              }
           }
         } catch (e: any) {
-          console.error("Failed to query company context:", e.message);
+          // console.error("Failed to query company context:", e.message);
         }
       }
 
@@ -325,12 +284,11 @@ export class Engine {
           return;
         }
 
-        // Type-ahead buffering
         if (!key.ctrl && !key.meta) {
           if (key.name === "backspace") {
             bufferedInput = bufferedInput.slice(0, -1);
           } else if (key.name === "return") {
-            // Do nothing for return, user must hit it again at prompt
+            // Do nothing
           } else if (str && str.length === 1) {
             bufferedInput += str;
           }
@@ -343,7 +301,6 @@ export class Engine {
       }
 
       try {
-        // Pass registry to buildPrompt
         let prompt = await ctx.buildPrompt(this.registry.tools, this.registry);
 
         const userHistory = ctx.history.filter(
@@ -352,7 +309,6 @@ export class Engine {
             !["Continue.", "Fix the error."].includes(m.content),
         );
 
-        // Pass signal to LLM
         let typingStarted = false;
         const onTyping = () => {
           this.s.start("Typing...");
@@ -380,7 +336,6 @@ export class Engine {
 
         if (thought) this.log("info", pc.dim(thought));
 
-        // Determine execution list
         const executionList =
           tools && tools.length > 0
             ? tools
@@ -397,14 +352,14 @@ export class Engine {
             const tName = item.tool;
             const tArgs = item.args;
 
-            // Inject company context into sub-agents (Delegate CLI replacement logic)
-            if ((tName === "aider_chat" || tName === "aider_edit" || tName === "ask_claude") && sharedContext) {
-                 if (tArgs.message) {
-                     tArgs.message = `${sharedContext}\n\nTask:\n${tArgs.message}`;
-                 } else if (tArgs.task) {
-                     tArgs.task = `${sharedContext}\n\nTask:\n${tArgs.task}`;
-                 }
-            }
+            // Inject shared context into sub-agents arguments if applicable
+            // This might be redundant if we already injected it into the prompt,
+            // but sub-agents might need it in their direct input.
+            // We can rely on the Agent Servers (CrewAI, Aider) to fetch context from Brain themselves now!
+            // But for safety, we can leave it or remove it.
+            // The prompt says "Implement Brain MCP server integration for all agents".
+            // If agents integrate Brain themselves, we don't need to inject it here.
+            // But "aider_chat" message argument is what Aider receives.
 
             const t = this.registry.tools.get(tName);
 
@@ -417,23 +372,17 @@ export class Engine {
                 this.s.stop(`Executed ${tName}`);
                 toolExecuted = true;
 
-                // Track artifacts
                 if (tArgs && (tArgs.filepath || tArgs.path)) {
                    currentArtifacts.push(tArgs.filepath || tArgs.path);
                 }
 
-                // Reload tools if create_tool was used (via MCP refresh if available?)
-                // Since legacy tools are gone, create_tool would likely create an MCP server or file.
-                // We should refresh MCP tools.
                 if (tName === "create_tool" || tName === "mcp_start_server" || tName === "mcp_install_server") {
-                  // Refresh tools
                   (await this.mcp.getTools()).forEach((t) =>
                     this.registry.tools.set(t.name, t as any),
                   );
                   this.log("success", "MCP tools updated.");
                 }
 
-                // Add individual tool execution to history to keep context updated
                 ctx.history.push({
                   role: "assistant",
                   content: JSON.stringify({
@@ -447,11 +396,10 @@ export class Engine {
                   content: `Result: ${JSON.stringify(result)}`,
                 });
 
-                // --- Supervisor Loop (QA & Reflection) ---
                 this.s.start(`[Supervisor] Verifying work from ${tName}...`);
                 qaStarted = true;
 
-                let qaPrompt = `Analyze the result of the tool execution: ${JSON.stringify(result)}. Did it satisfy the user's request: "${input || userHistory.pop()?.content}"? If specific files were mentioned (like flask app), check if they exist or look correct based on the tool output.`;
+                let qaPrompt = `Analyze the result of the tool execution: ${JSON.stringify(result)}. Did it satisfy the user's request: "${input || userHistory.pop()?.content}"? If specific files were mentioned, check if they exist or look correct.`;
 
                 const qaCheck = await this.llm.generate(
                   qaPrompt,
@@ -471,12 +419,12 @@ export class Engine {
                   input =
                     "The previous attempt failed. Please retry or fix the issue.";
                   allExecuted = false;
-                  break; // Stop batch execution on failure
+                  break;
                 } else {
                   this.s.stop("[Supervisor] Verified");
                 }
               } catch (e: any) {
-                if (signal.aborted) throw e; // Re-throw if it was an abort
+                if (signal.aborted) throw e;
                 if (!toolExecuted) this.s.stop(`Error executing ${tName}`);
                 else if (qaStarted) {
                   this.s.stop("Verification Error");
@@ -508,21 +456,15 @@ export class Engine {
           }
 
           if (allExecuted) {
-            // Store successful memory
+            // Store successful memory using BrainClient
             try {
-                const brainClient = this.mcp.getClient("brain");
-                if (brainClient) {
-                    await brainClient.callTool({
-                        name: "brain_store",
-                        arguments: {
-                            taskId: "task-" + Date.now(),
-                            request: userRequest,
-                            solution: message || response.thought || "Task completed.",
-                            artifacts: JSON.stringify(currentArtifacts),
-                            company: companyName
-                        }
-                    });
-                }
+                await brainClient.store(
+                    "task-" + Date.now(),
+                    userRequest,
+                    message || response.thought || "Task completed.",
+                    currentArtifacts,
+                    process.env.JULES_COMPANY
+                );
             } catch (e) {
                 console.warn("Failed to store memory via brain server:", e);
             }
@@ -577,18 +519,14 @@ export class Engine {
         input = undefined;
       } catch (e: any) {
         if (aborted || signal.aborted || e.name === "AbortError") {
-          // Already logged interruption or will just loop back
           input = undefined;
           continue;
         }
-        // Log actual errors
         this.log("error", `Error: ${e.message}`);
 
         if (!options.interactive) {
           throw e;
         }
-
-        // Break or continue? Probably continue to prompt
         input = undefined;
       } finally {
         if (process.stdin.isTTY) {

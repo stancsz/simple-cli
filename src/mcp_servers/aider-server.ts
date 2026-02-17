@@ -7,15 +7,20 @@ import process from "process";
 import { readFile } from "fs/promises";
 import { join } from "path";
 import { existsSync } from "fs";
+import { BrainClient } from "../brain/client.js";
 
 export class AiderServer {
   private server: McpServer;
+  private brain: BrainClient;
 
   constructor() {
     this.server = new McpServer({
       name: "aider-server",
       version: "1.0.0",
     });
+
+    // Initialize BrainClient
+    this.brain = new BrainClient();
 
     this.setupTools();
   }
@@ -80,15 +85,29 @@ export class AiderServer {
       };
     }
 
+    // Query Brain
+    let memoryContext = "";
+    try {
+        const company = process.env.JULES_COMPANY;
+        const memory = await this.brain.query(message, company);
+        if (memory && !memory.includes("No relevant memories found")) {
+            memoryContext = `[Relevant Past Experience]\n${memory}\n\n`;
+        }
+    } catch (e) {
+        // Ignore brain errors
+    }
+
     let finalMessage = message;
     const soulPath = join(process.cwd(), "src", "agents", "souls", "aider.md");
     try {
       if (existsSync(soulPath)) {
           const soul = await readFile(soulPath, "utf-8");
-          finalMessage = `${soul}\n\nTask:\n${message}`;
+          finalMessage = `${soul}\n\n${memoryContext}Task:\n${message}`;
+      } else {
+          finalMessage = `${memoryContext}Task:\n${message}`;
       }
     } catch (e) {
-      // Ignore soul loading error
+      finalMessage = `${memoryContext}Task:\n${message}`;
     }
 
     // Construct arguments
@@ -120,20 +139,35 @@ export class AiderServer {
       });
 
       // Ensure aider exits after the message
-      // Writing /exit might be needed if it stays in chat mode
       if (child.stdin) {
         child.stdin.write("/exit\n");
         child.stdin.end();
       }
 
-      child.on("close", (code) => {
+      child.on("close", async (code) => {
+        const fullOutput = output + (errorOutput ? `\nStderr:\n${errorOutput}` : "");
+
         if (code === 0) {
+          // Store successful execution
+          try {
+             const company = process.env.JULES_COMPANY;
+             await this.brain.store(
+                 `aider-${Date.now()}`,
+                 message,
+                 output || "Task completed.",
+                 files, // Use files as artifacts hint
+                 company
+             );
+          } catch (e) {
+             // Ignore
+          }
+
           resolve({
-            content: [{ type: "text", text: output + (errorOutput ? `\nStderr:\n${errorOutput}` : "") }],
+            content: [{ type: "text", text: fullOutput }],
           });
         } else {
           resolve({
-            content: [{ type: "text", text: `Aider failed with exit code ${code}.\nStdout:\n${output}\nStderr:\n${errorOutput}` }],
+            content: [{ type: "text", text: `Aider failed with exit code ${code}.\n${fullOutput}` }],
             isError: true,
           });
         }
@@ -149,6 +183,9 @@ export class AiderServer {
   }
 
   async run() {
+    // Connect to Brain
+    await this.brain.connect();
+
     const transport = new StdioServerTransport();
     await this.server.connect(transport);
     console.error("Aider MCP Server running on stdio");

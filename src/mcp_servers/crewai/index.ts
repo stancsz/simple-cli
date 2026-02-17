@@ -5,15 +5,20 @@ import { spawn } from "child_process";
 import { join } from "path";
 import { fileURLToPath } from "url";
 import { readFile } from "fs/promises";
+import { BrainClient } from "../../brain/client.js";
 
 export class CrewAIServer {
   private server: McpServer;
+  private brain: BrainClient;
 
   constructor() {
     this.server = new McpServer({
       name: "crewai-server",
       version: "1.0.0",
     });
+
+    // Initialize BrainClient (will self-manage connection if standalone)
+    this.brain = new BrainClient();
 
     this.setupTools();
   }
@@ -59,13 +64,25 @@ export class CrewAIServer {
       };
     }
 
+    // Query Brain for past experiences
+    let memoryContext = "";
+    try {
+        const company = process.env.JULES_COMPANY;
+        const memory = await this.brain.query(task, company);
+        if (memory && !memory.includes("No relevant memories found")) {
+            memoryContext = `[Relevant Past Experience]\n${memory}\n\n`;
+        }
+    } catch (e) {
+        // Ignore brain errors
+    }
+
     let finalTask = task;
     const soulPath = join(process.cwd(), "src", "agents", "souls", "crewai.md");
     try {
       const soul = await readFile(soulPath, "utf-8");
-      finalTask = `${soul}\n\nTask:\n${task}`;
+      finalTask = `${soul}\n\n${memoryContext}Task:\n${task}`;
     } catch (e) {
-      // console.warn("Could not load CrewAI soul:", e);
+      finalTask = `${memoryContext}Task:\n${task}`;
     }
 
     // Set up environment
@@ -97,8 +114,24 @@ export class CrewAIServer {
         errorOutput += data.toString();
       });
 
-      child.on("close", (code) => {
+      child.on("close", async (code) => {
+        const fullOutput = output + (errorOutput ? `\nStderr:\n${errorOutput}` : "");
+
         if (code === 0) {
+          // Store successful execution in Brain
+          try {
+             const company = process.env.JULES_COMPANY;
+             await this.brain.store(
+                 `crewai-${Date.now()}`,
+                 task,
+                 output || "Task completed successfully.",
+                 [],
+                 company
+             );
+          } catch (e) {
+             // Ignore store errors
+          }
+
           resolve({
             content: [
               {
@@ -112,7 +145,7 @@ export class CrewAIServer {
             content: [
               {
                 type: "text",
-                text: `Crew execution failed (exit code ${code}):\n${errorOutput}\n${output}`,
+                text: `Crew execution failed (exit code ${code}):\n${fullOutput}`,
               },
             ],
           });
@@ -140,6 +173,9 @@ export class CrewAIServer {
   }
 
   async run() {
+    // Connect to Brain server (if running standalone)
+    await this.brain.connect();
+
     const transport = new StdioServerTransport();
     await this.server.connect(transport);
     console.error("CrewAI MCP Server running on stdio");
