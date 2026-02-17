@@ -101,8 +101,8 @@ Analyze the roadmap against current progress and identify the absolute next step
     if (decision.should_delegate && decision.tasks && decision.tasks.length > 0) {
         const jules = new JulesClient();
 
-        // Limit to 3 tasks per run to avoid spamming
-        const tasksToDelegate = decision.tasks.slice(0, 3);
+        // Limit to 1 task per run to avoid overwhelming the system
+        const tasksToDelegate = decision.tasks.slice(0, 1);
 
         for (const taskObj of tasksToDelegate) {
             console.log(chalk.white("\nNext Task:"), chalk.yellow(taskObj.description));
