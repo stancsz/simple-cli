@@ -79,6 +79,51 @@ export class BrainServer {
       }
     );
 
+    // Generic Memory Tools (Key-Value backed by Episodic)
+    this.server.tool(
+      "recall_memory",
+      "Retrieve a specific memory by key (e.g. project context).",
+      {
+        key: z.string().describe("The unique key for the memory."),
+        company: z.string().optional().describe("The company/client identifier."),
+      },
+      async ({ key, company }) => {
+        const result = await this.episodic.retrieve(key, company);
+        if (!result) {
+          return { content: [{ type: "text", text: "Memory not found." }], isError: true };
+        }
+        return {
+          content: [
+            {
+              type: "text",
+              text: JSON.stringify({
+                value: result.agentResponse,
+                metadata: result.userPrompt
+              })
+            }
+          ]
+        };
+      }
+    );
+
+    this.server.tool(
+      "store_memory",
+      "Store a specific memory by key.",
+      {
+        key: z.string().describe("The unique key for the memory."),
+        value: z.string().describe("The value to store."),
+        metadata: z.any().optional().describe("Additional metadata."),
+        company: z.string().optional().describe("The company/client identifier."),
+      },
+      async ({ key, value, metadata, company }) => {
+        const metaStr = metadata ? JSON.stringify(metadata) : "{}";
+        await this.episodic.store(key, metaStr, value, [], company);
+        return {
+          content: [{ type: "text", text: "Memory stored." }]
+        };
+      }
+    );
+
     // Semantic Graph Tools
     this.server.tool(
       "brain_query_graph",

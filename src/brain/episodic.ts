@@ -114,4 +114,29 @@ export class EpisodicMemory {
 
     return results as unknown as PastEpisode[];
   }
+
+  async retrieve(taskId: string, company?: string): Promise<PastEpisode | null> {
+    if (!this.db) await this.init();
+
+    const table = await this.getTable(company);
+    if (!table) return null;
+
+    try {
+      // Sanitize taskId to prevent injection
+      const sanitizedId = taskId.replace(/'/g, "''");
+
+      // Retrieve all entries for the taskId and sort by timestamp to get the latest
+      const results = await table.query()
+        .where(`taskId = '${sanitizedId}'`)
+        .toArray();
+
+      if (results.length === 0) return null;
+
+      results.sort((a: any, b: any) => b.timestamp - a.timestamp);
+      return results[0] as unknown as PastEpisode;
+    } catch (e) {
+      console.warn(`Error retrieving memory for ${taskId}:`, e);
+      return null;
+    }
+  }
 }
