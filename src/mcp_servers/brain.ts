@@ -79,6 +79,30 @@ export class BrainServer {
       }
     );
 
+    // Alias for brain_query
+    this.server.tool(
+      "recall",
+      "Alias for brain_query. Search episodic memory for relevant past experiences.",
+      {
+        query: z.string().describe("The search query."),
+        limit: z.number().optional().default(3).describe("Max number of results."),
+        company: z.string().optional().describe("The company/client identifier for namespacing."),
+      },
+      async ({ query, limit = 3, company }) => {
+        const results = await this.episodic.recall(query, limit, company);
+        if (results.length === 0) {
+          return { content: [{ type: "text", text: "No relevant memories found." }] };
+        }
+        const text = results
+          .map(
+            (r) =>
+              `[Task: ${r.taskId}]\nTimestamp: ${new Date(r.timestamp).toISOString()}\nRequest: ${r.userPrompt}\nSolution: ${r.agentResponse}\nArtifacts: ${r.artifacts.join(", ") || "None"}`
+          )
+          .join("\n\n---\n\n");
+        return { content: [{ type: "text", text }] };
+      }
+    );
+
     // Semantic Graph Tools
     this.server.tool(
       "brain_query_graph",

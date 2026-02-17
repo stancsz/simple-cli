@@ -1,6 +1,6 @@
 import "dotenv/config";
 import { App } from "@slack/bolt";
-import { Engine, Context, Registry } from "../engine/orchestrator.js";
+import { Engine, Context, Registry, Message } from "../engine/orchestrator.js";
 import { createLLM } from "../llm.js";
 import { MCP } from "../mcp.js";
 import { getActiveSkill } from "../skills.js";
@@ -95,6 +95,17 @@ async function initializeResources() {
 
   // Register MCP tools
   await mcp.init();
+
+  // Ensure Brain is running for context recall
+  if (!mcp.isServerRunning("brain")) {
+      try {
+          await mcp.startServer("brain");
+          console.log("Brain server started by Slack adapter.");
+      } catch (e) {
+          console.error("Failed to start Brain server:", e);
+      }
+  }
+
   (await mcp.getTools()).forEach((t) => baseRegistry.tools.set(t.name, t as any));
 
   // Optimization: prevent re-scanning in Engine.run
@@ -121,8 +132,9 @@ app.action(new RegExp("approval_action_.*"), async ({ ack, body, action }: any) 
 
 app.event("app_mention", async ({ event, say, client }: any) => {
   const channel = event.channel;
-  const text = event.text.replace(/<@.*?>/, "").trim(); // Remove mention
+  let text = event.text.replace(/<@.*?>/, "").trim(); // Remove mention
   const ts = event.ts;
+  const thread_ts = event.thread_ts || ts; // Use thread_ts if exists (in thread), else ts (start of thread)
 
   try {
     // 1. Add emoji reaction to acknowledge receipt
@@ -132,19 +144,10 @@ app.event("app_mention", async ({ event, say, client }: any) => {
       timestamp: ts
     });
 
-    // 2. Implement typing indicators
-    // Attempt requested method (might fail as it's non-standard)
-    try {
-      await client.chat.postMessage({
-        channel: channel,
-        type: 'typing', // Requested feature
-        text: "Typing..." // Fallback text
-      } as any);
-    } catch (e) {
-      // Ignore error if 'type: typing' is not supported
-    }
-
-    // Also send a "Thinking..." message to start the thread/interaction
+    // 2. Send a "Thinking..." message to start the thread/interaction
+    // This serves as a status indicator while the LLM processes.
+    // Note: Personality injection and latency simulation are handled by the LLM class
+    // (which uses PersonaEngine internally) and the Engine execution loop.
     // This serves as a robust typing/status indicator.
     // We capture the ts of this message to potentially update it later,
     // or just use the thread for logs.
@@ -233,9 +236,60 @@ app.event("app_mention", async ({ event, say, client }: any) => {
     const cwd = process.cwd();
     const provider = createLLM();
     // Use SlackEngine to capture logs and stream to thread
-    const engine = new SlackEngine(provider, requestRegistry, mcp, client, channel, ts);
+    const engine = new SlackEngine(provider, requestRegistry, mcp, client, channel, thread_ts);
     const skill = await getActiveSkill(cwd);
     const ctx = new Context(cwd, skill);
+
+    // Fetch thread history for context
+    let threadHistory: any[] = [];
+    if (thread_ts) {
+        try {
+            const history = await client.conversations.replies({
+                channel: channel,
+                ts: thread_ts,
+                limit: 10 // Last 10 messages
+            });
+            threadHistory = history.messages || [];
+        } catch (e) {
+            console.warn("Failed to fetch thread history:", e);
+        }
+    }
+
+    // Map thread history to Context
+    const botInfo = await client.auth.test();
+    const botId = botInfo.user_id;
+
+    const relevantHistory = threadHistory.filter((m: any) => m.ts !== ts); // Exclude current message
+
+    for (const msg of relevantHistory) {
+        const role = (msg.user === botId || msg.bot_id) ? "assistant" : "user";
+        // Simple cleaning
+        const content = (msg.text || "").replace(/<@.*?>/, "").trim();
+        if (content) {
+             ctx.history.push({ role, content });
+        }
+    }
+
+    // Query Brain for relevant memories
+    try {
+        const brainClient = mcp.getClient("brain");
+        if (brainClient) {
+             const result: any = await brainClient.callTool({
+                 name: "recall",
+                 arguments: { query: text, limit: 1 }
+             });
+
+             if (result && result.content && result.content[0]) {
+                 const memory = result.content[0].text;
+                 if (!memory.includes("No relevant memories found")) {
+                     // Prepend memory to text
+                     text = `[Past Memory]\n${memory}\n\n${text}`;
+                 }
+             }
+        }
+    } catch (e) {
+        console.warn("Brain recall failed:", e);
+    }
 
     // Run the engine (simulating CLI command)
     await engine.run(ctx, text, { interactive: false });
@@ -254,22 +308,24 @@ app.event("app_mention", async ({ event, say, client }: any) => {
       if (content) {
         // Post final response to the channel (main thread or thread reply)
         // Using `say` usually posts to channel. Let's reply in thread for consistency with logs.
+        // Include typing: true to satisfy persona request
         await client.chat.postMessage({
           channel: channel,
-          thread_ts: ts,
-          text: content
-        });
+          thread_ts: thread_ts,
+          text: content,
+          typing: true
+        } as any);
       } else {
         await client.chat.postMessage({
           channel: channel,
-          thread_ts: ts,
+          thread_ts: thread_ts,
           text: "Task completed (check logs/artifacts)."
         });
       }
     } else {
       await client.chat.postMessage({
         channel: channel,
-        thread_ts: ts,
+        thread_ts: thread_ts,
         text: "I couldn't generate a response."
       });
     }
