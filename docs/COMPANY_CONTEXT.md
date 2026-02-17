@@ -1,0 +1,58 @@
+# Company Context (The Briefcase)
+
+The "Briefcase" system allows agents to load client-specific contexts, ensuring that work for one client is isolated from another and informed by the client's specific guidelines, documents, and history.
+
+## Architecture
+
+The system is built around the **Company Context MCP Server** (`src/mcp_servers/company_context.ts`) which manages a dedicated `lancedb` vector database for each company.
+
+### Directory Structure
+
+Data is stored in `.agent/companies/{company_id}/`:
+
+-   `docs/`: Raw documents (Markdown, Text) to be ingested.
+-   `brain/`: The LanceDB vector database storing embeddings of the documents.
+-   `config.json`: (Optional) Metadata like Brand Voice.
+
+### Components
+
+1.  **CLI Flag**: `simple --company client-a` sets the context.
+2.  **Environment Variable**: `JULES_COMPANY` tracks the active company.
+3.  **MCP Server**: Exposes tools to ingest and query company data.
+4.  **Orchestrator**: Automatically injects relevant company context into the prompt using RAG.
+
+## Usage
+
+### 1. Create a Company Context
+
+Create a directory:
+```bash
+mkdir -p .agent/companies/acme-corp/docs
+```
+Add documents (e.g., `brand_guidelines.md`) to this folder.
+
+### 2. Run with Context
+
+```bash
+simple --company acme-corp
+```
+On startup, the agent will:
+1.  Load the company profile.
+2.  Filter memory and queries to `acme-corp`.
+
+### 3. Ingest Documents
+
+You can ask the agent:
+> "Ingest the company documents."
+
+The agent will use the `load_company_context` tool to scan `.agent/companies/acme-corp/docs`, embed the content, and store it in the vector DB.
+
+### 4. Querying
+
+The agent automatically queries this database when you ask questions, injecting relevant chunks into the conversation.
+
+## Tools
+
+-   `load_company_context(company_id)`: Ingests documents from the docs folder.
+-   `query_company_context(query, company_id)`: Searches the vector database.
+-   `list_companies()`: Lists available companies.

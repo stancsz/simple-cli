@@ -39,12 +39,12 @@ export class Briefcase {
         }
     }
 
-    if (this.mcp.isServerRunning("company")) {
-        await this.mcp.stopServer("company");
+    if (this.mcp.isServerRunning("company_context")) {
+        await this.mcp.stopServer("company_context");
         try {
-            await this.mcp.startServer("company");
+            await this.mcp.startServer("company_context");
         } catch (e) {
-            console.warn(`Failed to restart company server for company ${company}:`, e);
+            console.warn(`Failed to restart company_context server for company ${company}:`, e);
         }
     }
 

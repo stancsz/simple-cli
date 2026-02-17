@@ -194,6 +194,10 @@ export class Engine {
         await this.mcp.startServer("claude");
         this.log("success", "Claude server started.");
       }
+      if (servers.find((s) => s.name === "company_context" && s.status === "stopped")) {
+        await this.mcp.startServer("company_context");
+        this.log("success", "Company Context server started.");
+      }
     } catch (e) {
       console.error("Failed to start core servers:", e);
     }
@@ -281,18 +285,18 @@ export class Engine {
       // Inject RAG context from Company MCP Server
       if (companyName) {
         try {
-          const client = this.mcp.getClient("company");
+          const client = this.mcp.getClient("company_context");
           if (client) {
             const result: any = await client.callTool({
-              name: "company_get_context",
-              arguments: { query: input }
+              name: "query_company_context",
+              arguments: { query: input, company_id: companyName }
             });
 
             if (result && result.content && result.content[0] && result.content[0].text) {
               const contextText = result.content[0].text;
-              if (!contextText.includes("No company context active")) {
+              if (!contextText.includes("No context found") && !contextText.includes("No relevant documents")) {
                 const lastMsg = ctx.history[ctx.history.length - 1];
-                lastMsg.content = `${contextText}\n\n[User Request]\n${lastMsg.content}`;
+                lastMsg.content = `[Company Context RAG]\n${contextText}\n\n[User Request]\n${lastMsg.content}`;
                 this.log("info", pc.dim(`[RAG] Injected company context.`));
               }
             }
