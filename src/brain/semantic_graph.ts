@@ -23,27 +23,35 @@ export interface GraphData {
 export class SemanticGraph {
   private baseDir: string;
   private cache: Map<string, GraphData> = new Map();
+  private company?: string;
 
-  constructor(baseDir: string = process.cwd()) {
+  constructor(baseDir: string = process.cwd(), company?: string) {
     this.baseDir = baseDir;
+    this.company = company;
   }
 
-  private getFilePath(company?: string): string {
-    if (company && !/^[a-zA-Z0-9_-]+$/.test(company)) {
-      console.warn(`Invalid company name for graph: ${company}, falling back to default.`);
-      return join(this.baseDir, ".agent", "brain", "graph.json");
+  private getFilePath(companyOverride?: string): string {
+    const company = this.company || companyOverride;
+
+    if (company) {
+      if (!/^[a-zA-Z0-9_-]+$/.test(company)) {
+        console.warn(`Invalid company name for graph: ${company}, falling back to default.`);
+        return join(this.baseDir, ".agent", "brain", "graph.json");
+      }
+      return join(this.baseDir, ".agent", "brain", "clients", company, "graph_db", "graph.json");
     }
-    const filename = company ? `graph_${company}.json` : "graph.json";
-    return join(this.baseDir, ".agent", "brain", filename);
+    return join(this.baseDir, ".agent", "brain", "graph.json");
   }
 
-  private async load(company?: string): Promise<GraphData> {
+  private async load(companyOverride?: string): Promise<GraphData> {
+    const company = this.company || companyOverride;
     const key = company || "default";
+
     if (this.cache.has(key)) {
         return this.cache.get(key)!;
     }
 
-    const filePath = this.getFilePath(company);
+    const filePath = this.getFilePath(companyOverride);
     let data: GraphData = { nodes: [], edges: [] };
 
     if (existsSync(filePath)) {
@@ -63,8 +71,9 @@ export class SemanticGraph {
     return data;
   }
 
-  private async save(data: GraphData, company?: string) {
-    const filePath = this.getFilePath(company);
+  private async save(data: GraphData, companyOverride?: string) {
+    const company = this.company || companyOverride;
+    const filePath = this.getFilePath(companyOverride);
     try {
       await mkdir(dirname(filePath), { recursive: true });
       await writeFile(filePath, JSON.stringify(data, null, 2));
@@ -75,8 +84,8 @@ export class SemanticGraph {
     }
   }
 
-  async addNode(id: string, type: string, properties: Record<string, any> = {}, company?: string): Promise<void> {
-    const data = await this.load(company);
+  async addNode(id: string, type: string, properties: Record<string, any> = {}, companyOverride?: string): Promise<void> {
+    const data = await this.load(companyOverride);
     const existing = data.nodes.find((n) => n.id === id);
     if (existing) {
       existing.properties = { ...existing.properties, ...properties };
@@ -84,11 +93,11 @@ export class SemanticGraph {
     } else {
       data.nodes.push({ id, type, properties });
     }
-    await this.save(data, company);
+    await this.save(data, companyOverride);
   }
 
-  async addEdge(from: string, to: string, relation: string, properties: Record<string, any> = {}, company?: string): Promise<void> {
-    const data = await this.load(company);
+  async addEdge(from: string, to: string, relation: string, properties: Record<string, any> = {}, companyOverride?: string): Promise<void> {
+    const data = await this.load(companyOverride);
     // Check if edge exists
     const existingIndex = data.edges.findIndex(
       (e) => e.from === from && e.to === to && e.relation === relation
@@ -99,11 +108,11 @@ export class SemanticGraph {
     } else {
       data.edges.push({ from, to, relation, properties });
     }
-    await this.save(data, company);
+    await this.save(data, companyOverride);
   }
 
-  async query(query: string, company?: string): Promise<any> {
-      const data = await this.load(company);
+  async query(query: string, companyOverride?: string): Promise<any> {
+      const data = await this.load(companyOverride);
       // Simple keyword search for now
       const q = query.toLowerCase();
       const nodes = data.nodes.filter(n =>
@@ -122,7 +131,7 @@ export class SemanticGraph {
       return { nodes, edges };
   }
 
-  async getGraphData(company?: string): Promise<GraphData> {
-    return this.load(company);
+  async getGraphData(companyOverride?: string): Promise<GraphData> {
+    return this.load(companyOverride);
   }
 }

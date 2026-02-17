@@ -12,6 +12,7 @@ export interface PastEpisode {
   agentResponse: string;
   artifacts: string[];
   vector: number[];
+  company_id?: string;
   _distance?: number;
 }
 
@@ -20,11 +21,22 @@ export class EpisodicMemory {
   private db: lancedb.Connection | null = null;
   private llm: ReturnType<typeof createLLM>;
   private defaultTableName = "episodic_memories";
+  private company?: string;
 
-  constructor(baseDir: string = process.cwd(), llm?: ReturnType<typeof createLLM>) {
-    // Store vector data in .agent/brain/episodic/
-    this.dbPath = join(baseDir, ".agent", "brain", "episodic");
+  constructor(baseDir: string = process.cwd(), llm?: ReturnType<typeof createLLM>, company?: string) {
+    this.company = company;
     this.llm = llm || createLLM();
+
+    if (this.company) {
+      if (!/^[a-zA-Z0-9_-]+$/.test(this.company)) {
+        console.warn(`Invalid company name: ${this.company}, falling back to global.`);
+        this.dbPath = join(baseDir, ".agent", "brain", "episodic");
+      } else {
+        this.dbPath = join(baseDir, ".agent", "brain", "clients", this.company, "vector_db");
+      }
+    } else {
+        this.dbPath = join(baseDir, ".agent", "brain", "episodic");
+    }
   }
 
   async init() {
@@ -39,17 +51,10 @@ export class EpisodicMemory {
     this.db = await lancedb.connect(this.dbPath);
   }
 
-  private async getTable(company?: string): Promise<lancedb.Table | null> {
+  private async getTable(): Promise<lancedb.Table | null> {
     if (!this.db) await this.init();
 
-    let tableName = this.defaultTableName;
-    if (company) {
-        if (/^[a-zA-Z0-9_-]+$/.test(company)) {
-            tableName = `episodic_memories_${company}`;
-        } else {
-            console.warn(`Invalid company name: ${company}, falling back to default table.`);
-        }
-    }
+    const tableName = this.defaultTableName;
 
     try {
       const tableNames = await this.db!.tableNames();
@@ -73,7 +78,11 @@ export class EpisodicMemory {
         throw new Error("Failed to generate embedding for memory.");
     }
 
-    const data = {
+    if (this.company && company && this.company !== company) {
+      console.warn(`Warning: Brain instance is scoped to company '${this.company}', but storing memory for '${company}'. The memory will be stored in '${this.company}' DB.`);
+    }
+
+    const data: PastEpisode = {
       id: randomUUID(),
       taskId,
       timestamp: Date.now(),
@@ -81,16 +90,11 @@ export class EpisodicMemory {
       agentResponse: solution,
       artifacts,
       vector: embedding,
+      company_id: company || this.company, // Use passed company or instance company
     };
 
-    let tableName = this.defaultTableName;
-    if (company) {
-        if (/^[a-zA-Z0-9_-]+$/.test(company)) {
-            tableName = `episodic_memories_${company}`;
-        }
-    }
-
-    let table = await this.getTable(company);
+    const tableName = this.defaultTableName;
+    let table = await this.getTable();
 
     if (!table) {
       table = await this.db!.createTable(tableName, [data]);
@@ -102,7 +106,7 @@ export class EpisodicMemory {
   async recall(query: string, limit: number = 3, company?: string): Promise<PastEpisode[]> {
     if (!this.db) await this.init();
 
-    const table = await this.getTable(company);
+    const table = await this.getTable();
     if (!table) return [];
 
     const embedding = await this.llm.embed(query);

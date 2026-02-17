@@ -2,8 +2,8 @@ import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { z } from "zod";
 import { fileURLToPath } from "url";
-import { EpisodicMemory } from "../brain/episodic.js";
-import { SemanticGraph } from "../brain/semantic_graph.js";
+import { EpisodicMemory } from "../../brain/episodic.js";
+import { SemanticGraph } from "../../brain/semantic_graph.js";
 import { join } from "path";
 import { readFile, readdir } from "fs/promises";
 import { existsSync } from "fs";
@@ -20,8 +20,10 @@ export class BrainServer {
       version: "1.0.0",
     });
 
-    this.episodic = new EpisodicMemory();
-    this.semantic = new SemanticGraph();
+    const company = process.env.JULES_COMPANY;
+
+    this.episodic = new EpisodicMemory(process.cwd(), undefined, company);
+    this.semantic = new SemanticGraph(process.cwd(), company);
     this.sopsDir = join(process.cwd(), ".agent", "sops");
 
     this.setupTools();
