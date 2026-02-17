@@ -38,6 +38,7 @@ To transition from a "Wrapper" to a true "Universal AI Integration Platform," th
     - *Refactor/Feature:* -> Claude Code (Sonnet 3.7).
     - *Research:* -> DeepSeek R1 / CrewAI.
 - **Benefit:** Drastic cost reduction for users while maintaining high quality for complex tasks.
+- **Update (Sprint 1):** Engine refactored to eliminate `delegate_cli` and use direct MCP tool execution based on router decisions.
 
 ### Phase 2: Unified Context Protocol (UCP) (✅ Implemented)
 **Goal:** Share memory and state between disparate agents.

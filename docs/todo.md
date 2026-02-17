@@ -46,9 +46,9 @@
     - [x] Refine `devin-mcp`: Completed `src/mcp_servers/devin` with session management tools.
 
 ### 2. Digest Phase (Simplify Core Engine)
-- [ ] **Remove Logic Duplication**:
-    - [ ] Delete `delegate_cli` from `src/builtins.ts`. The engine should just call `run_crew_task` or `aider_edit`.
-    - [ ] Remove manual tool loading in `engine.ts`. Use standard MCP discovery.
+- [x] **Remove Logic Duplication**:
+    - [x] Delete `delegate_cli` from `src/builtins.ts`. The engine should just call `run_crew_task` or `aider_edit`.
+    - [x] Remove manual tool loading in `engine.ts`. Use standard MCP discovery.
 - [ ] **Context Management**:
     - [x] Implement Concurrency Control: Added file locking to `ContextManager` to prevent race conditions.
     - [x] Implement a **Context MCP Server** (singleton) to handle `context.json` updates securely (fix race conditions).
@@ -61,6 +61,7 @@
 - [x] **Deprecation**: Delete `src/mcp_servers/simple_tools`, `src/agents/*.ts` (DONE).
     - [x] Marked `src/agents/*.ts` as deprecated with console warnings.
     - [x] Deleted deprecated files.
+    - [x] Refactored `src/engine/orchestrator.ts` to use direct MCP calls.
 
 ### 4. Tests
 - [ ] Update tests to mock MCP servers instead of local file paths.

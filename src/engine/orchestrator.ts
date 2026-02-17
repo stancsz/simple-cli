@@ -79,61 +79,6 @@ export class Context {
 
 export class Registry {
   tools: Map<string, Tool> = new Map();
-
-  // Deprecated: Legacy tool loading removed.
-  // Tools are now loaded exclusively via MCP Server discovery.
-  async loadProjectTools(_cwd: string) {
-    // No-op
-  }
-
-  async loadCompanyTools(company: string) {
-    const cwd = process.cwd();
-    const toolsDir = join(cwd, ".agent", "companies", company, "tools");
-    if (existsSync(toolsDir)) {
-      for (const f of await readdir(toolsDir)) {
-        if (f.endsWith(".ts") || f.endsWith(".js")) {
-          try {
-            const mod = await import(pathToFileURL(join(toolsDir, f)).href);
-            const t = mod.tool || mod.default;
-            if (Array.isArray(t)) {
-              t.forEach(tool => { if (tool?.name) this.tools.set(tool.name, tool); });
-            } else if (t?.name) {
-              this.tools.set(t.name, t);
-            }
-          } catch (e) {
-            console.error(`Failed to load company tool ${f}:`, e);
-          }
-        }
-      }
-    }
-
-    // 2. Scan Skill-Based Tools (.agent/skills/*/tools.ts)
-    const skillsDir = join(cwd, ".agent", "skills");
-    if (existsSync(skillsDir)) {
-      for (const skillName of await readdir(skillsDir)) {
-        const skillPath = join(skillsDir, skillName);
-        // Look for tools.ts or index.ts
-        const potentialFiles = ["tools.ts", "index.ts", "tools.js", "index.js"];
-
-        for (const file of potentialFiles) {
-          const filePath = join(skillPath, file);
-          if (existsSync(filePath)) {
-            try {
-              const mod = await import(pathToFileURL(filePath).href);
-              const t = mod.tool || mod.default;
-              if (Array.isArray(t)) {
-                t.forEach(tool => { if (tool?.name) this.tools.set(tool.name, tool); });
-              } else if (t?.name) {
-                this.tools.set(t.name, t);
-              }
-            } catch (e) {
-              console.error(`Failed to load tools for skill ${skillName}:`, e);
-            }
-          }
-        }
-      }
-    }
-  }
 }
 
 export class Engine {
@@ -198,21 +143,22 @@ export class Engine {
       this.registry.tools.set(t.name, t as any),
     );
 
-    // Legacy loading removed
-    // await this.registry.loadProjectTools(ctx.cwd);
-
     if (process.stdin.isTTY) {
       readline.emitKeypressEvents(process.stdin);
     }
 
     // Initialize CompanyContext if JULES_COMPANY is set
     let sharedContext = "";
-    if (process.env.JULES_COMPANY) {
+    const companyName = process.env.JULES_COMPANY;
+    let companyProfile: CompanyProfile | undefined;
+
+    if (companyName) {
       try {
         const { CompanyLoader } = await import("../context/company_loader.js");
         const loader = new CompanyLoader();
-        await loader.load(process.env.JULES_COMPANY);
-        this.log("success", `Loaded company context for ${process.env.JULES_COMPANY}`);
+        await loader.load(companyName);
+        companyProfile = await loadCompanyProfile(companyName);
+        this.log("success", `Loaded company context for ${companyName}`);
       } catch (e: any) {
         console.error("Failed to load company context:", e.message);
       }
@@ -397,7 +343,7 @@ export class Engine {
             const tName = item.tool;
             const tArgs = item.args;
 
-            // Inject company context into sub-agents (Delegate CLI replacement logic)
+            // Inject shared context into sub-agent tools
             if ((tName === "aider_chat" || tName === "aider_edit" || tName === "ask_claude") && sharedContext) {
                  if (tArgs.message) {
                      tArgs.message = `${sharedContext}\n\nTask:\n${tArgs.message}`;

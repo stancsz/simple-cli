@@ -2,9 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { Briefcase } from '../../src/context/briefcase.js';
 
 // Mock dependencies
-const mockRegistry = {
-  loadCompanyTools: vi.fn(),
-};
+const mockRegistry = {};
 
 const mockLLM = {};
 
@@ -39,8 +37,7 @@ describe('Briefcase', () => {
 
     expect(process.env.JULES_COMPANY).toBe(company);
     expect(mockSOPRegistry.setCompany).toHaveBeenCalledWith(company);
-    expect(mockRegistry.loadCompanyTools).toHaveBeenCalledWith(company);
-    expect(mockMCP.isServerRunning).toHaveBeenCalledWith('context');
+    expect(mockMCP.isServerRunning).toHaveBeenCalledWith('context_server');
     expect(mockMCP.stopServer).not.toHaveBeenCalled();
     expect(mockMCP.startServer).not.toHaveBeenCalled();
   });
@@ -53,10 +50,9 @@ describe('Briefcase', () => {
 
     expect(process.env.JULES_COMPANY).toBe(company);
     expect(mockSOPRegistry.setCompany).toHaveBeenCalledWith(company);
-    expect(mockRegistry.loadCompanyTools).toHaveBeenCalledWith(company);
-    expect(mockMCP.isServerRunning).toHaveBeenCalledWith('context');
-    expect(mockMCP.stopServer).toHaveBeenCalledWith('context');
-    expect(mockMCP.startServer).toHaveBeenCalledWith('context');
+    expect(mockMCP.isServerRunning).toHaveBeenCalledWith('context_server');
+    expect(mockMCP.stopServer).toHaveBeenCalledWith('context_server');
+    expect(mockMCP.startServer).toHaveBeenCalledWith('context_server');
   });
 
   it('should throw error for invalid company name', async () => {
