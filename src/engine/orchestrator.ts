@@ -206,14 +206,36 @@ export class Engine {
     }
 
     // Initialize CompanyContext if JULES_COMPANY is set
-    let companyProfile: CompanyProfile | null = null;
-    const companyName = process.env.JULES_COMPANY;
-
-    if (companyName) {
-      companyProfile = await loadCompanyProfile(companyName);
-      if (companyProfile) {
-        this.log("info", pc.green(`Loaded company profile: ${companyProfile.name}`));
+    let sharedContext = "";
+    if (process.env.JULES_COMPANY) {
+      try {
+        const { CompanyLoader } = await import("../context/company_loader.js");
+        const loader = new CompanyLoader();
+        await loader.load(process.env.JULES_COMPANY);
+        this.log("success", `Loaded company context for ${process.env.JULES_COMPANY}`);
+      } catch (e: any) {
+        console.error("Failed to load company context:", e.message);
       }
+    }
+
+    // Fetch shared context for injection
+    try {
+        const contextClient = this.mcp.getClient("context_server");
+        if (contextClient) {
+             const res: any = await contextClient.callTool({ name: "read_context", arguments: {} });
+             if (res && res.content && res.content[0]) {
+                 const data = JSON.parse(res.content[0].text);
+                 if (data.company_context) {
+                     sharedContext = data.company_context;
+                     // Inject into system prompt once
+                     if (!ctx.skill.systemPrompt.includes("## Company Context")) {
+                        ctx.skill.systemPrompt = `${ctx.skill.systemPrompt}\n\n${sharedContext}`;
+                     }
+                 }
+             }
+        }
+    } catch (e) {
+        // Ignore if context server is not available or empty
     }
 
     while (true) {
@@ -374,6 +396,16 @@ export class Engine {
 
             const tName = item.tool;
             const tArgs = item.args;
+
+            // Inject company context into sub-agents (Delegate CLI replacement logic)
+            if ((tName === "aider_chat" || tName === "aider_edit" || tName === "ask_claude") && sharedContext) {
+                 if (tArgs.message) {
+                     tArgs.message = `${sharedContext}\n\nTask:\n${tArgs.message}`;
+                 } else if (tArgs.task) {
+                     tArgs.task = `${sharedContext}\n\nTask:\n${tArgs.task}`;
+                 }
+            }
+
             const t = this.registry.tools.get(tName);
 
             if (t) {

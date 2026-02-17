@@ -6,6 +6,7 @@ export const ContextSchema = z.object({
   recent_changes: z.array(z.string()).default([]),
   active_tasks: z.array(z.string()).default([]),
   working_memory: z.string().optional(),
+  company_context: z.string().optional(),
   last_updated: z.string().optional(),
 });
 

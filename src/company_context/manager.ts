@@ -23,7 +23,7 @@ export class CompanyManager {
   async load(): Promise<void> {
     if (!this.companyId || this.loaded) return;
 
-    const baseDir = join(process.cwd(), ".companies", this.companyId);
+    const baseDir = join(process.cwd(), ".agent", "brain", "companies", this.companyId);
 
     // 1. Load Config
     const configPath = join(baseDir, "config.json");
