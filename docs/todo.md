@@ -72,7 +72,7 @@
     - [x] Implement `inject_personality()` function in `src/llm.ts`.
 - [ ] **Interfaces**:
     - [x] Create `src/interfaces/slack.ts`: Implement Slack Bolt.js adapter.
-    - [ ] Create `src/interfaces/teams.ts`: Implement Microsoft Bot Framework adapter.
+    - [x] Create `src/interfaces/teams.ts`: Completed Teams Bot Framework integration with persona simulation and typing indicators.
 - [x] **Infrastructure**:
     - [x] Create `Dockerfile` for lightweight production image.
     - [x] Create `docker-compose.yml` for local "Agency" simulation (Redis + Agent).

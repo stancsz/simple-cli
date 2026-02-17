@@ -207,12 +207,18 @@ export class Engine {
 
     // Initialize CompanyContext if JULES_COMPANY is set
     let sharedContext = "";
-    if (process.env.JULES_COMPANY) {
+    const companyName = process.env.JULES_COMPANY;
+    let companyProfile: CompanyProfile | null = null;
+
+    if (companyName) {
       try {
         const { CompanyLoader } = await import("../context/company_loader.js");
         const loader = new CompanyLoader();
-        await loader.load(process.env.JULES_COMPANY);
-        this.log("success", `Loaded company context for ${process.env.JULES_COMPANY}`);
+        await loader.load(companyName);
+        this.log("success", `Loaded company context for ${companyName}`);
+
+        // Also load profile
+        companyProfile = await loadCompanyProfile(companyName);
       } catch (e: any) {
         console.error("Failed to load company context:", e.message);
       }
