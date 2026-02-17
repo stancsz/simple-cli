@@ -114,4 +114,28 @@ export class EpisodicMemory {
 
     return results as unknown as PastEpisode[];
   }
+
+  async retrieveLatest(limit: number = 1, company?: string, where?: string): Promise<PastEpisode[]> {
+    if (!this.db) await this.init();
+
+    const table = await this.getTable(company);
+    if (!table) return [];
+
+    try {
+      let query = table.query();
+      if (where) query = query.where(where);
+
+      // LanceDB Node SDK doesn't support orderBy in non-vector queries yet.
+      // We fetch all matching records and sort in memory.
+      // This is acceptable as filtered set (e.g. context snapshots) should be small.
+      const results = await query.toArray();
+
+      results.sort((a: any, b: any) => b.timestamp - a.timestamp);
+
+      return results.slice(0, limit) as unknown as PastEpisode[];
+    } catch (e) {
+      console.warn("Failed to retrieve latest episodes:", e);
+      return [];
+    }
+  }
 }

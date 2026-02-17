@@ -98,3 +98,4 @@ tsc_output.txt
 full_run.log
 pr_failure.log
 .test_agent_*/
+.agent/brain/
