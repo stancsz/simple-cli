@@ -76,6 +76,10 @@
 - [x] **Infrastructure**:
     - [x] Create `Dockerfile` for lightweight production image.
     - [x] Create `docker-compose.yml` for local "Agency" simulation (Redis + Agent).
+- [x] **SOP-as-Code**:
+    - [x] Create `src/mcp_servers/sops`: Implemented MCP server for Standard Operating Procedures.
+    - [x] Create `sops/` directory: Added sample SOPs (`client_onboarding.md`, `weekly_report.md`).
+    - [x] Implement `sop-engine.ts`: Core logic for parsing and executing markdown workflows.
 
 ### 6. Phase 6: Enterprise Cognition (The Brain)
 - [x] **Episodic Memory (Vector DB)**:

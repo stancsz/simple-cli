@@ -1,0 +1,61 @@
+{
+  "client_onboarding": {
+    "sop_name": "client_onboarding",
+    "current_step_index": 3,
+    "status": "completed",
+    "history": [
+      {
+        "step_index": 0,
+        "instruction": "Create a new directory for the client in `clients/`.",
+        "status": "success",
+        "timestamp": "2026-02-17T09:59:58.888Z",
+        "tool": "fs_write",
+        "args": {
+          "path": "clients/new_client",
+          "content": ""
+        },
+        "output": {
+          "content": [
+            {
+              "text": "success"
+            }
+          ]
+        }
+      },
+      {
+        "step_index": 1,
+        "instruction": "Initialize a git repository for the client project.",
+        "status": "success",
+        "timestamp": "2026-02-17T09:59:58.889Z",
+        "tool": "git_init",
+        "args": {
+          "path": "clients/new_client"
+        },
+        "output": {
+          "content": [
+            {
+              "text": "success"
+            }
+          ]
+        }
+      },
+      {
+        "step_index": 2,
+        "instruction": "Send a welcome email template to the client contact.",
+        "status": "success",
+        "timestamp": "2026-02-17T09:59:58.889Z",
+        "tool": "email_send",
+        "args": {
+          "to": "client@example.com"
+        },
+        "output": {
+          "content": [
+            {
+              "text": "success"
+            }
+          ]
+        }
+      }
+    ]
+  }
+}
