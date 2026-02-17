@@ -9,6 +9,8 @@ import { relative, join } from "path";
 import { MCP } from "../mcp.js";
 import { Skill } from "../skills.js";
 import { LLM } from "../llm.js";
+import { ContextManager } from "./context-manager.js";
+import { SYSTEM_PROMPT_TEMPLATE } from "../llm/prompts.js";
 
 export interface Message {
   role: "user" | "assistant" | "system";
@@ -55,7 +57,7 @@ export class Context {
     this.skill = skill;
   }
 
-  async buildPrompt(tools: Map<string, Tool>, registry: Registry) {
+  async buildPrompt(tools: Map<string, Tool>, registry: Registry, relevantMemory: string = "") {
     const repoMap = await getRepoMap(this.cwd, registry);
     const toolDefs = Array.from(tools.values())
       .map((t) => {
@@ -68,11 +70,13 @@ export class Context {
       })
       .join("\n");
 
-    return `${this.skill.systemPrompt}\n\n## Tools\n${toolDefs}\n\n## Repository\n${repoMap}\n\n## Active Files\n${Array.from(
-      this.activeFiles,
-    )
-      .map((f) => relative(this.cwd, f))
-      .join(", ")}`;
+    return SYSTEM_PROMPT_TEMPLATE(
+      this.skill.systemPrompt,
+      repoMap,
+      Array.from(this.activeFiles).map((f) => relative(this.cwd, f)),
+      toolDefs,
+      relevantMemory
+    );
   }
 }
 
@@ -137,6 +141,7 @@ export class Registry {
 
 export class Engine {
   protected s = spinner();
+  protected contextManager = new ContextManager();
 
   constructor(
     protected llm: LLM,
@@ -206,27 +211,14 @@ export class Engine {
         if (!input) break;
       }
 
-      // Brain: Recall similar past experiences
-      const userRequest = input; // Capture original request
-      let pastMemory: string | null = null;
-      try {
-        const brainClient = this.mcp.getClient("brain");
-        if (brainClient) {
-            const result: any = await brainClient.callTool({
-                name: "brain_query",
-                arguments: { query: userRequest }
-            });
-            if (result && result.content && result.content[0]) {
-                 pastMemory = result.content[0].text;
-            }
-        }
-      } catch (e) {
-         // Ignore context errors
-      }
+      // Brain: Recall similar past experiences via ContextManager
+      const userRequest = input; // Capture original request for later storage
+      this.s.start("Recalling past experiences...");
+      const relevantMemory = await this.contextManager.getCurrentContext(userRequest, this.mcp);
+      this.s.stop("Context loaded");
 
-      if (pastMemory && !pastMemory.includes("No relevant memory found")) {
+      if (relevantMemory && !relevantMemory.includes("No relevant memories")) {
         this.log("info", pc.dim(`[Brain] Recalled past experience.`));
-        input = `[Past Experience]\n${pastMemory}\n\n[User Request]\n${input}`;
       }
 
       ctx.history.push({ role: "user", content: input });
@@ -292,7 +284,7 @@ export class Engine {
 
       try {
         // Pass registry to buildPrompt
-        let prompt = await ctx.buildPrompt(this.registry.tools, this.registry);
+        let prompt = await ctx.buildPrompt(this.registry.tools, this.registry, relevantMemory);
 
         const userHistory = ctx.history.filter(
           (m) =>

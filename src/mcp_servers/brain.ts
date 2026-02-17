@@ -77,6 +77,38 @@ export class BrainServer {
       }
     );
 
+    this.server.tool(
+      "query_memory",
+      "Query both episodic and semantic memory for relevant context.",
+      {
+        query: z.string().describe("The user's request or query."),
+      },
+      async ({ query }) => {
+        // Query Episodic
+        const episodes = await this.episodic.recall(query, 3);
+        const episodeText = episodes.map(e =>
+            `- [${new Date(e.timestamp).toISOString()}] Task: ${e.taskId}\n  Outcome: ${(e as any).solution || (e as any).agentResponse}`
+        ).join("\n");
+
+        // Query Semantic (Graph)
+        const graphResult = await this.semantic.query(query);
+        let graphText = "";
+        if (graphResult.nodes && graphResult.nodes.length > 0) {
+           const nodes = graphResult.nodes.map((n: any) => n.id).join(", ");
+           graphText = `Related Concepts: ${nodes}`;
+        }
+
+        const combined = [
+            episodeText ? `Episodic Memory:\n${episodeText}` : "",
+            graphText ? `Semantic Memory:\n${graphText}` : ""
+        ].filter(Boolean).join("\n\n");
+
+        return {
+          content: [{ type: "text", text: combined || "No relevant memories found." }]
+        };
+      }
+    );
+
     // Semantic Graph Tools
     this.server.tool(
       "brain_query_graph",

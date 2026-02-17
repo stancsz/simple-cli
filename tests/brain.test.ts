@@ -15,6 +15,7 @@ vi.mock('@lancedb/lancedb', () => ({
     createTable: vi.fn().mockReturnValue({
       add: vi.fn(),
     }),
+    tableNames: vi.fn().mockResolvedValue([]),
   }),
 }));
 
@@ -28,9 +29,12 @@ vi.mock('../src/brain/embedder.js', () => ({
 
 describe('EpisodicMemory', () => {
   it('should initialize and add memory', async () => {
-    const memory = new EpisodicMemory('test_dir');
+    const mockLlm = {
+        embed: vi.fn().mockResolvedValue([0.1, 0.2, 0.3])
+    } as any;
+    const memory = new EpisodicMemory('test_dir', mockLlm);
     await memory.init();
-    await memory.add('test', 'response', []);
+    await memory.store('task-1', 'test', 'response', []);
     expect(lancedb.connect).toHaveBeenCalled();
   });
 });
