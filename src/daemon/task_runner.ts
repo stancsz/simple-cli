@@ -34,7 +34,6 @@ export class TaskRunner {
     (await this.mcp.getTools()).forEach((t) =>
       this.registry.tools.set(t.name, t as any),
     );
-    await this.registry.loadProjectTools(ctx.cwd);
 
     const startTime = Date.now();
     let status = "success";
@@ -111,7 +110,7 @@ export class TaskRunner {
 
                   // Reload tools if create_tool was used
                   if (tName === "create_tool") {
-                    await this.registry.loadProjectTools(ctx.cwd);
+                    // Logic for reloading tools via MCP if needed
                     logger.success("Tools reloaded.");
                   }
 

@@ -20,7 +20,7 @@ export class CrewAIServer {
 
   private setupTools() {
     this.server.tool(
-      "start_crew",
+      "run_crew_task",
       "Start a CrewAI crew to perform a complex task using multiple agents.",
       {
         task: z.string().describe("The task description for the crew to execute."),

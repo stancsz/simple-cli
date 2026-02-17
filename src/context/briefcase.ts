@@ -26,8 +26,7 @@ export class Briefcase {
     // 3. Update SOP Registry
     this.sopRegistry.setCompany(company);
 
-    // 4. Load Company Tools
-    await this.registry.loadCompanyTools(company);
+    // 4. Load Company Tools (Removed - handled by MCP discovery)
 
     // 5. Restart context and company servers if running
     if (this.mcp.isServerRunning("context_server")) {

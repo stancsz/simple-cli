@@ -43,10 +43,10 @@ Important Rules:
 
 4. **Smart Delegation (Router)**:
    If native tools are insufficient, analyze the task complexity and delegate:
-   - **Simple Fix / Typo / Code Edit**: Use 'deepseek_aider'. It is fast and good at direct edits.
-   - **Refactor / Feature / Architecture**: Use 'deepseek_claude'. It has strong reasoning and architectural grasp.
-   - **Research / Writing**: Use 'deepseek_crewai'.
-   - **PR Management (Complex)**: Use 'jules' ONLY if native 'pr_comment' tool is not enough.
+   - **Simple Fix / Typo / Code Edit**: Use 'aider_edit' (or 'aider_chat'). It is fast and good at direct edits.
+   - **Refactor / Feature / Architecture**: Use 'ask_claude'. It has strong reasoning and architectural grasp.
+   - **Research / Writing**: Use 'run_crew_task'.
+   - **PR Management (Complex)**: Use 'jules_task' ONLY if native 'pr_comment' tool is not enough.
 
 5. **Tool Discovery (MCP)**:
    - Check 'mcp_list_servers' for additional capabilities.

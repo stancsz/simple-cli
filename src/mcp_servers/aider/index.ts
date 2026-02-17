@@ -37,7 +37,7 @@ export class AiderServer {
     );
 
     this.server.tool(
-      "aider_edit_files",
+      "aider_edit",
       "Instruct Aider to edit specific files based on a request.",
       {
         message: z.string().describe("The instruction describing the changes to make."),
