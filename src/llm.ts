@@ -143,6 +143,7 @@ export class LLM {
         });
 
         const parsed = this.parse(text, usage as any);
+        // Apply persona transformations (e.g., emojis, catchphrases)
         return await this.personaEngine.transformResponse(parsed, onTyping);
       } catch (e: any) {
         lastError = e;

@@ -7,6 +7,7 @@ import process from "process";
 import { readFile } from "fs/promises";
 import { join } from "path";
 import { existsSync } from "fs";
+import { PersonaEngine } from "../../persona.js";
 
 export class AiderServer {
   private server: McpServer;
@@ -89,6 +90,14 @@ export class AiderServer {
       }
     } catch (e) {
       // Ignore soul loading error
+    }
+
+    // Inject Persona
+    const personaEngine = new PersonaEngine();
+    await personaEngine.loadConfig();
+    const persona = personaEngine.getPersonalityDescription();
+    if (persona) {
+        finalMessage = `${persona}\n\n${finalMessage}`;
     }
 
     // Construct arguments

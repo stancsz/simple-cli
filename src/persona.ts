@@ -70,7 +70,13 @@ export class PersonaEngine {
   }
 
   injectPersonality(systemPrompt: string): string {
-    if (!this.config || !this.config.enabled) return systemPrompt;
+    const personality = this.getPersonalityDescription();
+    if (!personality) return systemPrompt;
+    return `${personality}\n\n${systemPrompt}`;
+  }
+
+  getPersonalityDescription(): string {
+    if (!this.config || !this.config.enabled) return "";
 
     let personalityPrompt = `You are ${this.config.name}, a ${this.config.role}.`;
     if (this.config.voice && this.config.voice.tone) {
@@ -79,8 +85,7 @@ export class PersonaEngine {
     if (this.config.working_hours) {
       personalityPrompt += ` Your working hours are ${this.config.working_hours}.`;
     }
-
-    return `${personalityPrompt}\n\n${systemPrompt}`;
+    return personalityPrompt;
   }
 
   async transformResponse(response: LLMResponse, onTyping?: () => void): Promise<LLMResponse> {
@@ -102,30 +107,49 @@ export class PersonaEngine {
     let message = response.message || "";
     let thought = response.thought;
 
+    // Initialize deterministic PRNG based on message content
+    let seed = this.hashString(message + (this.config.name || ""));
+    const nextRandom = () => {
+        seed++;
+        const x = Math.sin(seed) * 10000;
+        return x - Math.floor(x);
+    };
+
+    const getRandomElement = <T>(arr: T[]): T => {
+        return arr[Math.floor(nextRandom() * arr.length)];
+    };
+
     // Inject Greeting
     if (this.config.catchphrases?.greeting?.length > 0) {
-      const greeting = this.getRandomElement(this.config.catchphrases.greeting);
+      const greeting = getRandomElement(this.config.catchphrases.greeting);
       if (!message.trim().startsWith(greeting)) {
          message = `${greeting} ${message}`;
       }
     }
 
-    // Inject Filler Catchphrases
+    // Inject Filler Catchphrases (Protected Code Blocks)
     if (this.config.catchphrases?.filler && this.config.catchphrases.filler.length > 0) {
-      message = this.insertCatchphrases(message, this.config.catchphrases.filler);
+      // Split message by code blocks to protect them
+      const parts = message.split(/(```[\s\S]*?```)/g);
+      for (let i = 0; i < parts.length; i += 2) {
+          if (parts[i]) {
+              parts[i] = this.insertCatchphrases(parts[i], this.config.catchphrases.filler, nextRandom);
+          }
+      }
+      message = parts.join("");
     }
 
     // Inject Emojis
     if (this.config.emoji_usage) {
       // Simple check to avoid double emojis if LLM already added some common ones
       if (!/[\u{1F600}-\u{1F64F}]/u.test(message)) {
-        message += ` ${this.getRandomElement(DEFAULT_EMOJIS)}`;
+        message += ` ${getRandomElement(DEFAULT_EMOJIS)}`;
       }
     }
 
     // Inject Signoff
     if (this.config.catchphrases?.signoff?.length > 0) {
-      const signoff = this.getRandomElement(this.config.catchphrases.signoff);
+      const signoff = getRandomElement(this.config.catchphrases.signoff);
       // Avoid appending if already ends with signoff-like structure
       if (!message.trim().endsWith(signoff)) {
           message = `${message}\n\n${signoff}`;
@@ -162,7 +186,11 @@ export class PersonaEngine {
     const match = workingHours.match(/^(\d{2}):(\d{2})-(\d{2}):(\d{2})$/);
     if (!match) return true;
 
-    const [_, startH, startM, endH, endM] = match.map(Number);
+    const startH = parseInt(match[1], 10);
+    const startM = parseInt(match[2], 10);
+    const endH = parseInt(match[3], 10);
+    const endM = parseInt(match[4], 10);
+
     const now = new Date();
     const currentH = now.getHours();
     const currentM = now.getMinutes();
@@ -179,16 +207,23 @@ export class PersonaEngine {
     }
   }
 
-  private getRandomElement<T>(arr: T[]): T {
-    return arr[Math.floor(Math.random() * arr.length)];
+  private hashString(str: string): number {
+    let hash = 0;
+    if (str.length === 0) return hash;
+    for (let i = 0; i < str.length; i++) {
+      const char = str.charCodeAt(i);
+      hash = (hash << 5) - hash + char;
+      hash = hash & hash; // Convert to 32bit integer
+    }
+    return Math.abs(hash);
   }
 
-  private insertCatchphrases(text: string, phrases: string[]): string {
+  private insertCatchphrases(text: string, phrases: string[], randomFn: () => number): string {
     if (!phrases || phrases.length === 0) return text;
     // Insert a catchphrase after a sentence ending with roughly 20% probability
     return text.replace(/([.!?])\s+/g, (match, p1) => {
-      if (Math.random() < 0.2) {
-        const phrase = this.getRandomElement(phrases);
+      if (randomFn() < 0.2) {
+        const phrase = phrases[Math.floor(randomFn() * phrases.length)];
         return `${p1} ${phrase} `;
       }
       return match;

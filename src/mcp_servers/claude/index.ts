@@ -6,6 +6,7 @@ import { fileURLToPath } from "url";
 import process from "process";
 import { readFile } from "fs/promises";
 import { join } from "path";
+import { PersonaEngine } from "../../../persona.js";
 
 export class ClaudeServer {
   private server: McpServer;
@@ -53,6 +54,14 @@ export class ClaudeServer {
       finalTask = `${soul}\n\nTask:\n${task}`;
     } catch (e) {
       // console.warn("Could not load Claude soul:", e);
+    }
+
+    // Inject Persona
+    const personaEngine = new PersonaEngine();
+    await personaEngine.loadConfig();
+    const persona = personaEngine.getPersonalityDescription();
+    if (persona) {
+        finalTask = `${persona}\n\n${finalTask}`;
     }
 
     // Construct arguments for claude code
