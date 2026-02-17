@@ -43,7 +43,8 @@ export class LocalEmbedder implements Embedder {
   async init(): Promise<void> {
     try {
       // Dynamic import to avoid crash if not installed
-      const { pipeline } = await import("@xenova/transformers");
+      // @ts-ignore - Optional dependency
+      const { pipeline } = await import("@xenova/transformers") as any;
       // Create pipeline
       this.pipeline = await pipeline("feature-extraction", this.modelName);
     } catch (e) {
