@@ -87,10 +87,13 @@ async function main() {
         try {
             console.log("Attempting to merge origin/main into PR branch...");
             run('git fetch origin main');
-            execSync('git merge origin/main', { cwd: CWD, stdio: 'pipe' });
+            // Use execSync with pipe to capture output if it fails
+            execSync('git merge origin/main', { cwd: CWD, stdio: 'inherit' });
             console.log("✅ Local merge successful.");
-        } catch (e) {
-            console.log("❌ Local merge failed (conflicts).");
+        } catch (e: any) {
+            console.log("❌ Local merge failed (conflicts or history issues).");
+            if (e.stderr) console.error(e.stderr.toString());
+            if (e.stdout) console.log(e.stdout.toString());
             mergeSuccess = false;
         }
 
@@ -100,6 +103,7 @@ async function main() {
 
             // Clean up
             run('git merge --abort', { ignoreErrors: true });
+            run('git reset --hard HEAD', { ignoreErrors: true });
             run('git checkout main');
             run('git clean -fd');
             continue;
