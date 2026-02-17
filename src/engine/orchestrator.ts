@@ -10,6 +10,7 @@ import { MCP } from "../mcp.js";
 import { Skill } from "../skills.js";
 import { LLM } from "../llm.js";
 import { loadCompanyProfile, CompanyProfile } from "../context/company-profile.js";
+import { loadConfig } from "../config.js";
 
 export interface Message {
   role: "user" | "assistant" | "system";
@@ -397,12 +398,21 @@ export class Engine {
             const tName = item.tool;
             const tArgs = item.args;
 
-            // Inject company context into sub-agents (Delegate CLI replacement logic)
-            if ((tName === "aider_chat" || tName === "aider_edit" || tName === "ask_claude") && sharedContext) {
-                 if (tArgs.message) {
-                     tArgs.message = `${sharedContext}\n\nTask:\n${tArgs.message}`;
-                 } else if (tArgs.task) {
-                     tArgs.task = `${sharedContext}\n\nTask:\n${tArgs.task}`;
+            // Inject company context into sub-agents (Generic)
+            if (sharedContext) {
+                 const config = await loadConfig();
+                 const agent = config.agents ? Object.values(config.agents).find(a => a.tool_name === tName || (!a.tool_name && tName.startsWith(a.command))) : undefined;
+
+                 if (agent) {
+                     if (tArgs.message) {
+                         tArgs.message = `${sharedContext}\n\nTask:\n${tArgs.message}`;
+                     } else if (tArgs.task) {
+                         tArgs.task = `${sharedContext}\n\nTask:\n${tArgs.task}`;
+                     } else if (tArgs.query) {
+                         tArgs.query = `${sharedContext}\n\nTask:\n${tArgs.query}`;
+                     } else if (tArgs.instruction) {
+                         tArgs.instruction = `${sharedContext}\n\nTask:\n${tArgs.instruction}`;
+                     }
                  }
             }
 

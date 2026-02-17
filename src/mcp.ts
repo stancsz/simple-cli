@@ -5,6 +5,7 @@ import { existsSync, readFileSync, writeFileSync } from "fs";
 import { readdir } from "fs/promises";
 import { join } from "path";
 import { log } from "@clack/prompts";
+import { loadConfig } from "./config.js";
 
 interface DiscoveredServer {
   name: string;
@@ -324,6 +325,77 @@ export class MCP {
         },
         execute: async ({ name }: { name: string }) => {
             return await this.startServer(name);
+        }
+    });
+
+    all.push({
+        name: "delegate_cli",
+        description: "Delegate a task to a specialized agent/CLI tool.",
+        inputSchema: {
+            type: "object",
+            properties: {
+                agent: { type: "string", description: "Name of the agent (e.g., 'aider', 'claude')." },
+                task: { type: "string", description: "The task instruction or message for the agent." }
+            },
+            required: ["agent", "task"]
+        },
+        execute: async ({ agent, task }: { agent: string, task: string }) => {
+            const config = await loadConfig();
+            if (!config.agents || !config.agents[agent]) {
+                return `Agent '${agent}' is not configured. Available agents: ${Object.keys(config.agents || {}).join(", ")}.`;
+            }
+
+            const agentConfig = config.agents[agent];
+            const serverName = agentConfig.mcp_server;
+            const toolName = agentConfig.tool_name || `${agent}_chat`;
+
+            if (!serverName) {
+                return `Agent '${agent}' does not have an associated MCP server configured.`;
+            }
+
+            try {
+                // Ensure server is started
+                if (!this.clients.has(serverName)) {
+                    await this.startServer(serverName);
+                }
+
+                const client = this.clients.get(serverName);
+                if (!client) {
+                    return `Failed to connect to MCP server '${serverName}'.`;
+                }
+
+                // Dynamically map arguments
+                const toolsList = await client.listTools();
+                const toolDef = toolsList.tools.find(t => t.name === toolName);
+                if (!toolDef) {
+                    return `Tool '${toolName}' not found on server '${serverName}'. Available tools: ${toolsList.tools.map(t => t.name).join(", ")}.`;
+                }
+
+                const argsSchema = toolDef.inputSchema as any;
+                let argName = "task"; // default fallback
+                if (argsSchema && argsSchema.properties) {
+                    if (argsSchema.properties.message) argName = "message";
+                    else if (argsSchema.properties.task) argName = "task";
+                    else if (argsSchema.properties.query) argName = "query";
+                    else if (argsSchema.properties.instruction) argName = "instruction";
+                }
+
+                const toolArgs = { [argName]: task };
+                const result: any = await client.callTool({ name: toolName, arguments: toolArgs });
+
+                if (result.isError) {
+                     return `Error from agent '${agent}': ${JSON.stringify(result.content)}`;
+                }
+
+                // If content is array, join text
+                if (Array.isArray(result.content)) {
+                    return result.content.map((c: any) => c.text).join("\n");
+                }
+                return JSON.stringify(result.content);
+
+            } catch (e: any) {
+                return `Error delegating to agent '${agent}': ${e.message}`;
+            }
         }
     });
 

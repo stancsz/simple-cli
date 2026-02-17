@@ -9,6 +9,8 @@ export interface AgentConfig {
   supports_stdin?: boolean;
   env?: Record<string, string>;
   context_flag?: string;
+  mcp_server?: string;
+  tool_name?: string;
 }
 
 export interface Config {
