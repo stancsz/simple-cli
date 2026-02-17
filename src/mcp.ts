@@ -5,6 +5,7 @@ import { existsSync, readFileSync, writeFileSync } from "fs";
 import { readdir } from "fs/promises";
 import { join } from "path";
 import { log } from "@clack/prompts";
+import { validateServer, checkServerHealth, executeWithRetry, diagnose, HealthCheckConfig } from "./mcp_servers/health.js";
 
 interface DiscoveredServer {
   name: string;
@@ -12,6 +13,7 @@ interface DiscoveredServer {
   args?: string[];
   env?: Record<string, string>;
   url?: string;
+  healthCheck?: HealthCheckConfig;
   source: 'config' | 'local';
 }
 
@@ -34,6 +36,7 @@ export class MCP {
             args: (cfg as any).args || [],
             env: (cfg as any).env || {},
             url: (cfg as any).url,
+            healthCheck: (cfg as any).health_check,
             source: 'config'
           });
         }
@@ -65,6 +68,7 @@ export class MCP {
             }
           } else if (entry.isFile() && name.endsWith(".ts")) {
             const serverName = name.replace(/\.ts$/, "");
+            if (serverName === 'health') continue; // Skip health module
             if (this.discoveredServers.has(serverName)) continue;
 
             const serverScript = join(localServersDir, name);
@@ -99,6 +103,12 @@ export class MCP {
           throw new Error(`Server '${name}' not found in discovered servers.`);
       }
 
+      // Validate server before starting
+      const validation = await validateServer(config);
+      if (!validation.valid) {
+          throw new Error(`Server '${name}' validation failed: ${validation.error}`);
+      }
+
       try {
         const client = new Client(
           { name: "simple-cli", version: "1.0.0" },
@@ -119,6 +129,14 @@ export class MCP {
         }
 
         await client.connect(transport);
+
+        // Check health after connection
+        const health = await checkServerHealth(client);
+        if (!health.healthy) {
+             try { await client.close(); } catch {} // Cleanup
+             throw new Error(`Server '${name}' failed health check: ${health.error}`);
+        }
+
         this.clients.set(name, client);
         log.success(`Connected to MCP: ${name}`);
         return `Successfully started server '${name}'.`;
@@ -327,6 +345,16 @@ export class MCP {
         }
     });
 
+    // Add diagnose tool
+    all.push({
+        name: "diagnose_mcp",
+        description: "Diagnose MCP servers and check their health.",
+        inputSchema: { type: "object", properties: {} },
+        execute: async () => {
+            return await diagnose(this.discoveredServers, this.clients);
+        }
+    });
+
     for (const [name, client] of this.clients) {
       try {
         const { tools } = await client.listTools();
@@ -334,7 +362,7 @@ export class MCP {
           ...tools.map((t) => ({
             ...t,
             execute: (args: any) =>
-              client.callTool({ name: t.name, arguments: args }),
+              executeWithRetry(client, t.name, args), // Use retry logic
             source: "mcp" as const,
             server: name,
           })),

@@ -1,0 +1,45 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "type": "object",
+  "properties": {
+    "mcpServers": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "object",
+        "properties": {
+          "command": { "type": "string" },
+          "args": { "type": "array", "items": { "type": "string" } },
+          "env": { "type": "object", "additionalProperties": { "type": "string" } },
+          "url": { "type": "string" },
+          "health_check": {
+            "type": "object",
+            "properties": {
+              "command": { "type": "string" },
+              "timeout": { "type": "number" }
+            },
+            "additionalProperties": false
+          }
+        },
+        "anyOf": [
+          { "required": ["command"] },
+          { "required": ["url"] }
+        ]
+      }
+    },
+    "agents": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "object",
+        "properties": {
+          "command": { "type": "string" },
+          "args": { "type": "array", "items": { "type": "string" } },
+          "description": { "type": "string" },
+          "supports_stdin": { "type": "boolean" },
+          "env": { "type": "object", "additionalProperties": { "type": "string" } }
+        },
+        "required": ["command"]
+      }
+    }
+  },
+  "additionalProperties": false
+}
