@@ -1,0 +1,9 @@
+# Simple CLI Automated Jobs
+# Runs job delegator at :00 and :30
+# Runs code reviewer at :15 and :45
+
+# Job Delegator - runs at :00 and :30 every hour
+0,30 * * * * cd /app && npx tsx .github/scripts/job-delegator.ts >> /var/log/cron/delegator.log 2>&1
+
+# Code Reviewer - runs at :15 and :45 every hour
+15,45 * * * * cd /app && npx tsx .github/scripts/review.ts >> /var/log/cron/reviewer.log 2>&1

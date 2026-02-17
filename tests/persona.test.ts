@@ -1,7 +1,8 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { Persona } from "../src/persona.js";
+import { PersonaEngine } from "../src/persona.js";
 import { readFile } from "fs/promises";
 import { existsSync } from "fs";
+import { LLMResponse } from "../src/llm.js";
 
 // Mock fs/promises
 vi.mock("fs/promises", () => ({
@@ -13,8 +14,8 @@ vi.mock("fs", () => ({
   existsSync: vi.fn(),
 }));
 
-describe("Persona", () => {
-  let persona: Persona;
+describe("PersonaEngine", () => {
+  let engine: PersonaEngine;
 
   const MOCK_CONFIG = {
     name: "TestBot",
@@ -38,78 +39,136 @@ describe("Persona", () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
-    persona = new Persona();
+    engine = new PersonaEngine();
   });
 
   afterEach(() => {
     vi.useRealTimers();
   });
 
-  describe("format_response", () => {
-    it("should process message with greeting, signoff and filler", async () => {
-      vi.useFakeTimers({ toFake: ['Date'] });
+  describe("transformResponse", () => {
+    it("should process response with greeting, signoff and filler", async () => {
+      vi.useFakeTimers({ toFake: ['Date', 'setTimeout'] });
       vi.setSystemTime(new Date(2023, 0, 1, 10, 0, 0)); // Jan 1, 10:00 Local Time
 
       (existsSync as any).mockReturnValue(true);
       (readFile as any).mockResolvedValue(JSON.stringify(MOCK_CONFIG));
 
-      await persona.load("config.json");
+      await engine.loadConfig();
 
-      const message = "This is a test message.";
-      const processed = persona.format_response(message);
+      const response: LLMResponse = {
+        thought: "Thinking...",
+        tool: "none",
+        args: {},
+        message: "This is a test message.",
+        raw: "raw"
+      };
 
-      expect(processed).toContain("Hello Test!");
-      expect(processed).toContain("Bye Test!");
-      expect(processed).toContain("This is a test message.");
+      const promise = engine.transformResponse(response);
+      vi.runAllTimers();
+      const processed = await promise;
+
+      expect(processed.message).toContain("Hello Test!");
+      expect(processed.message).toContain("Bye Test!");
+      expect(processed.message).toContain("This is a test message.");
     });
 
     it("should filter response outside working hours", async () => {
-      vi.useFakeTimers({ toFake: ['Date'] });
+      vi.useFakeTimers({ toFake: ['Date', 'setTimeout'] });
       vi.setSystemTime(new Date(2023, 0, 1, 20, 0, 0)); // Jan 1, 20:00 Local Time
 
       (existsSync as any).mockReturnValue(true);
       (readFile as any).mockResolvedValue(JSON.stringify(MOCK_CONFIG));
 
-      await persona.load("config.json");
+      await engine.loadConfig();
 
-      const processed = persona.format_response("Hello");
-      expect(processed).toContain("I am currently offline.");
-      expect(processed).toContain("09:00-17:00");
+      const response: LLMResponse = {
+        thought: "Thinking...",
+        tool: "none",
+        args: {},
+        message: "Hello",
+        raw: "raw"
+      };
+
+      const promise = engine.transformResponse(response);
+      vi.runAllTimers();
+      const processed = await promise;
+
+      expect(processed.message).toContain("I am currently offline.");
+      expect(processed.message).toContain("09:00-17:00");
     });
 
     it("should add emojis if enabled", async () => {
-      vi.useFakeTimers({ toFake: ['Date'] });
+      vi.useFakeTimers({ toFake: ['Date', 'setTimeout'] });
       vi.setSystemTime(new Date(2023, 0, 1, 10, 0, 0));
       (existsSync as any).mockReturnValue(true);
       (readFile as any).mockResolvedValue(JSON.stringify(MOCK_CONFIG));
 
-      await persona.load("config.json");
+      await engine.loadConfig();
 
-      const processed = persona.format_response("Hello");
-      expect(processed).toMatch(/(😊|👍|🚀|🤖|💻|✨|💡|🔥)/u);
+      const response: LLMResponse = {
+        thought: "Thinking...",
+        tool: "none",
+        args: {},
+        message: "Hello",
+        raw: "raw"
+      };
+
+      const promise = engine.transformResponse(response);
+      vi.runAllTimers();
+      const processed = await promise;
+
+      expect(processed.message).toMatch(/(😊|👍|🚀|🤖|💻|✨|💡|🔥)/u);
     });
 
-    it("should return original message if config not loaded", () => {
-      const message = "Original";
-      const processed = persona.format_response(message);
-      expect(processed).toBe(message);
+    it("should return original response if config not loaded", async () => {
+      const response: LLMResponse = {
+        thought: "Thinking...",
+        tool: "none",
+        args: {},
+        message: "Original",
+        raw: "raw"
+      };
+      const processed = await engine.transformResponse(response);
+      expect(processed.message).toBe("Original");
     });
   });
 
-  describe("inject_personality", () => {
+  describe("injectPersonality", () => {
     it("should inject personality into system prompt", async () => {
       (existsSync as any).mockReturnValue(true);
       (readFile as any).mockResolvedValue(JSON.stringify(MOCK_CONFIG));
 
-      await persona.load("config.json");
+      await engine.loadConfig();
 
       const systemPrompt = "Original system prompt.";
-      const injected = persona.inject_personality(systemPrompt);
+      const injected = engine.injectPersonality(systemPrompt);
 
       expect(injected).toContain("You are TestBot, a Tester.");
       expect(injected).toContain("Your voice is test.");
       expect(injected).toContain("Your working hours are 09:00-17:00.");
       expect(injected).toContain("Original system prompt.");
     });
+  });
+
+  describe("simulateTyping", () => {
+     it("should call onTyping callback", async () => {
+        vi.useFakeTimers();
+
+        // Mock config with noticeable latency
+        const configWithLatency = { ...MOCK_CONFIG, response_latency: { min: 200, max: 300 } };
+        (existsSync as any).mockReturnValue(true);
+        (readFile as any).mockResolvedValue(JSON.stringify(configWithLatency));
+
+        await engine.loadConfig();
+
+        const onTyping = vi.fn();
+        const promise = engine.simulateTyping("Response", { min: 200, max: 300 }, onTyping);
+
+        await vi.advanceTimersByTimeAsync(1000);
+        await promise;
+
+        expect(onTyping).toHaveBeenCalled();
+     });
   });
 });

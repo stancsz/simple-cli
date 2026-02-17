@@ -1,0 +1,36 @@
+services:
+  simple-cli-cron:
+    build:
+      context: .
+      dockerfile: Dockerfile.cron
+    container_name: simple-cli-cron
+    restart: unless-stopped
+    environment:
+      # API Keys
+      - JULES_API_KEY=${JULES_API_KEY}
+      - GITHUB_TOKEN=${GITHUB_TOKEN}
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
+      - GOOGLE_API_KEY=${GOOGLE_API_KEY}
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - DEEPSEEK_API_KEY=${DEEPSEEK_API_KEY}
+
+      # Model configuration
+      - MODEL=deepseek-claude:deepseek-reasoner
+
+      # Timezone
+      - TZ=America/Denver
+    volumes:
+      # Mount .agent directory for persistent memory
+      - ./.agent:/app/.agent
+
+      # Mount .git for git operations
+      - ./.git:/app/.git
+
+      # Mount logs directory
+      - ./logs/cron:/var/log/cron
+    networks:
+      - simple-cli-network
+
+networks:
+  simple-cli-network:
+    driver: bridge

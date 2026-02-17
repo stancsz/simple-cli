@@ -5,8 +5,7 @@ import { fileURLToPath } from "url";
 import { readFile, writeFile, mkdir } from "fs/promises";
 import { existsSync } from "fs";
 import { join, dirname } from "path";
-import { Client } from "@modelcontextprotocol/sdk/client/index.js";
-import { SSEClientTransport } from "@modelcontextprotocol/sdk/client/sse.js";
+// @ts-ignore - No type definitions available
 import { lock } from "proper-lockfile";
 import { ContextSchema, ContextData, ContextManager } from "../core/context.js";
 
@@ -34,7 +33,6 @@ function deepMerge(target: any, source: any): any {
 
 export class ContextServer implements ContextManager {
   private contextFile: string;
-  private brainClient: Client | null = null;
   private cwd: string;
 
   constructor(cwd: string = process.cwd()) {
@@ -47,46 +45,25 @@ export class ContextServer implements ContextManager {
     }
   }
 
-  private async getBrain() {
-    if (this.brainClient) return this.brainClient;
-
-    const url = process.env.BRAIN_MCP_URL || "http://localhost:3002/sse";
-    const transport = new SSEClientTransport(new URL(url));
-
-    const client = new Client(
-      { name: "context-server", version: "1.0.0" },
-      { capabilities: {} }
-    );
-
-    try {
-      await client.connect(transport);
-      this.brainClient = client;
-      return client;
-    } catch (e) {
-      console.warn(`Failed to connect to Brain MCP server at ${url}. Ensure it is running.`);
-      throw e;
-    }
-  }
-
   // Internal lock wrapper
   private async withLock<T>(action: () => Promise<T>): Promise<T> {
     // Ensure directory exists
     if (!existsSync(dirname(this.contextFile))) {
-        await mkdir(dirname(this.contextFile), { recursive: true });
+      await mkdir(dirname(this.contextFile), { recursive: true });
     }
     // Ensure file exists for locking
     if (!existsSync(this.contextFile)) {
-         await writeFile(this.contextFile, "{}");
+      await writeFile(this.contextFile, "{}");
     }
 
     let release: () => Promise<void>;
     try {
-        release = await lock(this.contextFile, {
-            retries: { retries: 10, minTimeout: 100, maxTimeout: 1000 },
-            stale: 10000
-        });
+      release = await lock(this.contextFile, {
+        retries: { retries: 10, minTimeout: 100, maxTimeout: 1000 },
+        stale: 10000
+      });
     } catch (e: any) {
-        throw new Error(`Failed to acquire lock for ${this.contextFile}: ${e.message}`);
+      throw new Error(`Failed to acquire lock for ${this.contextFile}: ${e.message}`);
     }
 
     try {
@@ -97,9 +74,6 @@ export class ContextServer implements ContextManager {
   }
 
   async readContext(lockId?: string): Promise<ContextData> {
-    // lockId unused, kept for interface compatibility if needed,
-    // but strict interface implementation doesn't require matching optional args if we don't use them?
-    // Actually interface says `lockId?: string`.
     return this.withLock(async () => {
       if (existsSync(this.contextFile)) {
         try {
@@ -109,9 +83,8 @@ export class ContextServer implements ContextManager {
           if (parsed.success) {
             return parsed.data;
           } else {
-             console.warn("Context schema validation failed, returning default/partial:", parsed.error);
-             return ContextSchema.parse(json); // Try to parse what we can or fail?
-             // Zod parse will strip unknown keys.
+            console.warn("Context schema validation failed, returning default/partial:", parsed.error);
+            return ContextSchema.parse(json);
           }
         } catch {
           return ContextSchema.parse({});
@@ -135,7 +108,7 @@ export class ContextServer implements ContextManager {
 
       const parsed = ContextSchema.safeParse(merged);
       if (!parsed.success) {
-          throw new Error(`Invalid context update: ${parsed.error.message}`);
+        throw new Error(`Invalid context update: ${parsed.error.message}`);
       }
 
       const finalContext = parsed.data;
@@ -148,42 +121,9 @@ export class ContextServer implements ContextManager {
 
   async clearContext(lockId?: string): Promise<void> {
     return this.withLock(async () => {
-       const empty = ContextSchema.parse({});
-       await writeFile(this.contextFile, JSON.stringify(empty, null, 2));
+      const empty = ContextSchema.parse({});
+      await writeFile(this.contextFile, JSON.stringify(empty, null, 2));
     });
-  }
-
-  async searchMemory(query: string): Promise<string> {
-      try {
-        const brain = await this.getBrain();
-        const result: any = await brain.callTool({
-            name: "query_memory",
-            arguments: { query, limit: 5 }
-        });
-        if (result && result.content && result.content[0] && result.content[0].text) {
-            return result.content[0].text;
-        }
-        return "No relevant memory found.";
-      } catch (e) {
-          console.warn("Failed to search memory:", e);
-          return "Memory unavailable.";
-      }
-  }
-
-  async storeMemory(userPrompt: string, agentResponse: string, artifacts: string[]): Promise<void> {
-      try {
-        const brain = await this.getBrain();
-        await brain.callTool({
-            name: "store_memory",
-            arguments: {
-                userPrompt,
-                agentResponse,
-                artifacts: JSON.stringify(artifacts)
-            }
-        });
-      } catch (e) {
-          console.warn("Failed to store memory:", e);
-      }
   }
 }
 
@@ -224,15 +164,15 @@ server.tool(
     }
 
     try {
-        const newContext = await manager.updateContext(parsedUpdates);
-        return {
-          content: [{ type: "text", text: JSON.stringify(newContext, null, 2) }],
-        };
+      const newContext = await manager.updateContext(parsedUpdates);
+      return {
+        content: [{ type: "text", text: JSON.stringify(newContext, null, 2) }],
+      };
     } catch (e: any) {
-        return {
-            content: [{ type: "text", text: `Error updating context: ${e.message}` }],
-            isError: true
-        };
+      return {
+        content: [{ type: "text", text: `Error updating context: ${e.message}` }],
+        isError: true
+      };
     }
   }
 );
@@ -246,38 +186,6 @@ server.tool(
     return {
       content: [{ type: "text", text: "Context cleared." }],
     };
-  }
-);
-
-server.tool(
-  "search_memory",
-  "Search long-term memory via Brain",
-  {
-    query: z.string().describe("Search query"),
-  },
-  async ({ query }) => {
-    const result = await manager.searchMemory(query);
-    return { content: [{ type: "text", text: result }] };
-  }
-);
-
-server.tool(
-  "store_memory",
-  "Store a memory to Brain (user prompt, response, artifacts)",
-  {
-    userPrompt: z.string().describe("User prompt"),
-    agentResponse: z.string().describe("Agent response"),
-    artifacts: z.string().optional().describe("JSON string array of artifacts"),
-  },
-  async ({ userPrompt, agentResponse, artifacts }) => {
-    let arts: string[] = [];
-    if (artifacts) {
-        try {
-            arts = JSON.parse(artifacts);
-        } catch { arts = []; }
-    }
-    await manager.storeMemory(userPrompt, agentResponse, arts);
-    return { content: [{ type: "text", text: "Memory stored" }] };
   }
 );
 

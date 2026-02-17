@@ -9,7 +9,6 @@ import { relative, join } from "path";
 import { MCP } from "../mcp.js";
 import { Skill } from "../skills.js";
 import { LLM } from "../llm.js";
-import { PersonaEngine } from "../persona/engine.js";
 
 export interface Message {
   role: "user" | "assistant" | "system";
@@ -138,15 +137,12 @@ export class Registry {
 
 export class Engine {
   protected s = spinner();
-  protected personaEngine: PersonaEngine;
 
   constructor(
     protected llm: LLM,
     protected registry: Registry,
     protected mcp: MCP,
-  ) {
-    this.personaEngine = new PersonaEngine(llm);
-  }
+  ) {}
 
   protected async getUserInput(initialValue: string, interactive: boolean): Promise<string | undefined> {
     if (!interactive || !process.stdout.isTTY) return undefined;
@@ -196,9 +192,6 @@ export class Engine {
     // Legacy loading removed
     // await this.registry.loadProjectTools(ctx.cwd);
 
-    // Initialize Persona Engine
-    await this.personaEngine.loadConfig();
-
     if (process.stdin.isTTY) {
       readline.emitKeypressEvents(process.stdin);
     }
@@ -217,10 +210,10 @@ export class Engine {
       const userRequest = input; // Capture original request
       let pastMemory: string | null = null;
       try {
-        const contextClient = this.mcp.getClient("context_server");
-        if (contextClient) {
-            const result: any = await contextClient.callTool({
-                name: "search_memory",
+        const brainClient = this.mcp.getClient("brain");
+        if (brainClient) {
+            const result: any = await brainClient.callTool({
+                name: "brain_query",
                 arguments: { query: userRequest }
             });
             if (result && result.content && result.content[0]) {
@@ -314,7 +307,7 @@ export class Engine {
           typingStarted = true;
         };
 
-        const response = await this.personaEngine.generate(prompt, ctx.history, signal, onTyping);
+        const response = await this.llm.generate(prompt, ctx.history, signal, onTyping);
 
         if (typingStarted) {
           this.s.stop("Response received");
@@ -455,19 +448,20 @@ export class Engine {
           if (allExecuted) {
             // Store successful memory
             try {
-                const contextClient = this.mcp.getClient("context_server");
-                if (contextClient) {
-                    await contextClient.callTool({
-                        name: "store_memory",
+                const brainClient = this.mcp.getClient("brain");
+                if (brainClient) {
+                    await brainClient.callTool({
+                        name: "brain_store",
                         arguments: {
-                            userPrompt: userRequest,
-                            agentResponse: message || response.thought || "Task completed.",
+                            taskId: "task-" + Date.now(),
+                            request: userRequest,
+                            solution: message || response.thought || "Task completed.",
                             artifacts: JSON.stringify(currentArtifacts)
                         }
                     });
                 }
             } catch (e) {
-                console.warn("Failed to store memory via context server:", e);
+                console.warn("Failed to store memory via brain server:", e);
             }
             input = "The tool executions were verified. Proceed.";
           }

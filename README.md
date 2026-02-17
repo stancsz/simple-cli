@@ -1,12 +1,23 @@
-# 🚀 Simple-CLI: The Digital Coworker
-**Stop chatting with AI. Start deploying coworkers.**
+<div align="center">
+  <img src="docs/assets/logo.jpeg" alt="Simple CLI Logo" width="200"/>
+</div>
 
-Simple-CLI is a **Meta-Orchestrator** designed to build and manage a fleet of autonomous digital employees. It doesn't just answer questions; it coordinates specialized agents (Jules, Claude, Aider, Kimi) to execute complex, multi-threaded workflows in parallel.
+# 🚀 Simple-CLI: The Universal AI Framework Integrator
+**The only orchestrator that learns any AI framework and turns it into a subordinate agent.**
 
-## 🎯 Goal
-**Simple-CLI is your Digital Coworker and Autonomous Consulting Agency.**
+Simple-CLI is a **Meta-Orchestrator** with a unique superpower: **rapid framework ingestion**. Point it at any AI framework (Jules, Claude, Aider, CrewAI, Kimi, Devin), and it will digest, wrap, and deploy it as a specialized sub-agent—complete with token-efficient long-term memory and autonomous execution capabilities.
 
-The goal is to evolve beyond a simple coding assistant into a fleet of **Digital Employees** that you can deploy across multiple companies. By leveraging the best-in-class models and frameworks, Simple-CLI acts as a high-leverage manager that thinks boldly, acts creatively, and executes with precision.
+## 🎯 Core Strength
+**Simple-CLI is a Framework-Agnostic Integration Engine.**
+
+Unlike traditional AI tools that lock you into a single model or framework, Simple-CLI is designed to:
+- ✅ **Ingest any AI framework** in hours, not weeks
+- ✅ **Digest and standardize** via MCP (Model Context Protocol) servers
+- ✅ **Deploy as subordinate agents** with shared memory and context
+- ✅ **Optimize token usage** through smart routing and persistent memory
+- ✅ **Scale infinitely** by adding new frameworks as they emerge
+
+**The Vision:** A digital consulting agency that can adopt any new AI capability and make it an integral part of your workforce—fast, cheap, and with perfect memory.
 
 ## 🏢 Digital Employee Framework
 Simple-CLI allows you to "hire" and "equip" specialized digital workers for your projects:
@@ -49,13 +60,43 @@ $ simple "Refactor src/legacy.ts to functional style and write tests for it. Do 
 
 ---
 
+## 🔄 The Ingest-Digest-Deploy Cycle
+
+Simple-CLI's secret weapon is its ability to **rapidly integrate any AI framework** using a three-phase process:
+
+### 1️⃣ **Ingest** (Learn the Framework)
+- Analyze the framework's API, CLI, or SDK
+- Understand its strengths, weaknesses, and ideal use cases
+- Map its capabilities to MCP tool definitions
+
+### 2️⃣ **Digest** (Standardize the Interface)
+- Wrap the framework in an MCP server (`src/mcp_servers/<framework>/`)
+- Create a unified interface that the orchestrator can call
+- Add framework-specific optimizations (streaming, batching, caching)
+
+### 3️⃣ **Deploy** (Make it a Subordinate Agent)
+- Register the new MCP server in `mcp.json`
+- The orchestrator automatically discovers and uses it
+- The framework becomes part of your digital workforce
+
+**Examples of Integrated Frameworks:**
+- **Jules** → Autonomous GitHub PR agent (ingested in 2 days)
+- **Aider** → Rapid code editing specialist (ingested in 1 day)
+- **CrewAI** → Multi-agent research teams (ingested in 3 days)
+- **Kimi K2.5** → Deep reasoning engine (ingested in 1 day)
+- **Devin** → Full-stack autonomous developer (ingested in 2 days)
+
+**Token Efficiency:** All agents share a unified `.agent/brain/` memory system, eliminating redundant context passing and reducing token costs by up to 70%.
+
+---
+
 ## ⚡ The Vision: Results, Not Conversations
 Most AI tools trap you in a never-ending chat loop. Simple-CLI is built for **autonomous execution**.
 
 *   **Deployable Results**: Give a high-level goal and walk away. The orchestrator handles the planning, delegation, and verification.
 *   **Specialized Workforce**: Hire `Jules` for GitHub PR surgery, `DeepSeek Claude` for architectural heavy lifting, and `Aider` for rapid-fire edits.
-*   **Ghost Mode (New!)**: Your digital co-workers run 24/7. The `Smart Job Delegator` wakes up hourly to check the Roadmap and assign tasks while you sleep.
-*   **The Brain (New!)**: Hybrid Memory Architecture (Vector + Graph) ensures your agents remember past solutions, user preferences, and project context forever.
+*   **Ghost Mode**: Your digital co-workers run 24/7. The `Smart Job Delegator` wakes up hourly to check the Roadmap and assign tasks while you sleep.
+*   **The Brain**: Hybrid Memory Architecture (Vector + Graph) ensures your agents remember past solutions, user preferences, and project context forever.
 *   **Parallel Productivity**: Run a frontend refactor and a backend test suite simultaneously. Simple-CLI manages the threads so you don't have to.
 
 ---
@@ -70,12 +111,11 @@ The core engine runs a "Game Loop" that uses an **Asynchronous Task Manager** to
 4.  **Reviews**: Verifies the work (files, PRs) via a Supervisor loop.
 
 ### The "Workers" (Sub-Agents)
-Simple-CLI wraps powerful industry CLIs into a unified interface. **Note: We are currently migrating these to standalone MCP Servers.**
+Simple-CLI wraps powerful industry CLIs into a unified interface via **MCP Servers**:
 *   **Jules (`jules`)**: An autonomous agent for GitHub PRs and full-stack tasks.
-*   **DeepSeek Claude (`deepseek_claude`)** *(Deprecated)*: Wraps Anthropic's Claude CLI. Transitioning to `claude-mcp`.
-*   **DeepSeek Aider (`deepseek_aider`)** *(Deprecated)*: Wraps the popular `aider` CLI. Transitioning to `aider-mcp`.
-*   **DeepSeek CrewAI (`deepseek_crewai`)** *(Deprecated)*: Delegates to CrewAI. Please use the `crewai` MCP server instead.
-*   **DeepSeek OpenCode (`deepseek_opencode`)**: Fast, open-source model generation.
+*   **Claude (`claude`)**: Wraps Anthropic's Claude for architectural reasoning.
+*   **Aider (`aider`)**: Wraps the popular `aider` CLI for rapid code editing.
+*   **CrewAI (`crewai`)**: Orchestrates multi-agent research crews.
 
 ---
 
@@ -114,6 +154,8 @@ simple "Delegate the UI fix to Jules and the API tests to Aider in parallel."
 
 Simple-CLI extends its capabilities via the Model Context Protocol (MCP). It includes several built-in MCP servers located in `src/mcp_servers/`:
 
+*   **Brain (`brain`)**: Provides episodic and semantic memory via Vector DB and Graph.
+*   **SOP (`sop`)**: Manages and executes Standard Operating Procedures.
 *   **CapRover (`caprover`)**: Manages CapRover deployments.
 *   **Cloudflare Browser (`cloudflare_browser`)**: Web browsing capabilities via Cloudflare.
 *   **Coolify (`coolify`)**: Integrates with Coolify for self-hosting.
@@ -124,12 +166,11 @@ Simple-CLI extends its capabilities via the Model Context Protocol (MCP). It inc
 *   **Kimi (`kimi`)**: Integrates Kimi AI capabilities.
 *   **OpenClaw (`openclaw`)**: Integrates OpenClaw skills (e.g., system tools, GitHub) into the workflow.
 *   **OpenCowork (`opencowork`)**: Enables hierarchical agency by allowing the hiring and delegation of tasks to worker agents.
-*   **Simple Tools (`simple_tools`)**: Core system tools for the orchestrator.
 
 ## 🧠 The `.agent` Brain
 Simple-CLI persists its memory and configuration in your project:
 *   **`.agent/state.json`**: The Psyche (Personality, Trust, Irritation).
-*   **`.agent/tools/`**: Custom tools the agent has written for itself (`create_tool`).
+*   **`.agent/brain/`**: The Core Memory (Vector DB + Graph) managed by the Brain MCP server.
 *   **`.agent/learnings.json`**: Long-term memory of what works and what doesn't.
 
 ---

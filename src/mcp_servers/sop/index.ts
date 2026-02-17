@@ -5,7 +5,7 @@ import { fileURLToPath } from "url";
 import { join } from "path";
 import { readdir, readFile, writeFile, appendFile, mkdir } from "fs/promises";
 import { existsSync } from "fs";
-import { SOPEngine } from "../../sop/SOPEngine.js";
+import { SOPEngine } from "../../sop/engine.js";
 import { SopMcpClient } from "../../sop/SopMcpClient.js";
 
 export class SOPServer {
@@ -20,10 +20,7 @@ export class SOPServer {
       version: "1.0.0",
     });
 
-    // Use current working directory as base for resolving paths
-    // The engine will look for files relative to this directory.
-    // If we pass 'sops/deploy.md', it will look in cwd/sops/deploy.md
-    this.sopsDir = process.cwd();
+    this.sopsDir = join(process.cwd(), ".agent", "sops");
     this.client = new SopMcpClient();
     this.engine = new SOPEngine(this.client, this.sopsDir);
 
@@ -33,18 +30,18 @@ export class SOPServer {
   private setupTools() {
     this.server.tool(
       "list_sops",
-      "List all available Standard Operating Procedures (SOPs) in the sops/ directory.",
+      "List all available Standard Operating Procedures (SOPs) in the .agent/sops/ directory.",
       {},
       async () => {
         try {
-          const sopsDir = join(process.cwd(), "sops");
-          if (!existsSync(sopsDir)) {
-            return { content: [{ type: "text", text: "No sops/ directory found." }] };
+          if (!existsSync(this.sopsDir)) {
+            await mkdir(this.sopsDir, { recursive: true });
+            return { content: [{ type: "text", text: "No SOPs found (directory created)." }] };
           }
-          const files = await readdir(sopsDir);
+          const files = await readdir(this.sopsDir);
           const sops = files
             .filter(f => f.endsWith(".md"))
-            .map(f => `sops/${f}`); // Return relative paths
+            .map(f => f.replace(".md", "")); // Return names without extension
           return {
             content: [
               {
@@ -66,11 +63,11 @@ export class SOPServer {
       "read_sop",
       "Read and parse an SOP definition.",
       {
-        sop_path: z.string().describe("The path to the SOP markdown file (e.g. 'sops/market_research.md')."),
+        name: z.string().describe("The name of the SOP (e.g. 'market_research')."),
       },
-      async ({ sop_path }) => {
+      async ({ name }) => {
         try {
-          const sop = await this.engine.loadSOP(sop_path);
+          const sop = await this.engine.loadSOP(name);
           return {
             content: [
               {
@@ -92,15 +89,15 @@ export class SOPServer {
       "execute_sop",
       "Execute an SOP workflow.",
       {
-        sop_path: z.string().describe("The path to the SOP markdown file (e.g., 'sops/deploy.md')."),
+        name: z.string().describe("The name of the SOP (e.g., 'deploy')."),
         params: z.record(z.any()).optional().describe("Optional parameters for the SOP."),
       },
-      async ({ sop_path, params }) => {
+      async ({ name, params }) => {
         try {
           // Ensure client is initialized and connected to tools
           await this.client.init();
 
-          const result = await this.engine.executeSOP(sop_path, params || {});
+          const result = await this.engine.executeSOP(name, params || {});
 
           // Log progress to .agent/sop_logs.jsonl
           const agentDir = join(process.cwd(), ".agent");
@@ -110,7 +107,7 @@ export class SOPServer {
 
           const logPath = join(agentDir, "sop_logs.jsonl");
           const logEntry = {
-              sop: sop_path,
+              sop: name,
               params,
               result,
               timestamp: new Date().toISOString()
