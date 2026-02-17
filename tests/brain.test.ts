@@ -18,19 +18,24 @@ vi.mock('@lancedb/lancedb', () => ({
   }),
 }));
 
-// Mock embedder
-vi.mock('../src/brain/embedder.js', () => ({
-  getEmbedder: vi.fn().mockResolvedValue({
-    embed: vi.fn().mockResolvedValue([0.1, 0.2, 0.3]),
-    init: vi.fn(),
-  }),
+const { mockLLM } = vi.hoisted(() => {
+  return {
+    mockLLM: {
+      embed: vi.fn().mockResolvedValue([0.1, 0.2, 0.3]),
+    }
+  }
+});
+
+vi.mock('../src/llm.js', () => ({
+  createLLM: vi.fn().mockReturnValue(mockLLM),
 }));
 
 describe('EpisodicMemory', () => {
   it('should initialize and add memory', async () => {
-    const memory = new EpisodicMemory('test_dir');
+    const memory = new EpisodicMemory('test_dir', mockLLM as any);
     await memory.init();
-    await memory.add('test', 'response', []);
+    await memory.store('task-1', 'test request', 'test response', []);
     expect(lancedb.connect).toHaveBeenCalled();
+    expect(mockLLM.embed).toHaveBeenCalled();
   });
 });

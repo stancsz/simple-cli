@@ -174,18 +174,20 @@ export class ContextServer implements ContextManager {
 
   async updateContext(updates: Partial<ContextData>, lockId?: string): Promise<ContextData> {
     const key = `project:${encodeURIComponent(this.cwd)}:context`;
-    let current = {};
-    let loadedFromBrain = false;
-
-    // Try reading current state from Brain
-    const brainContext = await this.queryBrainMemory(key);
-    if (brainContext) {
-        current = brainContext;
-        loadedFromBrain = true;
-    }
 
     return this.withLock(async () => {
-      // If not loaded from Brain, try local file
+      let current = {};
+      let loadedFromBrain = false;
+
+      // 1. Try reading current state from Brain INSIDE lock to prevent race conditions
+      // Note: This makes the lock held longer (network call), but ensures consistency.
+      const brainContext = await this.queryBrainMemory(key);
+      if (brainContext) {
+        current = brainContext;
+        loadedFromBrain = true;
+      }
+
+      // 2. If not loaded from Brain, try local file
       if (!loadedFromBrain && existsSync(this.contextFile)) {
         try {
           const content = await readFile(this.contextFile, "utf-8");
@@ -194,6 +196,37 @@ export class ContextServer implements ContextManager {
       }
 
       const merged = deepMerge(current, updates);
+
+      // 3. Apply business logic: Deduplicate and Limit
+      if (merged.goals) {
+        merged.goals = [...new Set(merged.goals)];
+      }
+      if (merged.constraints) {
+        merged.constraints = [...new Set(merged.constraints)];
+      }
+      if (merged.recent_changes) {
+        // Keep unique changes, latest first? or just latest 10?
+        // Usually recent changes are append-only.
+        // If deepMerge appends, we might have duplicates.
+        // Assuming deepMerge replaces arrays or merges them?
+        // My deepMerge function:
+        // if (typeof source[key] === 'object' && source[key] !== null && !Array.isArray(source[key])) { ... }
+        // else { Object.assign(output, { [key]: source[key] }); }
+        // Arrays are overwritten by source! So updates.recent_changes overwrites current.recent_changes.
+        // Wait, ContextManager usually appends.
+        // If the tool user passes the FULL new array, deepMerge is fine.
+        // If the tool user passes just new items, they expect append?
+        // The `update_context` tool usually sends the *modified* list.
+        // But if I want to enforce limits, I should check the result.
+        if (Array.isArray(merged.recent_changes)) {
+             // Deduplicate just in case
+             merged.recent_changes = [...new Set(merged.recent_changes)];
+             // Limit to last 10
+             if (merged.recent_changes.length > 10) {
+                 merged.recent_changes = merged.recent_changes.slice(-10);
+             }
+        }
+      }
 
       const parsed = ContextSchema.safeParse(merged);
       if (!parsed.success) {
@@ -207,10 +240,6 @@ export class ContextServer implements ContextManager {
       await writeFile(this.contextFile, JSON.stringify(finalContext, null, 2));
 
       // Write to Brain
-      // We can do this outside the lock, or keep it inside for consistency (Brain updated *after* local).
-      // Since storeBrainMemory is async and might block or fail, putting it inside might hold the lock longer.
-      // But we want to ensure updates are atomic-ish.
-      // I'll keep it inside for now as done previously.
       await this.storeBrainMemory(key, JSON.stringify(finalContext), {
           timestamp: Date.now(),
           agent: "context-server",
