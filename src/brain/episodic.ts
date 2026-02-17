@@ -11,6 +11,7 @@ export interface PastEpisode {
   userPrompt: string;
   agentResponse: string;
   artifacts: string[];
+  tags?: string[];
   vector: number[];
   _distance?: number;
 }
@@ -20,7 +21,7 @@ export class EpisodicMemory {
   private db: lancedb.Connection | null = null;
   private table: lancedb.Table | null = null;
   private llm: ReturnType<typeof createLLM>;
-  private tableName = "episodic_memories";
+  private tableName = "episodic_memories_v2";
 
   constructor(baseDir: string = process.cwd(), llm?: ReturnType<typeof createLLM>) {
     // Store vector data in .agent/brain/episodic/
@@ -50,11 +51,11 @@ export class EpisodicMemory {
     }
   }
 
-  async store(taskId: string, request: string, solution: string, artifacts: string[] = []): Promise<void> {
+  async store(taskId: string, request: string, solution: string, artifacts: string[] = [], tags: string[] = []): Promise<void> {
     if (!this.db) await this.init();
 
     // Embed the interaction (request + solution)
-    const textToEmbed = `Task: ${taskId}\nRequest: ${request}\nSolution: ${solution}`;
+    const textToEmbed = `Task: ${taskId}\nRequest: ${request}\nSolution: ${solution}\nTags: ${tags.join(", ")}`;
     const embedding = await this.llm.embed(textToEmbed);
 
     if (!embedding) {
@@ -68,6 +69,7 @@ export class EpisodicMemory {
       userPrompt: request,
       agentResponse: solution,
       artifacts,
+      tags,
       vector: embedding,
     };
 
@@ -78,7 +80,7 @@ export class EpisodicMemory {
     }
   }
 
-  async recall(query: string, limit: number = 3): Promise<PastEpisode[]> {
+  async recall(query: string, limit: number = 3, filters: { tags?: string[], minTimestamp?: number } = {}): Promise<PastEpisode[]> {
     if (!this.db) await this.init();
 
     if (!this.table) {
@@ -96,13 +98,40 @@ export class EpisodicMemory {
         }
     }
 
-    const embedding = await this.llm.embed(query);
-    if (!embedding) return [];
+    let search: any;
 
-    const results = await this.table!.search(embedding)
-      .limit(limit)
-      .toArray();
+    // If query is provided, perform vector search
+    if (query && query.trim().length > 0) {
+        const embedding = await this.llm.embed(query);
+        if (!embedding) return [];
+        search = this.table!.search(embedding);
+    } else {
+        // Fallback to query() if available or just empty search (LanceDB might require vector search usually)
+        // Note: lancedb-js search() usually requires vector.
+        // However, we can use filter only if we don't care about similarity?
+        // LanceDB JS client `search` needs a vector.
+        // If query is empty, maybe we just want to retrieve recent items?
+        // We can just use a dummy vector or query "everything".
+        // Or better, just search for "summary" or the tags themselves as query.
+        const embedding = await this.llm.embed("autonomous task summary");
+         if (!embedding) return [];
+        search = this.table!.search(embedding);
+    }
 
-    return results as unknown as PastEpisode[];
+    if (filters.minTimestamp) {
+        search = search.where(`timestamp > ${filters.minTimestamp}`);
+    }
+
+    const results = await search.limit(limit).toArray();
+    let episodes = results as unknown as PastEpisode[];
+
+    // In-memory filter for tags (since LanceDB array support varies)
+    if (filters.tags && filters.tags.length > 0) {
+        episodes = episodes.filter(ep =>
+            ep.tags && filters.tags!.every(t => ep.tags!.includes(t))
+        );
+    }
+
+    return episodes;
   }
 }

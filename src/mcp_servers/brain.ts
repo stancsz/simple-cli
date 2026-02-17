@@ -31,14 +31,15 @@ export class BrainServer {
     // Episodic Memory Tools
     this.server.tool(
       "brain_store",
-      "Store a new episodic memory (task ID, request, solution, artifacts).",
+      "Store a new episodic memory (task ID, request, solution, artifacts, tags).",
       {
         taskId: z.string().describe("The unique ID of the task."),
         request: z.string().describe("The user's original request."),
         solution: z.string().describe("The agent's final solution or response."),
         artifacts: z.string().optional().describe("JSON string array of modified file paths."),
+        tags: z.string().optional().describe("JSON string array of tags."),
       },
-      async ({ taskId, request, solution, artifacts }) => {
+      async ({ taskId, request, solution, artifacts, tags }) => {
         let artifactList: string[] = [];
         if (artifacts) {
           try {
@@ -48,7 +49,16 @@ export class BrainServer {
             artifactList = [];
           }
         }
-        await this.episodic.store(taskId, request, solution, artifactList);
+        let tagList: string[] = [];
+        if (tags) {
+            try {
+                tagList = JSON.parse(tags);
+                if (!Array.isArray(tagList)) tagList = [];
+            } catch {
+                tagList = [];
+            }
+        }
+        await this.episodic.store(taskId, request, solution, artifactList, tagList);
         return {
           content: [{ type: "text", text: "Memory stored successfully." }],
         };
@@ -61,16 +71,27 @@ export class BrainServer {
       {
         query: z.string().describe("The search query."),
         limit: z.number().optional().default(3).describe("Max number of results."),
+        tags: z.string().optional().describe("JSON string array of tags to filter by."),
+        min_timestamp: z.number().optional().describe("Minimum timestamp (ms) to filter results."),
       },
-      async ({ query, limit = 3 }) => {
-        const results = await this.episodic.recall(query, limit);
+      async ({ query, limit = 3, tags, min_timestamp }) => {
+        let tagList: string[] = [];
+        if (tags) {
+            try {
+                tagList = JSON.parse(tags);
+                if (!Array.isArray(tagList)) tagList = [];
+            } catch {
+                tagList = [];
+            }
+        }
+        const results = await this.episodic.recall(query, limit, { tags: tagList, minTimestamp: min_timestamp });
         if (results.length === 0) {
           return { content: [{ type: "text", text: "No relevant memories found." }] };
         }
         const text = results
           .map(
             (r) =>
-              `[Task: ${r.taskId}]\nTimestamp: ${new Date(r.timestamp).toISOString()}\nRequest: ${r.userPrompt}\nSolution: ${r.agentResponse}\nArtifacts: ${r.artifacts.join(", ") || "None"}`
+              `[Task: ${r.taskId}]\nTimestamp: ${new Date(r.timestamp).toISOString()}\nRequest: ${r.userPrompt}\nSolution: ${r.agentResponse}\nTags: ${r.tags?.join(", ") || "None"}\nArtifacts: ${r.artifacts.join(", ") || "None"}`
           )
           .join("\n\n---\n\n");
         return { content: [{ type: "text", text }] };

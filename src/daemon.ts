@@ -72,6 +72,20 @@ async function loadSchedule(): Promise<ScheduleConfig> {
     }
   }
 
+  // 3. Inject Default System Tasks
+  const standupTask: TaskDefinition = {
+      id: "morning-standup",
+      name: "Morning Standup",
+      trigger: "cron",
+      schedule: "0 8 * * *", // 8 AM
+      prompt: "Run the standup_report tool to generate a daily summary. If a Slack channel is configured, it will be posted automatically.",
+      yoloMode: true
+  };
+
+  if (!tasks.some(t => t.id === standupTask.id)) {
+      tasks.push(standupTask);
+  }
+
   return { tasks };
 }
 

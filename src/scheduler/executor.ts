@@ -10,6 +10,7 @@ import { existsSync } from "fs";
 import { readFile, mkdir, writeFile } from "fs/promises";
 import pc from "picocolors";
 import { getActiveSkill } from "../skills.js";
+import { EpisodicMemory } from "../brain/episodic.js";
 
 // Simple logger replacement for clack
 const logger = {
@@ -312,6 +313,24 @@ if (import.meta.url ===  "file://" + process.argv[1] || process.argv[1].endsWith
         try {
           await runner.run(ctx, taskDef.prompt);
           console.log(`Task ${taskDef.name} completed successfully.`);
+
+          // Auto-store memory of the execution
+          try {
+              const memory = new EpisodicMemory(cwd, provider);
+              // Extract summary from last assistant message or history
+              const lastMessage = ctx.history.filter(m => m.role === "assistant").pop()?.content || "Task completed.";
+              await memory.store(
+                  taskDef.id,
+                  taskDef.prompt,
+                  lastMessage,
+                  [], // Artifacts could be extracted from tool calls if needed
+                  ['autonomous', taskDef.name]
+              );
+              console.log("Task execution stored in Brain.");
+          } catch (memErr) {
+              console.error("Failed to store task memory:", memErr);
+          }
+
           process.exit(0);
         } catch (e: any) {
           console.error(`Task ${taskDef.name} failed:`, e);

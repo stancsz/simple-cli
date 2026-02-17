@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { ContextServer } from "./mcp_servers/context_server.js";
+import { standup_report } from "./tools/standup-report.js";
 
 export const change_dir = {
   name: "change_dir",
@@ -81,4 +82,4 @@ export const delegate_cli = {
   },
 };
 
-export const allBuiltins = [change_dir, update_context, delegate_cli];
+export const allBuiltins = [change_dir, update_context, delegate_cli, standup_report];

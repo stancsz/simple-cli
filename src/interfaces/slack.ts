@@ -70,13 +70,33 @@ class SlackEngine extends Engine {
   }
 }
 
-const app = new App({
-  token: process.env.SLACK_BOT_TOKEN,
-  signingSecret: process.env.SLACK_SIGNING_SECRET,
-});
+// Initialize App only if token is present to avoid crashes in other contexts
+let app: App | undefined;
+try {
+  if (process.env.SLACK_BOT_TOKEN) {
+    app = new App({
+      token: process.env.SLACK_BOT_TOKEN,
+      signingSecret: process.env.SLACK_SIGNING_SECRET,
+    });
+  }
+} catch (e) {
+  console.warn("Failed to initialize Slack App (token might be missing).");
+}
 
 // Store pending approvals: action_id -> resolve function
 const pendingApprovals = new Map<string, (value: string) => void>();
+
+export async function postToSlack(message: string, channel: string): Promise<void> {
+    if (!process.env.SLACK_BOT_TOKEN) {
+        throw new Error("SLACK_BOT_TOKEN not configured.");
+    }
+    const { WebClient } = await import('@slack/web-api');
+    const client = new WebClient(process.env.SLACK_BOT_TOKEN);
+    await client.chat.postMessage({
+        channel,
+        text: message
+    });
+}
 
 // Global instances for performance and resource management
 const baseRegistry = new Registry();
@@ -104,6 +124,7 @@ async function initializeResources() {
 }
 
 // Action listener for buttons
+if (app) {
 app.action(new RegExp("approval_action_.*"), async ({ ack, body, action }: any) => {
   await ack();
   const blockAction = action as any; // Type assertion for BlockAction
@@ -283,9 +304,14 @@ app.event("app_mention", async ({ event, say, client }: any) => {
     });
   }
 });
+} // End if (app)
 
 if (process.argv[1] === fileURLToPath(import.meta.url)) {
   (async () => {
+    if (!app) {
+        console.error("Slack App not initialized (missing token). Cannot start server.");
+        process.exit(1);
+    }
     // Initialize resources before starting
     await initializeResources();
     const port = Number(process.env.PORT) || 3000;
