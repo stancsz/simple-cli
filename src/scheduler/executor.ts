@@ -4,7 +4,6 @@ import { Context, Registry } from "../engine/orchestrator.js";
 import { MCP } from "../mcp.js";
 import { createLLM } from "../llm.js";
 import { TaskDefinition } from "../interfaces/daemon.js";
-import { allBuiltins } from "../builtins.js";
 import { join, dirname } from "path";
 import { existsSync } from "fs";
 import { readFile, mkdir, writeFile } from "fs/promises";
@@ -38,6 +37,21 @@ export class Executor {
 
     // Initialize MCP and load tools
     await this.mcp.init();
+
+    // Auto-start core servers
+    try {
+      const servers = this.mcp.listServers();
+      const coreServers = ["brain", "context_server", "aider", "claude"];
+      for (const name of coreServers) {
+         if (servers.find((s) => s.name === name && s.status === "stopped")) {
+            await this.mcp.startServer(name);
+            logger.success(`${name} server started.`);
+         }
+      }
+    } catch (e: any) {
+       logger.error(`Failed to start core servers: ${e.message}`);
+    }
+
     (await this.mcp.getTools()).forEach((t) =>
       this.registry.tools.set(t.name, t as any),
     );
@@ -277,7 +291,6 @@ if (import.meta.url ===  "file://" + process.argv[1] || process.argv[1].endsWith
         const cwd = process.cwd();
 
         const registry = new Registry();
-        allBuiltins.forEach((t) => registry.tools.set(t.name, t as any));
 
         // await registry.loadProjectTools(cwd);
 
