@@ -51,7 +51,9 @@ ${JSON.stringify(prs)}
 
 ### YOUR OBJECTIVE:
 Analyze the roadmap against current progress and identify the absolute NEXT step required to achieve the "4-Pillar Vision" (Company Context, SOP-as-Code, Ghost Mode, Recursive Optimization).
-As a manager, you are also responsible for maintaining project hygiene: ensure the assigned task includes instructions to cross off completed items in 'docs/todo.md' or 'docs/ROADMAP.md', and add progress notes to the relevant documentation.
+As a manager, you are also responsible for maintaining project hygiene: 
+1. Ensure the assigned task includes instructions to cross off completed items in 'docs/todo.md' or 'docs/ROADMAP.md', and add progress notes to the relevant documentation.
+2. **STRICT TEST POLICY**: Every delegated task MUST result in a PR with passing, comprehensive, and meaningful tests. You MUST instruct Jules to attach the test results (output) to the PR description or as a comment. Warn Jules that PRs without meaningful tests or attached results will be REJECTED.
 
 ### RULES:
 1. **DEEP DOCUMENTATION AUDIT**: You MUST read the Roadmap and Specs first. Understand "Phase 5" and the "4 Pillars".
@@ -61,6 +63,7 @@ As a manager, you are also responsible for maintaining project hygiene: ensure t
     - **Files to touch/create**: Suggest paths based on the project structure.
     - **Logic**: Briefly explain the architectural approach (e.g., "Implement as an MCP server in src/mcp_servers/...").
     - **Documentation**: Explicitly instruct Jules to update 'docs/todo.md', 'docs/ROADMAP.md', or other specs to reflect progress (crossing off items, adding context).
+    - **Testing**: Instruct Jules to write comprehensive tests and ATTACH the test results to the PR. Emphasize that passing tests and visible results are MANDATORY for acceptance.
     - **Constraints**: Mention existing patterns (e.g., "Use the LLM class from src/llm.ts").
 4. **INDEPENDENCE**: Suggest the single most important next step. Limit your response to EXACTLY 1 high-priority task per run.
 
@@ -69,7 +72,7 @@ As a manager, you are also responsible for maintaining project hygiene: ensure t
   "thought": "A detailed analysis of what is missing based on the roadmap vs current state.",
   "tasks": [
     {
-      "description": "A comprehensive, 2-3 paragraph instruction for Jules, including specific file paths, technical requirements, and documentation update instructions.",
+      "description": "A comprehensive, 2-3 paragraph instruction for Jules, including specific file paths, technical requirements, documentation update instructions, and strict testing/reporting mandates.",
       "priority": "high"
     }
   ],
