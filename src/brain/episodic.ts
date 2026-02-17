@@ -3,6 +3,7 @@ import { join, dirname } from "path";
 import { mkdirSync, existsSync } from "fs";
 import { randomUUID } from "crypto";
 import { createLLM } from "../llm.js";
+import { CompanyLoader } from "../context/company_manager.js";
 
 export interface PastEpisode {
   id: string;
@@ -22,10 +23,15 @@ export class EpisodicMemory {
   private llm: ReturnType<typeof createLLM>;
   private tableName = "episodic_memories";
 
-  constructor(baseDir: string = process.cwd(), llm?: ReturnType<typeof createLLM>) {
-    // Store vector data in .agent/brain/episodic/
-    this.dbPath = join(baseDir, ".agent", "brain", "episodic");
+  constructor(baseDir: string = process.cwd(), llm?: ReturnType<typeof createLLM>, company?: string) {
     this.llm = llm || createLLM();
+    if (company) {
+        const loader = new CompanyLoader(baseDir);
+        this.dbPath = loader.getCompanyDBPath(company);
+    } else {
+        // Store vector data in .agent/brain/episodic/
+        this.dbPath = join(baseDir, ".agent", "brain", "episodic");
+    }
   }
 
   async init() {

@@ -37,6 +37,7 @@ async function main() {
       continue;
     }
 
+    // Handle company context flag
     if (arg === "--company") {
       if (i + 1 < args.length) {
         process.env.JULES_COMPANY = args[i + 1];

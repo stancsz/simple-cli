@@ -30,6 +30,7 @@ export class Briefcase {
     await this.registry.loadCompanyTools(company);
 
     // 5. Restart context and company servers if running
+    // Note: The restarted servers will inherit the updated process.env.JULES_COMPANY
     if (this.mcp.isServerRunning("context_server")) {
         await this.mcp.stopServer("context_server");
         try {
@@ -45,6 +46,15 @@ export class Briefcase {
             await this.mcp.startServer("company");
         } catch (e) {
             console.warn(`Failed to restart company server for company ${company}:`, e);
+        }
+    }
+
+    if (this.mcp.isServerRunning("brain")) {
+        await this.mcp.stopServer("brain");
+        try {
+            await this.mcp.startServer("brain");
+        } catch (e) {
+            console.warn(`Failed to restart brain server for company ${company}:`, e);
         }
     }
 

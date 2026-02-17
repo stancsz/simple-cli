@@ -20,7 +20,8 @@ export class BrainServer {
       version: "1.0.0",
     });
 
-    this.episodic = new EpisodicMemory();
+    const company = process.env.JULES_COMPANY;
+    this.episodic = new EpisodicMemory(process.cwd(), undefined, company);
     this.semantic = new SemanticGraph();
     this.sopsDir = join(process.cwd(), ".agent", "sops");
 
