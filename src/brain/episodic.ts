@@ -23,7 +23,9 @@ export class EpisodicMemory {
 
   constructor(baseDir: string = process.cwd(), llm?: ReturnType<typeof createLLM>) {
     // Store vector data in .agent/brain/episodic/
-    this.dbPath = join(baseDir, ".agent", "brain", "episodic");
+    // Unless overridden by BRAIN_STORAGE_ROOT env var
+    const storageRoot = process.env.BRAIN_STORAGE_ROOT || join(baseDir, ".agent", "brain", "episodic");
+    this.dbPath = storageRoot;
     this.llm = llm || createLLM();
   }
 
@@ -62,12 +64,22 @@ export class EpisodicMemory {
     return null;
   }
 
+  private async getEmbedding(text: string): Promise<number[] | undefined> {
+     if (process.env.MOCK_EMBEDDINGS === "true") {
+         const hash = text.split("").reduce((acc, char) => acc + char.charCodeAt(0), 0);
+         // Use a fixed size vector.
+         const vector = new Array(1536).fill(0).map((_, i) => ((hash * (i + 1)) % 1000) / 1000);
+         return vector;
+     }
+     return await this.llm.embed(text);
+  }
+
   async store(taskId: string, request: string, solution: string, artifacts: string[] = [], company?: string): Promise<void> {
     if (!this.db) await this.init();
 
     // Embed the interaction (request + solution)
     const textToEmbed = `Task: ${taskId}\nRequest: ${request}\nSolution: ${solution}`;
-    const embedding = await this.llm.embed(textToEmbed);
+    const embedding = await this.getEmbedding(textToEmbed);
 
     if (!embedding) {
         throw new Error("Failed to generate embedding for memory.");
@@ -105,7 +117,7 @@ export class EpisodicMemory {
     const table = await this.getTable(company);
     if (!table) return [];
 
-    const embedding = await this.llm.embed(query);
+    const embedding = await this.getEmbedding(query);
     if (!embedding) return [];
 
     const results = await table.search(embedding)

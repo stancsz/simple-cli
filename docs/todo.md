@@ -84,9 +84,10 @@
 - [x] **Semantic Memory (Graph)**:
     - [x] Create `src/brain/semantic.ts`: JSON-based graph store.
     - [x] Implement entity extraction prompt in `src/llm/prompts.ts`.
-- [ ] **Integration**:
-    - [ ] Update `ContextManager` to query "The Brain" on initialization.
+- [x] **Integration**:
+    - [x] Update `ContextManager` to query "The Brain" on initialization.
     - [x] Create `src/mcp_servers/brain`: Expose memory via MCP for sub-agents.
+    - [x] **Validation**: Verified `ContextManager` correctly integrates with Brain MCP. `loadContext` recalls relevant past experiences, and `saveContext` persists outcomes to LanceDB. Artifacts are correctly stored and retrieved. Integration tests passed.
 
 ### 7. Phase 7: The Hive Mind (Planned)
 - [ ] **Swarm Orchestration**: Implement dynamic agent spawning via `opencowork`.

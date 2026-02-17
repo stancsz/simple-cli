@@ -24,12 +24,16 @@ export class ContextManager implements IContextManager {
     return this.server.clearContext(lockId);
   }
 
-  // New High-Level Methods
+  // New High-Level Methods for Long-Term Memory Integration
+
+  /**
+   * Loads context and enriches it with relevant past experiences from the Brain.
+   */
   async loadContext(taskDescription: string): Promise<ContextData & { relevant_past_experiences?: string[] }> {
-    // 1. Get base context
+    // 1. Get base context (local file)
     const context = await this.readContext();
 
-    // 2. Query Brain
+    // 2. Query Brain (Episodic Memory)
     let memories: string[] = [];
     try {
       const brainClient = this.mcp.getClient("brain");
@@ -38,9 +42,10 @@ export class ContextManager implements IContextManager {
             name: "brain_query",
             arguments: {
                 query: taskDescription,
-                company: process.env.JULES_COMPANY // Assuming we can access env or pass it
+                company: process.env.JULES_COMPANY
             }
         });
+
         if (result && result.content && result.content[0] && result.content[0].text) {
              const text = result.content[0].text;
              if (!text.includes("No relevant memories found")) {
@@ -50,7 +55,7 @@ export class ContextManager implements IContextManager {
         }
       }
     } catch (e) {
-      // brain might be unavailable or errored, proceed with base context
+      // Brain might be unavailable or errored; proceed with base context but log warning
       console.warn("Failed to query brain memories:", e);
     }
 
@@ -60,6 +65,9 @@ export class ContextManager implements IContextManager {
     };
   }
 
+  /**
+   * Saves the outcome of a task to the Brain and updates local context.
+   */
   async saveContext(taskDescription: string, outcome: string, updates: Partial<ContextData> = {}, artifacts: string[] = []): Promise<void> {
      // 1. Update local context
      await this.updateContext(updates);
@@ -71,7 +79,7 @@ export class ContextManager implements IContextManager {
            await brainClient.callTool({
                name: "brain_store",
                arguments: {
-                   taskId: "task-" + Date.now(), // generating a unique ID based on timestamp
+                   taskId: "task-" + Date.now(), // Unique ID
                    request: taskDescription,
                    solution: outcome,
                    artifacts: JSON.stringify(artifacts),
