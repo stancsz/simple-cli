@@ -217,10 +217,10 @@ export class Engine {
       const userRequest = input; // Capture original request
       let pastMemory: string | null = null;
       try {
-        const contextClient = this.mcp.getClient("context_server");
-        if (contextClient) {
-            const result: any = await contextClient.callTool({
-                name: "search_memory",
+        const brainClient = this.mcp.getClient("brain");
+        if (brainClient) {
+            const result: any = await brainClient.callTool({
+                name: "brain_query",
                 arguments: { query: userRequest }
             });
             if (result && result.content && result.content[0]) {
@@ -455,19 +455,20 @@ export class Engine {
           if (allExecuted) {
             // Store successful memory
             try {
-                const contextClient = this.mcp.getClient("context_server");
-                if (contextClient) {
-                    await contextClient.callTool({
-                        name: "store_memory",
+                const brainClient = this.mcp.getClient("brain");
+                if (brainClient) {
+                    await brainClient.callTool({
+                        name: "brain_store",
                         arguments: {
-                            userPrompt: userRequest,
-                            agentResponse: message || response.thought || "Task completed.",
+                            taskId: "task-" + Date.now(),
+                            request: userRequest,
+                            solution: message || response.thought || "Task completed.",
                             artifacts: JSON.stringify(currentArtifacts)
                         }
                     });
                 }
             } catch (e) {
-                console.warn("Failed to store memory via context server:", e);
+                console.warn("Failed to store memory via brain server:", e);
             }
             input = "The tool executions were verified. Proceed.";
           }

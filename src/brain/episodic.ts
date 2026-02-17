@@ -1,11 +1,12 @@
 import * as lancedb from "@lancedb/lancedb";
-import { getEmbedder, Embedder } from "./embedder.js";
 import { join, dirname } from "path";
 import { mkdirSync, existsSync } from "fs";
 import { randomUUID } from "crypto";
+import { createLLM } from "../llm.js";
 
-export interface EpisodicMemoryItem {
+export interface PastEpisode {
   id: string;
+  taskId: string;
   timestamp: number;
   userPrompt: string;
   agentResponse: string;
@@ -18,23 +19,21 @@ export class EpisodicMemory {
   private dbPath: string;
   private db: lancedb.Connection | null = null;
   private table: lancedb.Table | null = null;
-  private embedder: Embedder | null = null;
+  private llm: ReturnType<typeof createLLM>;
   private tableName = "episodic_memories";
 
-  constructor(baseDir: string = process.cwd()) {
-    this.dbPath = join(baseDir, ".agent", "brain", "episodic.lancedb");
+  constructor(baseDir: string = process.cwd(), llm?: ReturnType<typeof createLLM>) {
+    // Store vector data in .agent/brain/episodic/
+    this.dbPath = join(baseDir, ".agent", "brain", "episodic");
+    this.llm = llm || createLLM();
   }
 
   async init() {
-    if (this.db && this.embedder) return;
-
-    // Initialize embedder
-    this.embedder = await getEmbedder();
+    if (this.db) return;
 
     // Ensure directory exists
-    const dir = dirname(this.dbPath);
-    if (!existsSync(dir)) {
-      mkdirSync(dir, { recursive: true });
+    if (!existsSync(this.dbPath)) {
+      mkdirSync(this.dbPath, { recursive: true });
     }
 
     // Connect to DB
@@ -42,25 +41,33 @@ export class EpisodicMemory {
 
     // Check if table exists
     try {
-      this.table = await this.db.openTable(this.tableName);
-    } catch {
-      // Table will be created on first add
+        const tableNames = await this.db.tableNames();
+        if (tableNames.includes(this.tableName)) {
+            this.table = await this.db.openTable(this.tableName);
+        }
+    } catch (e) {
+      console.warn("Failed to open table, will create on first write:", e);
     }
   }
 
-  async add(userPrompt: string, agentResponse: string, artifacts: string[] = []): Promise<void> {
-    if (!this.embedder) await this.init();
+  async store(taskId: string, request: string, solution: string, artifacts: string[] = []): Promise<void> {
+    if (!this.db) await this.init();
 
-    // Embed the interaction (prompt + response)
-    const textToEmbed = `User: ${userPrompt}\nAgent: ${agentResponse}`;
-    const embedding = await this.embedder!.embed(textToEmbed);
+    // Embed the interaction (request + solution)
+    const textToEmbed = `Task: ${taskId}\nRequest: ${request}\nSolution: ${solution}`;
+    const embedding = await this.llm.embed(textToEmbed);
+
+    if (!embedding) {
+        throw new Error("Failed to generate embedding for memory.");
+    }
 
     const data = {
       id: randomUUID(),
+      taskId,
       timestamp: Date.now(),
-      userPrompt,
-      agentResponse,
-      artifacts, // LanceDB supports string arrays
+      userPrompt: request,
+      agentResponse: solution,
+      artifacts,
       vector: embedding,
     };
 
@@ -71,22 +78,31 @@ export class EpisodicMemory {
     }
   }
 
-  async search(query: string, limit: number = 3): Promise<EpisodicMemoryItem[]> {
-    if (!this.embedder) await this.init();
+  async recall(query: string, limit: number = 3): Promise<PastEpisode[]> {
+    if (!this.db) await this.init();
 
     if (!this.table) {
+        // Try to open again if it was created by another process?
+        // Or if it simply doesn't exist, return empty.
         try {
-            this.table = await this.db!.openTable(this.tableName);
+             const tableNames = await this.db!.tableNames();
+             if (tableNames.includes(this.tableName)) {
+                 this.table = await this.db!.openTable(this.tableName);
+             } else {
+                 return [];
+             }
         } catch {
             return [];
         }
     }
 
-    const embedding = await this.embedder!.embed(query);
+    const embedding = await this.llm.embed(query);
+    if (!embedding) return [];
+
     const results = await this.table!.search(embedding)
       .limit(limit)
       .toArray();
 
-    return results as unknown as EpisodicMemoryItem[];
+    return results as unknown as PastEpisode[];
   }
 }
