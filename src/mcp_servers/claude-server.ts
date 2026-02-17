@@ -21,14 +21,14 @@ export class ClaudeServer {
 
   private setupTools() {
     this.server.tool(
-      "ask_claude",
+      "claude_code",
       "Ask Claude to perform a task or answer a question.",
       {
         task: z.string().describe("The task or question for Claude."),
-        files: z.array(z.string()).optional().describe("List of file paths to provide as context."),
+        context_files: z.array(z.string()).optional().describe("List of file paths to provide as context."),
       },
-      async ({ task, files }) => {
-        const result = await this.runClaude(task, files || []);
+      async ({ task, context_files }) => {
+        const result = await this.runClaude(task, context_files || []);
         return {
           content: result.content.map((c) => ({ type: "text" as const, text: c.text })),
           isError: result.isError,
@@ -67,7 +67,7 @@ export class ClaudeServer {
     args.push(finalTask);
 
     return new Promise<{ content: { type: "text", text: string }[], isError?: boolean }>((resolve) => {
-      console.error(`[Claude] Running: npx ${args.join(" ")}`);
+      // console.error(`[Claude] Running: npx ${args.join(" ")}`);
 
       const env = {
         ...process.env,

@@ -37,6 +37,7 @@ export async function loadConfig(cwd: string = process.cwd()): Promise<Config> {
 
   // Legacy agent configuration is removed.
   // Agents should be configured via MCP servers in mcp.json.
+  // Default servers (e.g., aider-server, claude-server) are initialized in src/cli.ts.
 
   return config;
 }
