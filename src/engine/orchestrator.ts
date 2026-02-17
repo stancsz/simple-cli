@@ -10,6 +10,7 @@ import { MCP } from "../mcp.js";
 import { Skill } from "../skills.js";
 import { LLM } from "../llm.js";
 import { loadCompanyProfile, CompanyProfile } from "../context/company-profile.js";
+import { ContextManager } from "../context/ContextManager.js";
 
 export interface Message {
   role: "user" | "assistant" | "system";
@@ -138,12 +139,15 @@ export class Registry {
 
 export class Engine {
   protected s = spinner();
+  protected contextManager: ContextManager;
 
   constructor(
     protected llm: LLM,
     protected registry: Registry,
     protected mcp: MCP,
-  ) { }
+  ) {
+    this.contextManager = new ContextManager(this.mcp);
+  }
 
   protected async getUserInput(initialValue: string, interactive: boolean): Promise<string | undefined> {
     if (!interactive || !process.stdout.isTTY) return undefined;
@@ -249,30 +253,17 @@ export class Engine {
         if (!input) break;
       }
 
-      // Brain: Recall similar past experiences
+      // Brain: Recall similar past experiences via ContextManager
       const userRequest = input; // Capture original request
-      let pastMemory: string | null = null;
       try {
-        const brainClient = this.mcp.getClient("brain");
-        if (brainClient) {
-          const result: any = await brainClient.callTool({
-            name: "brain_query",
-            arguments: {
-              query: userRequest,
-              company: companyName
-            }
-          });
-          if (result && result.content && result.content[0]) {
-            pastMemory = result.content[0].text;
-          }
+        const contextData = await this.contextManager.loadContext(userRequest);
+        if (contextData.relevant_past_experiences && contextData.relevant_past_experiences.length > 0) {
+            const pastMemory = contextData.relevant_past_experiences.join("\n\n---\n\n");
+            this.log("info", pc.dim(`[Brain] Recalled past experience.`));
+            input = `[Past Experience]\n${pastMemory}\n\n[User Request]\n${input}`;
         }
       } catch (e) {
         // Ignore context errors
-      }
-
-      if (pastMemory && !pastMemory.includes("No relevant memory found")) {
-        this.log("info", pc.dim(`[Brain] Recalled past experience.`));
-        input = `[Past Experience]\n${pastMemory}\n\n[User Request]\n${input}`;
       }
 
       // Inject Company Profile Context
@@ -512,21 +503,14 @@ export class Engine {
           }
 
           if (allExecuted) {
-            // Store successful memory
+            // Store successful memory via ContextManager
             try {
-              const brainClient = this.mcp.getClient("brain");
-              if (brainClient) {
-                await brainClient.callTool({
-                  name: "brain_store",
-                  arguments: {
-                    taskId: "task-" + Date.now(),
-                    request: userRequest,
-                    solution: message || response.thought || "Task completed.",
-                    artifacts: JSON.stringify(currentArtifacts),
-                    company: companyName
-                  }
-                });
-              }
+                await this.contextManager.saveContext(
+                    userRequest,
+                    message || response.thought || "Task completed.",
+                    {}, // updates
+                    currentArtifacts
+                );
             } catch (e) {
               console.warn("Failed to store memory via brain server:", e);
             }

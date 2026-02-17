@@ -71,8 +71,21 @@ export class BrainServer {
         }
         const text = results
           .map(
-            (r) =>
-              `[Task: ${r.taskId}]\nTimestamp: ${new Date(r.timestamp).toISOString()}\nRequest: ${r.userPrompt}\nSolution: ${r.agentResponse}\nArtifacts: ${r.artifacts.join(", ") || "None"}`
+            (r) => {
+              // Ensure artifacts is treated as an array (LanceDB might return array-like object)
+              let artifacts: string[] = [];
+              if (Array.isArray(r.artifacts)) {
+                artifacts = r.artifacts;
+              } else if (r.artifacts) {
+                try {
+                  artifacts = Array.from(r.artifacts as any);
+                } catch {
+                  // Fallback if not iterable
+                  artifacts = [];
+                }
+              }
+              return `[Task: ${r.taskId}]\nTimestamp: ${new Date(r.timestamp).toISOString()}\nRequest: ${r.userPrompt}\nSolution: ${r.agentResponse}\nArtifacts: ${artifacts.length > 0 ? artifacts.join(", ") : "None"}`;
+            }
           )
           .join("\n\n---\n\n");
         return { content: [{ type: "text", text }] };
