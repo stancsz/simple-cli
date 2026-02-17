@@ -88,6 +88,16 @@
     - [ ] Update `ContextManager` to query "The Brain" on initialization.
     - [x] Create `src/mcp_servers/brain`: Expose memory via MCP for sub-agents.
 
+### Phase 3: Company Context Onboarding (The Briefcase)
+- [ ] **Core Logic**:
+    - [ ] Create `src/briefcase/` module (Manager, Store, Switcher).
+    - [ ] Implement `lancedb` integration for isolated company RAG.
+- [ ] **MCP Server**:
+    - [ ] Create `src/mcp_servers/briefcase/` exposing `get_context`, `add_document`, etc.
+- [ ] **Integration**:
+    - [ ] Update `cli.ts` to support `--company` and `switch_company`.
+    - [ ] Update `orchestrator.ts` to inject context via Briefcase MCP.
+
 ### 7. Phase 7: The Hive Mind (Planned)
 - [ ] **Swarm Orchestration**: Implement dynamic agent spawning via `opencowork`.
 - [ ] **Agent Negotiation**: Implement protocol for agents to "bid" on tasks.

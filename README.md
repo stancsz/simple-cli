@@ -142,6 +142,11 @@ Run the interactive TUI. The orchestrator will act as your pair programmer.
 simple "Refactor the auth system"
 ```
 
+**Options:**
+- `--company <name>`: Load a specific company context (Briefcase).
+- `--non-interactive`: Run in non-interactive mode.
+- `--daemon`: Start the background daemon.
+
 ### 4. Asynchronous Delegation
 You can explicitly tell the orchestrator to run tasks in parallel:
 ```bash

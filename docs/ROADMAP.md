@@ -48,7 +48,7 @@ To transition from a "Wrapper" to a true "Universal AI Integration Platform," th
     - Global constraints.
 - **Mechanism:** `delegate_cli` automatically injects this context (goals, constraints, changes) into the prompt or file context of every sub-agent.
 
-### Phase 3: The Universal Tool Interface (MCP) (✅ Implemented)
+### Phase 3: Company Context Onboarding (The Briefcase) (🔄 In Progress)
 **Goal:** Standardize how agents call tools via the Model Context Protocol.
 - **Status:** Core MCP server logic implemented. Numerous specialized servers (CapRover, Cloudflare, Kimi, etc.) integrated.
 - **Benefit:** Direct, high-bandwidth tool access for sub-agents without regex parsing or manual wrapper overhead.
@@ -106,7 +106,7 @@ To achieve a true "Universal AI Integration Platform" capable of consulting for 
 *   **Mechanism:** Vector DB + Graph storage for episodic and semantic memory.
 *   **Benefit:** Eliminates redundant context passing between agents, reducing token costs by up to 70%.
 
-### 3. "Company Context" Onboarding (The Briefcase)
+### 3. "Company Context" Onboarding (The Briefcase) (🔄 In Progress)
 *   **Concept:** Agents shouldn't just run in a folder; they should understand the "Client Profile."
 *   **Mechanism:** Multi-tenant RAG (Vector DB) per company. When you run `simple --company client-a`, the agent loads specific brand voices, internal docs, and past decisions.
 

@@ -10,7 +10,7 @@ import { outro } from "@clack/prompts";
 import { WorkflowEngine } from "./workflows/workflow_engine.js";
 import { SOPRegistry } from "./workflows/sop_registry.js";
 import { createExecuteSOPTool } from "./workflows/execute_sop_tool.js";
-import { Briefcase, createSwitchCompanyTool } from "./context/briefcase.js";
+import { BriefcaseSwitcher, createSwitchCompanyTool } from "./briefcase/switcher.js";
 
 async function main() {
   const args = process.argv.slice(2);
@@ -97,7 +97,8 @@ async function main() {
   await mcp.init();
   // Ensure essential servers are running.
   // 'filesystem' and 'git' should be configured in mcp.json via migration.
-  const coreServers = ["filesystem", "git", "context_server", "company", "aider-server", "claude-server"];
+  // We include 'briefcase' now instead of 'company'.
+  const coreServers = ["filesystem", "git", "context_server", "briefcase", "aider-server", "claude-server"];
   for (const s of coreServers) {
     try {
       if (mcp.isServerRunning(s)) continue; // Already running
@@ -109,17 +110,16 @@ async function main() {
   }
 
   const provider = createLLM();
+  const engine = new Engine(provider, registry, mcp);
 
-  const briefcase = new Briefcase(registry, provider, sopRegistry, mcp);
-  const switchTool = createSwitchCompanyTool(briefcase);
+  const briefcaseSwitcher = new BriefcaseSwitcher(mcp, registry);
+  const switchTool = createSwitchCompanyTool(briefcaseSwitcher);
   registry.tools.set(switchTool.name, switchTool as any);
 
   // Apply initial company context if env var is set
   if (process.env.JULES_COMPANY) {
-    await briefcase.switchCompany(process.env.JULES_COMPANY);
+    await briefcaseSwitcher.switchCompany(process.env.JULES_COMPANY);
   }
-
-  const engine = new Engine(provider, registry, mcp);
 
   showBanner();
 

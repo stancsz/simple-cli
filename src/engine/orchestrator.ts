@@ -9,7 +9,6 @@ import { relative, join } from "path";
 import { MCP } from "../mcp.js";
 import { Skill } from "../skills.js";
 import { LLM } from "../llm.js";
-import { loadCompanyProfile, CompanyProfile } from "../context/company-profile.js";
 
 export interface Message {
   role: "user" | "assistant" | "system";
@@ -31,11 +30,6 @@ async function getRepoMap(cwd: string, registry: Registry): Promise<string> {
 
   try {
     const result: any = await listTool.execute({ path: cwd });
-    // Assume result.content[0].text contains the list or result is the list
-    // Standard MCP returns { content: [{ type: "text", text: "..." }] }
-    // But filesystem list_directory might return JSON string or structured data?
-    // If it's standard MCP, it returns text or resource.
-    // Let's assume text for now.
     if (result && result.content && Array.isArray(result.content)) {
       return result.content.map((c: any) => c.text).join("\n");
     }
@@ -171,7 +165,7 @@ export class Engine {
     let bufferedInput = "";
     await this.mcp.init();
 
-    // Auto-start Brain and Context servers
+    // Auto-start Brain, Briefcase and Context servers
     try {
       const servers = this.mcp.listServers();
       if (servers.find((s) => s.name === "brain" && s.status === "stopped")) {
@@ -181,6 +175,10 @@ export class Engine {
       if (servers.find((s) => s.name === "context_server" && s.status === "stopped")) {
         await this.mcp.startServer("context_server");
         this.log("success", "Context server started.");
+      }
+      if (servers.find((s) => s.name === "briefcase" && s.status === "stopped")) {
+        await this.mcp.startServer("briefcase");
+        this.log("success", "Briefcase server started.");
       }
       if (servers.find((s) => s.name === "aider" && s.status === "stopped")) {
         await this.mcp.startServer("aider");
@@ -198,25 +196,12 @@ export class Engine {
       this.registry.tools.set(t.name, t as any),
     );
 
-    // Legacy loading removed
-    // await this.registry.loadProjectTools(ctx.cwd);
-
     if (process.stdin.isTTY) {
       readline.emitKeypressEvents(process.stdin);
     }
 
-    // Initialize CompanyContext if JULES_COMPANY is set
+    const companyName = process.env.JULES_COMPANY;
     let sharedContext = "";
-    if (process.env.JULES_COMPANY) {
-      try {
-        const { CompanyLoader } = await import("../context/company_loader.js");
-        const loader = new CompanyLoader();
-        await loader.load(process.env.JULES_COMPANY);
-        this.log("success", `Loaded company context for ${process.env.JULES_COMPANY}`);
-      } catch (e: any) {
-        console.error("Failed to load company context:", e.message);
-      }
-    }
 
     // Fetch shared context for injection
     try {
@@ -266,30 +251,18 @@ export class Engine {
          // Ignore context errors
       }
 
-      if (pastMemory && !pastMemory.includes("No relevant memory found")) {
+      if (pastMemory && !pastMemory.includes("No relevant memories found")) {
         this.log("info", pc.dim(`[Brain] Recalled past experience.`));
         input = `[Past Experience]\n${pastMemory}\n\n[User Request]\n${input}`;
       }
 
-      // Inject Company Profile Context
-      if (companyProfile) {
-         let profileContext = `[Company Context: ${companyProfile.name}]\n`;
-         if (companyProfile.brandVoice) profileContext += `Brand Voice: ${companyProfile.brandVoice}\n`;
-         if (companyProfile.internalDocs?.length) profileContext += `Docs: ${companyProfile.internalDocs.join(", ")}\n`;
-         if (companyProfile.sops?.length) profileContext += `Recommended SOPs: ${companyProfile.sops.join(", ")}\n`;
-
-         input = `${profileContext}\n${input}`;
-      }
-
-      ctx.history.push({ role: "user", content: input });
-
-      // Inject RAG context from Company MCP Server
+      // Inject RAG context from Briefcase MCP Server
       if (companyName) {
         try {
-          const client = this.mcp.getClient("company");
+          const client = this.mcp.getClient("briefcase");
           if (client) {
              const result: any = await client.callTool({
-                name: "company_get_context",
+                name: "briefcase_get_context",
                 arguments: { query: input }
              });
 
@@ -297,8 +270,11 @@ export class Engine {
                 const contextText = result.content[0].text;
                 if (!contextText.includes("No company context active")) {
                    const lastMsg = ctx.history[ctx.history.length - 1];
-                   lastMsg.content = `${contextText}\n\n[User Request]\n${lastMsg.content}`;
-                   this.log("info", pc.dim(`[RAG] Injected company context.`));
+
+                   // Check if we already injected it in prompt or history
+                   // Just append for now
+                   input = `${contextText}\n\n[User Request]\n${input}`;
+                   this.log("info", pc.dim(`[Briefcase] Injected company context.`));
                 }
              }
           }
@@ -306,6 +282,8 @@ export class Engine {
           console.error("Failed to query company context:", e.message);
         }
       }
+
+      ctx.history.push({ role: "user", content: input });
 
       const controller = new AbortController();
       const signal = controller.signal;
@@ -422,9 +400,7 @@ export class Engine {
                    currentArtifacts.push(tArgs.filepath || tArgs.path);
                 }
 
-                // Reload tools if create_tool was used (via MCP refresh if available?)
-                // Since legacy tools are gone, create_tool would likely create an MCP server or file.
-                // We should refresh MCP tools.
+                // Reload tools if create_tool was used
                 if (tName === "create_tool" || tName === "mcp_start_server" || tName === "mcp_install_server") {
                   // Refresh tools
                   (await this.mcp.getTools()).forEach((t) =>

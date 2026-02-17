@@ -16,6 +16,7 @@ export interface Config {
   agents?: Record<string, AgentConfig>;
   yoloMode?: boolean;
   autoDecisionTimeout?: number;
+  company?: string; // Phase 3: Company Context
 }
 
 export async function loadConfig(cwd: string = process.cwd()): Promise<Config> {
