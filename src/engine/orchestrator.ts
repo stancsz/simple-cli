@@ -10,6 +10,8 @@ import { MCP } from "../mcp.js";
 import { Skill } from "../skills.js";
 import { LLM } from "../llm.js";
 import { loadCompanyProfile, CompanyProfile } from "../context/company-profile.js";
+import { ContextManager } from "../context/ContextManager.js";
+import { RECALL_CONTEXT_PROMPT, AGENT_SYSTEM_PROMPT } from "../llm/prompts.js";
 
 export interface Message {
   role: "user" | "assistant" | "system";
@@ -138,12 +140,15 @@ export class Registry {
 
 export class Engine {
   protected s = spinner();
+  private contextManager: ContextManager;
 
   constructor(
     protected llm: LLM,
     protected registry: Registry,
     protected mcp: MCP,
-  ) {}
+  ) {
+    this.contextManager = new ContextManager(this.mcp);
+  }
 
   protected async getUserInput(initialValue: string, interactive: boolean): Promise<string | undefined> {
     if (!interactive || !process.stdout.isTTY) return undefined;
@@ -218,6 +223,11 @@ export class Engine {
       }
     }
 
+    // Append Brain System Prompt
+    if (!ctx.skill.systemPrompt.includes(AGENT_SYSTEM_PROMPT)) {
+      ctx.skill.systemPrompt = `${ctx.skill.systemPrompt}\n\n${AGENT_SYSTEM_PROMPT}`;
+    }
+
     // Fetch shared context for injection
     try {
         const contextClient = this.mcp.getClient("context_server");
@@ -247,28 +257,12 @@ export class Engine {
 
       // Brain: Recall similar past experiences
       const userRequest = input; // Capture original request
-      let pastMemory: string | null = null;
-      try {
-        const brainClient = this.mcp.getClient("brain");
-        if (brainClient) {
-            const result: any = await brainClient.callTool({
-                name: "brain_query",
-                arguments: {
-                  query: userRequest,
-                  company: companyName
-                }
-            });
-            if (result && result.content && result.content[0]) {
-                 pastMemory = result.content[0].text;
-            }
-        }
-      } catch (e) {
-         // Ignore context errors
-      }
+      const pastMemory = await this.contextManager.load(userRequest, process.env.JULES_COMPANY);
 
-      if (pastMemory && !pastMemory.includes("No relevant memory found")) {
+      if (pastMemory) {
         this.log("info", pc.dim(`[Brain] Recalled past experience.`));
-        input = `[Past Experience]\n${pastMemory}\n\n[User Request]\n${input}`;
+        const contextMsg = RECALL_CONTEXT_PROMPT.replace("{{context}}", pastMemory);
+        input = `${contextMsg}\n\n[User Request]\n${input}`;
       }
 
       // Inject Company Profile Context
@@ -284,7 +278,7 @@ export class Engine {
       ctx.history.push({ role: "user", content: input });
 
       // Inject RAG context from Company MCP Server
-      if (companyName) {
+      if (process.env.JULES_COMPANY) {
         try {
           const client = this.mcp.getClient("company");
           if (client) {
@@ -509,23 +503,13 @@ export class Engine {
 
           if (allExecuted) {
             // Store successful memory
-            try {
-                const brainClient = this.mcp.getClient("brain");
-                if (brainClient) {
-                    await brainClient.callTool({
-                        name: "brain_store",
-                        arguments: {
-                            taskId: "task-" + Date.now(),
-                            request: userRequest,
-                            solution: message || response.thought || "Task completed.",
-                            artifacts: JSON.stringify(currentArtifacts),
-                            company: companyName
-                        }
-                    });
-                }
-            } catch (e) {
-                console.warn("Failed to store memory via brain server:", e);
-            }
+            await this.contextManager.save(
+                "task-" + Date.now(),
+                userRequest,
+                message || response.thought || "Task completed.",
+                currentArtifacts,
+                process.env.JULES_COMPANY
+            );
             input = "The tool executions were verified. Proceed.";
           }
           continue;
