@@ -8,6 +8,7 @@ import { join, dirname } from "path";
 // @ts-ignore - No type definitions available
 import { lock } from "proper-lockfile";
 import { ContextSchema, ContextData, ContextManager } from "../core/context.js";
+import { McpClient } from "../mcp/client.js";
 
 // Deep merge helper
 function deepMerge(target: any, source: any): any {
@@ -34,6 +35,7 @@ function deepMerge(target: any, source: any): any {
 export class ContextServer implements ContextManager {
   private contextFile: string;
   private cwd: string;
+  private brainClient: McpClient;
 
   constructor(cwd: string = process.cwd()) {
     this.cwd = cwd;
@@ -43,6 +45,13 @@ export class ContextServer implements ContextManager {
     } else {
       this.contextFile = join(cwd, ".agent", "context.json");
     }
+
+    // Resolve brain script path
+    let brainScript = join(process.cwd(), "src", "mcp_servers", "brain.ts");
+    if (!existsSync(brainScript)) {
+        brainScript = join(process.cwd(), "dist", "mcp_servers", "brain.js");
+    }
+    this.brainClient = new McpClient("brain", brainScript);
   }
 
   // Internal lock wrapper
@@ -73,24 +82,92 @@ export class ContextServer implements ContextManager {
     }
   }
 
+  // Helper method for brain query
+  private async queryBrainMemory(query: string, limit: number = 3): Promise<string[]> {
+      try {
+          const result = await this.brainClient.callTool("brain_query", {
+              query,
+              limit,
+              company: process.env.JULES_COMPANY
+          });
+
+          const content = (result as any).content;
+          if (Array.isArray(content)) {
+              return content.map((c: any) => c.text).filter(Boolean);
+          }
+      } catch (e) {
+          // Log only if strictly necessary to avoid spam if brain is down
+          // console.error("Failed to query brain memory:", e);
+      }
+      return [];
+  }
+
+  // Helper for storing memory
+  private async storeBrainMemory(taskId: string, request: string, solution: string, artifacts: any[] = []): Promise<void> {
+      try {
+          await this.brainClient.callTool("brain_store", {
+              taskId,
+              request,
+              solution,
+              artifacts: JSON.stringify(artifacts),
+              company: process.env.JULES_COMPANY
+          });
+      } catch (e) {
+          // console.error("Failed to store brain memory:", e);
+      }
+  }
+
+  // Helper for graph updates
+  private async updateBrainGraph(operation: "add_node" | "add_edge", args: any): Promise<void> {
+       try {
+          await this.brainClient.callTool("brain_update_graph", {
+              operation,
+              args: JSON.stringify(args),
+              company: process.env.JULES_COMPANY
+          });
+      } catch (e) {
+          // console.error("Failed to update brain graph:", e);
+      }
+  }
+
   async readContext(lockId?: string): Promise<ContextData> {
     return this.withLock(async () => {
+      let context: ContextData;
       if (existsSync(this.contextFile)) {
         try {
           const content = await readFile(this.contextFile, "utf-8");
           const json = JSON.parse(content);
           const parsed = ContextSchema.safeParse(json);
           if (parsed.success) {
-            return parsed.data;
+            context = parsed.data;
           } else {
             console.warn("Context schema validation failed, returning default/partial:", parsed.error);
-            return ContextSchema.parse(json);
+            context = ContextSchema.parse(json);
           }
         } catch {
-          return ContextSchema.parse({});
+          context = ContextSchema.parse({});
         }
+      } else {
+        context = ContextSchema.parse({});
       }
-      return ContextSchema.parse({});
+
+      // Query Brain for relevant memories
+      try {
+          const queryParts = [
+              ...(context.active_tasks || []),
+              ...(context.goals || [])
+          ];
+
+          if (queryParts.length > 0) {
+              const query = queryParts.join(" ");
+              const memories = await this.queryBrainMemory(query, 3);
+              context.relevant_memories = memories;
+          }
+      } catch (e) {
+          console.error("Failed to query brain memories:", e);
+      }
+
+      return context;
     });
   }
 
@@ -115,6 +192,52 @@ export class ContextServer implements ContextManager {
       finalContext.last_updated = new Date().toISOString();
 
       await writeFile(this.contextFile, JSON.stringify(finalContext, null, 2));
+
+      // Store significant updates in Brain
+      try {
+          // 1. Store episodic memory for recent changes
+          if (updates.recent_changes && updates.recent_changes.length > 0) {
+              const changes = updates.recent_changes.join("; ");
+              const taskId = "context_update_" + Date.now();
+              await this.storeBrainMemory(taskId, "Context Update", `Recent changes: ${changes}`, []);
+          }
+
+          // 2. Update semantic graph for active tasks
+          if (updates.active_tasks) {
+              for (const task of updates.active_tasks) {
+                  await this.updateBrainGraph("add_node", {
+                      id: task,
+                      type: "Task",
+                      properties: { status: "active" }
+                  });
+
+                  const goals = finalContext.goals || [];
+                  for (const goal of goals) {
+                       await this.updateBrainGraph("add_edge", {
+                           from: task,
+                           to: goal,
+                           relation: "contributes_to",
+                           properties: {}
+                       });
+                  }
+              }
+          }
+
+          // 3. Update semantic graph for goals
+           if (updates.goals) {
+              for (const goal of updates.goals) {
+                  await this.updateBrainGraph("add_node", {
+                      id: goal,
+                      type: "Goal",
+                      properties: { status: "active" }
+                  });
+              }
+          }
+
+      } catch (e) {
+          console.error("Failed to update brain with context changes:", e);
+      }
+
       return finalContext;
     });
   }
