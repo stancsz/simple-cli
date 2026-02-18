@@ -1,0 +1,7 @@
+theme: jekyll-theme-minimal
+title: Simple CLI
+description: Advanced Autonomous Agent Workforce
+header_pages:
+  - index.md
+  - demos/oil_gas.md
+  - demos/developer.md
