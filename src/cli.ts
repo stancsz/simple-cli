@@ -64,6 +64,14 @@ async function main() {
       }
     }
 
+    if (arg === "--use-agent") {
+      if (i + 1 < args.length) {
+        process.env.SIMPLE_CLI_SKILL = args[i + 1];
+        i++; // Consume next arg
+        continue;
+      }
+    }
+
     if (!arg.startsWith("-")) {
       try {
         if (statSync(arg).isDirectory()) {
@@ -117,6 +125,11 @@ async function main() {
   // Ensure essential servers are running.
   // 'filesystem' and 'git' should be configured in mcp.json via migration.
   const coreServers = ["filesystem", "git", "context_server", "company_context", "aider-server", "claude-server", "openclaw", "hr"];
+
+  if (process.env.SIMPLE_CLI_SKILL?.startsWith("dify")) {
+    coreServers.push("dify");
+  }
+
   for (const s of coreServers) {
     try {
       if (mcp.isServerRunning(s)) continue; // Already running
