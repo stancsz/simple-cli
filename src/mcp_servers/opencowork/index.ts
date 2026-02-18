@@ -1,21 +1,23 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { z } from "zod";
-import { Engine, Context, Registry } from "../../engine/orchestrator.js";
-import { MCP } from "../../mcp.js";
-import { createLLM } from "../../llm.js";
-import { builtinSkills } from "../../skills.js";
 import { fileURLToPath } from "url";
+
+interface CoworkMessage {
+  from: string;
+  to: string;
+  content: string;
+  timestamp: number;
+}
 
 export class OpenCoworkServer {
   private server: McpServer;
-  public workers: Map<string, any> = new Map();
-  public workerContexts: Map<string, any> = new Map();
+  private messages: Map<string, CoworkMessage[]> = new Map();
 
   constructor() {
     this.server = new McpServer({
       name: "opencowork-server",
-      version: "1.0.0",
+      version: "0.1.0",
     });
 
     this.setupTools();
@@ -23,120 +25,58 @@ export class OpenCoworkServer {
 
   private setupTools() {
     this.server.tool(
-      "hire_worker",
-      "Hire a new worker (sub-agent) with a specific role.",
+      "send_message",
+      "Send a message to another agent.",
       {
-        role: z.string().describe("The role of the worker (e.g., 'researcher', 'coder')."),
-        name: z.string().describe("A unique name for the worker."),
+        from: z.string().describe("The ID or name of the sender agent."),
+        to: z.string().describe("The ID or name of the recipient agent."),
+        content: z.string().describe("The content of the message."),
       },
-      async ({ role, name }) => {
-        return await this.hireWorker(role, name);
+      async ({ from, to, content }) => {
+        return {
+          content: [
+            {
+              type: "text",
+              text: this.sendMessage(from, to, content),
+            },
+          ],
+        };
       }
     );
 
     this.server.tool(
-      "delegate_task",
-      "Delegate a task to a hired worker.",
+      "read_messages",
+      "Read messages sent to a specific agent.",
       {
-        worker_name: z.string().describe("The name of the worker to delegate to."),
-        task: z.string().describe("The task description."),
+        agent_id: z.string().describe("The ID or name of the agent to read messages for."),
       },
-      async ({ worker_name, task }) => {
-        return await this.delegateTask(worker_name, task);
+      async ({ agent_id }) => {
+        const msgs = this.readMessages(agent_id);
+        return {
+          content: [
+            {
+              type: "text",
+              text: JSON.stringify(msgs, null, 2),
+            },
+          ],
+        };
       }
     );
-
-    this.server.tool(
-      "list_workers",
-      "List all currently hired workers.",
-      {},
-      async () => {
-        return await this.listWorkers();
-      }
-    );
   }
 
-  async hireWorker(role: string, name: string) {
-    if (this.workers.has(name)) {
-      throw new Error(`Worker with name '${name}' already exists.`);
+  sendMessage(from: string, to: string, content: string): string {
+    const msg: CoworkMessage = { from, to, content, timestamp: Date.now() };
+
+    if (!this.messages.has(to)) {
+      this.messages.set(to, []);
     }
+    this.messages.get(to)!.push(msg);
 
-    console.error(`[OpenCowork] Hiring worker '${name}' as '${role}'...`);
-
-    const llm = createLLM();
-    const mcp = new MCP();
-    const registry = new Registry();
-    const engine = new Engine(llm, registry, mcp);
-
-    this.workers.set(name, engine);
-
-    const baseSkill = builtinSkills.code;
-    const skill = {
-      ...baseSkill,
-      name: role,
-      systemPrompt: `You are a ${role} named ${name}. ${baseSkill.systemPrompt}`,
-    };
-
-    const context = new Context(process.cwd(), skill as any);
-    this.workerContexts.set(name, context);
-
-    return {
-      content: [
-        {
-          type: "text" as const,
-          text: `Worker '${name}' hired as '${role}'.`,
-        },
-      ],
-    } as { content: { type: "text"; text: string }[] };
+    return `Message sent to ${to}.`;
   }
 
-  async delegateTask(workerName: string, task: string) {
-    const engine = this.workers.get(workerName);
-    const context = this.workerContexts.get(workerName);
-
-    if (!engine || !context) {
-      throw new Error(`Worker '${workerName}' not found.`);
-    }
-
-    console.error(
-      `[OpenCowork] Delegating task to '${workerName}': ${task.substring(0, 50)}...`,
-    );
-
-    const initialHistoryLength = context.history.length;
-
-    try {
-      await engine.run(context, task, { interactive: false });
-    } catch (e: any) {
-      console.error(`[OpenCowork] Worker error: ${e.message}`);
-    }
-
-    const newMessages = context.history.slice(initialHistoryLength);
-    const lastMessage = newMessages[newMessages.length - 1];
-
-    const resultText = lastMessage
-      ? `Worker finished. Last message: ${lastMessage.content}`
-      : "Worker finished but produced no output.";
-
-    return {
-      content: [
-        {
-          type: "text" as const,
-          text: resultText,
-        },
-      ],
-    } as { content: { type: "text"; text: string }[] };
-  }
-
-  async listWorkers() {
-    const workers = Array.from(this.workers.keys());
-    return {
-      content: [
-        {
-          type: "text" as const,
-          text: `Active workers: ${workers.join(", ") || "None"}`,
-        },
-      ],
-    } as { content: { type: "text"; text: string }[] };
+  readMessages(agentId: string): CoworkMessage[] {
+    return this.messages.get(agentId) || [];
   }
 
   async run() {

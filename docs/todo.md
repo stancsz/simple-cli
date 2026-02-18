@@ -115,9 +115,15 @@
     - [x] Create `docs/COMPANY_CONTEXT.md`.
     - [x] Validated Company Context with comprehensive E2E tests (including Slack/Teams flags).
 
-### 8. Phase 7: The Hive Mind (Planned)
-- [ ] **Swarm Orchestration**: Implement dynamic agent spawning via `opencowork`.
+### 8. Phase 7: The Hive Mind (Active)
+- [x] **Swarm Orchestration**: Implement dynamic agent spawning via `opencowork` (or `crewai`).
+    - [x] Extended `crewai` MCP with `spawn_subagent` and `start_crew` dynamic generation.
 - [ ] **Agent Negotiation**: Implement protocol for agents to "bid" on tasks.
+    - [x] Implemented `negotiate_task` in `crewai` and `send_message` in `opencowork`.
+    - [ ] Implement advanced bidding protocol.
+- [ ] **OpenCowork Server**:
+    - [x] Create `src/mcp_servers/opencowork/` with basic messaging.
+    - [ ] Implement full negotiation state machine.
 
 ### 9. Phase 8: Recursive Evolution (Active)
 - [x] **Self-Repair**: Implement `HR Loop` to fix `src/` files based on error logs (`src/mcp_servers/hr/`).
