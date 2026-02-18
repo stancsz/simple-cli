@@ -70,3 +70,19 @@ Creates a new SOP file with the provided content.
 *   **Be Explicit**: Write clear instructions in each step.
 *   **Atomic Steps**: Keep steps focused on a single action (e.g., "Run tests" instead of "Run tests and deploy").
 *   **Use Standard Tools**: Ensure the agent has access to the necessary tools (e.g., ensure `git` server is running if the SOP involves git operations).
+
+## Validation
+
+The SOP Engine is validated by a comprehensive integration test suite located in `src/mcp_servers/sop_engine/__tests__/sop_engine.integration.test.ts`.
+
+### Test Coverage
+- **Parser**: Verifies correct extraction of title, steps, and descriptions from Markdown.
+- **Executor (Success)**: Simulates a full SOP execution, verifying that tools are called in the correct order and the final outcome is logged to the Brain.
+- **Executor (Retry)**: Simulates tool failures and verifies that the engine retries with exponential backoff before succeeding.
+- **Executor (Failure)**: Verifies that the engine correctly handles exhausted retries and reports the failure.
+
+### Mocking Strategy
+The tests run in isolation by mocking:
+- **LLM**: Simulates the agent's thought process and tool selection.
+- **MCP**: Simulates tool discovery and execution (including `brain_query` and `log_experience`).
+- **Filesystem**: Prevents actual file I/O during testing.

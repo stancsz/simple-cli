@@ -60,12 +60,13 @@ To transition from a "Wrapper" to a true "Universal AI Integration Platform," th
 
 ### Phase 4.5: SOP-as-Code (✅ Implemented)
 **Goal:** Automating professional workflows using Markdown SOPs.
-- **Status:** Fully functional SOP Engine MCP server.
+- **Status:** Fully functional SOP Engine MCP server with comprehensive test suite.
 - **Mechanism:** `sop_engine` parses Markdown, executes steps via LLM, and integrates with the Brain for learning.
 - **Features:**
     - **Brain Integration:** Recalls past experiences and logs new ones.
     - **Resilience:** Exponential backoff retries.
     - **Tool Discovery:** Uses any available MCP tool.
+    - **Validation:** Integration tests cover parsing, execution, retries, and logging (`src/mcp_servers/sop_engine/__tests__/`).
 
 ### Phase 5: The Digital Co-worker (Deployment & Persona) (✅ Implemented)
 **Goal:** Create a fully functional, human-like digital employee that lives where your team lives (Slack, Teams).
