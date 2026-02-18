@@ -117,9 +117,12 @@
     - [x] Create `docs/COMPANY_CONTEXT.md`.
     - [x] Validated Company Context with comprehensive E2E tests (including Slack/Teams flags).
 
-### 8. Phase 7: The Hive Mind (Planned)
-- [ ] **Swarm Orchestration**: Implement dynamic agent spawning via `opencowork`.
-- [ ] **Agent Negotiation**: Implement protocol for agents to "bid" on tasks.
+### 8. Phase 7: The Hive Mind (✅ Implemented)
+- [x] **Swarm Orchestration**: Implement dynamic agent spawning via `opencowork` (Done).
+- [x] **Agent Negotiation**: Implement protocol for agents to "bid" on tasks (Done).
+    - [x] Implemented `NegotiationManager` in `src/mcp_servers/opencowork/negotiation.ts`.
+    - [x] Added `bid_on_task`, `form_agent_team`, `negotiate_delegation` tools.
+    - [x] Verified with unit and integration tests.
 
 ### 9. Phase 8: Recursive Evolution (Active)
 - [x] **Self-Repair**: Implement `HR Loop` to fix `src/` files based on error logs (`src/mcp_servers/hr/`).
