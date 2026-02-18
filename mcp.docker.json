@@ -24,9 +24,9 @@
       "command": "node",
       "args": ["/app/dist/mcp_servers/company/index.js"]
     },
-    "sop-executor": {
+    "sop_engine": {
       "command": "node",
-      "args": ["/app/dist/mcp_servers/sop-executor/index.js"]
+      "args": ["/app/dist/mcp_servers/sop_engine/index.js"]
     }
   },
   "agents": {
