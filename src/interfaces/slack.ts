@@ -240,8 +240,16 @@ app.event("app_mention", async ({ event, say, client }: any) => {
     const skill = await getActiveSkill(cwd);
     const ctx = new Context(cwd, skill);
 
+    // Parse company flag
+    let prompt = text;
+    const companyMatch = prompt.match(/--company\s+([a-zA-Z0-9_-]+)/);
+    const company = companyMatch ? companyMatch[1] : undefined;
+    if (company) {
+        prompt = prompt.replace(/--company\s+[a-zA-Z0-9_-]+/, "").trim();
+    }
+
     // Run the engine (simulating CLI command)
-    await engine.run(ctx, text, { interactive: false });
+    await engine.run(ctx, prompt, { interactive: false, company });
 
     // Retrieve Response
     const lastMessage = ctx.history.filter(m => m.role === "assistant").pop();

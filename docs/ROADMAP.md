@@ -25,6 +25,7 @@ To transition from a "Wrapper" to a true "Universal AI Integration Platform," th
     1. **Ingest:** Analyze the framework's API, CLI, or SDK
     2. **Digest:** Wrap it in an MCP server (`src/mcp_servers/<framework>/`)
     3. **Deploy:** Register in `mcp.json` for automatic orchestrator discovery
+- **Recent Update (Digest Phase):** Completed cleanup by removing legacy `delegate_cli` and migrating all agent configurations to `mcp.json`.
 - **Proven Track Record:**
     - Jules (2 days), Aider (1 day), CrewAI (3 days), Kimi (1 day), Devin (2 days)
     - Average integration time: **1-3 days** per framework
@@ -57,7 +58,16 @@ To transition from a "Wrapper" to a true "Universal AI Integration Platform," th
 **Goal:** Enhanced control and review via TUI and Supervisor.
 - **Status:** Interactive TUI and [Supervisor] QA loop are active parts of the core engine.
 
-### Phase 5: The Digital Co-worker (Deployment & Persona) (🔄 In Progress)
+### Phase 4.5: SOP-as-Code (✅ Implemented)
+**Goal:** Automating professional workflows using Markdown SOPs.
+- **Status:** Fully functional SOP Engine MCP server.
+- **Mechanism:** `sop_engine` parses Markdown, executes steps via LLM, and integrates with the Brain for learning.
+- **Features:**
+    - **Brain Integration:** Recalls past experiences and logs new ones.
+    - **Resilience:** Exponential backoff retries.
+    - **Tool Discovery:** Uses any available MCP tool.
+
+### Phase 5: The Digital Co-worker (Deployment & Persona) (✅ Implemented)
 **Goal:** Create a fully functional, human-like digital employee that lives where your team lives (Slack, Teams).
 - **Focus:** Role-based autonomy, human-like persona, and effortless deployment.
 - **Key Features:**
@@ -87,10 +97,20 @@ To transition from a "Wrapper" to a true "Universal AI Integration Platform," th
 **Goal:** The agent can safely upgrade its own source code to improve efficiency.
 - **Concept:** The system identifies bottlenecks (e.g., slow tools, repetitive failures) and proposes PRs to its own repo.
 - **Mechanism:** "HR Loop" (implemented) + "Core Update" protocols (Dual-verification required).
-    - **HR MCP Server**: Analyzes logs and suggests improvements (`analyze_logs`, `propose_change`).
+    - **HR MCP Server**: Analyzes logs and suggests improvements (`analyze_logs`, `propose_change`, `perform_weekly_review`).
     - **Core Update MCP**: Securely modifies `src/` files with `propose_core_update` and `apply_core_update`.
     - **Memory Integration**: Uses the Brain MCP to recall past failures and delegation patterns.
     - **Safety Protocol**: Proposals are stored as 'pending' and require human approval (token or strict YOLO checks) before application.
+    - **Automated Review**: (✅ Implemented) Weekly automated review via Scheduler.
+
+### Phase 9: Local LLM Ops (Dify) (✅ Implemented)
+**Goal:** Establish a local, privacy-first orchestration layer for rapid prototyping.
+- **Concept:** Run advanced agent workflows (Supervisor + Coding Agent) on local infrastructure using Dify.
+- **Status:** Local Dify stack operational for rapid prototyping.
+- **Mechanism:**
+    - **Dify Integration**: (✅ Implemented) `docker-compose.dify.yml` for local API, Web, DB, and Redis.
+    - **Agent Configuration**: (✅ Implemented) Pre-configured templates in `dify_agent_templates/` for "Supervisor Agent" and "Coding Agent".
+    - **Benefit:** Reduces reliance on cloud orchestration for sensitive projects and enables rapid iteration of agentic flows.
 
 ---
 

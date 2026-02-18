@@ -31,6 +31,7 @@ export class Scheduler extends EventEmitter {
     await this.loadState();
     await this.ensureHRTask();
     await this.ensureMorningStandupTask();
+    await this.ensureWeeklyReviewTask();
 
     // Resume pending tasks
     if (this.pendingTasks.size > 0) {
@@ -125,6 +126,39 @@ export class Scheduler extends EventEmitter {
           await writeFile(this.scheduleFile, JSON.stringify(config, null, 2));
       } catch (e) {
           console.error("Failed to write scheduler.json with default Morning Standup task:", e);
+      }
+    }
+  }
+
+  private async ensureWeeklyReviewTask() {
+    let config: ScheduleConfig = { tasks: [] };
+    if (existsSync(this.scheduleFile)) {
+      try {
+        const content = await readFile(this.scheduleFile, 'utf-8');
+        config = JSON.parse(content);
+      } catch (e) {
+        config = { tasks: [] };
+      }
+    }
+
+    const taskName = "Weekly HR Review";
+    const hasTask = config.tasks?.some((t: any) => t.id === "weekly-hr-review");
+
+    if (!hasTask) {
+      console.log("Adding default Weekly HR Review task.");
+      if (!config.tasks) config.tasks = [];
+      config.tasks.push({
+          id: "weekly-hr-review",
+          name: taskName,
+          trigger: "cron",
+          schedule: "0 0 * * 0", // Weekly at Sunday midnight
+          prompt: "Run the Weekly HR Review using the 'perform_weekly_review' tool to analyze long-term patterns.",
+          yoloMode: true
+      });
+      try {
+          await writeFile(this.scheduleFile, JSON.stringify(config, null, 2));
+      } catch (e) {
+          console.error("Failed to write scheduler.json with default Weekly HR Review task:", e);
       }
     }
   }

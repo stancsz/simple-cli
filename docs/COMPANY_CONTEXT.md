@@ -51,8 +51,24 @@ The agent will use the `load_company_context` tool to scan `.agent/companies/acm
 
 The agent automatically queries this database when you ask questions, injecting relevant chunks into the conversation.
 
+### 5. Multi-Tenant Interfaces
+
+For Slack and Teams interfaces, you can specify the company context dynamically in your message using the `--company` flag:
+
+> @bot Hello --company client-a
+
+This isolates the session to the specified company without restarting the server.
+
 ## Tools
 
 -   `load_company_context(company_id)`: Ingests documents from the docs folder.
 -   `query_company_context(query, company_id)`: Searches the vector database.
 -   `list_companies()`: Lists available companies.
+
+## Testing
+
+The company context feature is validated by a comprehensive test suite:
+
+1.  **Context Isolation**: `tests/company_context_integration.test.ts` verifies that `ContextServer` maintains separate context files for each company and that `ContextManager` queries the Brain MCP with the correct company ID.
+2.  **Interface Integration**: `tests/interface_integration.test.ts` verifies that Slack and Teams adapters correctly parse the `--company` flag and pass it to the agent engine.
+3.  **Vector Database**: Integration tests confirm that `CompanyContextServer` ingests and queries documents from isolated `lancedb` instances for each company.

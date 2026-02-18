@@ -176,6 +176,13 @@ class TeamsBot extends ActivityHandler {
       const text = TurnContext.removeRecipientMention(activity);
       const cleanText = text.trim();
 
+      let prompt = cleanText;
+      const companyMatch = prompt.match(/--company\s+([a-zA-Z0-9_-]+)/);
+      const company = companyMatch ? companyMatch[1] : undefined;
+      if (company) {
+          prompt = prompt.replace(/--company\s+[a-zA-Z0-9_-]+/, "").trim();
+      }
+
       // 3. Send typing indicator
       await context.sendActivity({ type: ActivityTypes.Typing });
 
@@ -200,7 +207,7 @@ class TeamsBot extends ActivityHandler {
       const ctx = new Context(cwd, skill);
 
       try {
-        await engine.run(ctx, cleanText, { interactive: false });
+        await engine.run(ctx, prompt, { interactive: false, company });
 
         const lastMessage = ctx.history.filter(m => m.role === "assistant").pop();
         if (lastMessage) {

@@ -62,9 +62,21 @@ export class HRServer {
       {},
       async () => this.listPendingProposals()
     );
+
+    this.server.tool(
+      "perform_weekly_review",
+      "Performs a deep analysis of logs and experiences from the past week to identify long-term patterns.",
+      {},
+      async () => this.performWeeklyReview()
+    );
   }
 
-  public async analyzeLogs({ limit = 10 }: { limit?: number }) {
+  public async performWeeklyReview() {
+    // Analyze last 50 logs for a broader weekly context
+    return this.performAnalysis(50);
+  }
+
+  private async performAnalysis(limit: number) {
     // 1. Read logs
     let logs: LogEntry[] = [];
     if (existsSync(this.logsPath)) {
@@ -158,6 +170,10 @@ export class HRServer {
     return {
       content: [{ type: "text" as const, text: `Analysis Complete. No improvements suggested.\nAnalysis: ${analysisData.analysis}` }]
     };
+  }
+
+  public async analyzeLogs({ limit = 10 }: { limit?: number }) {
+    return this.performAnalysis(limit);
   }
 
   public async proposeChange({ title, description, affectedFiles, patch }: { title: string, description: string, affectedFiles: string[], patch: string }) {

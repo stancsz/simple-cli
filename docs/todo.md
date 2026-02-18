@@ -32,6 +32,15 @@
 - [ ] **Bolt.new** (rapid prototyping)
 - [ ] **v0.dev** (UI generation)
 
+## Sprint 0.5: Local AI Stack (Dify) (✅ Completed)
+
+**Goal:** Provide a local, privacy-first orchestration layer for rapid prototyping.
+
+- [x] **Setup Dify locally for coding project**: Created `docker-compose.dify.yml`.
+- [x] **Configure Supervisor Agent**: Added `dify_agent_templates/supervisor_agent.json`.
+- [x] **Configure Coding Agent**: Added `dify_agent_templates/coding_agent.json`.
+- [x] **Documentation**: Added `docs/LOCAL_DIFY.md`.
+
 ## Sprint 1: The Awakening (Current)
 
 **Goal:** Transition from a "CLI Wrapper" to a "Persistent Digital Entity".
@@ -46,9 +55,9 @@
     - [x] Refine `devin-mcp`: Completed `src/mcp_servers/devin` with session management tools.
 
 ### 2. Digest Phase (Simplify Core Engine)
-- [ ] **Remove Logic Duplication**:
-    - [ ] Delete `delegate_cli` from `src/builtins.ts`. The engine should just call `run_crew_task` or `aider_edit`.
-    - [ ] Remove manual tool loading in `engine.ts`. Use standard MCP discovery.
+- [x] **Remove Logic Duplication**:
+    - [x] Delete `delegate_cli` from `src/builtins.ts`. The engine should just call `run_crew_task` or `aider_edit`.
+    - [x] Remove manual tool loading in `engine.ts`. Use standard MCP discovery.
 - [ ] **Context Management**:
     - [x] Implement Concurrency Control: Added file locking to `ContextManager` to prevent race conditions.
     - [x] Implement a **Context MCP Server** (singleton) to handle `context.json` updates securely (fix race conditions).
@@ -57,7 +66,7 @@
 
 ### 3. Cleanup & Polishing
 - [x] **Security**: Re-enabled path validation in `src/builtins.ts` (sandboxing to CWD).
-- [ ] **Configuration**: Move all agent configurations from `src/config.ts` to `mcp.json`.
+- [x] **Configuration**: Move all agent configurations from `src/config.ts` to `mcp.json`.
 - [x] **Deprecation**: Delete `src/mcp_servers/simple_tools`, `src/agents/*.ts` (DONE).
     - [x] Marked `src/agents/*.ts` as deprecated with console warnings.
     - [x] Deleted deprecated files.
@@ -66,7 +75,15 @@
 - [ ] Update tests to mock MCP servers instead of local file paths.
 - [ ] Verify Ghost Mode triggers (Scheduler/JobDelegator) in CI/CD or local simulation.
 
-### 5. Phase 5: The Digital Co-worker (Deployment & Persona)
+### 5. Phase 4.5: SOP Engine
+- [x] **Core Logic**:
+    - [x] Create `sop_parser.ts`.
+    - [x] Implement `executor.ts` with Brain integration and retries.
+    - [x] Expose tools in `sop_engine/index.ts`.
+- [x] **Documentation**:
+    - [x] Create `docs/SOP_ENGINE.md`.
+
+### 6. Phase 5: The Digital Co-worker (Deployment & Persona)
 - [x] **Persona Engine**:
     - [x] Create `src/persona.ts`: Load `persona.json` and wrap LLM responses.
     - [x] Implement `inject_personality()` function in `src/llm.ts`.
@@ -78,7 +95,7 @@
     - [x] Create `Dockerfile` for lightweight production image.
     - [x] Create `docker-compose.yml` for local "Agency" simulation (Redis + Agent).
 
-### 6. Phase 6: Enterprise Cognition (The Brain)
+### 7. Phase 6: Enterprise Cognition (The Brain)
 - [x] **Episodic Memory (Vector DB)**:
     - [x] Evaluate `lancedb` vs `chromadb` (node-compatible).
     - [x] Create `src/brain/episodic.ts`: Implement embedding generation + storage.
@@ -96,12 +113,13 @@
     - [x] Create `src/mcp_servers/company_context.ts`: Manage multi-tenant RAG via LanceDB.
     - [x] Update `cli.ts` and `engine.ts` to support `--company` flag and context injection.
     - [x] Create `docs/COMPANY_CONTEXT.md`.
+    - [x] Validated Company Context with comprehensive E2E tests (including Slack/Teams flags).
 
-### 7. Phase 7: The Hive Mind (Planned)
+### 8. Phase 7: The Hive Mind (Planned)
 - [ ] **Swarm Orchestration**: Implement dynamic agent spawning via `opencowork`.
 - [ ] **Agent Negotiation**: Implement protocol for agents to "bid" on tasks.
 
-### 8. Phase 8: Recursive Evolution (Active)
+### 9. Phase 8: Recursive Evolution (Active)
 - [x] **Self-Repair**: Implement `HR Loop` to fix `src/` files based on error logs (`src/mcp_servers/hr/`).
-- [ ] **Automated Review**: Integrate HR MCP with Scheduler for weekly automated reviews.
+- [x] **Automated Review**: Integrate HR MCP with Scheduler for weekly automated reviews.
 - [x] **Core Update**: Implement secure protocol for updating `engine.ts`.

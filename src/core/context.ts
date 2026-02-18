@@ -13,7 +13,7 @@ export const ContextSchema = z.object({
 export type ContextData = z.infer<typeof ContextSchema>;
 
 export interface ContextManager {
-  readContext(lockId?: string): Promise<ContextData>;
-  updateContext(updates: Partial<ContextData>, lockId?: string): Promise<ContextData>;
-  clearContext(lockId?: string): Promise<void>;
+  readContext(lockId?: string, company?: string): Promise<ContextData>;
+  updateContext(updates: Partial<ContextData>, lockId?: string, company?: string): Promise<ContextData>;
+  clearContext(lockId?: string, company?: string): Promise<void>;
 }
