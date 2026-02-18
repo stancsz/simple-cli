@@ -25,6 +25,7 @@ To transition from a "Wrapper" to a true "Universal AI Integration Platform," th
     1. **Ingest:** Analyze the framework's API, CLI, or SDK
     2. **Digest:** Wrap it in an MCP server (`src/mcp_servers/<framework>/`)
     3. **Deploy:** Register in `mcp.json` for automatic orchestrator discovery
+- **Recent Update (Digest Phase):** Completed cleanup by removing legacy `delegate_cli` and migrating all agent configurations to `mcp.json`.
 - **Proven Track Record:**
     - Jules (2 days), Aider (1 day), CrewAI (3 days), Kimi (1 day), Devin (2 days)
     - Average integration time: **1-3 days** per framework

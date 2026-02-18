@@ -106,9 +106,12 @@ Most AI tools trap you in a never-ending chat loop. Simple-CLI is built for **au
 ### The "Manager" (Meta-Orchestrator)
 The core engine runs a "Game Loop" that uses an **Asynchronous Task Manager** to maintain context and execute jobs in parallel:
 1.  **Plans**: Breaks high-level goals into sub-tasks.
-2.  **Delegates**: Dispatches tasks using `delegate_cli(..., async=true)`.
+2.  **Delegates**: Dispatches tasks using registered MCP agents (e.g., `aider`, `claude`, `jules`).
 3.  **Monitors**: Tracks the status of background jobs via the `AsyncTaskManager`.
 4.  **Reviews**: Verifies the work (files, PRs) via a Supervisor loop.
+
+### Agent Configuration
+Agents are configured in `mcp.json` in the project root. This file defines the available CLI agents and their commands.
 
 ### The "Workers" (Sub-Agents)
 Simple-CLI wraps powerful industry CLIs into a unified interface via **MCP Servers**:

@@ -5,6 +5,17 @@ import { existsSync, readFileSync, writeFileSync } from "fs";
 import { readdir } from "fs/promises";
 import { join } from "path";
 import { log } from "@clack/prompts";
+import { spawn } from "child_process";
+
+// Local definition replacing exported one from config.ts
+interface AgentConfig {
+  command: string;
+  args: string[];
+  description: string;
+  supports_stdin?: boolean;
+  env?: Record<string, string>;
+  context_flag?: string;
+}
 
 interface DiscoveredServer {
   name: string;
@@ -18,6 +29,7 @@ interface DiscoveredServer {
 export class MCP {
   private clients: Map<string, Client> = new Map();
   private discoveredServers: Map<string, DiscoveredServer> = new Map();
+  private agents: Record<string, AgentConfig> = {};
 
   async init() {
     // 1. Load from mcp.json
@@ -37,6 +49,10 @@ export class MCP {
             source: 'config'
           });
         }
+
+        // Load Agents
+        this.agents = config.agents || {};
+
       } catch (e) {
         log.error(`Error loading mcp.json: ${e}`);
       }
@@ -326,6 +342,68 @@ export class MCP {
             return await this.startServer(name);
         }
     });
+
+    // Add Agent tools
+    for (const [name, agent] of Object.entries(this.agents)) {
+        const inputSchema: any = {
+            type: "object",
+            properties: {
+                args: {
+                    type: "array",
+                    items: { type: "string" },
+                    description: `Arguments for ${name}`
+                }
+            },
+            required: ["args"]
+        };
+
+        if (agent.supports_stdin) {
+            inputSchema.properties.input = {
+                type: "string",
+                description: "Input to pass to stdin"
+            };
+        }
+
+        all.push({
+            name: name, // e.g. "codex", "aider"
+            description: agent.description,
+            inputSchema: inputSchema,
+            execute: async ({ args, input }: { args: string[], input?: string }) => {
+                return new Promise((resolve, reject) => {
+                    const finalArgs = [...(agent.args || []), ...(args || [])];
+                    const env = { ...process.env, ...(agent.env || {}) };
+
+                    const proc = spawn(agent.command, finalArgs, {
+                        env: env as any,
+                        shell: false
+                    });
+
+                    if (agent.supports_stdin && input) {
+                        proc.stdin.write(input);
+                        proc.stdin.end();
+                    }
+
+                    let stdout = "";
+                    let stderr = "";
+
+                    proc.stdout.on("data", (data) => stdout += data.toString());
+                    proc.stderr.on("data", (data) => stderr += data.toString());
+
+                    proc.on("close", (code) => {
+                        if (code === 0) {
+                            resolve(stdout.trim() || `Agent ${name} completed successfully.`);
+                        } else {
+                            resolve(`Agent ${name} failed (exit code ${code}):\n${stderr}\n${stdout}`);
+                        }
+                    });
+
+                    proc.on("error", (err) => {
+                        resolve(`Failed to start agent ${name}: ${err.message}`);
+                    });
+                });
+            }
+        });
+    }
 
     for (const [name, client] of this.clients) {
       try {
