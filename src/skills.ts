@@ -1,13 +1,20 @@
 import { readFile, readdir, writeFile } from "fs/promises";
 import { join, basename, extname } from "path";
 import { existsSync } from "fs";
+import { Skill } from "./skills/types.js";
+export type { Skill } from "./skills/types.js";
 
-export interface Skill {
-  name: string;
-  description?: string;
-  systemPrompt: string;
-  tools?: string[];
-}
+// Import built-in skills
+import { brainstorming } from "./skills/brainstorming.js";
+import { using_git_worktrees } from "./skills/using_git_worktrees.js";
+import { writing_plans } from "./skills/writing_plans.js";
+import { subagent_driven_development } from "./skills/subagent_driven_development.js";
+import { executing_plans } from "./skills/executing_plans.js";
+import { test_driven_development } from "./skills/test_driven_development.js";
+import { requesting_code_review } from "./skills/requesting_code_review.js";
+import { finishing_a_development_branch } from "./skills/finishing_a_development_branch.js";
+import { systematic_debugging } from "./skills/systematic_debugging.js";
+import { verification_before_completion } from "./skills/verification_before_completion.js";
 
 export const builtinSkills: Record<string, Skill> = {
   code: {
@@ -128,6 +135,27 @@ You must output your response in JSON format:
 }
 `,
   },
+  // New skills
+  brainstorming,
+  "superpowers:brainstorming": brainstorming,
+  "using-git-worktrees": using_git_worktrees,
+  "superpowers:using-git-worktrees": using_git_worktrees,
+  "writing-plans": writing_plans,
+  "superpowers:writing-plans": writing_plans,
+  "subagent-driven-development": subagent_driven_development,
+  "superpowers:subagent-driven-development": subagent_driven_development,
+  "executing-plans": executing_plans,
+  "superpowers:executing-plans": executing_plans,
+  "test-driven-development": test_driven_development,
+  "superpowers:test-driven-development": test_driven_development,
+  "requesting-code-review": requesting_code_review,
+  "superpowers:requesting-code-review": requesting_code_review,
+  "finishing-a-development-branch": finishing_a_development_branch,
+  "superpowers:finishing-a-development-branch": finishing_a_development_branch,
+  "systematic-debugging": systematic_debugging,
+  "superpowers:systematic-debugging": systematic_debugging,
+  "verification-before-completion": verification_before_completion,
+  "superpowers:verification-before-completion": verification_before_completion,
 };
 
 export async function loadSkillFromFile(path: string): Promise<Skill | null> {
