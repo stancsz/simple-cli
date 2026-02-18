@@ -24,7 +24,7 @@ def main():
     config_entry = {"model": model_name, "api_key": api_key}
     if base_url:
         config_entry["base_url"] = base_url
-    
+
     config_list = [config_entry]
 
     try:

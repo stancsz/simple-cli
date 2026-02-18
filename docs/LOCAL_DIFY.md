@@ -48,21 +48,36 @@ We have provided pre-configured agent templates in `dify_agent_templates/`.
 
 ## 4. Integration with Simple CLI
 
-You can interact with this local Dify instance using Simple CLI's `http` tools or by creating a custom MCP server that talks to the Dify API.
+We have implemented a native MCP server for Dify. You can now delegate tasks directly to your local Dify agents using Simple CLI.
 
-**Example API Call:**
+### Prerequisites
+Ensure your Dify App API Keys are set in your environment:
 ```bash
-curl -X POST 'http://localhost:5001/v1/chat-messages' \
---header 'Authorization: Bearer {YOUR_DIFY_APP_API_KEY}' \
---header 'Content-Type: application/json' \
---data-raw '{
-    "inputs": {},
-    "query": "Create a snake game in Python",
-    "response_mode": "blocking",
-    "conversation_id": "",
-    "user": "simple-cli-user"
-}'
+export DIFY_SUPERVISOR_API_KEY="app-..."
+export DIFY_CODING_API_KEY="app-..."
+# Fallback
+export DIFY_API_KEY="app-..."
 ```
+
+### Usage
+You can force Simple CLI to use the Dify Supervisor Agent "persona" which is optimized to delegate tasks to Dify:
+
+```bash
+simple --use-agent dify-supervisor "Analyze this project structure and suggest improvements"
+```
+
+Or for coding tasks:
+
+```bash
+simple --use-agent dify-coding "Implement a snake game in src/snake.py"
+```
+
+The CLI will start the Dify MCP server, connect to it, and use the `execute_supervisor_workflow` or `execute_coding_workflow` tools to communicate with your local Dify instance.
+
+### Manual Tool Usage
+If you are running `simple` without a specific agent, the Dify tools are still available (if configured in `mcp.json`). You can ask the agent:
+
+> "Use the Dify Supervisor to plan a refactor of the auth module."
 
 ## 5. Stopping the Stack
 

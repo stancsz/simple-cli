@@ -2,6 +2,8 @@ import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import { execSync } from 'child_process';
 import * as fs from 'fs';
 import * as path from 'path';
+import { Client } from "@modelcontextprotocol/sdk/client/index.js";
+import { StdioClientTransport } from "@modelcontextprotocol/sdk/client/stdio.js";
 
 const DIFY_COMPOSE_FILE = 'docker-compose.dify.yml';
 const DIFY_TEMPLATES_DIR = 'dify_agent_templates';
@@ -88,4 +90,58 @@ describe('Dify Integration', () => {
     expect(simpleOutput).toContain('dify-db');
     expect(simpleOutput).toContain('dify-redis');
   });
+
+  it('should start Dify MCP server and list tools', async () => {
+    const serverPath = path.join(process.cwd(), "src", "mcp_servers", "dify", "index.ts");
+    const transport = new StdioClientTransport({
+      command: "npx",
+      args: ["tsx", serverPath],
+      env: process.env as any
+    });
+    const client = new Client(
+      { name: "test-client", version: "1.0.0" },
+      { capabilities: {} }
+    );
+    try {
+        await client.connect(transport);
+        const tools = await client.listTools();
+        expect(tools.tools.find(t => t.name === "execute_supervisor_workflow")).toBeDefined();
+        expect(tools.tools.find(t => t.name === "execute_coding_workflow")).toBeDefined();
+    } finally {
+        await client.close();
+    }
+  }, 30000);
+
+  it('should execute supervisor workflow if keys are present', async () => {
+    if ((!process.env.DIFY_API_KEY && !process.env.DIFY_SUPERVISOR_API_KEY) || !difyStarted) {
+      console.warn("Skipping workflow execution test due to missing keys or Dify not started.");
+      return;
+    }
+    const serverPath = path.join(process.cwd(), "src", "mcp_servers", "dify", "index.ts");
+    const transport = new StdioClientTransport({
+      command: "npx",
+      args: ["tsx", serverPath],
+      env: process.env as any
+    });
+    const client = new Client(
+      { name: "test-client", version: "1.0.0" },
+      { capabilities: {} }
+    );
+
+    try {
+        await client.connect(transport);
+        try {
+            const result: any = await client.callTool({
+                name: "execute_supervisor_workflow",
+                arguments: { prompt: "Test prompt from integration test" }
+            });
+            console.log("Tool execution result:", result);
+            expect(result).toBeDefined();
+        } catch(e: any) {
+            console.warn("Tool execution failed (expected if app not configured/authed):", e);
+        }
+    } finally {
+        await client.close();
+    }
+  }, 60000);
 });

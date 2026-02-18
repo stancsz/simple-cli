@@ -36,7 +36,7 @@ describe("DifyServer", () => {
     const result = await server.runChat("hello", "user-1");
 
     expect(fetchMock).toHaveBeenCalledWith(
-      "https://api.dify.ai/v1/chat-messages",
+      "http://localhost:5001/v1/chat-messages",
       expect.objectContaining({
         method: "POST",
         headers: expect.objectContaining({

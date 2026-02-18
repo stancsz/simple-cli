@@ -40,6 +40,8 @@
 - [x] **Configure Supervisor Agent**: Added `dify_agent_templates/supervisor_agent.json`.
 - [x] **Configure Coding Agent**: Added `dify_agent_templates/coding_agent.json`.
 - [x] **Documentation**: Added `docs/LOCAL_DIFY.md`.
+- [x] **MCP Server**: Implemented `src/mcp_servers/dify/` with `execute_supervisor_workflow` and `execute_coding_workflow`.
+- [x] **CLI Integration**: Added `--use-agent dify-supervisor` support.
 
 ## Sprint 1: The Awakening (Current)
 
