@@ -20,7 +20,12 @@ def main():
         sys.exit(1)
 
     model_name = os.environ.get("OPENAI_MODEL_NAME", "gpt-4o")
-    config_list = [{"model": model_name, "api_key": api_key}]
+    base_url = os.environ.get("OPENAI_BASE_URL")
+    config_entry = {"model": model_name, "api_key": api_key}
+    if base_url:
+        config_entry["base_url"] = base_url
+    
+    config_list = [config_entry]
 
     try:
         assistant = AssistantAgent(

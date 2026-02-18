@@ -47,8 +47,21 @@ export class AgnoServer {
     }
 
     return new Promise<any>((resolve, reject) => {
+      // Configure environment for DeepSeek if available
+      const apiKey = process.env.DEEPSEEK_API_KEY || process.env.OPENAI_API_KEY;
+      const env = {
+        ...process.env,
+        OPENAI_API_KEY: apiKey,
+        ...(process.env.DEEPSEEK_API_KEY
+          ? {
+            OPENAI_BASE_URL: "https://api.deepseek.com",
+            OPENAI_MODEL_NAME: "deepseek-reasoner",
+          }
+          : {}),
+      };
+
       const pythonProcess = spawn(pythonCmd, args, {
-        env: process.env,
+        env,
       });
 
       let output = "";
