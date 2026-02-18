@@ -9,7 +9,7 @@ const server = new McpServer({
 });
 
 for (const tool of tools) {
-  server.tool(tool.name, tool.description, tool.args, tool.execute);
+  server.tool(tool.name, tool.description, tool.args as any, tool.execute as any);
 }
 
 async function main() {
