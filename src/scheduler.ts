@@ -152,6 +152,7 @@ export class Scheduler extends EventEmitter {
           name: taskName,
           trigger: "cron",
           schedule: "0 0 * * 0", // Weekly at Sunday midnight
+          script: "src/scheduler/jobs/weekly_review_job.ts",
           prompt: "Run the Weekly HR Review using the 'perform_weekly_review' tool to analyze long-term patterns.",
           yoloMode: true
       });

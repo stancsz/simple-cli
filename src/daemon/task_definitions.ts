@@ -6,6 +6,7 @@ export interface TaskDefinition {
   trigger: TriggerType;
   schedule?: string; // Cron expression
   path?: string; // File path for file-watch trigger
+  script?: string; // Custom script to execute instead of default run_task
   prompt: string; // The task to execute
   company?: string; // Company context isolation
   yoloMode?: boolean; // Whether to run without confirmation (defaults to true for daemon)

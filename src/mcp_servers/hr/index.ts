@@ -29,7 +29,7 @@ export class HRServer {
     this.memory = new EpisodicMemory();
     this.storage = new ProposalStorage();
     this.llm = createLLM();
-    this.logsPath = join(process.cwd(), ".agent", "sop_logs.json");
+    this.logsPath = join(process.cwd(), ".agent", "brain", "sop_logs.json");
 
     this.setupTools();
   }
@@ -139,10 +139,29 @@ export class HRServer {
       const isCoreUpdate = analysisData.affected_files?.some((f: string) => f.startsWith("src/"));
 
       if (isCoreUpdate) {
+        // Construct structured proposal for programmatic access
+        const proposalData = {
+          title: analysisData.title,
+          description: analysisData.analysis,
+          changes: analysisData.changes || [] // Will be populated if prompt asks for it
+        };
+
         return {
           content: [{
             type: "text" as const,
-            text: `Analysis Complete. CORE UPDATE REQUIRED.\nTitle: ${analysisData.title}\nAnalysis: ${analysisData.analysis}\n\nIMPORTANT: Use 'propose_core_update' tool for src/ files instead of standard proposals.\n\nProposed Changes:\n${JSON.stringify(analysisData.affected_files, null, 2)}\nPatch:\n${analysisData.patch}`
+            text: `Analysis Complete. CORE UPDATE REQUIRED.
+Title: ${analysisData.title}
+Analysis: ${analysisData.analysis}
+
+IMPORTANT: Use 'propose_core_update' tool for src/ files instead of standard proposals.
+
+Proposed Changes (JSON):
+\`\`\`json_proposal
+${JSON.stringify(proposalData, null, 2)}
+\`\`\`
+
+Patch/Instructions:
+${analysisData.patch}`
           }]
         };
       }

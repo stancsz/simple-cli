@@ -101,7 +101,7 @@ To transition from a "Wrapper" to a true "Universal AI Integration Platform," th
     - **Core Update MCP**: Securely modifies `src/` files with `propose_core_update` and `apply_core_update`.
     - **Memory Integration**: Uses the Brain MCP to recall past failures and delegation patterns.
     - **Safety Protocol**: Proposals are stored as 'pending' and require human approval (token or strict YOLO checks) before application.
-    - **Automated Review**: (✅ Implemented) Weekly automated review via Scheduler.
+    - **Automated Review**: (✅ Implemented) Weekly automated review implemented via Scheduler integration (2024-05-23).
 
 ### Phase 9: Local LLM Ops (Dify) (✅ Implemented)
 **Goal:** Establish a local, privacy-first orchestration layer for rapid prototyping.

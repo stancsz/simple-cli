@@ -23,13 +23,31 @@ export async function handleTaskTrigger(task: TaskDefinition): Promise<{ exitCod
     env.JULES_COMPANY = task.company;
   }
 
-  // Use run_task in src/daemon/ directory
-  // We need to go up one level from src/scheduler to src/daemon
-  const runTaskScript = join(__dirname, '..', 'daemon', `run_task${ext}`);
+  let scriptPath: string;
+
+  if (task.script) {
+    let scriptRelPath = task.script;
+
+    // If running in compiled mode (JS), map src/ -> dist/ if provided
+    if (!isTs) {
+      if (scriptRelPath.startsWith('src/')) {
+        scriptRelPath = scriptRelPath.replace(/^src\//, 'dist/').replace(/\.ts$/, '.js');
+      } else if (scriptRelPath.endsWith('.ts')) {
+        scriptRelPath = scriptRelPath.replace(/\.ts$/, '.js');
+      }
+    }
+
+    // Resolve custom script path relative to CWD
+    scriptPath = join(process.cwd(), scriptRelPath);
+  } else {
+    // Use run_task in src/daemon/ directory
+    // We need to go up one level from src/scheduler to src/daemon
+    scriptPath = join(__dirname, '..', 'daemon', `run_task${ext}`);
+  }
 
   const args = isTs
-       ? ['--loader', 'ts-node/esm', runTaskScript]
-       : [runTaskScript];
+       ? ['--loader', 'ts-node/esm', scriptPath]
+       : [scriptPath];
 
   return new Promise((resolve, reject) => {
     const child = spawn('node', args, {

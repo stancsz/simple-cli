@@ -27,6 +27,13 @@ Return your response in this JSON format:
   "title": "Short title for the proposal (e.g., 'Fix error handling in X')",
   "description": "Detailed description of the problem and the proposed fix.",
   "affected_files": ["file1.ts", "file2.md"],
-  "patch": "The specific content to add/change. If it's a file modification, provide a git diff or clear instructions. If it's a prompt update, provide the new text."
+  "changes": [
+     { "filepath": "src/file1.ts", "new_content": "Full new content of file1..." }
+  ],
+  "patch": "A textual description or git diff of the changes (for human review)."
 }
+
+IMPORTANT:
+- If proposing code changes, populate the 'changes' array with the FULL content of the modified files. This is critical for automated application.
+- 'patch' should still contain a human-readable diff or instructions.
 `;
