@@ -12,16 +12,16 @@ export class ContextManager implements IContextManager {
   }
 
   // Implementation of IContextManager (delegates to server/local file)
-  async readContext(lockId?: string): Promise<ContextData> {
-    return this.server.readContext(lockId);
+  async readContext(lockId?: string, company?: string): Promise<ContextData> {
+    return this.server.readContext(lockId, company);
   }
 
-  async updateContext(updates: Partial<ContextData>, lockId?: string): Promise<ContextData> {
-    return this.server.updateContext(updates, lockId);
+  async updateContext(updates: Partial<ContextData>, lockId?: string, company?: string): Promise<ContextData> {
+    return this.server.updateContext(updates, lockId, company);
   }
 
-  async clearContext(lockId?: string): Promise<void> {
-    return this.server.clearContext(lockId);
+  async clearContext(lockId?: string, company?: string): Promise<void> {
+    return this.server.clearContext(lockId, company);
   }
 
   // New High-Level Methods for Long-Term Memory Integration
@@ -29,9 +29,9 @@ export class ContextManager implements IContextManager {
   /**
    * Loads context and enriches it with relevant past experiences from the Brain.
    */
-  async loadContext(taskDescription: string): Promise<ContextData & { relevant_past_experiences?: string[] }> {
+  async loadContext(taskDescription: string, company?: string): Promise<ContextData & { relevant_past_experiences?: string[] }> {
     // 1. Get base context (local file)
-    const context = await this.readContext();
+    const context = await this.readContext(undefined, company);
 
     // 2. Query Brain (Episodic Memory)
     let memories: string[] = [];
@@ -42,7 +42,7 @@ export class ContextManager implements IContextManager {
             name: "brain_query",
             arguments: {
                 query: taskDescription,
-                company: process.env.JULES_COMPANY
+                company: company || process.env.JULES_COMPANY
             }
         });
 
@@ -68,9 +68,9 @@ export class ContextManager implements IContextManager {
   /**
    * Saves the outcome of a task to the Brain and updates local context.
    */
-  async saveContext(taskDescription: string, outcome: string, updates: Partial<ContextData> = {}, artifacts: string[] = []): Promise<void> {
+  async saveContext(taskDescription: string, outcome: string, updates: Partial<ContextData> = {}, artifacts: string[] = [], company?: string): Promise<void> {
      // 1. Update local context
-     await this.updateContext(updates);
+     await this.updateContext(updates, undefined, company);
 
      // 2. Store to Brain
      try {
@@ -83,7 +83,7 @@ export class ContextManager implements IContextManager {
                    request: taskDescription,
                    solution: outcome,
                    artifacts: JSON.stringify(artifacts),
-                   company: process.env.JULES_COMPANY
+                   company: company || process.env.JULES_COMPANY
                }
            });
        }

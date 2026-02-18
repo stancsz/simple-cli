@@ -32,52 +32,59 @@ function deepMerge(target: any, source: any): any {
 }
 
 export class ContextServer implements ContextManager {
-  private contextFile: string;
   private cwd: string;
 
   constructor(cwd: string = process.cwd()) {
     this.cwd = cwd;
-    const company = process.env.JULES_COMPANY;
-    if (company) {
-      this.contextFile = join(cwd, ".agent", "companies", company, "context.json");
-    } else {
-      this.contextFile = join(cwd, ".agent", "context.json");
+  }
+
+  private getContextFile(company?: string): string {
+    const targetCompany = company || process.env.JULES_COMPANY;
+    if (targetCompany) {
+      // Validate company name to prevent path traversal
+      if (!/^[a-zA-Z0-9_-]+$/.test(targetCompany)) {
+        throw new Error("Invalid company name.");
+      }
+      return join(this.cwd, ".agent", "companies", targetCompany, "context.json");
     }
+    return join(this.cwd, ".agent", "context.json");
   }
 
   // Internal lock wrapper
-  private async withLock<T>(action: () => Promise<T>): Promise<T> {
+  private async withLock<T>(company: string | undefined, action: (file: string) => Promise<T>): Promise<T> {
+    const contextFile = this.getContextFile(company);
+
     // Ensure directory exists
-    if (!existsSync(dirname(this.contextFile))) {
-      await mkdir(dirname(this.contextFile), { recursive: true });
+    if (!existsSync(dirname(contextFile))) {
+      await mkdir(dirname(contextFile), { recursive: true });
     }
     // Ensure file exists for locking
-    if (!existsSync(this.contextFile)) {
-      await writeFile(this.contextFile, "{}");
+    if (!existsSync(contextFile)) {
+      await writeFile(contextFile, "{}");
     }
 
     let release: () => Promise<void>;
     try {
-      release = await lock(this.contextFile, {
+      release = await lock(contextFile, {
         retries: { retries: 10, minTimeout: 100, maxTimeout: 1000 },
         stale: 10000
       });
     } catch (e: any) {
-      throw new Error(`Failed to acquire lock for ${this.contextFile}: ${e.message}`);
+      throw new Error(`Failed to acquire lock for ${contextFile}: ${e.message}`);
     }
 
     try {
-      return await action();
+      return await action(contextFile);
     } finally {
       await release();
     }
   }
 
-  async readContext(lockId?: string): Promise<ContextData> {
-    return this.withLock(async () => {
-      if (existsSync(this.contextFile)) {
+  async readContext(lockId?: string, company?: string): Promise<ContextData> {
+    return this.withLock(company, async (file) => {
+      if (existsSync(file)) {
         try {
-          const content = await readFile(this.contextFile, "utf-8");
+          const content = await readFile(file, "utf-8");
           const json = JSON.parse(content);
           const parsed = ContextSchema.safeParse(json);
           if (parsed.success) {
@@ -94,12 +101,12 @@ export class ContextServer implements ContextManager {
     });
   }
 
-  async updateContext(updates: Partial<ContextData>, lockId?: string): Promise<ContextData> {
-    return this.withLock(async () => {
+  async updateContext(updates: Partial<ContextData>, lockId?: string, company?: string): Promise<ContextData> {
+    return this.withLock(company, async (file) => {
       let current = {};
-      if (existsSync(this.contextFile)) {
+      if (existsSync(file)) {
         try {
-          const content = await readFile(this.contextFile, "utf-8");
+          const content = await readFile(file, "utf-8");
           current = JSON.parse(content);
         } catch { }
       }
@@ -114,15 +121,15 @@ export class ContextServer implements ContextManager {
       const finalContext = parsed.data;
       finalContext.last_updated = new Date().toISOString();
 
-      await writeFile(this.contextFile, JSON.stringify(finalContext, null, 2));
+      await writeFile(file, JSON.stringify(finalContext, null, 2));
       return finalContext;
     });
   }
 
-  async clearContext(lockId?: string): Promise<void> {
-    return this.withLock(async () => {
+  async clearContext(lockId?: string, company?: string): Promise<void> {
+    return this.withLock(company, async (file) => {
       const empty = ContextSchema.parse({});
-      await writeFile(this.contextFile, JSON.stringify(empty, null, 2));
+      await writeFile(file, JSON.stringify(empty, null, 2));
     });
   }
 }
@@ -137,9 +144,11 @@ const manager = new ContextServer();
 server.tool(
   "read_context",
   "Read the current context.",
-  {},
-  async () => {
-    const context = await manager.readContext();
+  {
+    company: z.string().optional().describe("Company ID to read context for (optional)."),
+  },
+  async ({ company }) => {
+    const context = await manager.readContext(undefined, company);
     return {
       content: [{ type: "text", text: JSON.stringify(context, null, 2) }],
     };
@@ -151,8 +160,9 @@ server.tool(
   "Update the context with partial updates (deep merged).",
   {
     updates: z.string().describe("JSON string of updates to merge"),
+    company: z.string().optional().describe("Company ID to update context for (optional)."),
   },
-  async ({ updates }) => {
+  async ({ updates, company }) => {
     let parsedUpdates;
     try {
       parsedUpdates = JSON.parse(updates);
@@ -164,7 +174,7 @@ server.tool(
     }
 
     try {
-      const newContext = await manager.updateContext(parsedUpdates);
+      const newContext = await manager.updateContext(parsedUpdates, undefined, company);
       return {
         content: [{ type: "text", text: JSON.stringify(newContext, null, 2) }],
       };
@@ -180,9 +190,11 @@ server.tool(
 server.tool(
   "clear_context",
   "Reset the context to empty/default state.",
-  {},
-  async () => {
-    await manager.clearContext();
+  {
+    company: z.string().optional().describe("Company ID to clear context for (optional)."),
+  },
+  async ({ company }) => {
+    await manager.clearContext(undefined, company);
     return {
       content: [{ type: "text", text: "Context cleared." }],
     };
