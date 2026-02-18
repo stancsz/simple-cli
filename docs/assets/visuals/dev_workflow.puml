@@ -1,0 +1,30 @@
+@startuml
+participant User as "Slack/GitHub"
+participant Agent as "Developer Agent"
+participant Repo as "Codebase"
+participant Test as "Test Runner"
+participant Git as "Git/VCS"
+
+User -> Agent: "Bug Report: ZeroDivisionError"
+activate Agent
+
+Agent -> Repo: Read 'calculator.py' & 'test_calculator.py'
+Repo --> Agent: File Content
+
+Agent -> Test: Run Reproducible Test Case
+Test --> Agent: ❌ FAILED (ZeroDivisionError)
+
+Agent -> Agent: Analyze Fail & Fix Logic
+
+Agent -> Repo: Edit 'calculator.py' (Add Guard Clause)
+Repo --> Agent: Success
+
+Agent -> Test: Re-run Test Case
+Test --> Agent: ✅ PASSED
+
+Agent -> Git: New Branch -> Commit -> Push
+Git --> Agent: Success
+
+Agent -> User: "Fixed in PR #123 (branch: fix-calculator-bug)"
+deactivate Agent
+@enduml
