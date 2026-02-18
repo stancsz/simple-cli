@@ -1,0 +1,25 @@
+{
+  "app": {
+    "name": "Coding Agent",
+    "description": "A Senior Software Engineer agent that implements plans with clean, efficient code. Powered by DeepSeek Coder V2.",
+    "mode": "chat",
+    "icon": "👨‍💻",
+    "icon_background": "#E5F0FF"
+  },
+  "model_config": {
+    "provider": "deepseek",
+    "model": "deepseek-coder",
+    "configs": {
+      "prompt_template": "You are a Senior Software Engineer (Codex Persona).\nYou receive a technical plan from the Supervisor.\nYour goal is to write clean, efficient, and well-documented code based on the plan.\nReturn the code blocks clearly.\n\nInstructions:\n1. Use modern best practices.\n2. Include comments explaining complex logic.\n3. Return only the code, or minimal explanation around it.",
+      "opening_statement": "I am ready to implement the plan. Please paste the requirements or plan from the Supervisor.",
+      "suggested_questions": [],
+      "model_parameters": {
+        "temperature": 0.2,
+        "top_p": 0.95,
+        "max_tokens": 8192,
+        "presence_penalty": 0,
+        "frequency_penalty": 0
+      }
+    }
+  }
+}
