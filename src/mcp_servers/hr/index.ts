@@ -122,7 +122,19 @@ export class HRServer {
     }
 
     if (analysisData.improvement_needed) {
-        // Create a proposal automatically
+        // CHECK IF CORE UPDATE
+        const isCoreUpdate = analysisData.affected_files?.some((f: string) => f.startsWith("src/"));
+
+        if (isCoreUpdate) {
+            return {
+                content: [{
+                    type: "text",
+                    text: `Analysis Complete. CORE UPDATE REQUIRED.\nTitle: ${analysisData.title}\nAnalysis: ${analysisData.analysis}\n\nIMPORTANT: Use 'propose_core_update' tool for src/ files instead of standard proposals.\n\nProposed Changes:\n${JSON.stringify(analysisData.affected_files, null, 2)}\nPatch:\n${analysisData.patch}`
+                }]
+            };
+        }
+
+        // Standard Proposal for non-core files
         const proposal: Proposal = {
             id: randomUUID(),
             title: analysisData.title || "Automated Improvement Proposal",
@@ -148,6 +160,15 @@ export class HRServer {
   }
 
   public async proposeChange({ title, description, affectedFiles, patch }: { title: string, description: string, affectedFiles: string[], patch: string }) {
+    // CHECK IF CORE UPDATE
+    const isCoreUpdate = affectedFiles.some((f: string) => f.startsWith("src/"));
+    if (isCoreUpdate) {
+        return {
+            content: [{ type: "text", text: `Error: Changes to 'src/' files must use 'propose_core_update' tool for safety verification.` }],
+            isError: true
+        };
+    }
+
     await this.storage.init();
 
     const proposal: Proposal = {
