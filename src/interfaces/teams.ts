@@ -18,53 +18,7 @@ import { createExecuteSOPTool } from "../workflows/execute_sop_tool.js";
 import { fileURLToPath } from "url";
 import { join } from "path";
 import { existsSync, readFileSync } from "fs";
-import { SOPEngineServer } from "../mcp_servers/sop_engine/index.js";
-
-// Custom Engine to capture output and stream to Teams
-class TeamsEngine extends Engine {
-  private turnContext: TurnContext;
-
-  constructor(
-    llm: any,
-    registry: Registry,
-    mcp: MCP,
-    turnContext: TurnContext
-  ) {
-    super(llm, registry, mcp);
-    this.turnContext = turnContext;
-
-    // Override spinner to stream updates to Teams
-    this.s = {
-      start: (msg: string) => this.log('info', `[Start] ${msg}`),
-      stop: (msg: string) => this.log('success', `[Done] ${msg}`),
-      message: (msg: string) => this.log('info', `[Update] ${msg}`),
-    } as any;
-  }
-
-  // Override log to send updates to Teams conversation
-  protected override log(type: 'info' | 'success' | 'warn' | 'error', message: string) {
-    // Filter out verbose logs
-    if (message.includes("Tokens:") || message.includes("prompt +")) return;
-
-    let icon = "";
-    if (type === 'success') icon = "✅ ";
-    else if (type === 'warn') icon = "⚠️ ";
-    else if (type === 'error') icon = "❌ ";
-    else if (type === 'info') icon = "ℹ️ ";
-
-    this.turnContext.sendActivity(`${icon} ${message}`).catch((err) => {
-      console.error("Failed to log to Teams:", err);
-    });
-
-    // Also log to console
-    super.log(type, message);
-  }
-
-  protected async getUserInput(initialValue: string, interactive: boolean): Promise<string | undefined> {
-    this.log('warn', "Agent requested input, but interactive mode is disabled in Teams adapter.");
-    return undefined;
-  }
-}
+import { BaseInterface } from "./base.js";
 
 // Global instances
 const baseRegistry = new Registry();
@@ -97,6 +51,66 @@ async function initializeResources() {
   (await mcp.getTools()).forEach((t) => baseRegistry.tools.set(t.name, t as any));
 
   isInitialized = true;
+}
+
+export class TeamsInterface extends BaseInterface {
+    constructor() {
+        super();
+        this.initialize().catch(console.error);
+    }
+
+    async sendRaw(content: string, metadata: { context: TurnContext }): Promise<void> {
+        await metadata.context.sendActivity(content);
+    }
+}
+
+// Custom Engine to capture output and stream to Teams
+class TeamsEngine extends Engine {
+  private turnContext: TurnContext;
+  private teamsInterface: TeamsInterface;
+
+  constructor(
+    llm: any,
+    registry: Registry,
+    mcp: MCP,
+    turnContext: TurnContext,
+    teamsInterface: TeamsInterface
+  ) {
+    super(llm, registry, mcp);
+    this.turnContext = turnContext;
+    this.teamsInterface = teamsInterface;
+
+    // Override spinner to stream updates to Teams
+    this.s = {
+      start: (msg: string) => this.log('info', `[Start] ${msg}`),
+      stop: (msg: string) => this.log('success', `[Done] ${msg}`),
+      message: (msg: string) => this.log('info', `[Update] ${msg}`),
+    } as any;
+  }
+
+  // Override log to send updates to Teams conversation
+  protected override log(type: 'info' | 'success' | 'warn' | 'error', message: string) {
+    // Filter out verbose logs
+    if (message.includes("Tokens:") || message.includes("prompt +")) return;
+
+    let icon = "";
+    if (type === 'success') icon = "✅ ";
+    else if (type === 'warn') icon = "⚠️ ";
+    else if (type === 'error') icon = "❌ ";
+    else if (type === 'info') icon = "ℹ️ ";
+
+    this.teamsInterface.sendResponse(`${icon} ${message}`, 'log', { context: this.turnContext }).catch((err) => {
+      console.error("Failed to log to Teams:", err);
+    });
+
+    // Also log to console
+    super.log(type, message);
+  }
+
+  protected async getUserInput(initialValue: string, interactive: boolean): Promise<string | undefined> {
+    this.log('warn', "Agent requested input, but interactive mode is disabled in Teams adapter.");
+    return undefined;
+  }
 }
 
 // Load Configuration
@@ -145,6 +159,9 @@ adapter.onTurnError = async (context, error) => {
   await context.sendActivity('To continue to run this bot, please fix the bot source code.');
 };
 
+// Global interface instance
+const teamsInterface = new TeamsInterface();
+
 class TeamsBot extends ActivityHandler {
   constructor() {
     super();
@@ -186,8 +203,15 @@ class TeamsBot extends ActivityHandler {
       // 3. Send typing indicator
       await context.sendActivity({ type: ActivityTypes.Typing });
 
-      // 4. Acknowledge
-      await context.sendActivity("Thinking...");
+      // Typing callback
+      const onTyping = async () => {
+          try {
+              await context.sendActivity({ type: ActivityTypes.Typing });
+          } catch {}
+      };
+
+      // 4. Acknowledge with Persona
+      await teamsInterface.sendResponse("Thinking...", 'log', { context }, onTyping);
 
       // 3. Initialize and Run
       if (!isInitialized) {
@@ -202,7 +226,7 @@ class TeamsBot extends ActivityHandler {
 
       const cwd = process.cwd();
       const provider = createLLM();
-      const engine = new TeamsEngine(provider, requestRegistry, mcp, context);
+      const engine = new TeamsEngine(provider, requestRegistry, mcp, context, teamsInterface);
       const skill = await getActiveSkill(cwd);
       const ctx = new Context(cwd, skill);
 
@@ -219,16 +243,16 @@ class TeamsBot extends ActivityHandler {
           } catch { }
 
           if (content) {
-            await context.sendActivity(content);
+            await teamsInterface.sendResponse(content, 'response', { context }, onTyping);
           } else {
-            await context.sendActivity("Task completed (check logs/artifacts).");
+            await teamsInterface.sendResponse("Task completed (check logs/artifacts).", 'response', { context }, onTyping);
           }
         } else {
-          await context.sendActivity("I couldn't generate a response.");
+            await teamsInterface.sendResponse("I couldn't generate a response.", 'response', { context }, onTyping);
         }
       } catch (error: any) {
         console.error("Error running engine:", error);
-        await context.sendActivity(`Error: ${error.message}`);
+        await teamsInterface.sendResponse(`Error: ${error.message}`, 'log', { context }, onTyping);
       }
 
       await next();
