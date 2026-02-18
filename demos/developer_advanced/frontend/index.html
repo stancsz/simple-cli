@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Dashboard</title>
+</head>
+<body>
+    <h1>API Dashboard</h1>
+    <button onclick="fetchData()">Get Data</button>
+    <div id="status">Ready</div>
+    <div id="result"></div>
+
+    <script>
+        async function fetchData() {
+            const statusDiv = document.getElementById('status');
+            const resultDiv = document.getElementById('result');
+            
+            statusDiv.innerText = "Loading...";
+            
+            try {
+                const response = await fetch('http://localhost:8000/items/1');
+                if (response.ok) {
+                    const data = await response.json();
+                    statusDiv.innerText = "Success";
+                    resultDiv.innerText = JSON.stringify(data);
+                } else {
+                    statusDiv.innerText = "Error: " + response.status;
+                }
+            } catch (error) {
+                statusDiv.innerText = "Network Error";
+            }
+        }
+    </script>
+</body>
+</html>
