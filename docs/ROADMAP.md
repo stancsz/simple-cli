@@ -110,9 +110,14 @@ To achieve a true "Universal AI Integration Platform" capable of consulting for 
 *   **Concept:** Agents shouldn't just run in a folder; they should understand the "Client Profile."
 *   **Mechanism:** Multi-tenant RAG (Vector DB) per company. When you run `simple --company client-a`, the agent loads specific brand voices, internal docs, and past decisions.
 
-### 4. SOP-as-Code (The Operating Manual)
+### 4. SOP-as-Code (The Operating Manual) (✅ Implemented)
 *   **Concept:** Automating professional workflows.
-*   **Mechanism:** Workflow agents that take an SOP (Standard Operating Procedure) and execute it autonomously—from scraping market data to writing a PR review script.
+*   **Mechanism:** `sop_engine` MCP server parses Markdown SOPs and executes them step-by-step using available tools.
+*   **Features:**
+    - **Markdown Parsing:** Writes SOPs in standard Markdown.
+    - **Autonomous Execution:** Uses LLM to reason and select tools for each step.
+    - **Resilience:** Automatic retries and error handling.
+    - **Tool Integration:** Discovers and uses any available MCP tool (Git, Filesystem, Brain).
 
 ### 5. "Ghost Mode" Persistence (The 24/7 Employee) (✅ Active)
 *   **Concept:** Employees that work while you sleep.
