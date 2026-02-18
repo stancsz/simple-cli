@@ -36,7 +36,8 @@ vi.mock("../../brain/episodic.js", () => {
 
 const AGENT_DIR = join(process.cwd(), ".agent");
 const HR_DIR = join(AGENT_DIR, "hr");
-const LOGS_FILE = join(AGENT_DIR, "sop_logs.json");
+const BRAIN_DIR = join(AGENT_DIR, "brain");
+const LOGS_FILE = join(BRAIN_DIR, "sop_logs.json");
 const PROPOSALS_FILE = join(HR_DIR, "proposals.json");
 
 describe("HRServer Integration", () => {
@@ -46,6 +47,7 @@ describe("HRServer Integration", () => {
     // Ensure directories exist
     if (!existsSync(AGENT_DIR)) await mkdir(AGENT_DIR, { recursive: true });
     if (!existsSync(HR_DIR)) await mkdir(HR_DIR, { recursive: true });
+    if (!existsSync(BRAIN_DIR)) await mkdir(BRAIN_DIR, { recursive: true });
 
     // Clear existing files
     if (existsSync(PROPOSALS_FILE)) await rm(PROPOSALS_FILE);
