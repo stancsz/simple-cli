@@ -169,7 +169,7 @@ export class Engine {
   async run(
     ctx: Context,
     initialPrompt?: string,
-    options: { interactive: boolean } = { interactive: true },
+    options: { interactive: boolean; company?: string } = { interactive: true },
   ) {
     let input = initialPrompt;
     let bufferedInput = "";
@@ -214,7 +214,7 @@ export class Engine {
     }
 
     // Initialize CompanyContext if JULES_COMPANY is set
-    let companyName = process.env.JULES_COMPANY || "";
+    let companyName = options.company || process.env.JULES_COMPANY || "";
     let companyProfile: CompanyProfile | null = null;
     let sharedContext = "";
 
@@ -234,7 +234,10 @@ export class Engine {
     try {
       const contextClient = this.mcp.getClient("context_server");
       if (contextClient) {
-        const res: any = await contextClient.callTool({ name: "read_context", arguments: {} });
+        const res: any = await contextClient.callTool({
+          name: "read_context",
+          arguments: { company: companyName || undefined }
+        });
         if (res && res.content && res.content[0]) {
           const data = JSON.parse(res.content[0].text);
           if (data.company_context) {
@@ -260,7 +263,7 @@ export class Engine {
       // Brain: Recall similar past experiences via ContextManager
       const userRequest = input; // Capture original request
       try {
-        const contextData = await this.contextManager.loadContext(userRequest);
+        const contextData = await this.contextManager.loadContext(userRequest, companyName);
         if (contextData.relevant_past_experiences && contextData.relevant_past_experiences.length > 0) {
             const pastMemory = contextData.relevant_past_experiences.join("\n\n---\n\n");
             this.log("info", pc.dim(`[Brain] Recalled past experience.`));
@@ -513,7 +516,8 @@ export class Engine {
                     userRequest,
                     message || response.thought || "Task completed.",
                     {}, // updates
-                    currentArtifacts
+                    currentArtifacts,
+                    companyName
                 );
             } catch (e) {
               console.warn("Failed to store memory via brain server:", e);
