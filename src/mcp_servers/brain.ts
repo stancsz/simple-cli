@@ -213,6 +213,99 @@ export class BrainServer {
         }
       }
     );
+
+    // Experience / Delegation Memory
+    this.server.tool(
+      "log_experience",
+      "Log a task execution experience for future learning.",
+      {
+        taskId: z.string().describe("The unique ID of the task."),
+        task_type: z.string().describe("The type or category of the task (e.g., 'refactor', 'bugfix')."),
+        agent_used: z.string().describe("The agent that performed the task."),
+        outcome: z.string().describe("The outcome of the task (e.g., 'success', 'failure', 'pending')."),
+        summary: z.string().describe("A brief summary of what happened."),
+        artifacts: z.string().optional().describe("JSON string array of modified file paths."),
+        company: z.string().optional().describe("The company/client identifier for namespacing."),
+      },
+      async ({ taskId, task_type, agent_used, outcome, summary, artifacts, company }) => {
+        let artifactList: string[] = [];
+        if (artifacts) {
+          try {
+            artifactList = JSON.parse(artifacts);
+            if (!Array.isArray(artifactList)) artifactList = [];
+          } catch {
+            artifactList = [];
+          }
+        }
+
+        // We use the existing episodic memory store, but format the request/solution to structured text
+        // so it can be retrieved effectively by recall_delegation_patterns.
+        const request = `Task Type: ${task_type}\nAgent: ${agent_used}`;
+        const solution = `Outcome: ${outcome}\nSummary: ${summary}`;
+
+        await this.episodic.store(taskId, request, solution, artifactList, company);
+        return {
+          content: [{ type: "text", text: "Experience logged successfully." }],
+        };
+      }
+    );
+
+    this.server.tool(
+      "recall_delegation_patterns",
+      "Recall past delegation experiences to identify patterns and success rates.",
+      {
+        task_type: z.string().describe("The type of task to analyze (e.g., 'refactor')."),
+        query: z.string().optional().describe("Additional query text."),
+        company: z.string().optional().describe("The company/client identifier for namespacing."),
+      },
+      async ({ task_type, query, company }) => {
+        const searchQuery = query ? `${task_type} ${query}` : task_type;
+        // Fetch more results to calculate stats
+        const results = await this.episodic.recall(searchQuery, 10, company);
+
+        if (results.length === 0) {
+          return { content: [{ type: "text", text: `No past experiences found for task type: ${task_type}` }] };
+        }
+
+        let successCount = 0;
+        let failureCount = 0;
+        const agentStats: Record<string, { success: number; fail: number }> = {};
+
+        results.forEach((r) => {
+           // Parse solution for Outcome
+           const solution = r.agentResponse;
+           const isSuccess = solution.toLowerCase().includes("outcome: success");
+           const isFail = solution.toLowerCase().includes("outcome: failure") || solution.toLowerCase().includes("outcome: failed");
+
+           // Parse request for Agent
+           const request = r.userPrompt;
+           const agentMatch = request.match(/Agent: ([^\n]+)/);
+           const agent = agentMatch ? agentMatch[1].trim() : "unknown";
+
+           if (!agentStats[agent]) agentStats[agent] = { success: 0, fail: 0 };
+
+           if (isSuccess) {
+               successCount++;
+               agentStats[agent].success++;
+           } else if (isFail) {
+               failureCount++;
+               agentStats[agent].fail++;
+           }
+        });
+
+        let statsText = `Found ${results.length} relevant experiences for '${task_type}'.\n`;
+        statsText += `Overall Success Rate: ${Math.round((successCount / results.length) * 100)}%\n\n`;
+        statsText += `Agent Performance:\n`;
+
+        for (const [agent, stats] of Object.entries(agentStats)) {
+            const total = stats.success + stats.fail;
+            const rate = total > 0 ? Math.round((stats.success / total) * 100) : 0;
+            statsText += `- ${agent}: ${rate}% success (${stats.success}/${total})\n`;
+        }
+
+        return { content: [{ type: "text", text: statsText }] };
+      }
+    );
   }
 
   async run() {
