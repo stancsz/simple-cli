@@ -83,10 +83,12 @@ To transition from a "Wrapper" to a true "Universal AI Integration Platform," th
 - **Concept:** Agents that can dynamically spawn sub-agents (e.g., a "Lead Developer" hiring a "QA Engineer" and a "Docs Writer").
 - **Mechanism:** `OpenCowork` MCP improvements to support complex delegation trees and inter-agent negotiation.
 
-### Phase 8: Recursive Evolution (Self-Modifying Code) (Planned)
+### Phase 8: Recursive Evolution (Self-Modifying Code) (✅ Active)
 **Goal:** The agent can safely upgrade its own source code to improve efficiency.
 - **Concept:** The system identifies bottlenecks (e.g., slow tools, repetitive failures) and proposes PRs to its own repo.
 - **Mechanism:** "HR Loop" (implemented) + "Core Update" protocols (Dual-verification required).
+    - **HR MCP Server**: Analyzes logs and suggests improvements.
+    - **Safety Protocol**: Proposals require human approval before application.
 
 ---
 
