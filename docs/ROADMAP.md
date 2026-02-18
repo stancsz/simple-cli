@@ -115,7 +115,7 @@ To achieve a true "Universal AI Integration Platform" capable of consulting for 
 
 ### 4. SOP-as-Code (The Operating Manual) (✅ Implemented)
 *   **Concept:** Automating professional workflows.
-*   **Mechanism:** `sop_engine` MCP server parses Markdown SOPs and executes them step-by-step using available tools.
+*   **Mechanism:** `sop_engine` MCP server parses Markdown SOPs and executes them step-by-step using available tools. See [SOP_ENGINE.md](./SOP_ENGINE.md) for details.
 *   **Features:**
     - **Markdown Parsing:** Writes SOPs in standard Markdown.
     - **Autonomous Execution:** Uses LLM to reason and select tools for each step.

@@ -1,5 +1,5 @@
-import { LLM } from '../../llm.js';
-import { MCP } from '../../mcp.js';
+import type { LLM } from '../../llm.js';
+import type { MCP } from '../../mcp.js';
 import { SOP } from './sop_parser.js';
 
 export class SOPExecutor {

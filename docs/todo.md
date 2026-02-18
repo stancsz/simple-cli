@@ -97,6 +97,14 @@
     - [x] Update `cli.ts` and `engine.ts` to support `--company` flag and context injection.
     - [x] Create `docs/COMPANY_CONTEXT.md`.
 
+### SOP-as-Code (The Operating Manual)
+- [x] **Engine Implementation**:
+    - [x] Create `src/mcp_servers/sop_engine`: Implement SOP Parser and Executor.
+    - [x] Expose `sop_list`, `sop_execute`, `sop_create` tools.
+- [x] **Documentation & Testing**:
+    - [x] Create `docs/SOP_ENGINE.md`.
+    - [x] Implement integration tests in `tests/sop_engine.test.ts`.
+
 ### 7. Phase 7: The Hive Mind (Planned)
 - [ ] **Swarm Orchestration**: Implement dynamic agent spawning via `opencowork`.
 - [ ] **Agent Negotiation**: Implement protocol for agents to "bid" on tasks.
