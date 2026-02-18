@@ -59,8 +59,21 @@ export class AutoGenServer {
     }
 
     return new Promise<any>((resolve, reject) => {
+      // Configure environment for DeepSeek if available
+      const apiKey = process.env.DEEPSEEK_API_KEY || process.env.OPENAI_API_KEY;
+      const env = {
+        ...process.env,
+        OPENAI_API_KEY: apiKey,
+        ...(process.env.DEEPSEEK_API_KEY
+          ? {
+            OPENAI_BASE_URL: "https://api.deepseek.com",
+            OPENAI_MODEL_NAME: "deepseek-reasoner",
+          }
+          : {}),
+      };
+
       const pythonProcess = spawn("python3", [scriptPath, task], {
-        env: process.env,
+        env,
       });
 
       let output = "";
@@ -77,23 +90,23 @@ export class AutoGenServer {
       pythonProcess.on("close", (code) => {
         if (code === 0) {
           try {
-             const jsonOutput = JSON.parse(output.trim());
-             if (jsonOutput.error) {
-                 resolve({
-                     content: [{ type: "text" as const, text: `AutoGen Error: ${jsonOutput.error}` }]
-                 });
-             } else {
-                 resolve({
-                     content: [
-                         { type: "text" as const, text: `Result:\n${jsonOutput.result}` },
-                         { type: "text" as const, text: `\nFull Conversation:\n${jsonOutput.conversation}` }
-                     ]
-                 });
-             }
+            const jsonOutput = JSON.parse(output.trim());
+            if (jsonOutput.error) {
+              resolve({
+                content: [{ type: "text" as const, text: `AutoGen Error: ${jsonOutput.error}` }]
+              });
+            } else {
+              resolve({
+                content: [
+                  { type: "text" as const, text: `Result:\n${jsonOutput.result}` },
+                  { type: "text" as const, text: `\nFull Conversation:\n${jsonOutput.conversation}` }
+                ]
+              });
+            }
           } catch (e) {
-             resolve({
-                 content: [{ type: "text" as const, text: output.trim() }]
-             });
+            resolve({
+              content: [{ type: "text" as const, text: output.trim() }]
+            });
           }
         } else {
           resolve({
