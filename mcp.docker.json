@@ -27,6 +27,14 @@
     "sop_engine": {
       "command": "node",
       "args": ["/app/dist/mcp_servers/sop_engine/index.js"]
+    },
+    "claude-server": {
+      "command": "node",
+      "args": ["/app/dist/mcp_servers/claude-server.js"]
+    },
+    "openclaw": {
+      "command": "node",
+      "args": ["/app/dist/mcp_servers/openclaw/index.js"]
     }
   },
   "agents": {
