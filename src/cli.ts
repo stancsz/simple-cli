@@ -97,7 +97,7 @@ async function main() {
   await mcp.init();
   // Ensure essential servers are running.
   // 'filesystem' and 'git' should be configured in mcp.json via migration.
-  const coreServers = ["filesystem", "git", "context_server", "company_context", "aider-server", "claude-server"];
+  const coreServers = ["filesystem", "git", "context_server", "company_context", "aider-server", "claude-server", "openclaw"];
   for (const s of coreServers) {
     try {
       if (mcp.isServerRunning(s)) continue; // Already running
