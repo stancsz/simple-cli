@@ -89,10 +89,13 @@
 - [x] **Persona Engine**:
     - [x] Create `src/persona.ts`: Load `persona.json` and wrap LLM responses.
     - [x] Implement `inject_personality()` function in `src/llm.ts`.
+    - [x] Implement `src/persona/middleware.ts`: LLM-based tone rewrite, catchphrases, latency.
+    - [x] Create `docs/PERSONA_ENGINE.md`.
 - [x] **Interfaces**:
     - [x] Create `src/interfaces/slack.ts`: Implement Slack Bolt.js adapter.
     - [x] Create `src/interfaces/teams.ts`: Implement Microsoft Bot Framework adapter.
     - [x] Create `src/interfaces/discord.ts`: Implement Discord.js adapter.
+    - [x] Integrate `BaseInterface` and `PersonaMiddleware` into all adapters.
 - [x] **Infrastructure**:
     - [x] Create `Dockerfile` for lightweight production image.
     - [x] Create `docker-compose.yml` for local "Agency" simulation (Redis + Agent).

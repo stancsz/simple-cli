@@ -7,78 +7,7 @@ import { getActiveSkill } from "../skills.js";
 import { WorkflowEngine } from "../workflows/workflow_engine.js";
 import { createExecuteSOPTool } from "../workflows/execute_sop_tool.js";
 import { fileURLToPath } from "url";
-
-// Custom Engine to capture output and stream to Discord
-class DiscordEngine extends Engine {
-  private channel: TextChannel;
-  private threadId: string | null;
-
-  constructor(
-    llm: any,
-    registry: Registry,
-    mcp: MCP,
-    channel: TextChannel,
-    threadId: string | null = null
-  ) {
-    super(llm, registry, mcp);
-    this.channel = channel;
-    this.threadId = threadId;
-
-    // Override spinner to stream updates to Discord
-    this.s = {
-      start: (msg: string) => {
-        this.log('info', `[Start] ${msg}`);
-        // Trigger typing for both LLM generation ("Typing...") and Tool execution
-        if (msg === "Typing..." || msg.startsWith("Executing")) {
-          this.channel.sendTyping().catch(console.error);
-        }
-      },
-      stop: (msg: string) => this.log('success', `[Done] ${msg}`),
-      message: (msg: string) => this.log('info', `[Update] ${msg}`),
-    } as any;
-  }
-
-  // Override log to send updates to Discord
-  protected override log(type: 'info' | 'success' | 'warn' | 'error', message: string) {
-    // Filter out verbose logs
-    if (message.includes("Tokens:") || message.includes("prompt +")) return;
-
-    let icon = "";
-    if (type === 'success') icon = "✅ ";
-    else if (type === 'warn') icon = "⚠️ ";
-    else if (type === 'error') icon = "❌ ";
-    else if (type === 'info') icon = "ℹ️ ";
-
-    // In Discord, we might want to avoid spamming too many small logs.
-    // For now, we'll send them.
-    // Ideally we should use a dedicated log channel or thread, but here we reply in the same context.
-
-    // Check if we are in a thread or just a channel
-    // Discord.js sending logic:
-    // If threadId is present (though we are passing the channel object which might be a ThreadChannel),
-    // but here we typed it as TextChannel.
-    // Actually, channel can be TextChannel | ThreadChannel.
-    // For simplicity, let's assume 'channel' is where we send messages.
-
-    // To prevent rate limits, we could batch, but for now direct send.
-    // Also, wrap in code block if it looks like code? No, simple logs.
-
-    // We intentionally don't await here to not block execution, but we catch errors.
-    // However, if we don't await, we might lose order or hit rate limits harder.
-    // Let's fire and forget for logs.
-    this.channel.send(`${icon} ${message}`).catch((err) => {
-      console.error("Failed to log to Discord:", err);
-    });
-
-    // Also log to console
-    super.log(type, message);
-  }
-
-  protected async getUserInput(initialValue: string, interactive: boolean): Promise<string | undefined> {
-    this.log('warn', "Agent requested input, but interactive mode is disabled in Discord adapter.");
-    return undefined;
-  }
-}
+import { BaseInterface } from "./base.js";
 
 // Global instances
 const baseRegistry = new Registry();
@@ -102,6 +31,79 @@ async function initializeResources() {
   isInitialized = true;
 }
 
+export class DiscordInterface extends BaseInterface {
+    constructor() {
+        super();
+        this.initialize().catch(console.error);
+    }
+
+    async sendRaw(content: string, metadata: { message?: Message, channel?: any }): Promise<void> {
+        if (metadata.message) {
+            await metadata.message.reply(content);
+        } else if (metadata.channel) {
+            await metadata.channel.send(content);
+        }
+    }
+}
+
+// Custom Engine to capture output and stream to Discord
+class DiscordEngine extends Engine {
+  private channel: TextChannel;
+  private threadId: string | null;
+  private discordInterface: DiscordInterface;
+
+  constructor(
+    llm: any,
+    registry: Registry,
+    mcp: MCP,
+    channel: TextChannel,
+    threadId: string | null = null,
+    discordInterface: DiscordInterface
+  ) {
+    super(llm, registry, mcp);
+    this.channel = channel;
+    this.threadId = threadId;
+    this.discordInterface = discordInterface;
+
+    // Override spinner to stream updates to Discord
+    this.s = {
+      start: (msg: string) => {
+        this.log('info', `[Start] ${msg}`);
+        // Trigger typing via interface if possible, or direct call
+        if (msg === "Typing..." || msg.startsWith("Executing")) {
+          this.channel.sendTyping().catch(console.error);
+        }
+      },
+      stop: (msg: string) => this.log('success', `[Done] ${msg}`),
+      message: (msg: string) => this.log('info', `[Update] ${msg}`),
+    } as any;
+  }
+
+  // Override log to send updates to Discord
+  protected override log(type: 'info' | 'success' | 'warn' | 'error', message: string) {
+    // Filter out verbose logs
+    if (message.includes("Tokens:") || message.includes("prompt +")) return;
+
+    let icon = "";
+    if (type === 'success') icon = "✅ ";
+    else if (type === 'warn') icon = "⚠️ ";
+    else if (type === 'error') icon = "❌ ";
+    else if (type === 'info') icon = "ℹ️ ";
+
+    this.discordInterface.sendResponse(`${icon} ${message}`, 'log', { channel: this.channel }).catch((err) => {
+      console.error("Failed to log to Discord:", err);
+    });
+
+    // Also log to console
+    super.log(type, message);
+  }
+
+  protected async getUserInput(initialValue: string, interactive: boolean): Promise<string | undefined> {
+    this.log('warn', "Agent requested input, but interactive mode is disabled in Discord adapter.");
+    return undefined;
+  }
+}
+
 const client = new Client({
   intents: [
     GatewayIntentBits.Guilds,
@@ -115,6 +117,8 @@ const client = new Client({
 client.once(Events.ClientReady, (c) => {
   console.log(`⚡️ Discord bot ready! Logged in as ${c.user.tag}`);
 });
+
+const discordInterface = new DiscordInterface();
 
 client.on(Events.MessageCreate, async (message: Message) => {
   // Ignore bots
@@ -138,9 +142,12 @@ client.on(Events.MessageCreate, async (message: Message) => {
 
     // 2. Typing Indicator
     await (message.channel as any).sendTyping();
+    const onTyping = async () => {
+        try { await (message.channel as any).sendTyping(); } catch {}
+    };
 
     // 3. Initial "Thinking..." message
-    await message.reply("Thinking...");
+    await discordInterface.sendResponse("Thinking...", 'log', { message }, onTyping);
 
     // 4. Initialize Resources
     if (!isInitialized) {
@@ -158,11 +165,7 @@ client.on(Events.MessageCreate, async (message: Message) => {
     const cwd = process.cwd();
     const provider = createLLM();
 
-    // We treat message.channel as the output channel.
-    // In discord.js, message.channel can be TextChannel, DMChannel, ThreadChannel, etc.
-    // Casting to any for the constructor to avoid complex type guarding for now,
-    // as send() exists on all TextBasedChannels.
-    const engine = new DiscordEngine(provider, requestRegistry, mcp, message.channel as any);
+    const engine = new DiscordEngine(provider, requestRegistry, mcp, message.channel as any, null, discordInterface);
     const skill = await getActiveSkill(cwd);
     const ctx = new Context(cwd, skill);
 
@@ -180,12 +183,12 @@ client.on(Events.MessageCreate, async (message: Message) => {
       } catch { }
 
       if (content) {
-        await message.reply(content);
+        await discordInterface.sendResponse(content, 'response', { message }, onTyping);
       } else {
-        await message.reply("Task completed (check logs/artifacts).");
+        await discordInterface.sendResponse("Task completed (check logs/artifacts).", 'response', { message }, onTyping);
       }
     } else {
-      await message.reply("I couldn't generate a response.");
+      await discordInterface.sendResponse("I couldn't generate a response.", 'response', { message }, onTyping);
     }
 
   } catch (error: any) {

@@ -33,5 +33,40 @@
     "step": 1,
     "status": "failure",
     "details": "Cannot proceed"
+  },
+  {
+    "timestamp": "2026-02-18T18:58:43.380Z",
+    "sop": "Test SOP",
+    "step": 1,
+    "status": "success",
+    "details": "Done"
+  },
+  {
+    "timestamp": "2026-02-18T18:58:43.384Z",
+    "sop": "Fail SOP",
+    "step": 1,
+    "status": "success",
+    "details": "Finally done"
+  },
+  {
+    "timestamp": "2026-02-18T18:58:55.848Z",
+    "sop": "Test SOP",
+    "step": 1,
+    "status": "success",
+    "details": "Task completed"
+  },
+  {
+    "timestamp": "2026-02-18T18:58:55.860Z",
+    "sop": "Error Test",
+    "step": 1,
+    "status": "success",
+    "details": "Recovered"
+  },
+  {
+    "timestamp": "2026-02-18T18:58:55.863Z",
+    "sop": "Fail Test",
+    "step": 1,
+    "status": "failure",
+    "details": "Cannot proceed"
   }
 ]
