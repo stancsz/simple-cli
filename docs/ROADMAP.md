@@ -67,15 +67,16 @@ To transition from a "Wrapper" to a true "Universal AI Integration Platform," th
     - **Ghost Mode:** (✅ Implemented) True 24/7 background operation via `daemon`.
     - **Persona Engine:** (✅ Implemented) Configurable voice, tone, and response style to mimic human co-workers.
     - **Containerized Deployment:** (✅ Implemented) `Dockerfile` and `docker-compose.yml` for production.
-    - **Multi-Platform Interfaces:** (🔄 In Progress) Native integrations for Slack (Done), MS Teams (Planned), and Discord (Planned).
+    - **Multi-Platform Interfaces:** (✅ Done) Native integrations for Slack (Done), MS Teams (Done), and Discord (Done).
 
-### Phase 6: Enterprise Cognition (The Brain) (🔄 In Progress)
+### Phase 6: Enterprise Cognition (The Brain) (✅ Active)
 **Goal:** Deep, persistent memory and learning across all projects.
 - **Concept:** A central "Brain" that learns from every interaction, successful merge, and failed build.
 - **Mechanism:** Vector database integration for long-term memory, cross-project pattern recognition, and automated "Employee Training".
 - **Status:**
     - **Brain MCP Server:** (✅ Implemented)
     - **Memory Integration:** (✅ Implemented) ContextManager now automatically queries/stores relevant past experiences via the Brain.
+    - **Agent Integration:** (✅ Implemented) Brain integrated with autonomous agents (Job Delegator & Reviewer) for experiential learning.
 
 ### Phase 7: The Hive Mind (Multi-Agent Swarms) (Planned)
 **Goal:** Advanced multi-agent collaboration and hierarchical swarms.
@@ -110,9 +111,14 @@ To achieve a true "Universal AI Integration Platform" capable of consulting for 
 *   **Concept:** Agents shouldn't just run in a folder; they should understand the "Client Profile."
 *   **Mechanism:** Multi-tenant RAG (Vector DB) per company. When you run `simple --company client-a`, the agent loads specific brand voices, internal docs, and past decisions.
 
-### 4. SOP-as-Code (The Operating Manual)
+### 4. SOP-as-Code (The Operating Manual) (✅ Implemented)
 *   **Concept:** Automating professional workflows.
-*   **Mechanism:** Workflow agents that take an SOP (Standard Operating Procedure) and execute it autonomously—from scraping market data to writing a PR review script.
+*   **Mechanism:** `sop_engine` MCP server parses Markdown SOPs and executes them step-by-step using available tools.
+*   **Features:**
+    - **Markdown Parsing:** Writes SOPs in standard Markdown.
+    - **Autonomous Execution:** Uses LLM to reason and select tools for each step.
+    - **Resilience:** Automatic retries and error handling.
+    - **Tool Integration:** Discovers and uses any available MCP tool (Git, Filesystem, Brain).
 
 ### 5. "Ghost Mode" Persistence (The 24/7 Employee) (✅ Active)
 *   **Concept:** Employees that work while you sleep.

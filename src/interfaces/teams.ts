@@ -1,13 +1,14 @@
 import "dotenv/config";
-import express from "express";
 import {
-  ActivityHandler,
   CloudAdapter,
   ConfigurationServiceClientCredentialFactory,
   createBotFrameworkAuthenticationFromConfiguration,
+  ActivityHandler,
   TurnContext,
+  MessageFactory,
   ActivityTypes
 } from "botbuilder";
+import express from "express";
 import { Engine, Context, Registry } from "../engine/orchestrator.js";
 import { createLLM } from "../llm.js";
 import { MCP } from "../mcp.js";
@@ -15,22 +16,24 @@ import { getActiveSkill } from "../skills.js";
 import { WorkflowEngine } from "../workflows/workflow_engine.js";
 import { createExecuteSOPTool } from "../workflows/execute_sop_tool.js";
 import { fileURLToPath } from "url";
+import { join } from "path";
+import { existsSync, readFileSync } from "fs";
 import { SopEngineServer } from "../mcp_servers/sop_engine/index.js";
 
 // Custom Engine to capture output and stream to Teams
 class TeamsEngine extends Engine {
-  private context: TurnContext;
+  private turnContext: TurnContext;
 
   constructor(
     llm: any,
     registry: Registry,
     mcp: MCP,
-    context: TurnContext
+    turnContext: TurnContext
   ) {
     super(llm, registry, mcp);
-    this.context = context;
+    this.turnContext = turnContext;
 
-    // Override spinner
+    // Override spinner to stream updates to Teams
     this.s = {
       start: (msg: string) => this.log('info', `[Start] ${msg}`),
       stop: (msg: string) => this.log('success', `[Done] ${msg}`),
@@ -38,7 +41,9 @@ class TeamsEngine extends Engine {
     } as any;
   }
 
+  // Override log to send updates to Teams conversation
   protected override log(type: 'info' | 'success' | 'warn' | 'error', message: string) {
+    // Filter out verbose logs
     if (message.includes("Tokens:") || message.includes("prompt +")) return;
 
     let icon = "";
@@ -47,7 +52,11 @@ class TeamsEngine extends Engine {
     else if (type === 'error') icon = "❌ ";
     else if (type === 'info') icon = "ℹ️ ";
 
-    this.context.sendActivity(`${icon} ${message}`).catch(console.error);
+    this.turnContext.sendActivity(`${icon} ${message}`).catch((err) => {
+      console.error("Failed to log to Teams:", err);
+    });
+
+    // Also log to console
     super.log(type, message);
   }
 
@@ -57,97 +66,195 @@ class TeamsEngine extends Engine {
   }
 }
 
-// Bot implementation
-class SimpleBot extends ActivityHandler {
-  private baseRegistry: Registry;
-  private mcp: MCP;
+// Global instances
+const baseRegistry = new Registry();
+const mcp = new MCP();
+let isInitialized = false;
 
-  constructor(registry: Registry, mcp: MCP) {
+export function resetInitialization() {
+  isInitialized = false;
+}
+
+async function initializeResources() {
+  if (isInitialized) return;
+
+  const workflowEngine = new WorkflowEngine(baseRegistry);
+  const sopTool = createExecuteSOPTool(workflowEngine);
+  baseRegistry.tools.set(sopTool.name, sopTool as any);
+
+  await mcp.init();
+
+  // Ensure essential servers are started
+  const coreServers = ["filesystem", "git", "context_server", "company_context", "aider-server", "claude-server", "openclaw"];
+  for (const s of coreServers) {
+    try {
+      if (!mcp.isServerRunning(s)) await mcp.startServer(s);
+    } catch (e) {
+      console.warn(`Failed to start core server ${s}:`, e);
+    }
+  }
+
+  (await mcp.getTools()).forEach((t) => baseRegistry.tools.set(t.name, t as any));
+
+  isInitialized = true;
+}
+
+// Load Configuration
+function loadConfiguration() {
+  let config = {
+    MicrosoftAppId: process.env.MicrosoftAppId || process.env.MICROSOFT_APP_ID || "",
+    MicrosoftAppPassword: process.env.MicrosoftAppPassword || process.env.MICROSOFT_APP_PASSWORD || "",
+    MicrosoftAppType: process.env.MicrosoftAppType || "MultiTenant",
+    MicrosoftAppTenantId: process.env.MicrosoftAppTenantId || process.env.MICROSOFT_APP_TENANT_ID || "",
+    port: process.env.PORT || 3978
+  };
+
+  const mcpConfigPath = join(process.cwd(), "mcp.json");
+  if (existsSync(mcpConfigPath)) {
+    try {
+      const mcpConfig = JSON.parse(readFileSync(mcpConfigPath, "utf-8"));
+      if (mcpConfig.teams) {
+        config = { ...config, ...mcpConfig.teams };
+      }
+    } catch (e) {
+      console.error("Error loading mcp.json:", e);
+    }
+  }
+  return config;
+}
+
+const config = loadConfiguration();
+
+const credentialsFactory = new ConfigurationServiceClientCredentialFactory({
+  MicrosoftAppId: config.MicrosoftAppId,
+  MicrosoftAppPassword: config.MicrosoftAppPassword,
+  MicrosoftAppType: config.MicrosoftAppType,
+  MicrosoftAppTenantId: config.MicrosoftAppTenantId
+});
+
+const botFrameworkAuthentication = createBotFrameworkAuthenticationFromConfiguration(
+  null,
+  credentialsFactory
+);
+
+const adapter = new CloudAdapter(botFrameworkAuthentication);
+
+adapter.onTurnError = async (context, error) => {
+  console.error(`\n [onTurnError] unhandled error: ${error}`);
+  await context.sendActivity('The bot encountered an error or bug.');
+  await context.sendActivity('To continue to run this bot, please fix the bot source code.');
+};
+
+class TeamsBot extends ActivityHandler {
+  constructor() {
     super();
-    this.baseRegistry = registry;
-    this.mcp = mcp;
 
     this.onMessage(async (context, next) => {
-      const text = context.activity.text.trim();
+      const activity = context.activity;
+
+      // 1. Add reaction (👍)
+      if (activity.id) {
+        try {
+          await context.sendActivities([
+            {
+              type: ActivityTypes.MessageReaction,
+              reactionsAdded: [{ type: 'like' }],
+              replyToId: activity.id
+            }
+          ]);
+        } catch (e) {
+          // Ignore if reaction fails
+        }
+      }
+
+      // 2. Handle attachments (Basic acknowledgement)
+      if (activity.attachments && activity.attachments.length > 0) {
+        const fileNames = activity.attachments.map(a => a.name || 'unnamed_file').join(', ');
+        await context.sendActivity(`Received attachments: ${fileNames}. (File processing is limited in this version)`);
+      }
+
+      const text = TurnContext.removeRecipientMention(activity);
+      const cleanText = text.trim();
+
+      // 3. Send typing indicator
       await context.sendActivity({ type: ActivityTypes.Typing });
+
+      // 4. Acknowledge
       await context.sendActivity("Thinking...");
 
-      try {
-        const cwd = process.cwd();
-        const provider = createLLM();
-        const engine = new TeamsEngine(provider, this.baseRegistry, this.mcp, context);
-        const skill = await getActiveSkill(cwd);
-        const ctx = new Context(cwd, skill);
+      // 3. Initialize and Run
+      if (!isInitialized) {
+        await initializeResources();
+      }
 
-        await engine.run(ctx, text, { interactive: false });
+      // Create request-specific registry
+      const requestRegistry = new Registry();
+      for (const [name, tool] of baseRegistry.tools) {
+        requestRegistry.tools.set(name, tool);
+      }
+
+      const cwd = process.cwd();
+      const provider = createLLM();
+      const engine = new TeamsEngine(provider, requestRegistry, mcp, context);
+      const skill = await getActiveSkill(cwd);
+      const ctx = new Context(cwd, skill);
+
+      try {
+        await engine.run(ctx, cleanText, { interactive: false });
 
         const lastMessage = ctx.history.filter(m => m.role === "assistant").pop();
         if (lastMessage) {
-            let content = lastMessage.content;
-            try {
-                const parsed = JSON.parse(content);
-                content = parsed.message || parsed.thought || content;
-            } catch {}
+          let content = lastMessage.content;
+          try {
+            const parsed = JSON.parse(content);
+            if (parsed.message) content = parsed.message;
+            else if (parsed.thought) content = parsed.thought;
+          } catch { }
+
+          if (content) {
             await context.sendActivity(content);
+          } else {
+            await context.sendActivity("Task completed (check logs/artifacts).");
+          }
         } else {
-            await context.sendActivity("Task completed.");
+          await context.sendActivity("I couldn't generate a response.");
         }
       } catch (error: any) {
-        console.error("Error processing Teams message:", error);
+        console.error("Error running engine:", error);
         await context.sendActivity(`Error: ${error.message}`);
+      }
+
+      await next();
+    });
+
+    this.onMembersAdded(async (context, next) => {
+      const membersAdded = context.activity.membersAdded;
+      const welcomeText = 'Hello and welcome! I am your AI coding assistant.';
+      for (const member of membersAdded || []) {
+        if (member.id !== context.activity.recipient.id) {
+          await context.sendActivity(MessageFactory.text(welcomeText, welcomeText));
+        }
       }
       await next();
     });
   }
 }
 
-// Initialization
-const baseRegistry = new Registry();
-const mcp = new MCP();
-let isInitialized = false;
+const bot = new TeamsBot();
+const app = express();
+app.use(express.json());
 
-async function initializeResources() {
-  if (isInitialized) return;
-  const workflowEngine = new WorkflowEngine(baseRegistry);
-  const sopTool = createExecuteSOPTool(workflowEngine);
-  baseRegistry.tools.set(sopTool.name, sopTool as any);
-  await mcp.init();
-  // Ensure essential servers are started
-  const coreServers = ["filesystem", "git", "context_server", "company_context", "aider-server", "claude-server", "openclaw"];
-  for (const s of coreServers) {
-    try {
-        if (!mcp.isServerRunning(s)) await mcp.startServer(s);
-    } catch {}
-  }
-  (await mcp.getTools()).forEach((t) => baseRegistry.tools.set(t.name, t as any));
-  isInitialized = true;
-}
+app.post('/api/messages', async (req, res) => {
+  await adapter.process(req, res, (context) => bot.run(context));
+});
+
+export { adapter, bot, app };
 
 if (process.argv[1] === fileURLToPath(import.meta.url)) {
-    (async () => {
-        await initializeResources();
-
-        const credentialsFactory = new ConfigurationServiceClientCredentialFactory({
-            MicrosoftAppId: process.env.MicrosoftAppId || "",
-            MicrosoftAppPassword: process.env.MicrosoftAppPassword || "",
-            MicrosoftAppType: process.env.MicrosoftAppType || "MultiTenant",
-            MicrosoftAppTenantId: process.env.MicrosoftAppTenantId || ""
-        });
-
-        const botFrameworkAuthentication = createBotFrameworkAuthenticationFromConfiguration(null, credentialsFactory);
-        const adapter = new CloudAdapter(botFrameworkAuthentication);
-        const bot = new SimpleBot(baseRegistry, mcp);
-
-        const app = express();
-        app.use(express.json());
-
-        app.post("/api/messages", async (req, res) => {
-            await adapter.process(req, res, (context) => bot.run(context));
-        });
-
-        const port = process.env.PORT || 3978;
-        app.listen(port, () => {
-             console.log(`\nTeams Bot running on port ${port}`);
-        });
-    })();
+  const port = config.port;
+  app.listen(port, () => {
+    console.log(`\nTeams Adapter listening at http://localhost:${port}`);
+    console.log('\nGet Bot Framework Emulator: https://aka.ms/botframework-emulator');
+    console.log('\nTo test your bot in Teams, deploy to Azure or use ngrok.');
+  });
 }

@@ -45,6 +45,25 @@ async function main() {
       }
     }
 
+    if (arg === "--interface") {
+      if (i + 1 < args.length) {
+        const interfaceName = args[i + 1];
+        i++; // Consume next arg
+
+        if (interfaceName === "discord") {
+          try {
+            const { start } = await import("./interfaces/discord.js");
+            await start();
+            return; // Exit main, interface takes over
+          } catch (e: any) {
+            console.error("Failed to start Discord interface:", e);
+            process.exit(1);
+          }
+        }
+        continue;
+      }
+    }
+
     if (!arg.startsWith("-")) {
       try {
         if (statSync(arg).isDirectory()) {
