@@ -17,7 +17,16 @@ export class SOPExecutor {
     this.logDir = join(process.cwd(), '.agent', 'brain');
   }
 
-  private async logStep(sopName: string, stepNumber: number, status: 'success' | 'failure', details: string) {
+  private async logStep(executionLogs: any[], stepNumber: number, status: 'success' | 'failure', details: string) {
+    executionLogs.push({
+        step: `Step ${stepNumber}`,
+        status,
+        output: details,
+        timestamp: new Date().toISOString()
+    });
+  }
+
+  private async flushLogs(sopName: string, executionLogs: any[], success: boolean) {
     if (!existsSync(this.logDir)) {
       await mkdir(this.logDir, { recursive: true });
     }
@@ -33,11 +42,12 @@ export class SOPExecutor {
     }
 
     logs.push({
-      timestamp: new Date().toISOString(),
       sop: sopName,
-      step: stepNumber,
-      status,
-      details
+      timestamp: new Date().toISOString(),
+      result: {
+        success,
+        logs: executionLogs
+      }
     });
 
     // Keep last 1000 logs
@@ -47,6 +57,8 @@ export class SOPExecutor {
   }
 
   async execute(sop: SOP, input: string): Promise<string> {
+    const executionLogs: { step: string; status: string; output: string; timestamp: string }[] = [];
+
     // Initialize MCP to discover servers
     await this.mcp.init();
 
@@ -148,7 +160,7 @@ Do not ask the user for input unless absolutely necessary.
               const summary = args.summary || message || "Step completed.";
               context.push(`Step ${step.number} completed: ${summary}`);
               console.error(`[SOP] Step ${step.number} Complete.`);
-              await this.logStep(sop.title, step.number, 'success', summary);
+              await this.logStep(executionLogs, step.number, 'success', summary);
               stepComplete = true;
               break;
             }
@@ -192,7 +204,8 @@ Do not ask the user for input unless absolutely necessary.
 
         } catch (e: any) {
           if (e.isFatal) {
-            await this.logStep(sop.title, step.number, 'failure', e.message);
+            await this.logStep(executionLogs, step.number, 'failure', e.message);
+            await this.flushLogs(sop.title, executionLogs, false);
             throw e;
           }
           console.error(`[SOP] Error in step execution: ${e.message}`);
@@ -209,12 +222,14 @@ Do not ask the user for input unless absolutely necessary.
 
       if (!stepComplete) {
         const msg = `Failed to complete Step ${step.number} after ${this.maxRetries} retries.`;
-        await this.logStep(sop.title, step.number, 'failure', msg);
+        await this.logStep(executionLogs, step.number, 'failure', msg);
+        await this.flushLogs(sop.title, executionLogs, false);
         throw new Error(msg);
       }
     }
 
     const finalSummary = `SOP '${sop.title}' executed successfully.\n\nSummary:\n${context.join('\n')}`;
+    await this.flushLogs(sop.title, executionLogs, true);
 
     // Log final experience to Brain
     try {
