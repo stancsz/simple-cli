@@ -29,7 +29,7 @@ export class HRServer {
     this.memory = new EpisodicMemory();
     this.storage = new ProposalStorage();
     this.llm = createLLM();
-    this.logsPath = join(process.cwd(), ".agent", "sop_logs.json");
+    this.logsPath = join(process.cwd(), ".agent", "brain", "sop_logs.json");
 
     this.setupTools();
   }

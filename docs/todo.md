@@ -74,8 +74,11 @@
     - [x] Deleted deprecated files.
 
 ### 4. Tests
-- [ ] Update tests to mock MCP servers instead of local file paths.
-- [ ] Verify Ghost Mode triggers (Scheduler/JobDelegator) in CI/CD or local simulation.
+- [x] **Integration Testing**: Created `tests/integration/four_pillars.test.ts`.
+    - [x] Validated Company Context loading and RAG.
+    - [x] Validated SOP Engine execution and Brain logging.
+    - [x] Validated HR Loop (Ghost Mode) analysis and proposal generation.
+- [x] **Mocking**: Implemented robust MCP and LLM mocking strategy for end-to-end flows.
 
 ### 5. Phase 4.5: SOP Engine
 - [x] **Core Logic**:
