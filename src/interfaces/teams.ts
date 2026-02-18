@@ -18,6 +18,7 @@ import { createExecuteSOPTool } from "../workflows/execute_sop_tool.js";
 import { fileURLToPath } from "url";
 import { join } from "path";
 import { existsSync, readFileSync } from "fs";
+import { SOPEngineServer } from "../mcp_servers/sop_engine/index.js";
 
 // Custom Engine to capture output and stream to Teams
 class TeamsEngine extends Engine {
@@ -82,6 +83,17 @@ async function initializeResources() {
   baseRegistry.tools.set(sopTool.name, sopTool as any);
 
   await mcp.init();
+
+  // Ensure essential servers are started
+  const coreServers = ["filesystem", "git", "context_server", "company_context", "aider-server", "claude-server", "openclaw"];
+  for (const s of coreServers) {
+    try {
+      if (!mcp.isServerRunning(s)) await mcp.startServer(s);
+    } catch (e) {
+      console.warn(`Failed to start core server ${s}:`, e);
+    }
+  }
+
   (await mcp.getTools()).forEach((t) => baseRegistry.tools.set(t.name, t as any));
 
   isInitialized = true;
@@ -157,8 +169,8 @@ class TeamsBot extends ActivityHandler {
 
       // 2. Handle attachments (Basic acknowledgement)
       if (activity.attachments && activity.attachments.length > 0) {
-         const fileNames = activity.attachments.map(a => a.name || 'unnamed_file').join(', ');
-         await context.sendActivity(`Received attachments: ${fileNames}. (File processing is limited in this version)`);
+        const fileNames = activity.attachments.map(a => a.name || 'unnamed_file').join(', ');
+        await context.sendActivity(`Received attachments: ${fileNames}. (File processing is limited in this version)`);
       }
 
       const text = TurnContext.removeRecipientMention(activity);
@@ -194,15 +206,15 @@ class TeamsBot extends ActivityHandler {
         if (lastMessage) {
           let content = lastMessage.content;
           try {
-             const parsed = JSON.parse(content);
-             if (parsed.message) content = parsed.message;
-             else if (parsed.thought) content = parsed.thought;
-          } catch {}
+            const parsed = JSON.parse(content);
+            if (parsed.message) content = parsed.message;
+            else if (parsed.thought) content = parsed.thought;
+          } catch { }
 
           if (content) {
             await context.sendActivity(content);
           } else {
-             await context.sendActivity("Task completed (check logs/artifacts).");
+            await context.sendActivity("Task completed (check logs/artifacts).");
           }
         } else {
           await context.sendActivity("I couldn't generate a response.");
