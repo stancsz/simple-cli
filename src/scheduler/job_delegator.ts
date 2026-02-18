@@ -2,17 +2,54 @@ import { join } from 'path';
 import { writeFile, mkdir } from 'fs/promises';
 import { TaskDefinition } from '../daemon/task_definitions.js';
 import { handleTaskTrigger } from './trigger.js';
+import { MCP } from '../mcp.js';
 
 export class JobDelegator {
   private logsDir: string;
+  private mcp: MCP;
 
   constructor(agentDir: string) {
     this.logsDir = join(agentDir, 'ghost_logs');
+    this.mcp = new MCP();
   }
 
   async delegateTask(task: TaskDefinition): Promise<void> {
     const startTime = Date.now();
     await this.logTaskStart(task, startTime);
+
+    // Init MCP and Brain
+    let brainAvailable = false;
+    try {
+      await this.mcp.init();
+      const servers = this.mcp.listServers();
+      if (servers.find((s) => s.name === "brain" && s.status === "stopped")) {
+        await this.mcp.startServer("brain");
+      }
+      brainAvailable = true;
+    } catch (e) {
+      console.warn("[JobDelegator] Failed to connect to Brain MCP:", e);
+    }
+
+    // Recall patterns
+    if (brainAvailable) {
+      try {
+        const client = this.mcp.getClient("brain");
+        if (client) {
+          const result: any = await client.callTool({
+            name: "recall_delegation_patterns",
+            arguments: {
+              task_type: task.name,
+              company: task.company
+            }
+          });
+          if (result && result.content && result.content[0]) {
+            console.log(`[JobDelegator] Brain Recall for ${task.name}:\n${result.content[0].text}`);
+          }
+        }
+      } catch (e) {
+        console.warn("[JobDelegator] Failed to recall patterns:", e);
+      }
+    }
 
     let status = 'success';
     let errorMessage = '';
@@ -28,6 +65,30 @@ export class JobDelegator {
       errorMessage = e.message;
     } finally {
       await this.logTaskEnd(task, startTime, status, errorMessage);
+
+      // Log Experience
+      if (brainAvailable) {
+        try {
+          const client = this.mcp.getClient("brain");
+          if (client) {
+            await client.callTool({
+              name: "log_experience",
+              arguments: {
+                taskId: task.id,
+                task_type: task.name, // Use name as type for now
+                agent_used: "autonomous-executor", // Or extract from task def if available
+                outcome: status,
+                summary: errorMessage || "Task completed successfully",
+                company: task.company,
+                artifacts: JSON.stringify([]) // We don't track artifacts here easily
+              }
+            });
+            console.log("[JobDelegator] Logged experience to Brain.");
+          }
+        } catch (e) {
+          console.warn("[JobDelegator] Failed to log experience:", e);
+        }
+      }
     }
   }
 

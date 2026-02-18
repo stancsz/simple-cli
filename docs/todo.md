@@ -89,6 +89,9 @@
     - [x] Update `ContextManager` to query "The Brain" on initialization.
     - [x] Create `src/mcp_servers/brain`: Expose memory via MCP for sub-agents.
     - [x] **Validation**: Verified `ContextManager` correctly integrates with Brain MCP. `loadContext` recalls relevant past experiences, and `saveContext` persists outcomes to LanceDB. Artifacts are correctly stored and retrieved. Integration tests passed.
+    - [x] **Agent Integration**:
+        - [x] Integrated Brain with Job Delegator (log experience, recall patterns).
+        - [x] Created Reviewer Agent with Brain integration.
 - [x] **Company Context (The Briefcase)**:
     - [x] Create `src/mcp_servers/company_context.ts`: Manage multi-tenant RAG via LanceDB.
     - [x] Update `cli.ts` and `engine.ts` to support `--company` flag and context injection.
