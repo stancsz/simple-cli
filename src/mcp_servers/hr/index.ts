@@ -89,15 +89,15 @@ export class HRServer {
     }
 
     if (logs.length === 0) {
-      return { content: [{ type: "text", text: "No logs found to analyze." }] };
+      return { content: [{ type: "text" as const, text: "No logs found to analyze." }] };
     }
 
     // Take recent logs
     const recentLogs = logs.slice(-limit);
     const logSummary = recentLogs.map(l => {
-        const status = l.result.success ? "SUCCESS" : "FAILURE";
-        const steps = l.result.logs.map(s => `  - [${s.status}] ${s.step}: ${s.output}`).join("\n");
-        return `[${l.timestamp}] SOP: ${l.sop} -> ${status}\n${steps}`;
+      const status = l.result.success ? "SUCCESS" : "FAILURE";
+      const steps = l.result.logs.map(s => `  - [${s.status}] ${s.step}: ${s.output}`).join("\n");
+      return `[${l.timestamp}] SOP: ${l.sop} -> ${status}\n${steps}`;
     }).join("\n\n");
 
     // 2. Query Memory for context (e.g. recent failures)
@@ -106,10 +106,10 @@ export class HRServer {
     let pastExperiences = "No specific past experiences queried.";
 
     if (hasFailures) {
-            const results = await this.memory.recall("failure error bug", 5);
-            if (results.length > 0) {
-                pastExperiences = results.map(r => `[Task: ${r.taskId}] ${r.userPrompt} -> ${r.agentResponse}`).join("\n---\n");
-            }
+      const results = await this.memory.recall("failure error bug", 5);
+      if (results.length > 0) {
+        pastExperiences = results.map(r => `[Task: ${r.taskId}] ${r.userPrompt} -> ${r.agentResponse}`).join("\n---\n");
+      }
     }
 
     // 3. LLM Analysis
@@ -119,55 +119,56 @@ export class HRServer {
     // Parse JSON from response
     let analysisData: any;
     try {
-        // Attempt to parse JSON from the response text (handling potential markdown blocks)
-        const jsonMatch = response.message.match(/\{[\s\S]*\}/);
-        if (jsonMatch) {
-            analysisData = JSON.parse(jsonMatch[0]);
-        } else {
-            throw new Error("No JSON found in response");
-        }
+      // Attempt to parse JSON from the response text (handling potential markdown blocks)
+      const rawMsg = response.message || response.raw;
+      const jsonMatch = rawMsg.match(/\{[\s\S]*\}/);
+      if (jsonMatch) {
+        analysisData = JSON.parse(jsonMatch[0]);
+      } else {
+        throw new Error("No JSON found in response");
+      }
     } catch (e) {
-        return {
-            content: [{ type: "text", text: `Failed to parse analysis from LLM.\nResponse: ${response.message}` }],
-            isError: true
-        };
+      return {
+        content: [{ type: "text" as const, text: `Failed to parse analysis from LLM.\nResponse: ${response.message}` }],
+        isError: true
+      };
     }
 
     if (analysisData.improvement_needed) {
-        // CHECK IF CORE UPDATE
-        const isCoreUpdate = analysisData.affected_files?.some((f: string) => f.startsWith("src/"));
+      // CHECK IF CORE UPDATE
+      const isCoreUpdate = analysisData.affected_files?.some((f: string) => f.startsWith("src/"));
 
-        if (isCoreUpdate) {
-            return {
-                content: [{
-                    type: "text",
-                    text: `Analysis Complete. CORE UPDATE REQUIRED.\nTitle: ${analysisData.title}\nAnalysis: ${analysisData.analysis}\n\nIMPORTANT: Use 'propose_core_update' tool for src/ files instead of standard proposals.\n\nProposed Changes:\n${JSON.stringify(analysisData.affected_files, null, 2)}\nPatch:\n${analysisData.patch}`
-                }]
-            };
-        }
-
-        // Standard Proposal for non-core files
-        const proposal: Proposal = {
-            id: randomUUID(),
-            title: analysisData.title || "Automated Improvement Proposal",
-            description: analysisData.description || analysisData.analysis,
-            affectedFiles: analysisData.affected_files || [],
-            patch: analysisData.patch || "",
-            status: 'pending',
-            createdAt: Date.now(),
-            updatedAt: Date.now()
-        };
-
-        await this.storage.init();
-        await this.storage.add(proposal);
-
+      if (isCoreUpdate) {
         return {
-            content: [{ type: "text", text: `Analysis Complete. Proposal Created: ${proposal.id}\nTitle: ${proposal.title}\nAnalysis: ${analysisData.analysis}` }]
+          content: [{
+            type: "text" as const,
+            text: `Analysis Complete. CORE UPDATE REQUIRED.\nTitle: ${analysisData.title}\nAnalysis: ${analysisData.analysis}\n\nIMPORTANT: Use 'propose_core_update' tool for src/ files instead of standard proposals.\n\nProposed Changes:\n${JSON.stringify(analysisData.affected_files, null, 2)}\nPatch:\n${analysisData.patch}`
+          }]
         };
+      }
+
+      // Standard Proposal for non-core files
+      const proposal: Proposal = {
+        id: randomUUID(),
+        title: analysisData.title || "Automated Improvement Proposal",
+        description: analysisData.description || analysisData.analysis,
+        affectedFiles: analysisData.affected_files || [],
+        patch: analysisData.patch || "",
+        status: 'pending',
+        createdAt: Date.now(),
+        updatedAt: Date.now()
+      };
+
+      await this.storage.init();
+      await this.storage.add(proposal);
+
+      return {
+        content: [{ type: "text" as const, text: `Analysis Complete. Proposal Created: ${proposal.id}\nTitle: ${proposal.title}\nAnalysis: ${analysisData.analysis}` }]
+      };
     }
 
     return {
-        content: [{ type: "text", text: `Analysis Complete. No improvements suggested.\nAnalysis: ${analysisData.analysis}` }]
+      content: [{ type: "text" as const, text: `Analysis Complete. No improvements suggested.\nAnalysis: ${analysisData.analysis}` }]
     };
   }
 
@@ -179,28 +180,28 @@ export class HRServer {
     // CHECK IF CORE UPDATE
     const isCoreUpdate = affectedFiles.some((f: string) => f.startsWith("src/"));
     if (isCoreUpdate) {
-        return {
-            content: [{ type: "text", text: `Error: Changes to 'src/' files must use 'propose_core_update' tool for safety verification.` }],
-            isError: true
-        };
+      return {
+        content: [{ type: "text" as const, text: `Error: Changes to 'src/' files must use 'propose_core_update' tool for safety verification.` }],
+        isError: true
+      };
     }
 
     await this.storage.init();
 
     const proposal: Proposal = {
-        id: randomUUID(),
-        title,
-        description,
-        affectedFiles,
-        patch,
-        status: 'pending',
-        createdAt: Date.now(),
-        updatedAt: Date.now()
+      id: randomUUID(),
+      title,
+      description,
+      affectedFiles,
+      patch,
+      status: 'pending',
+      createdAt: Date.now(),
+      updatedAt: Date.now()
     };
 
     await this.storage.add(proposal);
     return {
-        content: [{ type: "text", text: `Proposal '${title}' created with ID: ${proposal.id}` }]
+      content: [{ type: "text" as const, text: `Proposal '${title}' created with ID: ${proposal.id}` }]
     };
   }
 
@@ -209,14 +210,14 @@ export class HRServer {
     const pending = this.storage.getPending();
 
     if (pending.length === 0) {
-        return { content: [{ type: "text", text: "No pending proposals." }] };
+      return { content: [{ type: "text" as const, text: "No pending proposals." }] };
     }
 
     const text = pending.map(p =>
-        `ID: ${p.id}\nTitle: ${p.title}\nDescription: ${p.description}\nFiles: ${p.affectedFiles.join(", ")}\nStatus: ${p.status}\n---`
+      `ID: ${p.id}\nTitle: ${p.title}\nDescription: ${p.description}\nFiles: ${p.affectedFiles.join(", ")}\nStatus: ${p.status}\n---`
     ).join("\n");
 
-    return { content: [{ type: "text", text }] };
+    return { content: [{ type: "text" as const, text }] };
   }
 
   async run() {

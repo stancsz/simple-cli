@@ -74,7 +74,7 @@ def main():
     # We use a default model 'openai:gpt-4o' but this depends on keys being set.
     try:
         agent = Agent(
-            'openai:gpt-4o',
+            os.environ.get("OPENAI_MODEL_NAME", "openai:gpt-4o"),
             result_type=ResultModel,
             system_prompt="You are an expert data extractor. specificy extract the data strictly adhering to the requested schema."
         )

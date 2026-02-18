@@ -27,15 +27,28 @@ export class AutoAgentServer {
       {
         name: z.string().describe("Name of the agent."),
         description: z.string().describe("Description of what the agent should do."),
-        llm: z.string().describe("LLM to use (e.g., gpt-4)."),
+        llm: z.string().describe("LLM to use (e.g., deepseek:deepseek-reasoner)."),
         tools: z.array(z.string()).describe("List of tools to give to the agent."),
       },
       async ({ name, description, llm, tools }) => {
         const toolsStr = tools.join(",");
         const args = ["create", "--name", name, "--description", description, "--llm", llm, "--tools", toolsStr];
 
+        // Configure environment for DeepSeek if available
+        const apiKey = process.env.DEEPSEEK_API_KEY || process.env.OPENAI_API_KEY;
+        const env = {
+          ...process.env,
+          OPENAI_API_KEY: apiKey,
+          ...(process.env.DEEPSEEK_API_KEY
+            ? {
+              OPENAI_BASE_URL: "https://api.deepseek.com",
+              // We don't default the model here because it's passed as an argument, but we provide the base URL
+            }
+            : {}),
+        };
+
         try {
-          const { stdout, stderr } = await execFileAsync(this.cliPath, args);
+          const { stdout, stderr } = await execFileAsync(this.cliPath, args, { env });
           return {
             content: [{ type: "text" as const, text: stdout + (stderr ? `\nStderr: ${stderr}` : "") }],
           };
@@ -57,8 +70,19 @@ export class AutoAgentServer {
       },
       async ({ name, task }) => {
         const args = ["run", "--name", name, "--task", task];
+        // Configure environment for DeepSeek if available
+        const apiKey = process.env.DEEPSEEK_API_KEY || process.env.OPENAI_API_KEY;
+        const env = {
+          ...process.env,
+          OPENAI_API_KEY: apiKey,
+          ...(process.env.DEEPSEEK_API_KEY
+            ? {
+              OPENAI_BASE_URL: "https://api.deepseek.com",
+            }
+            : {}),
+        };
         try {
-          const { stdout, stderr } = await execFileAsync(this.cliPath, args);
+          const { stdout, stderr } = await execFileAsync(this.cliPath, args, { env });
           return {
             content: [{ type: "text" as const, text: stdout + (stderr ? `\nStderr: ${stderr}` : "") }],
           };

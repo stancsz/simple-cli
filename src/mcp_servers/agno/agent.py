@@ -31,7 +31,10 @@ def main():
         # Initialize Agent with persistent memory (storage) and knowledge (learning)
         # Note: 'learning=True' enables long-term memory about the user.
         agent = Agent(
-            model=OpenAIChat(id="gpt-4o"),
+            model=OpenAIChat(
+                id=os.environ.get("OPENAI_MODEL_NAME", "gpt-4o"),
+                base_url=os.environ.get("OPENAI_BASE_URL")
+            ),
             storage=SqliteDb(db_file=db_path, table_name="agent_sessions"),
             db=SqliteDb(db_file=db_path, table_name="agent_knowledge"), # For learning/knowledge
             session_id=session_id,
