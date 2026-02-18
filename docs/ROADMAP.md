@@ -87,8 +87,9 @@ To transition from a "Wrapper" to a true "Universal AI Integration Platform," th
 **Goal:** The agent can safely upgrade its own source code to improve efficiency.
 - **Concept:** The system identifies bottlenecks (e.g., slow tools, repetitive failures) and proposes PRs to its own repo.
 - **Mechanism:** "HR Loop" (implemented) + "Core Update" protocols (Dual-verification required).
-    - **HR MCP Server**: Analyzes logs and suggests improvements.
-    - **Safety Protocol**: Proposals require human approval before application.
+    - **HR MCP Server**: Analyzes logs and suggests improvements (`analyze_logs`, `propose_change`).
+    - **Memory Integration**: Uses the Brain MCP to recall past failures and delegation patterns.
+    - **Safety Protocol**: Proposals are stored as 'pending' and require human approval before application.
 
 ---
 
@@ -126,9 +127,12 @@ To achieve a true "Universal AI Integration Platform" capable of consulting for 
 *   **Concept:** Employees that work while you sleep.
 *   **Mechanism:** Background agents triggered by CRON (Job Delegator, Reviewer). They perform "Morning Standups" by summarizing their background work (GitHub Issue triage, security scans) before the human wakes up.
 
-### 6. Recursive Self-Optimization (The "HR Loop")
+### 6. Recursive Self-Optimization (The "HR Loop") (✅ Active)
 *   **Concept:** The agency gets smarter the more it works.
-*   **Mechanism:** Cross-Agent Reflection. A "Manager" agent reviews the logs of "Worker" agents and updates their `AGENT.md` (soul) to fix recurring mistakes or adopt better coding patterns.
+*   **Mechanism:** Cross-Agent Reflection via HR MCP.
+    - **Log Analysis**: Scans execution logs (`sop_logs.json`) and past experiences.
+    - **Proposals**: Generates actionable configuration or code updates (`propose_change`).
+    - **Human-in-the-Loop**: Dual-verification required for proposal application.
 
 ---
 

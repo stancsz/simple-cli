@@ -101,6 +101,7 @@
 - [ ] **Swarm Orchestration**: Implement dynamic agent spawning via `opencowork`.
 - [ ] **Agent Negotiation**: Implement protocol for agents to "bid" on tasks.
 
-### 8. Phase 8: Recursive Evolution (Planned)
-- [ ] **Self-Repair**: Implement `HR Loop` to fix `src/` files based on error logs.
+### 8. Phase 8: Recursive Evolution (Active)
+- [x] **Self-Repair**: Implement `HR Loop` to fix `src/` files based on error logs (`src/mcp_servers/hr/`).
+- [ ] **Automated Review**: Integrate HR MCP with Scheduler for weekly automated reviews.
 - [ ] **Core Update**: Implement secure protocol for updating `engine.ts`.
