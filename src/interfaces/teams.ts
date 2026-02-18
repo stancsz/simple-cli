@@ -18,7 +18,7 @@ import { createExecuteSOPTool } from "../workflows/execute_sop_tool.js";
 import { fileURLToPath } from "url";
 import { join } from "path";
 import { existsSync, readFileSync } from "fs";
-import { SopEngineServer } from "../mcp_servers/sop_engine/index.js";
+import { SOPEngineServer } from "../mcp_servers/sop_engine/index.js";
 
 // Custom Engine to capture output and stream to Teams
 class TeamsEngine extends Engine {

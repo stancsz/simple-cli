@@ -10,15 +10,15 @@ server.tool("git_commit", "Git commit", { message: z.string() }, async ({ messag
     try {
         await git.add(".");
         const res = await git.commit(message);
-        return { content: [{ type: "text", text: `Committed ${res.commit}: ${res.summary.total} files changed.` }] };
-    } catch(e: any) { return { content: [{ type: "text", text: `Error: ${e.message}` }], isError: true }; }
+        return { content: [{ type: "text", text: `Committed ${res.commit}: ${res.summary.changes} files changed.` }] };
+    } catch (e: any) { return { content: [{ type: "text", text: `Error: ${e.message}` }], isError: true }; }
 });
 
 server.tool("git_log", "Git log", { max: z.number().optional() }, async ({ max = 10 }) => {
     try {
         const log = await git.log({ maxCount: max });
         return { content: [{ type: "text", text: JSON.stringify(log.all, null, 2) }] };
-    } catch(e: any) { return { content: [{ type: "text", text: `Error: ${e.message}` }], isError: true }; }
+    } catch (e: any) { return { content: [{ type: "text", text: `Error: ${e.message}` }], isError: true }; }
 });
 
 async function main() {

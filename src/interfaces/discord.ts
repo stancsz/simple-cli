@@ -30,7 +30,7 @@ class DiscordEngine extends Engine {
         this.log('info', `[Start] ${msg}`);
         // Trigger typing for both LLM generation ("Typing...") and Tool execution
         if (msg === "Typing..." || msg.startsWith("Executing")) {
-            this.channel.sendTyping().catch(console.error);
+          this.channel.sendTyping().catch(console.error);
         }
       },
       stop: (msg: string) => this.log('success', `[Done] ${msg}`),
@@ -137,7 +137,7 @@ client.on(Events.MessageCreate, async (message: Message) => {
     await message.react('👍');
 
     // 2. Typing Indicator
-    await message.channel.sendTyping();
+    await (message.channel as any).sendTyping();
 
     // 3. Initial "Thinking..." message
     await message.reply("Thinking...");
