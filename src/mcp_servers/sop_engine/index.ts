@@ -35,6 +35,9 @@ export class SOPEngineServer {
       {},
       async () => {
         try {
+          if (!existsSync(this.sopsDir)) {
+             return { content: [{ type: "text", text: "No SOPs found (directory missing)." }] };
+          }
           const files = await readdir(this.sopsDir);
           const sops = files.filter(f => f.endsWith(".md")).map(f => f.replace(".md", ""));
           return {
@@ -45,6 +48,51 @@ export class SOPEngineServer {
             content: [{ type: "text", text: `Error listing SOPs: ${e.message}` }],
             isError: true
           };
+        }
+      }
+    );
+
+    this.server.tool(
+      "validate_sop",
+      "Validate a Standard Operating Procedure (SOP) file.",
+      {
+        name: z.string().describe("The name of the SOP to validate."),
+      },
+      async ({ name }) => {
+        const safeName = name.replace(/[^a-zA-Z0-9_\-\.]/g, "_");
+        const filename = safeName.endsWith(".md") ? safeName : `${safeName}.md`;
+        const filePath = join(this.sopsDir, filename);
+
+        // Security check
+        if (!filePath.startsWith(this.sopsDir)) {
+          return {
+            content: [{ type: "text", text: "Invalid SOP name." }],
+            isError: true
+          };
+        }
+
+        if (!existsSync(filePath)) {
+          return {
+            content: [{ type: "text", text: `SOP '${name}' not found.` }],
+            isError: true
+          };
+        }
+
+        try {
+            const content = await readFile(filePath, "utf-8");
+            const sop = parseSOP(content);
+
+            if (!sop.title) throw new Error("Missing title (first line must be '# Title')");
+            if (sop.steps.length === 0) throw new Error("No steps found (numbered list required)");
+
+            return {
+                content: [{ type: "text", text: `SOP '${name}' is valid.\nTitle: ${sop.title}\nSteps: ${sop.steps.length}` }]
+            };
+        } catch (e: any) {
+            return {
+                content: [{ type: "text", text: `SOP Invalid: ${e.message}` }],
+                isError: true
+            };
         }
       }
     );
@@ -82,8 +130,7 @@ export class SOPEngineServer {
 
           const llm = createLLM();
           const mcp = new MCP();
-          // Assuming MCP init is handled inside executor or we call it here?
-          // Executor calls mcp.init() inside execute().
+          // Initialize MCP happens inside executor.execute()
 
           const executor = new SOPExecutor(llm, mcp);
           const result = await executor.execute(sop, input);

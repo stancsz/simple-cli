@@ -1,29 +1,73 @@
 import { LLM } from '../../llm.js';
 import { MCP } from '../../mcp.js';
 import { SOP } from './sop_parser.js';
+import { writeFile, mkdir, readFile } from 'fs/promises';
+import { join } from 'path';
+import { existsSync } from 'fs';
 
 export class SOPExecutor {
   private llm: LLM;
   private mcp: MCP;
-  private maxRetries = 5;
+  private maxRetries = 3;
+  private logDir: string;
 
   constructor(llm: LLM, mcp: MCP) {
     this.llm = llm;
     this.mcp = mcp;
+    this.logDir = join(process.cwd(), '.agent', 'brain');
+  }
+
+  private async logStep(sopName: string, stepNumber: number, status: 'success' | 'failure', details: string) {
+    if (!existsSync(this.logDir)) {
+      await mkdir(this.logDir, { recursive: true });
+    }
+    const logFile = join(this.logDir, 'sop_logs.json');
+    let logs: any[] = [];
+    if (existsSync(logFile)) {
+      try {
+        const content = await readFile(logFile, 'utf-8');
+        logs = JSON.parse(content);
+      } catch (e) {
+        logs = [];
+      }
+    }
+
+    logs.push({
+      timestamp: new Date().toISOString(),
+      sop: sopName,
+      step: stepNumber,
+      status,
+      details
+    });
+
+    // Keep last 1000 logs
+    if (logs.length > 1000) logs = logs.slice(-1000);
+
+    await writeFile(logFile, JSON.stringify(logs, null, 2));
   }
 
   async execute(sop: SOP, input: string): Promise<string> {
     // Initialize MCP to discover servers
     await this.mcp.init();
 
-    // Auto-start common servers if not running?
-    // We'll let the agent decide or auto-start via Orchestrator logic if we were Orchestrator.
-    // Here we are a standalone engine. We should probably try to start 'brain' and 'filesystem' at least?
-    // Let's just rely on the agent using mcp_start_server if needed, or maybe start all local servers?
-    // Starting all might be slow.
-    // Let's start 'filesystem' and 'git' if available as they are core for "SOPs".
-    // But we don't know their names for sure.
-    // We'll rely on tool discovery.
+    // 1. Query Brain for past experiences
+    let pastContext = "";
+    try {
+        // Attempt to find brain_query tool
+        const tools = await this.mcp.getTools();
+        const brainQuery = tools.find(t => t.name === 'brain_query');
+        if (brainQuery) {
+            const result = await brainQuery.execute({ query: `SOP execution: ${sop.title} ${input}`, limit: 3 });
+             // Check if result is string or object with content
+            if (typeof result === 'string') {
+                pastContext = result;
+            } else if (result.content && Array.isArray(result.content)) {
+                pastContext = result.content.map((c: any) => c.text).join('\n');
+            }
+        }
+    } catch (e) {
+        console.error(`[SOP] Failed to query brain: ${(e as Error).message}`);
+    }
 
     const context: string[] = []; // Stores summary of completed steps
     let fullHistory: any[] = [];  // Stores conversation history for the current step
@@ -68,6 +112,9 @@ SOP Title: ${sop.title}
 SOP Description: ${sop.description}
 Original Input: ${input}
 
+Relevant Past Experiences:
+${pastContext || "None"}
+
 Current Step: ${step.number}. ${step.name}
 Instructions: ${step.description}
 
@@ -101,6 +148,7 @@ Do not ask the user for input unless absolutely necessary.
                     const summary = args.summary || message || "Step completed.";
                     context.push(`Step ${step.number} completed: ${summary}`);
                     console.error(`[SOP] Step ${step.number} Complete.`);
+                    await this.logStep(sop.title, step.number, 'success', summary);
                     stepComplete = true;
                     break;
                 }
@@ -143,18 +191,49 @@ Do not ask the user for input unless absolutely necessary.
             }
 
         } catch (e: any) {
-            if (e.isFatal) throw e;
+            if (e.isFatal) {
+                 await this.logStep(sop.title, step.number, 'failure', e.message);
+                 throw e;
+            }
             console.error(`[SOP] Error in step execution: ${e.message}`);
+
+            // Exponential Backoff
             retries++;
+            const delay = Math.pow(2, retries) * 1000;
+            console.error(`[SOP] Retrying in ${delay}ms... (Attempt ${retries}/${this.maxRetries})`);
+            await new Promise(resolve => setTimeout(resolve, delay));
+
             fullHistory.push({ role: 'user', content: `System Error: ${e.message}` });
         }
       }
 
       if (!stepComplete) {
-          throw new Error(`Failed to complete Step ${step.number} after ${this.maxRetries} retries.`);
+          const msg = `Failed to complete Step ${step.number} after ${this.maxRetries} retries.`;
+          await this.logStep(sop.title, step.number, 'failure', msg);
+          throw new Error(msg);
       }
     }
 
-    return `SOP '${sop.title}' executed successfully.\n\nSummary:\n${context.join('\n')}`;
+    const finalSummary = `SOP '${sop.title}' executed successfully.\n\nSummary:\n${context.join('\n')}`;
+
+    // Log final experience to Brain
+    try {
+        const tools = await this.mcp.getTools();
+        const logExp = tools.find(t => t.name === 'log_experience');
+        if (logExp) {
+            await logExp.execute({
+                taskId: `sop-${Date.now()}`,
+                task_type: 'sop_execution',
+                agent_used: 'sop_engine',
+                outcome: 'success',
+                summary: finalSummary,
+                artifacts: JSON.stringify([]) // TODO: Track artifacts?
+            });
+        }
+    } catch (e) {
+        console.error(`[SOP] Failed to log experience: ${(e as Error).message}`);
+    }
+
+    return finalSummary;
   }
 }

@@ -58,6 +58,15 @@ To transition from a "Wrapper" to a true "Universal AI Integration Platform," th
 **Goal:** Enhanced control and review via TUI and Supervisor.
 - **Status:** Interactive TUI and [Supervisor] QA loop are active parts of the core engine.
 
+### Phase 4.5: SOP-as-Code (✅ Implemented)
+**Goal:** Automating professional workflows using Markdown SOPs.
+- **Status:** Fully functional SOP Engine MCP server.
+- **Mechanism:** `sop_engine` parses Markdown, executes steps via LLM, and integrates with the Brain for learning.
+- **Features:**
+    - **Brain Integration:** Recalls past experiences and logs new ones.
+    - **Resilience:** Exponential backoff retries.
+    - **Tool Discovery:** Uses any available MCP tool.
+
 ### Phase 5: The Digital Co-worker (Deployment & Persona) (🔄 In Progress)
 **Goal:** Create a fully functional, human-like digital employee that lives where your team lives (Slack, Teams).
 - **Focus:** Role-based autonomy, human-like persona, and effortless deployment.

@@ -75,7 +75,15 @@
 - [ ] Update tests to mock MCP servers instead of local file paths.
 - [ ] Verify Ghost Mode triggers (Scheduler/JobDelegator) in CI/CD or local simulation.
 
-### 5. Phase 5: The Digital Co-worker (Deployment & Persona)
+### 5. Phase 4.5: SOP Engine
+- [x] **Core Logic**:
+    - [x] Create `sop_parser.ts`.
+    - [x] Implement `executor.ts` with Brain integration and retries.
+    - [x] Expose tools in `sop_engine/index.ts`.
+- [x] **Documentation**:
+    - [x] Create `docs/SOP_ENGINE.md`.
+
+### 6. Phase 5: The Digital Co-worker (Deployment & Persona)
 - [x] **Persona Engine**:
     - [x] Create `src/persona.ts`: Load `persona.json` and wrap LLM responses.
     - [x] Implement `inject_personality()` function in `src/llm.ts`.
@@ -87,7 +95,7 @@
     - [x] Create `Dockerfile` for lightweight production image.
     - [x] Create `docker-compose.yml` for local "Agency" simulation (Redis + Agent).
 
-### 6. Phase 6: Enterprise Cognition (The Brain)
+### 7. Phase 6: Enterprise Cognition (The Brain)
 - [x] **Episodic Memory (Vector DB)**:
     - [x] Evaluate `lancedb` vs `chromadb` (node-compatible).
     - [x] Create `src/brain/episodic.ts`: Implement embedding generation + storage.
@@ -106,11 +114,11 @@
     - [x] Update `cli.ts` and `engine.ts` to support `--company` flag and context injection.
     - [x] Create `docs/COMPANY_CONTEXT.md`.
 
-### 7. Phase 7: The Hive Mind (Planned)
+### 8. Phase 7: The Hive Mind (Planned)
 - [ ] **Swarm Orchestration**: Implement dynamic agent spawning via `opencowork`.
 - [ ] **Agent Negotiation**: Implement protocol for agents to "bid" on tasks.
 
-### 8. Phase 8: Recursive Evolution (Active)
+### 9. Phase 8: Recursive Evolution (Active)
 - [x] **Self-Repair**: Implement `HR Loop` to fix `src/` files based on error logs (`src/mcp_servers/hr/`).
 - [x] **Automated Review**: Integrate HR MCP with Scheduler for weekly automated reviews.
 - [x] **Core Update**: Implement secure protocol for updating `engine.ts`.
