@@ -92,6 +92,14 @@ To transition from a "Wrapper" to a true "Universal AI Integration Platform," th
     - **Memory Integration**: Uses the Brain MCP to recall past failures and delegation patterns.
     - **Safety Protocol**: Proposals are stored as 'pending' and require human approval (token or strict YOLO checks) before application.
 
+### Phase 9: Local LLM Ops (Dify) (Planned)
+**Goal:** Establish a local, privacy-first orchestration layer for rapid prototyping.
+- **Concept:** Run advanced agent workflows (Supervisor + Coding Agent) on local infrastructure using Dify.
+- **Mechanism:**
+    - **Dify Integration**: Local Docker Compose setup within the repository structure.
+    - **Agent Configuration**: Pre-configured templates for "Supervisor Agent" (Claude Code + DeepSeek) and "Coding Agent" (Codex + DeepSeek).
+    - **Benefit:** Reduces reliance on cloud orchestration for sensitive projects and enables rapid iteration of agentic flows.
+
 ---
 
 ## 🚀 The 6-Pillar Vision

@@ -32,6 +32,14 @@
 - [ ] **Bolt.new** (rapid prototyping)
 - [ ] **v0.dev** (UI generation)
 
+## Sprint 0.5: Local AI Stack (Dify)
+
+**Goal:** Provide a local, privacy-first orchestration layer for rapid prototyping.
+
+- [ ] **Setup Dify locally for coding project**
+- [ ] **Configure Supervisor Agent (Claude Code + DeepSeek)**
+- [ ] **Configure Coding Agent (Codex + DeepSeek)**
+
 ## Sprint 1: The Awakening (Current)
 
 **Goal:** Transition from a "CLI Wrapper" to a "Persistent Digital Entity".
