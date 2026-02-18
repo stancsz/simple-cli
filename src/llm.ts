@@ -108,12 +108,10 @@ export class LLM {
         if (providerName === "openai" || providerName === "codex") {
           model = createOpenAI({ apiKey })(modelName);
         } else if (providerName === "deepseek") {
-          console.log(chalk.gray(`[LLM] Attempting DeepSeek (via Anthropic SDK) with baseURL: https://api.deepseek.com/anthropic`));
-          model = createAnthropic({
+          model = createOpenAI({
             apiKey,
-            baseURL: "https://api.deepseek.com/anthropic",
-          });
-          model = model(modelName);
+            baseURL: "https://api.deepseek.com",
+          })(modelName);
         } else if (providerName === "anthropic" || providerName === "claude") {
           model = createAnthropic({ apiKey });
           model = model(modelName);
@@ -287,7 +285,7 @@ export const createLLM = (model?: string) => {
 
   // Auto-detect provider if missing
   if (p === "openai" && n.includes("deepseek")) {
-    p = n.includes("chat") || n.includes("reasoner") ? "deepseek" : "deepseek-claude";
+    p = "deepseek";
   }
   if (p === "openai" && (n.includes("claude") || n.includes("sonnet"))) p = "anthropic";
   if (p === "openai" && (n.includes("gemini") || n.includes("flash"))) p = "google";

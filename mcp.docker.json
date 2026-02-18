@@ -35,6 +35,10 @@
     "openclaw": {
       "command": "node",
       "args": ["/app/dist/mcp_servers/openclaw/index.js"]
+    },
+    "picoclaw": {
+      "command": "node",
+      "args": ["/app/dist/mcp_servers/picoclaw/index.js"]
     }
   },
   "agents": {
