@@ -60,3 +60,21 @@ The middleware is integrated into `BaseInterface` (`src/interfaces/base.ts`), wh
 - **Discord**: `src/interfaces/discord.ts`
 
 To use the persona in a new interface, extend `BaseInterface` and use `this.sendResponse(content, context)` instead of sending raw messages directly.
+
+## Autonomous Agent Persona
+
+Autonomous agents (like the **Job Delegator** and **Reviewer Agent**) running in the background via `daemon` also utilize the Persona Engine.
+
+-   **Ghost Mode**: When running in `daemon` mode (Ghost Mode), agents automatically load the persona configuration.
+-   **No Latency**: Background agents bypass the typing simulation to ensure efficient execution, but still apply tone rewriting and catchphrases to their logs and outputs.
+-   **Consistent Voice**: Whether it's a GitHub comment from the Reviewer Agent or a log entry from the Job Delegator, the voice remains consistent with the configured persona.
+
+### Example: Reviewer Agent
+
+If the persona is "Sarah_DevOps" (SRE), the Reviewer Agent's feedback on a PR might look like:
+
+> "Scanning code... 🔍 I've detected a potential race condition in `src/utils.ts`. Systems check: Failed. Please investigate immediately. Over and out."
+
+Instead of the raw:
+
+> "Potential race condition detected in src/utils.ts."

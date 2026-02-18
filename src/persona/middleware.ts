@@ -27,7 +27,7 @@ export class PersonaMiddleware {
    * @param onTyping Optional callback to trigger typing indicators.
    * @param context 'response' for final answers (full transformation), 'log' for updates (faster/lighter).
    */
-  async transform(text: string, onTyping?: () => void, context: 'log' | 'response' = 'response'): Promise<string> {
+  async transform(text: string, onTyping?: () => void, context: 'log' | 'response' = 'response', simulateLatency: boolean = true): Promise<string> {
     // Reload config if needed? simpler to assume initialize() was called or loadConfig is idempotent/fast check.
     await this.personaEngine.loadConfig();
     const config = this.config;
@@ -87,7 +87,7 @@ Keep it concise and professional but with your specific tone.`;
     // - Catchphrases (Greeting, Filler, Signoff)
     // - Emojis
     // - Latency (calls onTyping)
-    const result = await this.personaEngine.transformResponse(dummyResponse, onTyping);
+    const result = await this.personaEngine.transformResponse(dummyResponse, onTyping, simulateLatency);
 
     return result.message || transformedText;
   }

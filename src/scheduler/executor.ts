@@ -89,7 +89,7 @@ export class Executor {
                 !["Continue.", "Fix the error.", "The tool executions were verified. Proceed."].includes(m.content),
             );
 
-          const response = await this.llm.generate(prompt, ctx.history, signal);
+          const response = await this.llm.generate(prompt, ctx.history, signal, undefined, false);
 
           if (response.usage) {
             const { promptTokens, completionTokens, totalTokens } = response.usage;
@@ -161,7 +161,9 @@ export class Executor {
                   const qaCheck = await this.llm.generate(
                     qaPrompt,
                     [...ctx.history, { role: "user", content: qaPrompt }],
-                    signal
+                    signal,
+                    undefined,
+                    false
                   );
 
                   if (qaCheck.message && qaCheck.message.toLowerCase().includes("fail")) {

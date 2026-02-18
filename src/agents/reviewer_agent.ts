@@ -1,11 +1,14 @@
 import { MCP } from '../mcp.js';
 import { TaskDefinition } from '../daemon/task_definitions.js';
+import { PersonaMiddleware } from '../persona/middleware.js';
 
 export class ReviewerAgent {
   private mcp: MCP;
+  private persona: PersonaMiddleware;
 
   constructor() {
     this.mcp = new MCP();
+    this.persona = new PersonaMiddleware();
   }
 
   async reviewTask(task: TaskDefinition, artifacts: string[] = []): Promise<{ approved: boolean; feedback: string }> {
@@ -27,12 +30,15 @@ export class ReviewerAgent {
     // For now, we simulate a successful review if artifacts are present, or pending if not.
 
     let approved = true;
-    let feedback = "Automated review passed.";
+    let rawFeedback = "Automated review passed.";
 
     if (artifacts.length === 0) {
         // feedback = "No artifacts produced to review.";
         // approved = true; // Non-blocking for now
     }
+
+    // Apply persona to feedback
+    const feedback = await this.persona.transform(rawFeedback, undefined, 'response', false);
 
     // Log the review experience
     try {

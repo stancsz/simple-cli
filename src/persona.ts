@@ -87,13 +87,13 @@ export class PersonaEngine {
     return `${personalityPrompt}\n\n${systemPrompt}`;
   }
 
-  async transformResponse(response: LLMResponse, onTyping?: () => void): Promise<LLMResponse> {
+  async transformResponse(response: LLMResponse, onTyping?: () => void, simulateLatency: boolean = true): Promise<LLMResponse> {
     if (!this.config || !this.config.enabled) return response;
 
     // Working Hours Check
     if (this.config.working_hours && !this.isWithinWorkingHours(this.config.working_hours)) {
       // Simulate typing even for offline message
-      if (this.config.response_latency) {
+      if (this.config.response_latency && simulateLatency) {
           await this.simulateTyping("", this.config.response_latency, onTyping);
       }
       return {
@@ -137,7 +137,7 @@ export class PersonaEngine {
     }
 
     // Simulate Latency
-    if (this.config.response_latency) {
+    if (this.config.response_latency && simulateLatency) {
       await this.simulateTyping(message, this.config.response_latency, onTyping);
     }
 

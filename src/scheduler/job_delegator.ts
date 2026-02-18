@@ -3,14 +3,17 @@ import { writeFile, mkdir } from 'fs/promises';
 import { TaskDefinition } from '../daemon/task_definitions.js';
 import { handleTaskTrigger } from './trigger.js';
 import { MCP } from '../mcp.js';
+import { PersonaMiddleware } from '../persona/middleware.js';
 
 export class JobDelegator {
   private logsDir: string;
   private mcp: MCP;
+  private persona: PersonaMiddleware;
 
   constructor(agentDir: string) {
     this.logsDir = join(agentDir, 'ghost_logs');
     this.mcp = new MCP();
+    this.persona = new PersonaMiddleware();
   }
 
   async delegateTask(task: TaskDefinition): Promise<void> {
@@ -69,6 +72,10 @@ export class JobDelegator {
       // Log Experience
       if (brainAvailable) {
         try {
+          // Personify log summary
+          const rawSummary = errorMessage || "Task completed successfully";
+          const summary = await this.persona.transform(rawSummary, undefined, 'log', false);
+
           const client = this.mcp.getClient("brain");
           if (client) {
             await client.callTool({
@@ -78,7 +85,7 @@ export class JobDelegator {
                 task_type: task.name, // Use name as type for now
                 agent_used: "autonomous-executor", // Or extract from task def if available
                 outcome: status,
-                summary: errorMessage || "Task completed successfully",
+                summary: summary,
                 company: task.company,
                 artifacts: JSON.stringify([]) // We don't track artifacts here easily
               }
@@ -95,6 +102,10 @@ export class JobDelegator {
   private async logTaskStart(task: TaskDefinition, startTime: number) {
     // Ensure logs directory exists
     await mkdir(this.logsDir, { recursive: true });
+
+    // Personify console announcement
+    const msg = await this.persona.transform(`Starting task: ${task.name}`, undefined, 'log', false);
+    console.log(`[JobDelegator] ${msg}`);
   }
 
   private async logTaskEnd(task: TaskDefinition, startTime: number, status: string, errorMessage: string) {

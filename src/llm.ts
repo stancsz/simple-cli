@@ -82,6 +82,7 @@ export class LLM {
     history: any[],
     signal?: AbortSignal,
     onTyping?: () => void,
+    simulateLatency: boolean = true,
   ): Promise<LLMResponse> {
     await this.personaEngine.loadConfig();
     const systemWithPersona = this.personaEngine.injectPersonality(system);
@@ -149,7 +150,7 @@ export class LLM {
         });
 
         const parsed = this.parse(text, usage as any);
-        return await this.personaEngine.transformResponse(parsed, onTyping);
+        return await this.personaEngine.transformResponse(parsed, onTyping, simulateLatency);
       } catch (e: any) {
         lastError = e;
         console.error(`[LLM] ${providerName}:${modelName} failed: ${e.message}`);
