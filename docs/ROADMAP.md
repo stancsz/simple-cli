@@ -83,13 +83,14 @@ To transition from a "Wrapper" to a true "Universal AI Integration Platform," th
 - **Concept:** Agents that can dynamically spawn sub-agents (e.g., a "Lead Developer" hiring a "QA Engineer" and a "Docs Writer").
 - **Mechanism:** `OpenCowork` MCP improvements to support complex delegation trees and inter-agent negotiation.
 
-### Phase 8: Recursive Evolution (Self-Modifying Code) (✅ Active)
+### Phase 8: Recursive Evolution (Self-Modifying Code) (✅ Implemented)
 **Goal:** The agent can safely upgrade its own source code to improve efficiency.
 - **Concept:** The system identifies bottlenecks (e.g., slow tools, repetitive failures) and proposes PRs to its own repo.
 - **Mechanism:** "HR Loop" (implemented) + "Core Update" protocols (Dual-verification required).
     - **HR MCP Server**: Analyzes logs and suggests improvements (`analyze_logs`, `propose_change`).
+    - **Core Update MCP**: Securely modifies `src/` files with `propose_core_update` and `apply_core_update`.
     - **Memory Integration**: Uses the Brain MCP to recall past failures and delegation patterns.
-    - **Safety Protocol**: Proposals are stored as 'pending' and require human approval before application.
+    - **Safety Protocol**: Proposals are stored as 'pending' and require human approval (token or strict YOLO checks) before application.
 
 ---
 
@@ -127,12 +128,12 @@ To achieve a true "Universal AI Integration Platform" capable of consulting for 
 *   **Concept:** Employees that work while you sleep.
 *   **Mechanism:** Background agents triggered by CRON (Job Delegator, Reviewer). They perform "Morning Standups" by summarizing their background work (GitHub Issue triage, security scans) before the human wakes up.
 
-### 6. Recursive Self-Optimization (The "HR Loop") (✅ Active)
+### 6. Recursive Self-Optimization (The "HR Loop") (✅ Implemented)
 *   **Concept:** The agency gets smarter the more it works.
-*   **Mechanism:** Cross-Agent Reflection via HR MCP.
+*   **Mechanism:** Cross-Agent Reflection via HR MCP and Core Updater.
     - **Log Analysis**: Scans execution logs (`sop_logs.json`) and past experiences.
     - **Proposals**: Generates actionable configuration or code updates (`propose_change`).
-    - **Human-in-the-Loop**: Dual-verification required for proposal application.
+    - **Human-in-the-Loop**: Dual-verification required for proposal application via `core_updater`.
 
 ---
 
