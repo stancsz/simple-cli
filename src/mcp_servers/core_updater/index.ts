@@ -68,7 +68,7 @@ export class CoreUpdaterServer {
   private validatePath(filepath: string): { isValid: boolean; error?: string; fullPath?: string } {
     // 1. Basic check
     if (!filepath.startsWith("src/")) {
-        return { isValid: false, error: "Path must start with 'src/'." };
+      return { isValid: false, error: "Path must start with 'src/'." };
     }
 
     // 2. Resolve path
@@ -80,7 +80,7 @@ export class CoreUpdaterServer {
 
     // Also handle exact match if needed, though files are usually inside src/
     if (fullPath !== this.srcDir && !fullPath.startsWith(srcDirWithSep)) {
-        return { isValid: false, error: "Path traversal detected. File must be inside src/." };
+      return { isValid: false, error: "Path traversal detected. File must be inside src/." };
     }
 
     return { isValid: true, fullPath };
@@ -90,7 +90,7 @@ export class CoreUpdaterServer {
     const validation = this.validatePath(filepath);
     if (!validation.isValid) {
       return {
-        content: [{ type: "text", text: `Error: ${validation.error}` }],
+        content: [{ type: "text" as const, text: `Error: ${validation.error}` }],
         isError: true,
       };
     }
@@ -99,18 +99,18 @@ export class CoreUpdaterServer {
 
     if (!existsSync(fullPath)) {
       return {
-        content: [{ type: "text", text: `Error: File '${filepath}' not found.` }],
+        content: [{ type: "text" as const, text: `Error: File '${filepath}' not found.` }],
         isError: true,
       };
     }
     try {
       const content = await readFile(fullPath, "utf-8");
       return {
-        content: [{ type: "text", text: content }],
+        content: [{ type: "text" as const, text: content }],
       };
     } catch (e) {
       return {
-        content: [{ type: "text", text: `Error reading file: ${e}` }],
+        content: [{ type: "text" as const, text: `Error reading file: ${e}` }],
         isError: true,
       };
     }
@@ -122,7 +122,7 @@ export class CoreUpdaterServer {
       const validation = this.validatePath(change.filepath);
       if (!validation.isValid) {
         return {
-          content: [{ type: "text", text: `Error: Invalid path '${change.filepath}': ${validation.error}` }],
+          content: [{ type: "text" as const, text: `Error: Invalid path '${change.filepath}': ${validation.error}` }],
           isError: true,
         };
       }
@@ -141,11 +141,11 @@ export class CoreUpdaterServer {
       try {
         const pastFailures = await this.memory.recall(`failure error bug ${change.filepath}`, 3);
         if (pastFailures.length > 0) {
-            // Found past failures, elevate risk
-            if (riskLevel !== 'critical') riskLevel = 'high';
+          // Found past failures, elevate risk
+          riskLevel = 'high';
         }
       } catch (e) {
-          console.warn("Failed to check memory:", e);
+        console.warn("Failed to check memory:", e);
       }
     }
 
@@ -156,7 +156,7 @@ export class CoreUpdaterServer {
       id,
       title: args.title,
       description: args.description,
-      changes: args.changes.map(c => ({...c})), // Copy
+      changes: args.changes.map(c => ({ ...c })), // Copy
       riskLevel,
       status: 'pending',
       createdAt: Date.now(),
@@ -167,7 +167,7 @@ export class CoreUpdaterServer {
 
     return {
       content: [{
-        type: "text",
+        type: "text" as const,
         text: `Proposal Created.\nID: ${id}\nRisk Level: ${riskLevel}\nApproval Token: ${token}\n\nTo apply, use 'apply_core_update(update_id="${id}", approval_token="${token}")'.`
       }],
     };
@@ -177,16 +177,16 @@ export class CoreUpdaterServer {
     const proposal = await this.storage.get(args.update_id);
     if (!proposal) {
       return {
-        content: [{ type: "text", text: `Error: Proposal '${args.update_id}' not found.` }],
+        content: [{ type: "text" as const, text: `Error: Proposal '${args.update_id}' not found.` }],
         isError: true,
       };
     }
 
     if (proposal.status !== 'pending') {
-        return {
-            content: [{ type: "text", text: `Error: Proposal is already ${proposal.status}.` }],
-            isError: true
-        };
+      return {
+        content: [{ type: "text" as const, text: `Error: Proposal is already ${proposal.status}.` }],
+        isError: true
+      };
     }
 
     // Load Config for YOLO mode
@@ -198,25 +198,25 @@ export class CoreUpdaterServer {
     let reason = "";
 
     if (args.approval_token === proposal.approvalToken) {
-        approved = true;
-        reason = "Valid approval token provided.";
+      approved = true;
+      reason = "Valid approval token provided.";
     } else {
-        // Check YOLO conditions
-        if (yoloMode && proposal.riskLevel === 'low') {
-            approved = true;
-            reason = "YOLO mode enabled and risk is low.";
-        } else if (yoloMode && proposal.riskLevel !== 'low') {
-             reason = `YOLO mode enabled but risk is ${proposal.riskLevel} (requires token).`;
-        } else {
-            reason = "Approval token required.";
-        }
+      // Check YOLO conditions
+      if (yoloMode && proposal.riskLevel === 'low') {
+        approved = true;
+        reason = "YOLO mode enabled and risk is low.";
+      } else if (yoloMode && proposal.riskLevel !== 'low') {
+        reason = `YOLO mode enabled but risk is ${proposal.riskLevel} (requires token).`;
+      } else {
+        reason = "Approval token required.";
+      }
     }
 
     if (!approved) {
-        return {
-            content: [{ type: "text", text: `Update Rejected: ${reason}` }],
-            isError: true
-        };
+      return {
+        content: [{ type: "text" as const, text: `Update Rejected: ${reason}` }],
+        isError: true
+      };
     }
 
     // Backup & Apply
@@ -225,49 +225,49 @@ export class CoreUpdaterServer {
     await mkdir(backupDir, { recursive: true });
 
     try {
-        for (const change of proposal.changes) {
-            // Re-validate just in case (though proposal should be safe if created via tool)
-            const validation = this.validatePath(change.filepath);
-            if (!validation.isValid) throw new Error(`Invalid path in proposal: ${change.filepath}`);
+      for (const change of proposal.changes) {
+        // Re-validate just in case (though proposal should be safe if created via tool)
+        const validation = this.validatePath(change.filepath);
+        if (!validation.isValid) throw new Error(`Invalid path in proposal: ${change.filepath}`);
 
-            const fullPath = validation.fullPath!;
+        const fullPath = validation.fullPath!;
 
-            // Backup
-            if (existsSync(fullPath)) {
-                const backupPath = join(backupDir, change.filepath.replace(/\//g, "_"));
-                await copyFile(fullPath, backupPath);
-            }
-
-            // Apply
-            const dir = dirname(fullPath);
-            if (!existsSync(dir)) await mkdir(dir, { recursive: true });
-            await writeFile(fullPath, change.newContent);
+        // Backup
+        if (existsSync(fullPath)) {
+          const backupPath = join(backupDir, change.filepath.replace(/\//g, "_"));
+          await copyFile(fullPath, backupPath);
         }
 
-        // Update status
-        proposal.status = 'applied';
-        await this.storage.save(proposal); // Or delete? Let's keep for history.
-        // Actually, maybe move to 'history'? For now, just mark applied.
+        // Apply
+        const dir = dirname(fullPath);
+        if (!existsSync(dir)) await mkdir(dir, { recursive: true });
+        await writeFile(fullPath, change.newContent);
+      }
 
-        // Log to memory
-        try {
-            await this.memory.store(
-                `update-${proposal.id}`,
-                `Apply Core Update: ${proposal.title}`,
-                `Success. Backup ID: ${backupId}`,
-                proposal.changes.map(c => c.filepath)
-            );
-        } catch {}
+      // Update status
+      proposal.status = 'applied';
+      await this.storage.save(proposal); // Or delete? Let's keep for history.
+      // Actually, maybe move to 'history'? For now, just mark applied.
 
-        return {
-            content: [{ type: "text", text: `Update Applied Successfully.\nBackup ID: ${backupId}` }]
-        };
+      // Log to memory
+      try {
+        await this.memory.store(
+          `update-${proposal.id}`,
+          `Apply Core Update: ${proposal.title}`,
+          `Success. Backup ID: ${backupId}`,
+          proposal.changes.map(c => c.filepath)
+        );
+      } catch { }
+
+      return {
+        content: [{ type: "text" as const, text: `Update Applied Successfully.\nBackup ID: ${backupId}` }]
+      };
 
     } catch (e) {
-        return {
-            content: [{ type: "text", text: `Error applying update: ${e}. Changes may be partially applied. Check backups in ${backupId}.` }],
-            isError: true
-        };
+      return {
+        content: [{ type: "text" as const, text: `Error applying update: ${e}. Changes may be partially applied. Check backups in ${backupId}.` }],
+        isError: true
+      };
     }
   }
 

@@ -21,8 +21,9 @@ describe("AutoAgentServer", () => {
   };
 
   it("should handle autoagent_create_agent", async () => {
-    (execFile as any).mockImplementation((file: string, args: string[], cb: any) => {
-      cb(null, { stdout: "Agent created", stderr: "" });
+    (execFile as any).mockImplementation((file: string, args: string[], options: any, cb: any) => {
+      const callback = typeof options === 'function' ? options : cb;
+      callback(null, { stdout: "Agent created", stderr: "" });
     });
 
     const result = await callTool("autoagent_create_agent", {
@@ -35,6 +36,7 @@ describe("AutoAgentServer", () => {
     expect(execFile).toHaveBeenCalledWith(
       expect.stringContaining("autoagent"),
       expect.arrayContaining(["create", "--name", "TestAgent"]),
+      expect.objectContaining({ env: expect.anything() }),
       expect.anything()
     );
     expect(result.content[0].text).toContain("Agent created");

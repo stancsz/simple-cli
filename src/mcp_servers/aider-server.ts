@@ -57,19 +57,19 @@ export class AiderServer {
   private async runAider(message: string, files: string[]) {
     // Check if aider is installed
     try {
-        const check = spawn("aider", ["--version"]);
-        await new Promise((resolve, reject) => {
-            check.on("error", reject);
-            check.on("close", (code) => {
-                if (code === 0) resolve(true);
-                else reject(new Error(`Exit code ${code}`));
-            });
+      const check = spawn("aider", ["--version"]);
+      await new Promise((resolve, reject) => {
+        check.on("error", reject);
+        check.on("close", (code) => {
+          if (code === 0) resolve(true);
+          else reject(new Error(`Exit code ${code}`));
         });
+      });
     } catch (e) {
-        return {
-            content: [{ type: "text", text: "Error: 'aider' CLI is not found. Please install it (e.g., `pip install aider-chat`)." }],
-            isError: true
-        };
+      return {
+        content: [{ type: "text", text: "Error: 'aider' CLI is not found. Please install it (e.g., `pip install aider-chat`)." }],
+        isError: true
+      };
     }
 
     const apiKey = process.env.DEEPSEEK_API_KEY;
@@ -84,8 +84,8 @@ export class AiderServer {
     const soulPath = join(process.cwd(), "src", "agents", "souls", "aider.md");
     try {
       if (existsSync(soulPath)) {
-          const soul = await readFile(soulPath, "utf-8");
-          finalMessage = `${soul}\n\nTask:\n${message}`;
+        const soul = await readFile(soulPath, "utf-8");
+        finalMessage = `${soul}\n\nTask:\n${message}`;
       }
     } catch (e) {
       // Ignore soul loading error
@@ -93,7 +93,7 @@ export class AiderServer {
 
     // Construct arguments
     const args = [
-      "--model", "deepseek/deepseek-chat",
+      "--model", "deepseek/deepseek-reasoner",
       "--api-key", `deepseek=${apiKey}`,
       "--yes", // Automatically confirm changes
       "--message", finalMessage,

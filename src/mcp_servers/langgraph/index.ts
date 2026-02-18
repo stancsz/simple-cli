@@ -27,7 +27,7 @@ export class LangGraphServer {
       "Run a LangGraph agent workflow. This tool executes a simple state graph agent that uses an LLM to process the input task.",
       {
         task: z.string().describe("The task or query for the agent to process."),
-        model_name: z.string().optional().describe("The OpenAI model to use (default: gpt-4o)."),
+        model_name: z.string().optional().describe("The model to use (default: deepseek-reasoner if configured, else gpt-4o)."),
       },
       async ({ task, model_name }) => {
         return await this.runAgent(task, model_name);
@@ -59,8 +59,17 @@ export class LangGraphServer {
       };
     }
 
-    const env = {
+    // Configure environment for DeepSeek if available
+    const apiKey = process.env.DEEPSEEK_API_KEY || process.env.OPENAI_API_KEY;
+    const env: NodeJS.ProcessEnv = {
       ...process.env,
+      OPENAI_API_KEY: apiKey,
+      ...(process.env.DEEPSEEK_API_KEY
+        ? {
+          OPENAI_BASE_URL: "https://api.deepseek.com",
+          OPENAI_MODEL_NAME: "deepseek-reasoner",
+        }
+        : {}),
       ...(model_name ? { OPENAI_MODEL_NAME: model_name } : {}),
     };
 
@@ -83,22 +92,22 @@ export class LangGraphServer {
       pythonProcess.on("close", (code) => {
         if (code === 0) {
           try {
-             // Try to parse the JSON output from the script
-             const jsonOutput = JSON.parse(output.trim());
-             if (jsonOutput.error) {
-                 resolve({
-                     content: [{ type: "text" as const, text: `Agent Error: ${jsonOutput.error}` }]
-                 });
-             } else {
-                 resolve({
-                     content: [{ type: "text" as const, text: jsonOutput.result }]
-                 });
-             }
+            // Try to parse the JSON output from the script
+            const jsonOutput = JSON.parse(output.trim());
+            if (jsonOutput.error) {
+              resolve({
+                content: [{ type: "text" as const, text: `Agent Error: ${jsonOutput.error}` }]
+              });
+            } else {
+              resolve({
+                content: [{ type: "text" as const, text: jsonOutput.result }]
+              });
+            }
           } catch (e) {
-             // Fallback if not JSON
-             resolve({
-                 content: [{ type: "text" as const, text: output.trim() }]
-             });
+            // Fallback if not JSON
+            resolve({
+              content: [{ type: "text" as const, text: output.trim() }]
+            });
           }
         } else {
           resolve({

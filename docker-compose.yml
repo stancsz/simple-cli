@@ -11,10 +11,11 @@ services:
       - postgres
     environment:
       - NODE_ENV=production
+      - MODEL=deepseek:deepseek-reasoner
       - REDIS_URL=redis://redis:6379
       - POSTGRES_URL=postgresql://postgres:postgres@postgres:5432/postgres
     healthcheck:
-      test: ["CMD", "nc", "-z", "localhost", "3002"]
+      test: [ "CMD", "nc", "-z", "localhost", "3002" ]
       interval: 30s
       timeout: 10s
       retries: 3

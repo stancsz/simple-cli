@@ -75,9 +75,9 @@ export class CrewAIServer {
       OPENAI_API_KEY: apiKey,
       ...(process.env.DEEPSEEK_API_KEY
         ? {
-            OPENAI_BASE_URL: "https://api.deepseek.com",
-            OPENAI_MODEL_NAME: "deepseek-chat",
-          }
+          OPENAI_BASE_URL: "https://api.deepseek.com",
+          OPENAI_MODEL_NAME: "deepseek-reasoner",
+        }
         : {}),
     };
 

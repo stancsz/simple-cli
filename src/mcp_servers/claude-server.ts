@@ -76,7 +76,7 @@ export class ClaudeServer {
         ANTHROPIC_API_KEY: apiKey,
         ANTHROPIC_AUTH_TOKEN: apiKey, // Some docs suggest this too
         ANTHROPIC_MODEL: "deepseek-reasoner",
-        ANTHROPIC_SMALL_FAST_MODEL: "deepseek-chat",
+        ANTHROPIC_SMALL_FAST_MODEL: "deepseek-reasoner",
         // Optional timeouts
         API_TIMEOUT_MS: "600000",
         CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC: "1",

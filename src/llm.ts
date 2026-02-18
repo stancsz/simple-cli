@@ -129,6 +129,12 @@ export class LLM {
             apiKey,
             baseURL: "https://api.moonshot.cn/v1",
           })(modelName);
+        } else if (providerName === "deepseek-openai" || providerName === "codex-deepseek") {
+          console.log(chalk.gray(`[LLM] Attempting DeepSeek (via OpenAI SDK) with baseURL: https://api.deepseek.com`));
+          model = createOpenAI({
+            apiKey,
+            baseURL: "https://api.deepseek.com",
+          })(modelName);
         } else {
           continue; // Skip unsupported
         }
@@ -170,6 +176,8 @@ export class LLM {
       return process.env.GOOGLE_API_KEY || process.env.GEMINI_API_KEY;
     if (providerName === "moonshot" || providerName === "kimi")
       return process.env.MOONSHOT_API_KEY || process.env.KIMI_API_KEY;
+    if (providerName === "deepseek-openai" || providerName === "codex-deepseek")
+      return process.env.DEEPSEEK_API_KEY;
     return undefined;
   }
 
@@ -297,6 +305,8 @@ export const createLLM = (model?: string) => {
   if (!m.includes(":")) {
     const fallbacks: LLMConfig[] = [
       { provider: "anthropic", model: "claude-3-7-sonnet-latest" },
+      { provider: "deepseek", model: "deepseek-reasoner" },
+      { provider: "deepseek-openai", model: "deepseek-reasoner" },
       { provider: "google", model: "gemini-2.0-flash-001" },
       { provider: "openai", model: "gpt-4o" },
     ];

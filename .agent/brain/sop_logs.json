@@ -1,0 +1,37 @@
+[
+  {
+    "timestamp": "2026-02-18T16:59:54.576Z",
+    "sop": "Test SOP",
+    "step": 1,
+    "status": "success",
+    "details": "Done"
+  },
+  {
+    "timestamp": "2026-02-18T16:59:54.593Z",
+    "sop": "Fail SOP",
+    "step": 1,
+    "status": "success",
+    "details": "Finally done"
+  },
+  {
+    "timestamp": "2026-02-18T17:00:00.910Z",
+    "sop": "Test SOP",
+    "step": 1,
+    "status": "success",
+    "details": "Task completed"
+  },
+  {
+    "timestamp": "2026-02-18T17:00:00.918Z",
+    "sop": "Error Test",
+    "step": 1,
+    "status": "success",
+    "details": "Recovered"
+  },
+  {
+    "timestamp": "2026-02-18T17:00:00.921Z",
+    "sop": "Fail Test",
+    "step": 1,
+    "status": "failure",
+    "details": "Cannot proceed"
+  }
+]
