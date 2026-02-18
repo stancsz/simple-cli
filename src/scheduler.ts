@@ -73,17 +73,18 @@ export class Scheduler extends EventEmitter {
       }
     }
 
-    const taskName = "Weekly HR Review";
-    const hasHRTask = config.tasks?.some((t: any) => t.name === taskName);
+    const taskName = "Daily HR Review";
+    // Check by ID first to avoid duplicates if name changes
+    const hasHRTask = config.tasks?.some((t: any) => t.id === "hr-review");
 
     if (!hasHRTask) {
-      console.log("Adding default Weekly HR Review task.");
+      console.log("Adding default Daily HR Review task.");
       if (!config.tasks) config.tasks = [];
       config.tasks.push({
           id: "hr-review",
           name: taskName,
           trigger: "cron",
-          schedule: "0 0 * * 0", // Weekly on Sunday
+          schedule: "0 3 * * *", // Daily at 03:00 UTC
           prompt: "Run the HR optimization loop to analyze agent performance and update souls.",
           yoloMode: true
       });
