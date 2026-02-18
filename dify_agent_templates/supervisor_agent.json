@@ -1,0 +1,29 @@
+{
+  "app": {
+    "name": "Supervisor Agent",
+    "description": "A Senior Technical Supervisor agent that analyzes requests and creates implementation plans. Powered by Claude 3.5 Sonnet.",
+    "mode": "chat",
+    "icon": "🧠",
+    "icon_background": "#FFEAD5"
+  },
+  "model_config": {
+    "provider": "anthropic",
+    "model": "claude-3-5-sonnet-20240620",
+    "configs": {
+      "prompt_template": "You are a Senior Technical Supervisor (Claude Code Persona).\nYour goal is to analyze the user's coding request, break it down into a step-by-step implementation plan, and delegate it to the Coding Agent.\n\nRules:\n1. Analyze the request deeply.\n2. If the request is ambiguous, ask clarifying questions (return text directly).\n3. If clear, output a strictly formatted plan for the Coding Agent.",
+      "opening_statement": "Hello, I am your Supervisor. I can help verify your requirements and plan the implementation. What are we building today?",
+      "suggested_questions": [
+        "Create a plan for a Python web scraper.",
+        "Design a REST API for a todo app.",
+        "Refactor this legacy code."
+      ],
+      "model_parameters": {
+        "temperature": 0.5,
+        "top_p": 0.9,
+        "max_tokens": 4096,
+        "presence_penalty": 0,
+        "frequency_penalty": 0
+      }
+    }
+  }
+}

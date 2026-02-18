@@ -1,0 +1,100 @@
+services:
+  # Dify API Service
+  dify-api:
+    image: langgenius/dify-api:0.6.13
+    restart: always
+    environment:
+      # Application Mode
+      MODE: api
+      # Database Configuration
+      DB_USERNAME: dify
+      DB_PASSWORD: dify
+      DB_HOST: dify-db
+      DB_PORT: 5432
+      DB_DATABASE: dify
+      # Redis Configuration
+      REDIS_HOST: dify-redis
+      REDIS_PORT: 6379
+      REDIS_DB: 0
+      # Security & URLs
+      SECRET_KEY: simple-cli-dify-secret-key
+      APP_WEB_URL: http://localhost:3003
+      # Model Providers (Placeholders)
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
+      DEEPSEEK_API_KEY: ${DEEPSEEK_API_KEY:-}
+    ports:
+      - "5001:5001"
+    depends_on:
+      - dify-db
+      - dify-redis
+    volumes:
+      - dify_data:/app/api/storage
+
+  # Dify Worker Service (Background Tasks)
+  dify-worker:
+    image: langgenius/dify-api:0.6.13
+    restart: always
+    environment:
+      MODE: worker
+      DB_USERNAME: dify
+      DB_PASSWORD: dify
+      DB_HOST: dify-db
+      DB_PORT: 5432
+      DB_DATABASE: dify
+      REDIS_HOST: dify-redis
+      REDIS_PORT: 6379
+      REDIS_DB: 0
+      SECRET_KEY: simple-cli-dify-secret-key
+      # Model Providers
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
+      DEEPSEEK_API_KEY: ${DEEPSEEK_API_KEY:-}
+    depends_on:
+      - dify-db
+      - dify-redis
+    volumes:
+      - dify_data:/app/api/storage
+
+  # Dify Web Interface
+  dify-web:
+    image: langgenius/dify-web:0.6.13
+    restart: always
+    environment:
+      CONSOLE_API_URL: http://localhost:5001
+      APP_API_URL: http://localhost:5001
+      SENTRY_DSN: ""
+      GA_ID: ""
+    ports:
+      - "3003:3000"
+    depends_on:
+      - dify-api
+
+  # PostgreSQL Database
+  dify-db:
+    image: postgres:15-alpine
+    restart: always
+    environment:
+      POSTGRES_DB: dify
+      POSTGRES_USER: dify
+      POSTGRES_PASSWORD: dify
+      PGDATA: /var/lib/postgresql/data/pgdata
+    volumes:
+      - dify_postgres:/var/lib/postgresql/data
+    ports:
+      - "5433:5432"
+
+  # Redis Cache
+  dify-redis:
+    image: redis:6-alpine
+    restart: always
+    volumes:
+      - dify_redis:/data
+    ports:
+      - "6380:6379"
+    command: redis-server --requirepass ""
+
+volumes:
+  dify_data:
+  dify_postgres:
+  dify_redis:

@@ -32,13 +32,14 @@
 - [ ] **Bolt.new** (rapid prototyping)
 - [ ] **v0.dev** (UI generation)
 
-## Sprint 0.5: Local AI Stack (Dify)
+## Sprint 0.5: Local AI Stack (Dify) (✅ Completed)
 
 **Goal:** Provide a local, privacy-first orchestration layer for rapid prototyping.
 
-- [ ] **Setup Dify locally for coding project**
-- [ ] **Configure Supervisor Agent (Claude Code + DeepSeek)**
-- [ ] **Configure Coding Agent (Codex + DeepSeek)**
+- [x] **Setup Dify locally for coding project**: Created `docker-compose.dify.yml`.
+- [x] **Configure Supervisor Agent**: Added `dify_agent_templates/supervisor_agent.json`.
+- [x] **Configure Coding Agent**: Added `dify_agent_templates/coding_agent.json`.
+- [x] **Documentation**: Added `docs/LOCAL_DIFY.md`.
 
 ## Sprint 1: The Awakening (Current)
 
