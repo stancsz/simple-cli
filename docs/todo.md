@@ -130,4 +130,4 @@
 ### 9. Phase 8: Recursive Evolution (Active)
 - [x] **Self-Repair**: Implement `HR Loop` to fix `src/` files based on error logs (`src/mcp_servers/hr/`).
 - [x] **Automated Review**: Integrate HR MCP with Scheduler for weekly automated reviews.
-- [x] **Core Update**: Implement secure protocol for updating `engine.ts`.
+- [x] **Core Update**: Implement secure protocol for updating `src/` files (Patch-based, Dual-verification).
