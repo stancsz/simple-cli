@@ -47,3 +47,12 @@ To prevent the agent from degrading its own performance or introducing malicious
 4.  **Proposal**: The HR Agent calls `suggest_agent_improvement` with a new instruction: "Always run tests with a timeout of 60s."
 5.  **Review**: A human sees the proposal (e.g., via a generated issue or notification) and approves it.
 6.  **Update**: The changes are applied to `src/agents/souls/aider.md`.
+
+## Weekly Review
+
+A more comprehensive review runs weekly at **Sunday midnight (00:00 UTC)**.
+
+-   **Trigger**: `weekly-hr-review` task in Scheduler.
+-   **Tool**: `perform_weekly_review`.
+-   **Scope**: Analyzes logs and experiences from the past week (larger context window).
+-   **Goal**: Identify long-term patterns, systemic inefficiencies, and architectural improvements that daily reviews might miss.

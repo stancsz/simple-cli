@@ -88,10 +88,11 @@ To transition from a "Wrapper" to a true "Universal AI Integration Platform," th
 **Goal:** The agent can safely upgrade its own source code to improve efficiency.
 - **Concept:** The system identifies bottlenecks (e.g., slow tools, repetitive failures) and proposes PRs to its own repo.
 - **Mechanism:** "HR Loop" (implemented) + "Core Update" protocols (Dual-verification required).
-    - **HR MCP Server**: Analyzes logs and suggests improvements (`analyze_logs`, `propose_change`).
+    - **HR MCP Server**: Analyzes logs and suggests improvements (`analyze_logs`, `propose_change`, `perform_weekly_review`).
     - **Core Update MCP**: Securely modifies `src/` files with `propose_core_update` and `apply_core_update`.
     - **Memory Integration**: Uses the Brain MCP to recall past failures and delegation patterns.
     - **Safety Protocol**: Proposals are stored as 'pending' and require human approval (token or strict YOLO checks) before application.
+    - **Automated Review**: (✅ Implemented) Weekly automated review via Scheduler.
 
 ### Phase 9: Local LLM Ops (Dify) (Planned)
 **Goal:** Establish a local, privacy-first orchestration layer for rapid prototyping.
