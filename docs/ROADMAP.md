@@ -135,6 +135,7 @@ To achieve a true "Universal AI Integration Platform" capable of consulting for 
 ### 3. "Company Context" Onboarding (The Briefcase) (✅ Implemented)
 *   **Concept:** Agents shouldn't just run in a folder; they should understand the "Client Profile."
 *   **Mechanism:** Multi-tenant RAG (Vector DB) per company. When you run `simple --company client-a`, the agent loads specific brand voices, internal docs, and past decisions.
+*   **Progress:** Fully realized with `company_context` MCP server and isolated Vector DB tables (PR #Pending).
 
 ### 4. SOP-as-Code (The Operating Manual) (✅ Implemented)
 *   **Concept:** Automating professional workflows.

@@ -1,99 +1,210 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { CompanyContextServer } from "../src/mcp_servers/company_context.js";
-import { join } from "path";
-import { mkdir, writeFile, rm } from "fs/promises";
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { join } from 'path';
+import { writeFile, rm, mkdir } from 'fs/promises';
+import { existsSync } from 'fs';
+import * as lancedb from '@lancedb/lancedb';
 
-// Mock LLM
-vi.mock("../src/llm.js", () => {
+// Mocks must be defined before imports
+// 1. Mock LLM
+vi.mock('../src/llm.js', () => ({
+  createLLM: () => ({
+    embed: async (text: string) => new Array(1536).fill(0.1),
+    generate: async () => ({ thought: "Thinking...", message: "Response", usage: {} })
+  }),
+}));
+
+// 2. Mock McpServer to capture tools
+const toolHandlers = new Map<string, Function>();
+vi.mock('@modelcontextprotocol/sdk/server/mcp.js', () => {
   return {
-    createLLM: () => ({
-      embed: vi.fn().mockImplementation(async (text: string) => {
-        // Deterministic mock embedding
-        // If text contains "alpha", return vector pointing one way
-        // If "beta", return vector pointing another way
-        const val = text.includes("alpha") ? 0.1 : 0.9;
-        return new Array(1536).fill(val);
-      }),
-    }),
+    McpServer: class MockMcpServer {
+      constructor(info: any) {}
+      tool(name: string, description: string, schema: any, handler: Function) {
+        toolHandlers.set(name, handler);
+      }
+      async connect(transport: any) {}
+    }
   };
 });
 
-describe("CompanyContextServer", () => {
-  const testRoot = join(process.cwd(), ".agent-test-company");
-  const companyA = "company-alpha";
-  const companyB = "company-beta";
+vi.mock('@modelcontextprotocol/sdk/server/stdio.js', () => ({
+  StdioServerTransport: class {}
+}));
+
+// 3. Mock Engine dependencies for integration test
+const mockCallTool = vi.fn();
+const mockGetClient = vi.fn().mockReturnValue({
+    callTool: mockCallTool
+});
+
+vi.mock('../src/mcp.js', () => ({
+    MCP: class {
+        init = vi.fn();
+        listServers = vi.fn().mockReturnValue([]);
+        startServer = vi.fn();
+        getTools = vi.fn().mockResolvedValue([]);
+        getClient = mockGetClient;
+    }
+}));
+
+const mockUpdateContext = vi.fn();
+const mockLoadContext = vi.fn().mockResolvedValue({});
+
+vi.mock('../src/context/ContextManager.js', () => ({
+    ContextManager: class {
+        loadContext = mockLoadContext;
+        updateContext = mockUpdateContext;
+    }
+}));
+
+// Dynamic Import helper to avoid issues with mocked modules
+// import { CompanyContextServer } from '../src/mcp_servers/company_context/index.js';
+// import { Engine, Registry } from '../src/engine/orchestrator.js';
+
+describe('Company Context Integration', async () => {
+  let CompanyContextServer: any;
+  let Engine: any;
+  let Registry: any;
+  let MCP: any;
+
+  const testDir = join(process.cwd(), '.agent', 'test_company_context');
+  const companyName = 'test-company-a';
+  const docPath = join(testDir, 'profile.md');
 
   beforeEach(async () => {
-    // Override process.cwd to use a test directory
-    vi.spyOn(process, "cwd").mockReturnValue(testRoot);
+    // Import modules dynamically after mocks are set up
+    const serverModule = await import('../src/mcp_servers/company_context/index.js');
+    CompanyContextServer = serverModule.CompanyContextServer;
+    const engineModule = await import('../src/engine/orchestrator.js');
+    Engine = engineModule.Engine;
+    Registry = engineModule.Registry;
+    const mcpModule = await import('../src/mcp.js');
+    MCP = mcpModule.MCP;
 
-    // Clean start
-    await rm(testRoot, { recursive: true, force: true });
-
-    // Setup directories
-    await mkdir(join(testRoot, ".agent", "companies", companyA, "docs"), { recursive: true });
-    await mkdir(join(testRoot, ".agent", "companies", companyB, "docs"), { recursive: true });
-
-    // Create docs
-    await writeFile(join(testRoot, ".agent", "companies", companyA, "docs", "doc-a.txt"), "This is alpha content.");
-    await writeFile(join(testRoot, ".agent", "companies", companyB, "docs", "doc-b.txt"), "This is beta content.");
+    process.env.BRAIN_STORAGE_ROOT = join(testDir, 'brain');
+    if (!existsSync(testDir)) {
+        await mkdir(testDir, { recursive: true });
+    }
+    await writeFile(docPath, "# Company Profile\n\nBrand Voice: Professional and Concise.\n\nOnboarding: Read the docs.");
+    toolHandlers.clear();
+    mockCallTool.mockClear();
+    mockGetClient.mockClear();
+    mockUpdateContext.mockClear();
   });
 
   afterEach(async () => {
-    await rm(testRoot, { recursive: true, force: true });
-    vi.restoreAllMocks();
+    await rm(testDir, { recursive: true, force: true });
+    vi.clearAllMocks();
   });
 
-  it("should ingest and query documents for a specific company", async () => {
-    const server = new CompanyContextServer();
+  describe('MCP Server', () => {
+      it('should register required tools', () => {
+        new CompanyContextServer();
+        expect(toolHandlers.has('store_company_document')).toBe(true);
+        expect(toolHandlers.has('load_company_context')).toBe(true);
+        expect(toolHandlers.has('query_company_memory')).toBe(true);
+      });
 
-    // Access internal tools map from McpServer
-    // @ts-ignore
-    const tools = (server as any).server._registeredTools;
+      it('should store a company document', async () => {
+        new CompanyContextServer();
+        const handler = toolHandlers.get('store_company_document');
+        expect(handler).toBeDefined();
 
-    const callTool = async (name: string, args: any) => {
-       const tool = tools[name];
-       if (!tool) throw new Error(`Tool ${name} not found`);
-       return await tool.handler(args);
-    };
+        const result = await handler!({
+          company_name: companyName,
+          document_path: docPath
+        });
 
-    // 1. Ingest Company A
-    const ingestRes = await callTool("load_company_context", { company_id: companyA });
-    expect(ingestRes.content[0].text).toContain("Successfully ingested");
+        expect(result.isError).toBeUndefined();
+        expect(result.content[0].text).toContain(`Successfully stored document for ${companyName}`);
 
-    // 2. Query Company A
-    // Mock embedding returns 0.1 for "alpha", matching doc-a
-    const queryRes = await callTool("query_company_context", { query: "alpha", company_id: companyA });
-    expect(queryRes.content[0].text).toContain("This is alpha content");
-    expect(queryRes.content[0].text).not.toContain("beta");
+        // Verify DB directly
+        const db = await lancedb.connect(process.env.BRAIN_STORAGE_ROOT!);
+        const table = await db.openTable(`company_${companyName}`);
+        const rows = await table.query().toArray();
+        expect(rows.length).toBe(1);
+        expect(rows[0].id).toBe(docPath);
+      });
 
-    // 3. Query Company B (should be empty initially)
-    const queryResB = await callTool("query_company_context", { query: "beta", company_id: companyB });
-    expect(queryResB.content[0].text).toMatch(/No context found|No relevant documents/);
+      it('should load company context', async () => {
+        new CompanyContextServer();
 
-    // 4. Ingest Company B
-    await callTool("load_company_context", { company_id: companyB });
+        // First store
+        const storeHandler = toolHandlers.get('store_company_document');
+        await storeHandler!({ company_name: companyName, document_path: docPath });
 
-    // 5. Query Company B
-    const queryResB2 = await callTool("query_company_context", { query: "beta", company_id: companyB });
-    expect(queryResB2.content[0].text).toContain("This is beta content");
-    expect(queryResB2.content[0].text).not.toContain("alpha");
+        // Then load
+        const loadHandler = toolHandlers.get('load_company_context');
+        const result = await loadHandler!({ company_name: companyName });
+
+        expect(result.content[0].text).toContain("Brand Voice: Professional and Concise");
+      });
+
+      it('should query company memory', async () => {
+        new CompanyContextServer();
+
+        // First store
+        const storeHandler = toolHandlers.get('store_company_document');
+        await storeHandler!({ company_name: companyName, document_path: docPath });
+
+        // Then query
+        const queryHandler = toolHandlers.get('query_company_memory');
+        const result = await queryHandler!({ company_name: companyName, query: "brand voice" });
+
+        expect(result.content[0].text).toContain("Brand Voice: Professional and Concise");
+      });
   });
 
-  it("should respect isolation between companies", async () => {
-    const server = new CompanyContextServer();
-    // @ts-ignore
-    const tools = (server as any).server._registeredTools;
-    const callTool = async (name: string, args: any) => {
-       const tool = tools[name];
-       if (!tool) throw new Error(`Tool ${name} not found`);
-       return await tool.handler(args);
-    };
+  describe('Engine Integration', () => {
+    it('should call load_company_context on initialization if company flag is set', async () => {
+        const engine = new Engine(
+            { generate: vi.fn().mockResolvedValue({ thought: "", message: "", usage: {} }) } as any, // Mock LLM
+            new Registry(),
+            new MCP()
+        );
 
-    await callTool("load_company_context", { company_id: companyA });
+        // Mock load_company_context response
+        mockCallTool.mockImplementation(async (args) => {
+            if (args.name === 'load_company_context') {
+                return { content: [{ type: 'text', text: 'Mock Profile Context' }] };
+            }
+            if (args.name === 'read_context') return { content: [] };
+            return { content: [] };
+        });
 
-    // Query Company B for Alpha content (should not find it)
-    const res = await callTool("query_company_context", { query: "alpha", company_id: companyB });
-    expect(res.content[0].text).not.toContain("This is alpha content");
+        // Run engine with AbortSignal that immediately aborts loop?
+        // Engine.run has a loop `while(true)`. We need to break it.
+        // We can mock `getUserInput` to return undefined immediately to break the loop.
+        // Engine's getUserInput is protected, but we can override it via subclass or mock if possible.
+        // Or we can rely on `process.stdin.isTTY` check?
+        // If we set interactive: false, it throws if input is missing.
+        // If we provide `initialPrompt`, it runs one turn.
+        // But `while(true)` continues until `input` is undefined.
+        // `getUserInput` returns undefined if non-interactive.
+
+        // If we pass `initialPrompt: undefined` and `interactive: false`, it breaks immediately?
+        // `if (!input) input = await this.getUserInput(...)`.
+        // `getUserInput` returns undefined if !interactive.
+        // `if (!input) break;`
+
+        // So calling run with undefined prompt and interactive: false should run initialization and then exit loop.
+
+        await engine.run(
+            { history: [], skill: { systemPrompt: "" }, buildPrompt: async () => "" } as any,
+            undefined,
+            { interactive: false, company: 'client-test' }
+        );
+
+        expect(mockGetClient).toHaveBeenCalledWith('company_context');
+        expect(mockCallTool).toHaveBeenCalledWith({
+            name: 'load_company_context',
+            arguments: { company_name: 'client-test' }
+        });
+        expect(mockUpdateContext).toHaveBeenCalledWith(
+            { company_profile: 'Mock Profile Context' },
+            undefined,
+            'client-test'
+        );
+    });
   });
 });

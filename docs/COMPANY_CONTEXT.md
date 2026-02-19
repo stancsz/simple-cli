@@ -1,74 +1,72 @@
 # Company Context (The Briefcase)
 
-The "Briefcase" system allows agents to load client-specific contexts, ensuring that work for one client is isolated from another and informed by the client's specific guidelines, documents, and history.
+The **Company Context** pillar ensures that the agent understands the specific context of the client or company it is working for. This includes brand voice, internal documentation, coding standards, and past decisions.
 
 ## Architecture
 
-The system is built around the **Company Context MCP Server** (`src/mcp_servers/company_context.ts`) which manages a dedicated `lancedb` vector database for each company.
+The Company Context system consists of:
 
-### Directory Structure
+1.  **Company Context MCP Server** (`src/mcp_servers/company_context/`):
+    *   Manages a Vector Database (LanceDB) for storing and retrieving company-specific documents.
+    *   Reuses the `.agent/brain/episodic` storage location but uses namespaced tables (e.g., `company_{company_id}`).
+    *   Provides tools: `store_company_document`, `load_company_context`, `query_company_memory`.
 
-Data is stored in `.agent/companies/{company_id}/`:
+2.  **Briefcase** (`src/context/briefcase.ts`):
+    *   Handles switching between companies via `--company` CLI flag or `switch_company` tool.
+    *   Loads static profiles and configurations.
 
--   `docs/`: Raw documents (Markdown, Text) to be ingested.
--   `brain/`: The LanceDB vector database storing embeddings of the documents.
--   `config.json`: (Optional) Metadata like Brand Voice.
-
-### Components
-
-1.  **CLI Flag**: `simple --company client-a` sets the context.
-2.  **Environment Variable**: `JULES_COMPANY` tracks the active company.
-3.  **MCP Server**: Exposes tools to ingest and query company data.
-4.  **Orchestrator**: Automatically injects relevant company context into the prompt using RAG.
+3.  **Engine Integration** (`src/engine/orchestrator.ts`):
+    *   On startup, loads the "Company Profile" (summarized context) from the Vector DB.
+    *   Injects the profile into the system prompt or user context.
+    *   Performs RAG (Retrieval-Augmented Generation) on every user message to inject relevant company knowledge.
 
 ## Usage
 
-### 1. Create a Company Context
+### 1. Ingesting Documents
 
-Create a directory:
-```bash
-mkdir -p .agent/companies/acme-corp/docs
+To add documents to a company's knowledge base, use the `store_company_document` tool (or a script using it).
+
+```typescript
+// Example usage via MCP tool
+await useTool("company_context", "store_company_document", {
+  company_name: "client-a",
+  document_path: "/path/to/docs/branding.md"
+});
 ```
-Add documents (e.g., `brand_guidelines.md`) to this folder.
 
-### 2. Run with Context
+### 2. Loading Context
+
+Start the agent with the `--company` flag:
 
 ```bash
-simple --company acme-corp
+simple --company client-a
 ```
-On startup, the agent will:
-1.  Load the company profile.
-2.  Filter memory and queries to `acme-corp`.
 
-### 3. Ingest Documents
+The agent will:
+1.  Load the company profile from `.agent/companies/client-a/profile.json` (if exists).
+2.  Query the Vector DB for "profile", "onboarding", "overview".
+3.  Inject the combined context into the session.
 
-You can ask the agent:
-> "Ingest the company documents."
+### 3. RAG Querying
 
-The agent will use the `load_company_context` tool to scan `.agent/companies/acme-corp/docs`, embed the content, and store it in the vector DB.
+During conversation, the agent automatically queries the Company Context for relevant information based on the user's input.
 
-### 4. Querying
+```
+User: "How should I format the error logs?"
+Agent: [Queries Vector DB for "error logs"] -> [Retrieves "logging_standards.md"] -> [Answers based on standards]
+```
 
-The agent automatically queries this database when you ask questions, injecting relevant chunks into the conversation.
+## Configuration
 
-### 5. Multi-Tenant Interfaces
+Ensure `mcp.json` includes the server configuration:
 
-For Slack and Teams interfaces, you can specify the company context dynamically in your message using the `--company` flag:
-
-> @bot Hello --company client-a
-
-This isolates the session to the specified company without restarting the server.
-
-## Tools
-
--   `load_company_context(company_id)`: Ingests documents from the docs folder.
--   `query_company_context(query, company_id)`: Searches the vector database.
--   `list_companies()`: Lists available companies.
-
-## Testing
-
-The company context feature is validated by a comprehensive test suite:
-
-1.  **Context Isolation**: `tests/company_context_integration.test.ts` verifies that `ContextServer` maintains separate context files for each company and that `ContextManager` queries the Brain MCP with the correct company ID.
-2.  **Interface Integration**: `tests/interface_integration.test.ts` verifies that Slack and Teams adapters correctly parse the `--company` flag and pass it to the agent engine.
-3.  **Vector Database**: Integration tests confirm that `CompanyContextServer` ingests and queries documents from isolated `lancedb` instances for each company.
+```json
+{
+  "mcpServers": {
+    "company_context": {
+      "command": "npx",
+      "args": ["tsx", "src/mcp_servers/company_context/index.ts"]
+    }
+  }
+}
+```

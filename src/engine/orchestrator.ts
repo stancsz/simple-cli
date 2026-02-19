@@ -253,6 +253,29 @@ export class Engine {
       // Ignore if context server is not available or empty
     }
 
+    // Load Company Context from Brain (Vector DB)
+    if (companyName) {
+        try {
+            const companyClient = this.mcp.getClient("company_context");
+            if (companyClient) {
+                const res: any = await companyClient.callTool({
+                    name: "load_company_context",
+                    arguments: { company_name: companyName }
+                });
+
+                if (res && res.content && res.content[0] && res.content[0].text) {
+                    const profileContext = res.content[0].text;
+                    if (!profileContext.includes("No relevant context found")) {
+                        await this.contextManager.updateContext({ company_profile: profileContext }, undefined, companyName);
+                        this.log("success", "Loaded and injected company profile from Brain.");
+                    }
+                }
+            }
+        } catch (e: any) {
+             // Silently fail if server not ready or no context
+        }
+    }
+
     while (true) {
       if (!input) {
         input = await this.getUserInput(bufferedInput, options.interactive);
@@ -262,8 +285,9 @@ export class Engine {
 
       // Brain: Recall similar past experiences via ContextManager
       const userRequest = input; // Capture original request
+      let contextData: any = null;
       try {
-        const contextData = await this.contextManager.loadContext(userRequest, companyName);
+        contextData = await this.contextManager.loadContext(userRequest, companyName);
         if (contextData.relevant_past_experiences && contextData.relevant_past_experiences.length > 0) {
             const pastMemory = contextData.relevant_past_experiences.join("\n\n---\n\n");
             this.log("info", pc.dim(`[Brain] Recalled past experience.`));
@@ -281,6 +305,11 @@ export class Engine {
         if (companyProfile.sops?.length) profileContext += `Recommended SOPs: ${companyProfile.sops.join(", ")}\n`;
 
         input = `${profileContext}\n${input}`;
+      }
+
+      // Inject Company Profile Memory (Vector-based)
+      if (contextData && contextData.company_profile) {
+          input = `[Company Profile Memory]\n${contextData.company_profile}\n\n${input}`;
       }
 
       ctx.history.push({ role: "user", content: input });

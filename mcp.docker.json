@@ -20,9 +20,9 @@
       "command": "node",
       "args": ["/app/dist/mcp_servers/context_server.js"]
     },
-    "company": {
+    "company_context": {
       "command": "node",
-      "args": ["/app/dist/mcp_servers/company/index.js"]
+      "args": ["/app/dist/mcp_servers/company_context/index.js"]
     },
     "sop_engine": {
       "command": "node",
