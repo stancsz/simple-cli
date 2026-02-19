@@ -43,6 +43,10 @@
     "swarm": {
       "command": "node",
       "args": ["/app/dist/mcp_servers/swarm/index.js"]
+    },
+    "cursor": {
+      "command": "node",
+      "args": ["/app/dist/mcp_servers/cursor/index.js"]
     }
   },
   "agents": {
