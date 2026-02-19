@@ -48,6 +48,10 @@
       "command": "node",
       "args": ["/app/dist/mcp_servers/cursor/index.js"]
     },
+    "windsurf": {
+      "command": "node",
+      "args": ["/app/dist/mcp_servers/windsurf/index.js"]
+    },
     "v0dev": {
       "command": "node",
       "args": ["/app/dist/mcp_servers/v0dev/index.js"]
