@@ -110,6 +110,7 @@
     - [x] **Agent Integration**:
         - [x] Integrated Brain with Job Delegator (log experience, recall patterns).
         - [x] Created Reviewer Agent with Brain integration.
+    - [x] **Full Stack Validation**: Verified the full 4-Pillar Vision (Context + SOP + Brain + HR) via comprehensive E2E integration test (`tests/integration/four_pillars.test.ts`).
 - [x] **Company Context (The Briefcase)**:
     - [x] Create `src/mcp_servers/company_context.ts`: Manage multi-tenant RAG via LanceDB.
     - [x] Update `cli.ts` and `engine.ts` to support `--company` flag and context injection.

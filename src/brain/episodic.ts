@@ -105,6 +105,10 @@ export class EpisodicMemory {
     let table = await this.getTable(company);
 
     if (!table) {
+      // LanceDB requires non-empty arrays for type inference on creation
+      if (data.artifacts.length === 0) {
+        data.artifacts = ["none"];
+      }
       table = await this.db!.createTable(tableName, [data]);
     } else {
       await table.add([data]);

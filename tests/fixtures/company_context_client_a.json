@@ -1,0 +1,11 @@
+{
+  "id": "client_a",
+  "name": "Acme Corp",
+  "industry": "Tech",
+  "persona": {
+    "tone": "professional",
+    "voice": "authoritative"
+  },
+  "brand_voice": "We are the leaders in innovation.",
+  "sops": ["website_deployment"]
+}
