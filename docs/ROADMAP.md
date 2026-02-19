@@ -87,6 +87,7 @@ To transition from a "Wrapper" to a true "Universal AI Integration Platform," th
     - **Brain MCP Server:** (✅ Implemented)
     - **Memory Integration:** (✅ Implemented) ContextManager now automatically queries/stores relevant past experiences via the Brain.
     - **Agent Integration:** (✅ Implemented) Brain integrated with autonomous agents (Job Delegator & Reviewer) for experiential learning.
+    - **Active Recall:** (✅ Implemented) Agents now proactively query the Brain for past failures and preferences before acting.
     - **Integration Testing:** (✅ Completed) Verified Brain persistence and recall in end-to-end 4-Pillar tests.
 
 ### Phase 7: The Hive Mind (Multi-Agent Swarms) (✅ Implemented)

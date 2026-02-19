@@ -8,7 +8,7 @@ export class ReviewerAgent {
     this.mcp = new MCP();
   }
 
-  async reviewTask(task: TaskDefinition, artifacts: string[] = []): Promise<{ approved: boolean; feedback: string }> {
+  async reviewTask(task: TaskDefinition, artifacts: string[] = [], insights?: string): Promise<{ approved: boolean; feedback: string }> {
     // Init Brain
     try {
         await this.mcp.init();
@@ -28,6 +28,11 @@ export class ReviewerAgent {
 
     let approved = true;
     let feedback = "Automated review passed.";
+
+    if (insights) {
+        console.log(`[ReviewerAgent] Applying past insights: ${insights}`);
+        feedback += `\nApplied Insights: ${insights}`;
+    }
 
     if (artifacts.length === 0) {
         // feedback = "No artifacts produced to review.";

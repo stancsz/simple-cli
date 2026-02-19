@@ -29,7 +29,7 @@ export class Reviewer {
     }
   }
 
-  private async getRecentLogs(timeWindow: number): Promise<any[]> {
+  public async getRecentLogs(timeWindow: number): Promise<any[]> {
     if (!existsSync(this.logsDir)) return [];
 
     const files = await readdir(this.logsDir);

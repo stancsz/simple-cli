@@ -30,20 +30,27 @@ export class JobDelegator {
       console.warn("[JobDelegator] Failed to connect to Brain MCP:", e);
     }
 
-    // Recall patterns
+    // Active Recall
+    let taskWithContext = { ...task };
     if (brainAvailable) {
       try {
         const client = this.mcp.getClient("brain");
         if (client) {
           const result: any = await client.callTool({
-            name: "recall_delegation_patterns",
+            name: "brain_query",
             arguments: {
-              task_type: task.name,
+              query: `lessons learned about ${task.name}`,
+              limit: 3,
               company: task.company
             }
           });
           if (result && result.content && result.content[0]) {
-            console.log(`[JobDelegator] Brain Recall for ${task.name}:\n${result.content[0].text}`);
+            const insights = result.content[0].text;
+            console.log(`[JobDelegator] Brain Recall for ${task.name}:\n${insights}`);
+
+            if (!insights.includes("No relevant memories")) {
+                taskWithContext.prompt = `${task.prompt}\n\n[System Note: Relevant Past Experiences]\n${insights}`;
+            }
           }
         }
       } catch (e) {
@@ -55,7 +62,7 @@ export class JobDelegator {
     let errorMessage = '';
 
     try {
-      const result = await handleTaskTrigger(task);
+      const result = await handleTaskTrigger(taskWithContext);
       if (result.exitCode !== 0) {
         status = 'failed';
         errorMessage = `Process exited with code ${result.exitCode}`;
