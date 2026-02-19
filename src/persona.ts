@@ -150,7 +150,17 @@ export class PersonaEngine {
 
   async simulateTyping(response: string, latencyConfig: { min: number, max: number }, onTyping?: () => void): Promise<void> {
     const { min, max } = latencyConfig;
-    const delay = Math.floor(Math.random() * (max - min + 1)) + min;
+
+    // Calculate proportional delay (approx 30ms per character ~ 2000 chars/min)
+    let delay = response.length * 30;
+
+    // Apply constraints
+    delay = Math.max(min, delay);
+    delay = Math.min(max, delay);
+
+    // Add jitter (±10%)
+    const jitter = delay * 0.1 * (Math.random() * 2 - 1);
+    delay = Math.floor(delay + jitter);
 
     if (onTyping && delay > 100) {
       onTyping();
