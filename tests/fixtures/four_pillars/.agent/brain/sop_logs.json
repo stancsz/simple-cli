@@ -1,83 +1,37 @@
 [
   {
+    "timestamp": "2026-02-18T23:55:04.594Z",
     "sop": "Title: Deployment SOP",
-    "timestamp": "2026-02-18T20:03:41.227Z",
-    "result": {
-      "success": true,
-      "logs": [
-        {
-          "step": "Step 1",
-          "status": "success",
-          "output": "Clean",
-          "timestamp": "2026-02-18T20:03:41.223Z"
-        },
-        {
-          "step": "Step 2",
-          "status": "success",
-          "output": "Written",
-          "timestamp": "2026-02-18T20:03:41.227Z"
-        },
-        {
-          "step": "Step 3",
-          "status": "success",
-          "output": "Committed",
-          "timestamp": "2026-02-18T20:03:41.227Z"
-        }
-      ]
-    }
+    "step": 3,
+    "status": "success",
+    "details": "Committed"
   },
   {
+    "timestamp": "2026-02-18T23:55:04.596Z",
     "sop": "Title: Deployment SOP",
-    "timestamp": "2026-02-18T20:03:41.229Z",
-    "result": {
-      "success": true,
-      "logs": [
-        {
-          "step": "Step 1",
-          "status": "success",
-          "output": "Clean",
-          "timestamp": "2026-02-18T20:03:41.225Z"
-        },
-        {
-          "step": "Step 2",
-          "status": "success",
-          "output": "Written",
-          "timestamp": "2026-02-18T20:03:41.227Z"
-        },
-        {
-          "step": "Step 3",
-          "status": "success",
-          "output": "Committed",
-          "timestamp": "2026-02-18T20:03:41.228Z"
-        }
-      ]
-    }
+    "step": 3,
+    "status": "success",
+    "details": "Committed"
   },
   {
+    "timestamp": "2026-02-18T23:55:04.605Z",
     "sop": "Title: Deployment SOP",
-    "timestamp": "2026-02-18T20:03:41.238Z",
-    "result": {
-      "success": true,
-      "logs": [
-        {
-          "step": "Step 1",
-          "status": "success",
-          "output": "Repository is clean.",
-          "timestamp": "2026-02-18T20:03:41.236Z"
-        },
-        {
-          "step": "Step 2",
-          "status": "success",
-          "output": "Updated version.txt to v1.0.1",
-          "timestamp": "2026-02-18T20:03:41.238Z"
-        },
-        {
-          "step": "Step 3",
-          "status": "success",
-          "output": "Committed changes.",
-          "timestamp": "2026-02-18T20:03:41.238Z"
-        }
-      ]
-    }
+    "step": 1,
+    "status": "success",
+    "details": "Repository is clean."
+  },
+  {
+    "timestamp": "2026-02-18T23:55:04.607Z",
+    "sop": "Title: Deployment SOP",
+    "step": 2,
+    "status": "success",
+    "details": "Updated version.txt to v1.0.1"
+  },
+  {
+    "timestamp": "2026-02-18T23:55:04.608Z",
+    "sop": "Title: Deployment SOP",
+    "step": 3,
+    "status": "success",
+    "details": "Committed changes."
   }
 ]

@@ -92,9 +92,7 @@ vi.mock('../../src/llm.js', () => ({
 vi.mock('../../src/mcp.js', () => ({
     MCP: vi.fn().mockImplementation(() => ({
         init: mocks.McpInit,
-        getTools: mocks.McpGetTools,
-        isServerRunning: vi.fn().mockReturnValue(true),
-        startServer: vi.fn()
+        getTools: mocks.McpGetTools
     }))
 }));
 
@@ -108,13 +106,6 @@ vi.mock('../../src/workflows/workflow_engine.js', () => ({
 
 vi.mock('../../src/workflows/execute_sop_tool.js', () => ({
     createExecuteSOPTool: vi.fn().mockReturnValue({ name: 'execute_sop' })
-}));
-
-vi.mock('../../src/persona/middleware.js', () => ({
-    PersonaMiddleware: class {
-        initialize = vi.fn();
-        transform = vi.fn().mockImplementation((text) => Promise.resolve(text));
-    }
 }));
 
 import { adapter, bot, app, resetInitialization } from '../../src/interfaces/teams.js';

@@ -36,9 +36,9 @@
       "command": "node",
       "args": ["/app/dist/mcp_servers/openclaw/index.js"]
     },
-    "hive_mind": {
+    "picoclaw": {
       "command": "node",
-      "args": ["/app/dist/mcp_servers/hive_mind/index.js"]
+      "args": ["/app/dist/mcp_servers/picoclaw/index.js"]
     }
   },
   "agents": {
