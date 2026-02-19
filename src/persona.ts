@@ -36,6 +36,10 @@ export class PersonaEngine {
     this.cwd = cwd;
   }
 
+  getConfig(): PersonaConfig | null {
+    return this.config;
+  }
+
   async loadConfig(): Promise<void> {
     if (this.config) return;
 
@@ -44,19 +48,19 @@ export class PersonaEngine {
     // Support Company Override
     const company = process.env.JULES_COMPANY;
     if (company) {
-       const companyConfigPath = join(this.cwd, ".agent", "companies", company, "config", "persona.json");
-       if (existsSync(companyConfigPath)) {
-          configPath = companyConfigPath;
-       }
+      const companyConfigPath = join(this.cwd, ".agent", "companies", company, "config", "persona.json");
+      if (existsSync(companyConfigPath)) {
+        configPath = companyConfigPath;
+      }
     }
 
     if (!existsSync(configPath)) {
       // Try fallback locations
       const legacyPath = join(this.cwd, ".agent", "persona.json");
       if (existsSync(legacyPath)) {
-          configPath = legacyPath;
+        configPath = legacyPath;
       } else {
-          return;
+        return;
       }
     }
 
@@ -90,7 +94,7 @@ export class PersonaEngine {
     if (this.config.working_hours && !this.isWithinWorkingHours(this.config.working_hours)) {
       // Simulate typing even for offline message
       if (this.config.response_latency) {
-          await this.simulateTyping("", this.config.response_latency, onTyping);
+        await this.simulateTyping("", this.config.response_latency, onTyping);
       }
       return {
         ...response,
@@ -106,7 +110,7 @@ export class PersonaEngine {
     if (this.config.catchphrases?.greeting?.length > 0) {
       const greeting = this.getRandomElement(this.config.catchphrases.greeting);
       if (!message.trim().startsWith(greeting)) {
-         message = `${greeting} ${message}`;
+        message = `${greeting} ${message}`;
       }
     }
 
@@ -128,7 +132,7 @@ export class PersonaEngine {
       const signoff = this.getRandomElement(this.config.catchphrases.signoff);
       // Avoid appending if already ends with signoff-like structure
       if (!message.trim().endsWith(signoff)) {
-          message = `${message}\n\n${signoff}`;
+        message = `${message}\n\n${signoff}`;
       }
     }
 
@@ -149,11 +153,11 @@ export class PersonaEngine {
     const delay = Math.floor(Math.random() * (max - min + 1)) + min;
 
     if (onTyping && delay > 100) {
-        onTyping();
+      onTyping();
     }
 
     if (delay > 0) {
-        await new Promise((resolve) => setTimeout(resolve, delay));
+      await new Promise((resolve) => setTimeout(resolve, delay));
     }
   }
 

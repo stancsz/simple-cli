@@ -101,3 +101,8 @@ pr_failure.log
 
 # Local Dify Setup
 .dify/
+
+# Generated Test Artifacts
+tests/fixtures/hive_mind/
+.agent/brain/sop_logs.json
+.agent/brain/sop_logs.jsonl
