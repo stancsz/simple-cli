@@ -47,6 +47,10 @@
     "cursor": {
       "command": "node",
       "args": ["/app/dist/mcp_servers/cursor/index.js"]
+    },
+    "v0dev": {
+      "command": "node",
+      "args": ["/app/dist/mcp_servers/v0dev/index.js"]
     }
   },
   "agents": {
