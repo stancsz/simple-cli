@@ -73,6 +73,7 @@ class SlackEngine extends Engine {
 const app = new App({
   token: process.env.SLACK_BOT_TOKEN,
   signingSecret: process.env.SLACK_SIGNING_SECRET,
+  ...(process.env.SLACK_API_URL ? { clientOptions: { slackApiUrl: process.env.SLACK_API_URL } } : {}),
 });
 
 // Store pending approvals: action_id -> resolve function

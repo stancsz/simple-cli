@@ -1,0 +1,32 @@
+services:
+  agent:
+    volumes:
+      - ./.agent-test:/app/.agent
+      - ./test_fixtures/company_context:/app/.agent/companies
+      - ./persona.json:/app/persona.json
+    environment:
+      - JULES_COMPANY=acme
+
+  slack-interface:
+    build: .
+    command: node dist/interfaces/slack.js
+    depends_on:
+      - redis
+      - postgres
+      - agent
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=production
+      - MODEL=deepseek:deepseek-reasoner
+      - REDIS_URL=redis://redis:6379
+      - POSTGRES_URL=postgresql://postgres:postgres@postgres:5432/postgres
+      - SLACK_BOT_TOKEN=xoxb-test
+      - SLACK_SIGNING_SECRET=test
+      - SLACK_API_URL=http://host.docker.internal:3001/slack
+    volumes:
+      - ./.agent-test:/app/.agent
+      - ./test_fixtures/company_context:/app/.agent/companies
+      - ./persona.json:/app/persona.json
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
