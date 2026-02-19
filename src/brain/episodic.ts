@@ -91,7 +91,7 @@ export class EpisodicMemory {
       timestamp: Date.now(),
       userPrompt: request,
       agentResponse: solution,
-      artifacts,
+      artifacts: artifacts.length > 0 ? artifacts : ["none"],
       vector: embedding,
     };
 
