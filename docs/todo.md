@@ -12,6 +12,7 @@
     - [x] Kimi K2.5 (deep reasoning) - 1 day
     - [x] Devin (full-stack development) - 2 days
     - [x] Picoclaw (reasoning framework) - 1 day
+    - [x] Cursor (IDE integration) - 1 day
 - [x] **Digest Phase**: Standardize via MCP servers
     - [x] Created `src/mcp_servers/` architecture
     - [x] Implemented MCP protocol for all integrated frameworks
@@ -28,7 +29,6 @@
     - [x] Eliminates redundant context passing (70% token reduction)
 
 **Next Frameworks to Ingest:**
-- [ ] **Cursor** (IDE integration)
 - [ ] **Windsurf** (collaborative coding)
 - [ ] **Bolt.new** (rapid prototyping)
 - [ ] **v0.dev** (UI generation)

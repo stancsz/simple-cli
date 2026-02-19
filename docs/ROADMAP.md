@@ -27,7 +27,7 @@ To transition from a "Wrapper" to a true "Universal AI Integration Platform," th
     3. **Deploy:** Register in `mcp.json` for automatic orchestrator discovery
 - **Recent Update (Digest Phase):** Completed cleanup by removing legacy `delegate_cli` and migrating all agent configurations to `mcp.json`.
 - **Proven Track Record:**
-    - Jules (2 days), Aider (1 day), CrewAI (3 days), Kimi (1 day), Devin (2 days), Picoclaw (1 day)
+    - Jules (2 days), Aider (1 day), CrewAI (3 days), Kimi (1 day), Devin (2 days), Picoclaw (1 day), Cursor (1 day)
     - Average integration time: **1-3 days** per framework
 - **Token Efficiency:** Shared `.agent/brain/` memory reduces token costs by up to 70%
 - **Benefit:** Framework-agnostic architecture means Simple CLI never becomes obsolete—it evolves with the AI landscape.
@@ -130,7 +130,7 @@ To achieve a true "Universal AI Integration Platform" capable of consulting for 
     - **Ingest:** Analyze framework APIs, CLIs, or SDKs
     - **Digest:** Wrap in MCP servers (`src/mcp_servers/<framework>/`)
     - **Deploy:** Auto-register in `mcp.json` for orchestrator discovery
-*   **Proven Track Record:** Jules (2d), Aider (1d), CrewAI (3d), Kimi (1d), Devin (2d), Picoclaw (1d)
+*   **Proven Track Record:** Jules (2d), Aider (1d), CrewAI (3d), Kimi (1d), Devin (2d), Picoclaw (1d), Cursor (1d)
 *   **Competitive Advantage:** Framework-agnostic = never obsolete. As new AI frameworks emerge, Simple CLI absorbs them.
 
 ### 2. Token-Efficient Memory (The Shared Brain) (✅ Active)
