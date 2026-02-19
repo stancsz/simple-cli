@@ -1,34 +1,21 @@
-import cron from 'node-cron';
-import chokidar from 'chokidar';
-import { spawn, ChildProcess } from 'child_process';
+import { MCP } from './mcp.js';
 import { join, dirname } from 'path';
-import { readFile, appendFile } from 'fs/promises';
-import { existsSync } from 'fs';
 import { fileURLToPath } from 'url';
-import { ScheduleConfig, TaskDefinition } from './interfaces/daemon.js';
+import { appendFile, mkdir } from 'fs/promises';
+import { existsSync } from 'fs';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
-const isTs = __filename.endsWith('.ts');
-const ext = isTs ? '.ts' : '.js';
-
 const CWD = process.cwd();
 const AGENT_DIR = join(CWD, '.agent');
-const LOG_FILE = join(AGENT_DIR, 'daemon.log'); // Changed from ghost.log
-const MCP_CONFIG_FILE = join(CWD, 'mcp.json');
-const SCHEDULER_FILE = join(AGENT_DIR, 'scheduler.json'); // Legacy support
-
-// State tracking
-const activeChildren = new Set<ChildProcess>();
-const cronJobs: any[] = [];
-const taskFileWatchers: any[] = [];
+const LOG_FILE = join(AGENT_DIR, 'daemon.log');
 
 async function log(msg: string) {
   const timestamp = new Date().toISOString();
   const line = `[${timestamp}] ${msg}\n`;
   try {
     if (!existsSync(AGENT_DIR)) {
-      // Create .agent dir if not exists (though usually it should)
+      await mkdir(AGENT_DIR, { recursive: true });
     }
     await appendFile(LOG_FILE, line);
   } catch (e) {
@@ -37,196 +24,65 @@ async function log(msg: string) {
   console.log(line.trim());
 }
 
-async function loadSchedule(): Promise<ScheduleConfig> {
-  let tasks: TaskDefinition[] = [];
-
-  // 1. Load from mcp.json (Primary)
-  if (existsSync(MCP_CONFIG_FILE)) {
-      try {
-          const content = await readFile(MCP_CONFIG_FILE, 'utf-8');
-          const config = JSON.parse(content);
-          if (config.scheduledTasks && Array.isArray(config.scheduledTasks)) {
-              tasks.push(...config.scheduledTasks);
-          }
-      } catch (e) {
-          await log(`Error reading mcp.json: ${e}`);
-      }
-  }
-
-  // 2. Load from scheduler.json (Legacy/Fallback)
-  if (existsSync(SCHEDULER_FILE)) {
-    try {
-      const content = await readFile(SCHEDULER_FILE, 'utf-8');
-      const legacyConfig = JSON.parse(content);
-      if (legacyConfig.tasks && Array.isArray(legacyConfig.tasks)) {
-          // Avoid duplicates by ID
-          const existingIds = new Set(tasks.map(t => t.id));
-          legacyConfig.tasks.forEach((t: TaskDefinition) => {
-              if (!existingIds.has(t.id)) {
-                  tasks.push(t);
-              }
-          });
-      }
-    } catch (e) {
-      await log(`Error reading scheduler.json: ${e}`);
-    }
-  }
-
-  return { tasks };
-}
-
-async function runTask(task: TaskDefinition) {
-  await log(`Triggering task: ${task.name} (${task.id})`);
-
-  const env: NodeJS.ProcessEnv = {
-    ...process.env,
-    JULES_TASK_DEF: JSON.stringify(task)
-  };
-
-  if (task.company) {
-    env.JULES_COMPANY = task.company;
-  }
-
-  // Point to the new executor in src/scheduler/
-  const executorScript = join(__dirname, 'scheduler', `executor${ext}`);
-
-  const args = isTs
-       ? ['--loader', 'ts-node/esm', executorScript]
-       : [executorScript];
-
-  const child = spawn('node', args, {
-    env,
-    cwd: CWD,
-    stdio: 'pipe'
-  });
-
-  activeChildren.add(child);
-
-  child.stdout?.on('data', (d) => {
-    const output = d.toString().trim();
-    if (output) log(`[${task.name}] STDOUT: ${output}`);
-  });
-
-  child.stderr?.on('data', (d) => {
-    const output = d.toString().trim();
-    if (output) log(`[${task.name}] STDERR: ${output}`);
-  });
-
-  child.on('close', (code) => {
-    activeChildren.delete(child);
-    log(`Task ${task.name} exited with code ${code}`);
-  });
-
-  child.on('error', (err) => {
-    activeChildren.delete(child);
-    log(`Failed to spawn task ${task.name}: ${err.message}`);
-  });
-}
-
-async function applySchedule() {
-  await log("Applying schedule...");
-
-  cronJobs.forEach(job => job.stop());
-  cronJobs.length = 0;
-
-  await Promise.all(taskFileWatchers.map(w => w.close()));
-  taskFileWatchers.length = 0;
-
-  const config = await loadSchedule();
-  await log(`Loaded ${config.tasks.length} tasks.`);
-
-  if (config.tasks.length === 0) {
-    await log("No tasks scheduled.");
-  }
-
-  for (const task of config.tasks) {
-    try {
-      if (task.trigger === 'cron' && task.schedule) {
-        if (cron.validate(task.schedule)) {
-          const job = cron.schedule(task.schedule, () => {
-             log(`Cron triggered for task: ${task.name}`);
-             runTask(task);
-          });
-          cronJobs.push(job);
-          await log(`Scheduled cron task: ${task.name} at "${task.schedule}"`);
-        } else {
-          await log(`Invalid cron schedule for task: ${task.name}`);
-        }
-      } else if (task.trigger === 'file-watch' && task.path) {
-          const watchPath = join(CWD, task.path);
-          const watcher = chokidar.watch(watchPath, { persistent: true, ignoreInitial: true });
-
-          watcher.on('change', (path) => {
-              log(`File changed: ${path}. Triggering task ${task.name}`);
-              runTask(task);
-          });
-
-          taskFileWatchers.push(watcher);
-          await log(`Watching file: ${watchPath} for task: ${task.name}`);
-      } else if (task.trigger === 'webhook') {
-          await log(`Webhook trigger not implemented for task: ${task.name}`);
-      } else {
-        await log(`Unknown trigger or missing config for task: ${task.name}`);
-      }
-    } catch (e: any) {
-      await log(`Error scheduling task ${task.name}: ${e.message}`);
-    }
-  }
-}
-
 async function main() {
   await log("Daemon starting...");
   await log(`CWD: ${CWD}`);
 
-  await applySchedule();
+  const mcp = new MCP();
+  await mcp.init();
 
-  // Watch mcp.json for changes
-  if (existsSync(MCP_CONFIG_FILE)) {
-      const mcpWatcher = chokidar.watch(MCP_CONFIG_FILE, { persistent: true, ignoreInitial: true });
-      mcpWatcher.on('change', async () => {
-          await log("mcp.json changed. Reloading schedule...");
-          await applySchedule();
-      });
-  } else {
-      // Watch cwd for creation of mcp.json
-      const dirWatcher = chokidar.watch(CWD, { depth: 0, persistent: true, ignoreInitial: true });
-      dirWatcher.on('add', async (path) => {
-          if (path === MCP_CONFIG_FILE) {
-               await log("mcp.json created. Loading schedule...");
-               await applySchedule();
-               // Could attach specific watcher now, but applySchedule re-runs so logic is fine
-               // We might want to restart to attach specific watcher properly or just rely on manual restart
-               // For now, reloading schedule is good enough.
+  // Ensure scheduler server is started
+  try {
+      if (!mcp.isServerRunning('scheduler')) {
+          await mcp.startServer('scheduler');
+          await log("Scheduler MCP server started.");
+      }
+  } catch (e: any) {
+      await log(`Failed to start scheduler server: ${e.message}`);
+      // If scheduler fails, we can't do anything. Exit.
+      process.exit(1);
+  }
+
+  const client = mcp.getClient('scheduler');
+  if (!client) {
+      await log("Failed to get scheduler client.");
+      process.exit(1);
+  }
+
+  // Loop
+  const loop = async () => {
+      try {
+          const result: any = await client.callTool({
+              name: "execute_scheduled_tasks",
+              arguments: {}
+          });
+
+          if (result && result.content && result.content[0] && result.content[0].text) {
+              const text = result.content[0].text;
+              if (text !== "No tasks due.") {
+                  await log(`[Scheduler] ${text}`);
+              }
           }
-      });
-  }
+      } catch (e: any) {
+          await log(`Error calling scheduler: ${e.message}`);
+      }
+  };
 
-  // Watch scheduler.json as well
-  if (existsSync(SCHEDULER_FILE)) {
-      const legacyWatcher = chokidar.watch(SCHEDULER_FILE, { persistent: true, ignoreInitial: true });
-      legacyWatcher.on('change', async () => {
-          await log("scheduler.json changed. Reloading schedule...");
-          await applySchedule();
-      });
-  }
+  // Run immediately then interval
+  await loop();
+  setInterval(loop, 10000); // Check every 10 seconds
 
-  setInterval(() => {}, 1000 * 60 * 60); // Keep alive
+  // Handle cleanup
+  const cleanup = async (signal: string) => {
+      await log(`Daemon stopping (${signal})...`);
+      try {
+          await mcp.stopServer('scheduler');
+      } catch (e) {}
+      process.exit(0);
+  };
+
+  process.on('SIGINT', () => cleanup('SIGINT'));
+  process.on('SIGTERM', () => cleanup('SIGTERM'));
 }
-
-const shutdown = async (signal: string) => {
-    await log(`Daemon stopping (${signal})...`);
-    if (activeChildren.size > 0) {
-        await log(`Killing ${activeChildren.size} active tasks...`);
-        for (const child of activeChildren) {
-            try {
-                child.kill('SIGTERM');
-            } catch (e) { }
-        }
-    }
-    process.exit(0);
-};
-
-process.on('SIGINT', () => shutdown('SIGINT'));
-process.on('SIGTERM', () => shutdown('SIGTERM'));
 
 main().catch(err => log(`Daemon fatal error: ${err}`));

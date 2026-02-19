@@ -124,7 +124,7 @@ async function main() {
   await mcp.init();
   // Ensure essential servers are running.
   // 'filesystem' and 'git' should be configured in mcp.json via migration.
-  const coreServers = ["filesystem", "git", "context_server", "company_context", "aider-server", "claude-server", "openclaw", "hr", "core_updater"];
+  const coreServers = ["filesystem", "git", "context_server", "company_context", "aider-server", "claude-server", "openclaw", "hr", "core_updater", "scheduler"];
 
   if (process.env.SIMPLE_CLI_SKILL?.startsWith("dify")) {
     coreServers.push("dify");

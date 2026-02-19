@@ -231,11 +231,15 @@ To maintain a lean and efficient system, the agent adheres to a "Discovery First
 The agent is not just reactive; it can proactively manage its environment through the Scheduler.
 
 *   **Goal**: Enable "Set and Forget" autonomy.
+*   **Architecture**:
+    *   **Scheduler MCP Server**: A specialized MCP server (`src/mcp_servers/scheduler/`) that manages the schedule (`scheduler.json`) and tracks due tasks using `node-cron`.
+    *   **Daemon**: A lightweight process (`src/daemon.ts`) that runs continuously, initializing the MCP ecosystem and polling the Scheduler MCP for due tasks.
 *   **Workflow**:
     1.  **User Request**: "Organize my desktop every Friday."
     2.  **Tool Creation**: Agent realizes it needs a script. Calls `create_tool` to generate `organize_desktop.ts`.
     3.  **Scheduling**: Agent calls `schedule_task` with cron `"0 17 * * 5"` and prompt `"Run organize_desktop tool"`.
-    4.  **Execution**: On Friday at 5 PM, the system wakes up (if running as a daemon) or checks pending tasks on next boot, and executes the prompt.
+    4.  **Queuing**: The Scheduler MCP detects the due time and adds the task to a pending queue.
+    5.  **Execution**: The Daemon calls `execute_scheduled_tasks` on the Scheduler MCP, which spawns an isolated `Executor` process to run the task safely.
 
 ### 6.2 Self-Maintenance (Relevance Checks)
 To prevent "zombie tasks" (tasks that are no longer useful), the Scheduler includes a built-in "Relevance Audit".
@@ -333,7 +337,7 @@ To balance safety with autonomy, the system supports configurable permission lev
 1.  **Phase 1 (Current)**: Basics. `delegate_cli` works with `stdout`. MCP servers supported. Simple `learnings.json` RAG.
 2.  **Phase 2**: Structured Communication. Implement JSON schema for agent-to-agent talk.
 3.  **Phase 3**: Shared Memory & **Dreaming**. Agents share a vector database and perform offline simulations.
-4.  **Phase 4**: Autonomous Scheduler. Implementation of the cron-based task runner and daemon mode.
+4.  **Phase 4 (Completed)**: Autonomous Scheduler. Implementation of the cron-based task runner and daemon mode using Scheduler MCP.
 5.  **Phase 5**: Recursive Self-Improvement. Agent gains safe write-access to its own `src/` directory.
 
 ---
