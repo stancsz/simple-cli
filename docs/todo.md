@@ -73,8 +73,8 @@
     - [x] Deleted deprecated files.
 
 ### 4. Tests
-- [ ] Update tests to mock MCP servers instead of local file paths.
-- [ ] Verify Ghost Mode triggers (Scheduler/JobDelegator) in CI/CD or local simulation.
+- [x] Update tests to mock MCP servers instead of local file paths.
+- [x] Verify Ghost Mode triggers (Scheduler/JobDelegator) in CI/CD or local simulation.
 
 ### 5. Phase 4.5: SOP Engine
 - [x] **Core Logic**:
