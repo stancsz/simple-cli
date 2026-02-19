@@ -88,6 +88,7 @@ To transition from a "Wrapper" to a true "Universal AI Integration Platform," th
     - **Memory Integration:** (✅ Implemented) ContextManager now automatically queries/stores relevant past experiences via the Brain.
     - **Agent Integration:** (✅ Implemented) Brain integrated with autonomous agents (Job Delegator & Reviewer) for experiential learning.
     - **Integration Testing:** (✅ Completed) Verified Brain persistence and recall in end-to-end 4-Pillar tests.
+    - **Validation:** (✅ Completed) Validated multi-tenant context separation (Company Context + Brain) via `scripts/validate_company_context.ts`.
 
 ### Phase 7: The Hive Mind (Multi-Agent Swarms) (✅ Implemented)
 **Goal:** Advanced multi-agent collaboration and hierarchical swarms.
@@ -137,7 +138,7 @@ To achieve a true "Universal AI Integration Platform" capable of consulting for 
 *   **Mechanism:** Vector DB + Graph storage for episodic and semantic memory.
 *   **Benefit:** Eliminates redundant context passing between agents, reducing token costs by up to 70%.
 
-### 3. "Company Context" Onboarding (The Briefcase) (✅ Implemented)
+### 3. "Company Context" Onboarding (The Briefcase) (✅ Validated)
 *   **Concept:** Agents shouldn't just run in a folder; they should understand the "Client Profile."
 *   **Mechanism:** Multi-tenant RAG (Vector DB) per company. When you run `simple --company client-a`, the agent loads specific brand voices, internal docs, and past decisions.
 

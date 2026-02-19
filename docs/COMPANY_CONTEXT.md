@@ -72,3 +72,26 @@ The company context feature is validated by a comprehensive test suite:
 1.  **Context Isolation**: `tests/company_context_integration.test.ts` verifies that `ContextServer` maintains separate context files for each company and that `ContextManager` queries the Brain MCP with the correct company ID.
 2.  **Interface Integration**: `tests/interface_integration.test.ts` verifies that Slack and Teams adapters correctly parse the `--company` flag and pass it to the agent engine.
 3.  **Vector Database**: Integration tests confirm that `CompanyContextServer` ingests and queries documents from isolated `lancedb` instances for each company.
+
+## Validation Results (Pillar #3)
+
+A comprehensive end-to-end validation script (`scripts/validate_company_context.ts`) was executed to prove the system's effectiveness in a multi-tenant scenario.
+
+### Methodology
+The validation script simulates two companies: `acme-corp` (Java/Waterfall) and `startup-xyz` (TypeScript/Agile).
+1.  **Ingestion**: Documents with conflicting guidelines were ingested for each company.
+2.  **RAG Isolation**: Queries about "backend language" were sent to each context.
+3.  **Memory Isolation**: A specific memory was stored for `acme-corp` and queried against `startup-xyz`.
+
+### Results
+
+| Feature | Test Case | Result | Notes |
+| :--- | :--- | :--- | :--- |
+| **Context Ingestion** | Load unique docs for 2 companies | ✅ PASS | Docs ingested into separate LanceDBs |
+| **RAG Isolation** | Query "backend language" | ✅ PASS | Acme -> Java, Startup -> TypeScript |
+| **Cross-contamination** | Check if Acme context leaks to Startup | ✅ PASS | Zero leakage observed |
+| **Memory Isolation** | Query Acme memory from Startup | ✅ PASS | Startup returned no results |
+| **Brain Integration** | Store/Recall namespaced memories | ✅ PASS | Correctly stored in `episodic_memories_{company}` |
+
+### Issues & Edge Cases
+-   **Empty Artifacts**: `EpisodicMemory` requires at least one artifact or an explicit schema when creating a new table, otherwise type inference fails. The validation script now handles this by providing a dummy artifact.

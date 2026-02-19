@@ -74,6 +74,8 @@ scraper_screenshots/
 .agent/secret.key
 .agent/*.sqlite
 .agent/*.db
+.agent/companies/*/brain/
+.agent/test_brain/
 data_analyst_demo/
 temp_product_director_test/
 jules_work_*
