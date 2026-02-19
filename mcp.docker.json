@@ -39,9 +39,51 @@
     "picoclaw": {
       "command": "node",
       "args": ["/app/dist/mcp_servers/picoclaw/index.js"]
+    },
+    "agent_swarm": {
+      "command": "node",
+      "args": ["/app/dist/mcp_servers/agent_swarm/index.js"]
     }
   },
   "agents": {
+    "codex": {
+      "command": "gh",
+      "args": ["copilot", "suggest"],
+      "description": "GitHub Copilot CLI for snippet generation.",
+      "supports_stdin": false
+    },
+    "gemini": {
+      "command": "gemini",
+      "args": [],
+      "description": "Google Gemini CLI for research and reasoning.",
+      "supports_stdin": true
+    },
+    "aider": {
+      "command": "aider",
+      "args": [],
+      "description": "Aider AI pair programmer in your terminal.",
+      "supports_stdin": false
+    },
+    "claude": {
+      "command": "claude",
+      "args": [],
+      "description": "Claude CLI.",
+      "supports_stdin": false
+    },
+    "crewai": {
+      "command": "crewai",
+      "args": [],
+      "description": "CrewAI agent framework.",
+      "supports_stdin": false
+    },
+    "devin": {
+      "command": "devin",
+      "args": [],
+      "description": "Devin AI software engineer.",
+      "supports_stdin": false
+    }
+  },
+  "swarmCapableAgents": {
     "codex": {
       "command": "gh",
       "args": ["copilot", "suggest"],
