@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { CompanyContextServer } from "../src/mcp_servers/company_context.js";
+import { CompanyContextServer } from "../src/mcp_servers/company_context/index.js";
 import { join } from "path";
 import { mkdir, writeFile, rm } from "fs/promises";
 
@@ -44,18 +44,20 @@ describe("CompanyContextServer", () => {
     vi.restoreAllMocks();
   });
 
+  // Helper to access tools
+  const getCallTool = (server: CompanyContextServer) => {
+      // @ts-ignore
+      const tools = (server as any).server._registeredTools;
+      return async (name: string, args: any) => {
+         const tool = tools[name];
+         if (!tool) throw new Error(`Tool ${name} not found`);
+         return await tool.handler(args);
+      };
+  };
+
   it("should ingest and query documents for a specific company", async () => {
     const server = new CompanyContextServer();
-
-    // Access internal tools map from McpServer
-    // @ts-ignore
-    const tools = (server as any).server._registeredTools;
-
-    const callTool = async (name: string, args: any) => {
-       const tool = tools[name];
-       if (!tool) throw new Error(`Tool ${name} not found`);
-       return await tool.handler(args);
-    };
+    const callTool = getCallTool(server);
 
     // 1. Ingest Company A
     const ingestRes = await callTool("load_company_context", { company_id: companyA });
@@ -82,18 +84,47 @@ describe("CompanyContextServer", () => {
 
   it("should respect isolation between companies", async () => {
     const server = new CompanyContextServer();
-    // @ts-ignore
-    const tools = (server as any).server._registeredTools;
-    const callTool = async (name: string, args: any) => {
-       const tool = tools[name];
-       if (!tool) throw new Error(`Tool ${name} not found`);
-       return await tool.handler(args);
-    };
+    const callTool = getCallTool(server);
 
     await callTool("load_company_context", { company_id: companyA });
 
     // Query Company B for Alpha content (should not find it)
     const res = await callTool("query_company_context", { query: "alpha", company_id: companyB });
     expect(res.content[0].text).not.toContain("This is alpha content");
+  });
+
+  it("should switch active context and query without explicit company_id", async () => {
+    const server = new CompanyContextServer();
+    const callTool = getCallTool(server);
+
+    // Ingest both
+    await callTool("load_company_context", { company_id: companyA });
+    await callTool("load_company_context", { company_id: companyB });
+
+    // Switch to A
+    const switchResA = await callTool("switch_company_context", { company_id: companyA });
+    expect(switchResA.content[0].text).toContain("Successfully switched context");
+
+    // Query without ID (should use A)
+    const queryResA = await callTool("query_company_context", { query: "alpha" });
+    expect(queryResA.content[0].text).toContain("This is alpha content");
+
+    // Switch to B
+    const switchResB = await callTool("switch_company_context", { company_id: companyB });
+    expect(switchResB.content[0].text).toContain("Successfully switched context");
+
+    // Query without ID (should use B)
+    const queryResB = await callTool("query_company_context", { query: "beta" });
+    expect(queryResB.content[0].text).toContain("This is beta content");
+    expect(queryResB.content[0].text).not.toContain("alpha");
+  });
+
+  it("should handle invalid company ID gracefully", async () => {
+    const server = new CompanyContextServer();
+    const callTool = getCallTool(server);
+
+    const res = await callTool("switch_company_context", { company_id: "non-existent" });
+    expect(res.isError).toBe(true);
+    expect(res.content[0].text).toContain("Company directory not found");
   });
 });

@@ -115,6 +115,7 @@
     - [x] Update `cli.ts` and `engine.ts` to support `--company` flag and context injection.
     - [x] Create `docs/COMPANY_CONTEXT.md`.
     - [x] Validated Company Context with comprehensive E2E tests (including Slack/Teams flags).
+    - [x] **Dynamic Switching**: Implemented `/switch-to` command and `switch_company_context` tool for runtime context switching without restarting.
 
 ### 8. Phase 7: The Hive Mind (Planned)
 - [ ] **Swarm Orchestration**: Implement dynamic agent spawning via `opencowork`.

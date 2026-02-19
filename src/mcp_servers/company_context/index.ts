@@ -6,11 +6,13 @@ import * as lancedb from "@lancedb/lancedb";
 import { join } from "path";
 import { readFile, readdir, mkdir } from "fs/promises";
 import { existsSync } from "fs";
-import { createLLM } from "../llm.js";
+import { createLLM } from "../../llm.js";
 
 export class CompanyContextServer {
   private server: McpServer;
   private llm: ReturnType<typeof createLLM>;
+  private connectionPool: Map<string, lancedb.Connection> = new Map();
+  private activeCompanyId: string | null = null;
 
   constructor() {
     this.server = new McpServer({
@@ -22,11 +24,23 @@ export class CompanyContextServer {
   }
 
   private async getDb(companyId: string) {
+    if (this.connectionPool.has(companyId)) {
+        return this.connectionPool.get(companyId)!;
+    }
+
     const dbPath = join(process.cwd(), ".agent", "companies", companyId, "brain");
     if (!existsSync(dbPath)) {
       await mkdir(dbPath, { recursive: true });
     }
-    return await lancedb.connect(dbPath);
+
+    try {
+        const db = await lancedb.connect(dbPath);
+        this.connectionPool.set(companyId, db);
+        return db;
+    } catch (e) {
+        console.error(`Failed to connect to DB for company ${companyId}:`, e);
+        throw e;
+    }
   }
 
   private async getTable(db: lancedb.Connection, tableName: string = "documents") {
@@ -42,6 +56,44 @@ export class CompanyContextServer {
   }
 
   private setupTools() {
+    this.server.tool(
+      "switch_company_context",
+      "Switch the active company context to the specified company ID.",
+      {
+        company_id: z.string().describe("The ID of the company to switch to."),
+      },
+      async ({ company_id }) => {
+        if (!/^[a-zA-Z0-9_-]+$/.test(company_id)) {
+             return {
+                content: [{ type: "text", text: "Invalid company ID." }],
+                isError: true
+             };
+        }
+
+        const companyDir = join(process.cwd(), ".agent", "companies", company_id);
+        if (!existsSync(companyDir)) {
+             return {
+                content: [{ type: "text", text: `Company directory not found: ${companyDir}` }],
+                isError: true
+             };
+        }
+
+        // Initialize/verify connection
+        try {
+            await this.getDb(company_id);
+            this.activeCompanyId = company_id;
+            return {
+                content: [{ type: "text", text: `Successfully switched context to company: ${company_id}` }]
+            };
+        } catch (e: any) {
+            return {
+                content: [{ type: "text", text: `Failed to switch context: ${e.message}` }],
+                isError: true
+            };
+        }
+      }
+    );
+
     this.server.tool(
       "load_company_context",
       "Ingest documents from the company's docs directory into the vector database.",
@@ -66,6 +118,7 @@ export class CompanyContextServer {
         }
 
         const files = await readdir(docsDir);
+        // Use connection pool via getDb
         const db = await this.getDb(company_id);
         let table = await this.getTable(db);
 
@@ -103,6 +156,9 @@ export class CompanyContextServer {
 
             if (!table) {
                 table = await db.createTable("documents", [data]);
+                // Need to re-fetch table wrapper after creation?
+                // lancedb.createTable returns the table object.
+                // Wait, previous code: table = await db.createTable
                 created = true;
             } else {
                 await table.add([data]);
@@ -124,13 +180,13 @@ export class CompanyContextServer {
       "Query the company's vector database for relevant context.",
       {
         query: z.string().describe("The search query."),
-        company_id: z.string().optional().describe("The ID of the company. Defaults to environment variable if set."),
+        company_id: z.string().optional().describe("The ID of the company. Defaults to active context if not set."),
       },
       async ({ query, company_id }) => {
-        const targetCompany = company_id || process.env.JULES_COMPANY;
+        const targetCompany = company_id || this.activeCompanyId || process.env.JULES_COMPANY;
         if (!targetCompany) {
           return {
-            content: [{ type: "text", text: "No company ID provided and JULES_COMPANY is not set." }],
+            content: [{ type: "text", text: "No company ID provided and no active context set." }],
             isError: true,
           };
         }
@@ -142,6 +198,7 @@ export class CompanyContextServer {
              };
         }
 
+        // Use connection pool via getDb
         const db = await this.getDb(targetCompany);
         const table = await this.getTable(db);
         if (!table) {

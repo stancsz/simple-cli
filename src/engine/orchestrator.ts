@@ -260,6 +260,37 @@ export class Engine {
         if (!input) break;
       }
 
+      // Handle /switch-to command
+      if (input.startsWith("/switch-to ")) {
+        const newCompany = input.replace("/switch-to ", "").trim();
+        if (newCompany) {
+          try {
+            await this.contextManager.switchCompany(newCompany);
+            companyName = newCompany;
+            process.env.JULES_COMPANY = newCompany;
+            this.log("success", `Switched context to ${newCompany}`);
+
+            // Reload company profile
+            try {
+              const { CompanyLoader } = await import("../context/company_loader.js");
+              const loader = new CompanyLoader();
+              await loader.load(companyName);
+              companyProfile = await loadCompanyProfile(companyName);
+              this.log("success", `Loaded company profile for ${companyName}`);
+            } catch (e: any) {
+              this.log("error", `Failed to load company profile for ${companyName}: ${e.message}`);
+            }
+
+            input = undefined;
+            continue;
+          } catch (e: any) {
+            this.log("error", `Failed to switch company: ${e.message}`);
+            input = undefined;
+            continue;
+          }
+        }
+      }
+
       // Brain: Recall similar past experiences via ContextManager
       const userRequest = input; // Capture original request
       try {
