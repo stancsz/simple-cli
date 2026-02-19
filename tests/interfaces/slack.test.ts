@@ -67,13 +67,6 @@ vi.mock('../../src/workflows/execute_sop_tool.js', () => ({
     createExecuteSOPTool: vi.fn().mockReturnValue({ name: 'execute_sop' })
 }));
 
-vi.mock('../../src/persona/middleware.js', () => ({
-    PersonaMiddleware: class {
-        initialize = vi.fn();
-        transform = vi.fn().mockImplementation((text) => Promise.resolve(text));
-    }
-}));
-
 // Import the module under test
 import { app, resetInitialization } from '../../src/interfaces/slack.js';
 

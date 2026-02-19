@@ -89,13 +89,6 @@ vi.mock('../../src/workflows/execute_sop_tool.js', () => ({
     createExecuteSOPTool: () => ({ name: 'sop', execute: vi.fn() })
 }));
 
-vi.mock('../../src/persona/middleware.js', () => ({
-    PersonaMiddleware: class {
-        initialize = vi.fn();
-        transform = vi.fn().mockImplementation((text) => Promise.resolve(text));
-    }
-}));
-
 describe('Discord Interface', () => {
     let messageHandler: any;
 

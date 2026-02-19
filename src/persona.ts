@@ -69,10 +69,6 @@ export class PersonaEngine {
     }
   }
 
-  getConfig(): PersonaConfig | null {
-    return this.config;
-  }
-
   injectPersonality(systemPrompt: string): string {
     if (!this.config || !this.config.enabled) return systemPrompt;
 
