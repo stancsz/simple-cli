@@ -30,7 +30,7 @@
 
 **Next Frameworks to Ingest:**
 - [x] **Windsurf** (collaborative coding)
-- [ ] **Bolt.new** (rapid prototyping)
+- [x] **Bolt.new** (rapid prototyping)
 - [ ] **v0.dev** (UI generation)
 
 ## Sprint 0.5: Local AI Stack (Dify) (✅ Completed)
