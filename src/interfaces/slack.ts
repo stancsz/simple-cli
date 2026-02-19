@@ -9,7 +9,7 @@ import { createExecuteSOPTool } from "../workflows/execute_sop_tool.js";
 import { fileURLToPath } from "url";
 
 // Custom Engine to capture output and stream to Slack
-class SlackEngine extends Engine {
+export class SlackEngine extends Engine {
   private client: any;
   private channel: string;
   private threadTs: string;
