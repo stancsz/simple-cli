@@ -39,6 +39,10 @@
     "picoclaw": {
       "command": "node",
       "args": ["/app/dist/mcp_servers/picoclaw/index.js"]
+    },
+    "swarm": {
+      "command": "node",
+      "args": ["/app/dist/mcp_servers/swarm/index.js"]
     }
   },
   "agents": {
