@@ -75,6 +75,7 @@
 ### 4. Tests
 - [x] Update tests to mock MCP servers instead of local file paths.
 - [x] Verify Ghost Mode triggers (Scheduler/JobDelegator) in CI/CD or local simulation.
+- [x] **Comprehensive Integration**: Implemented 24h simulation tests for Ghost Mode, Brain, and HR Loop (`tests/integration/ghost_mode_integration.test.ts`).
 
 ### 5. Phase 4.5: SOP Engine
 - [x] **Core Logic**:
