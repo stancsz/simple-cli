@@ -6,14 +6,15 @@ export interface CoreChange {
 
 export interface CoreProposal {
   id: string;
-  title: string;
-  description: string;
+  title: string; // Mapped from description
+  description: string; // Mapped from description + reasoning
   changes: CoreChange[];
   riskLevel: 'low' | 'high' | 'critical';
   status: 'pending' | 'applied' | 'rejected';
   createdAt: number;
   approvalToken?: string;
   rollbackPlan?: string;
+  reasoning: string; // New field
 }
 
 export interface StoredProposal extends CoreProposal {

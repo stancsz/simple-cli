@@ -1,4 +1,4 @@
-import { join, dirname } from "path";
+import { join } from "path";
 import { readFile, writeFile, mkdir, readdir, unlink } from "fs/promises";
 import { existsSync } from "fs";
 import { CoreProposal } from "./types.js";
@@ -7,7 +7,7 @@ export class CoreProposalStorage {
   private baseDir: string;
 
   constructor(rootDir: string = process.cwd()) {
-    this.baseDir = join(rootDir, ".agent", "pending_updates");
+    this.baseDir = join(rootDir, ".agent", "pending_core_updates");
   }
 
   async init() {
@@ -16,20 +16,28 @@ export class CoreProposalStorage {
     }
   }
 
-  private getFilePath(id: string): string {
-    return join(this.baseDir, `${id}.json`);
+  // Generate filename: {timestamp}_{id}.json
+  private getFilePath(id: string, timestamp: number): string {
+    return join(this.baseDir, `${timestamp}_${id}.json`);
+  }
+
+  // Find file path by ID (since timestamp might be unknown when getting by ID)
+  private async findFilePathById(id: string): Promise<string | null> {
+    await this.init();
+    const files = await readdir(this.baseDir);
+    const file = files.find(f => f.endsWith(`_${id}.json`));
+    return file ? join(this.baseDir, file) : null;
   }
 
   async save(proposal: CoreProposal): Promise<void> {
     await this.init();
-    const path = this.getFilePath(proposal.id);
+    const path = this.getFilePath(proposal.id, proposal.createdAt);
     await writeFile(path, JSON.stringify(proposal, null, 2));
   }
 
   async get(id: string): Promise<CoreProposal | null> {
-    await this.init();
-    const path = this.getFilePath(id);
-    if (!existsSync(path)) return null;
+    const path = await this.findFilePathById(id);
+    if (!path) return null;
 
     try {
       const content = await readFile(path, "utf-8");
@@ -40,19 +48,29 @@ export class CoreProposalStorage {
     }
   }
 
-  async list(): Promise<string[]> {
+  async list(): Promise<CoreProposal[]> {
     await this.init();
     try {
       const files = await readdir(this.baseDir);
-      return files.filter(f => f.endsWith(".json")).map(f => f.replace(".json", ""));
+      const proposals: CoreProposal[] = [];
+      for (const file of files) {
+        if (!file.endsWith(".json")) continue;
+        try {
+          const content = await readFile(join(this.baseDir, file), "utf-8");
+          proposals.push(JSON.parse(content));
+        } catch {
+          // Ignore malformed files
+        }
+      }
+      return proposals.sort((a, b) => b.createdAt - a.createdAt);
     } catch {
       return [];
     }
   }
 
   async delete(id: string): Promise<void> {
-    const path = this.getFilePath(id);
-    if (existsSync(path)) {
+    const path = await this.findFilePathById(id);
+    if (path) {
       await unlink(path);
     }
   }
