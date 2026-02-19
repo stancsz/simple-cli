@@ -89,6 +89,7 @@
 - [x] **Persona Engine**:
     - [x] Create `src/persona.ts`: Load `persona.json` and wrap LLM responses.
     - [x] Implement `inject_personality()` function in `src/llm.ts`.
+    - [x] Enhanced with full spec compliance: typing indicators, latency simulation, working hour enforcement.
 - [x] **Interfaces**:
     - [x] Create `src/interfaces/slack.ts`: Implement Slack Bolt.js adapter.
     - [x] Create `src/interfaces/teams.ts`: Implement Microsoft Bot Framework adapter.

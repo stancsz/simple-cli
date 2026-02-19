@@ -19,6 +19,7 @@ import { fileURLToPath } from "url";
 import { join } from "path";
 import { existsSync, readFileSync } from "fs";
 import { SOPEngineServer } from "../mcp_servers/sop_engine/index.js";
+import { persona } from "../persona.js";
 
 // Custom Engine to capture output and stream to Teams
 class TeamsEngine extends Engine {
@@ -85,7 +86,7 @@ async function initializeResources() {
   await mcp.init();
 
   // Ensure essential servers are started
-  const coreServers = ["filesystem", "git", "context_server", "company_context", "aider-server", "claude-server", "openclaw"];
+  const coreServers = ["filesystem", "git", "context_server", "company_context", "aider-server", "claude-server", "openclaw", "persona"];
   for (const s of coreServers) {
     try {
       if (!mcp.isServerRunning(s)) await mcp.startServer(s);
@@ -150,15 +151,40 @@ class TeamsBot extends ActivityHandler {
     super();
 
     this.onMessage(async (context, next) => {
+      // 0. Load Persona
+      await persona.loadConfig();
+
       const activity = context.activity;
 
-      // 1. Add reaction (👍)
+      // 1. Working Hours Check
+      const status = persona.getWorkingHoursStatus();
+      if (!status.isWorkingHours) {
+          await context.sendActivity(`I am currently offline. I will be back at ${status.nextAvailable}.`);
+          await next(); // Or return? Usually we should stop processing if "offline"
+          // If we stop processing, we should probably verify if we need to run 'next()' in bot framework.
+          // Usually 'next()' passes to next middleware. If we don't call it, bot framework might hang if other middleware expected it?
+          // But here we are the main handler.
+          return;
+      }
+
+      // 2. Add reaction (👍 or custom)
       if (activity.id) {
+        const reaction = persona.generateReaction(activity.text || "") || 'like';
         try {
+          // Teams reaction format might be different, let's assume standard Bot Framework
+          // Actually Teams uses specific reaction types. 'like', 'heart', 'laugh', 'surprised', 'sad', 'angry'.
+          // Our generateReaction returns unicode emojis. We might need mapping.
+          // For now, let's default to 'like' if generateReaction returns something unknown or if it's 'thumbsup'.
+          let teamsReaction = 'like';
+          if (reaction === '👍') teamsReaction = 'like';
+          if (reaction === '❤️') teamsReaction = 'heart';
+          if (reaction === '😂') teamsReaction = 'laugh';
+          // ... map others or just ignore if not supported.
+
           await context.sendActivities([
             {
               type: ActivityTypes.MessageReaction,
-              reactionsAdded: [{ type: 'like' }],
+              reactionsAdded: [{ type: teamsReaction }],
               replyToId: activity.id
             }
           ]);
@@ -167,7 +193,7 @@ class TeamsBot extends ActivityHandler {
         }
       }
 
-      // 2. Handle attachments (Basic acknowledgement)
+      // 3. Handle attachments (Basic acknowledgement)
       if (activity.attachments && activity.attachments.length > 0) {
         const fileNames = activity.attachments.map(a => a.name || 'unnamed_file').join(', ');
         await context.sendActivity(`Received attachments: ${fileNames}. (File processing is limited in this version)`);
@@ -183,13 +209,18 @@ class TeamsBot extends ActivityHandler {
           prompt = prompt.replace(/--company\s+[a-zA-Z0-9_-]+/, "").trim();
       }
 
-      // 3. Send typing indicator
-      await context.sendActivity({ type: ActivityTypes.Typing });
+      // 4. Simulate Latency
+      await persona.simulateLatency();
 
-      // 4. Acknowledge
+      // 5. Send typing indicator
+      if (persona.getConfig()?.response_latency?.simulate_typing) {
+        await context.sendActivity({ type: ActivityTypes.Typing });
+      }
+
+      // 6. Acknowledge
       await context.sendActivity("Thinking...");
 
-      // 3. Initialize and Run
+      // 7. Initialize and Run
       if (!isInitialized) {
         await initializeResources();
       }

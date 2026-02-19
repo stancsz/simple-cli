@@ -7,6 +7,7 @@ import { getActiveSkill } from "../skills.js";
 import { WorkflowEngine } from "../workflows/workflow_engine.js";
 import { createExecuteSOPTool } from "../workflows/execute_sop_tool.js";
 import { fileURLToPath } from "url";
+import { persona } from "../persona.js";
 
 // Custom Engine to capture output and stream to Slack
 class SlackEngine extends Engine {
@@ -128,29 +129,61 @@ app.event("app_mention", async ({ event, say, client }: any) => {
   const ts = event.ts;
 
   try {
-    // 1. Add emoji reaction to acknowledge receipt
-    await client.reactions.add({
-      name: 'thumbsup',
-      channel: channel,
-      timestamp: ts
-    });
+    // 0. Load Persona Config
+    await persona.loadConfig();
 
-    // 2. Implement typing indicators
-    // Attempt requested method (might fail as it's non-standard)
+    // 1. Working Hours Check
+    const status = persona.getWorkingHoursStatus();
+    if (!status.isWorkingHours) {
+        await client.chat.postMessage({
+            channel: channel,
+            thread_ts: ts,
+            text: `I am currently offline. I will be back at ${status.nextAvailable}.`
+        });
+        return;
+    }
+
+    // 2. Add emoji reaction to acknowledge receipt
+    const reaction = persona.generateReaction(text) || 'thumbsup';
     try {
-      await client.chat.postMessage({
-        channel: channel,
-        type: 'typing', // Requested feature
-        text: "Typing..." // Fallback text
-      } as any);
+        await client.reactions.add({
+            name: reaction,
+            channel: channel,
+            timestamp: ts
+        });
     } catch (e) {
-      // Ignore error if 'type: typing' is not supported
+        // Fallback if custom emoji fails or already reacted
+        if (reaction !== 'thumbsup') {
+             try {
+                await client.reactions.add({
+                    name: 'thumbsup',
+                    channel: channel,
+                    timestamp: ts
+                });
+             } catch {}
+        }
+    }
+
+    // 3. Simulate Latency
+    await persona.simulateLatency();
+
+    // 4. Implement typing indicators
+    const config = persona.getConfig();
+    if (config?.response_latency?.simulate_typing) {
+        // Attempt requested method (might fail as it's non-standard)
+        try {
+          await client.chat.postMessage({
+            channel: channel,
+            type: 'typing', // Requested feature
+            text: "Typing..." // Fallback text
+          } as any);
+        } catch (e) {
+          // Ignore error if 'type: typing' is not supported
+        }
     }
 
     // Also send a "Thinking..." message to start the thread/interaction
     // This serves as a robust typing/status indicator.
-    // We capture the ts of this message to potentially update it later,
-    // or just use the thread for logs.
     await client.chat.postMessage({
       channel: channel,
       text: "Thinking...",

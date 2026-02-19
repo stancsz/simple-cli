@@ -7,6 +7,7 @@ import { getActiveSkill } from "../skills.js";
 import { WorkflowEngine } from "../workflows/workflow_engine.js";
 import { createExecuteSOPTool } from "../workflows/execute_sop_tool.js";
 import { fileURLToPath } from "url";
+import { persona } from "../persona.js";
 
 // Custom Engine to capture output and stream to Discord
 class DiscordEngine extends Engine {
@@ -133,16 +134,34 @@ client.on(Events.MessageCreate, async (message: Message) => {
   }
 
   try {
+    await persona.loadConfig();
+    const status = persona.getWorkingHoursStatus();
+    if (!status.isWorkingHours) {
+        await message.reply(`I am currently offline. I will be back at ${status.nextAvailable}.`);
+        return;
+    }
+
     // 1. Acknowledge (Reaction)
-    await message.react('👍');
+    const reaction = persona.generateReaction(message.content) || '👍';
+    try {
+        await message.react(reaction);
+    } catch {
+        // Fallback
+        if (reaction !== '👍') await message.react('👍').catch(() => {});
+    }
 
-    // 2. Typing Indicator
-    await (message.channel as any).sendTyping();
+    // 2. Simulate Latency
+    await persona.simulateLatency();
 
-    // 3. Initial "Thinking..." message
+    // 3. Typing Indicator
+    if (persona.getConfig()?.response_latency?.simulate_typing) {
+        await (message.channel as any).sendTyping().catch(() => {});
+    }
+
+    // 4. Initial "Thinking..." message
     await message.reply("Thinking...");
 
-    // 4. Initialize Resources
+    // 5. Initialize Resources
     if (!isInitialized) {
       await initializeResources();
     }

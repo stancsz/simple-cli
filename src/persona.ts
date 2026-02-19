@@ -11,17 +11,14 @@ export const PersonaConfigSchema = z.object({
   role: z.string(),
   voice: z.object({
     tone: z.string(),
+    emoji_usage: z.string().optional().default("moderate"), // "none", "moderate", "high"
+    catchphrases: z.array(z.string()).optional().default([]),
   }),
-  emoji_usage: z.boolean(),
-  catchphrases: z.object({
-    greeting: z.array(z.string()),
-    signoff: z.array(z.string()),
-    filler: z.array(z.string()).optional(),
-  }),
-  working_hours: z.string().regex(/^\d{2}:\d{2}-\d{2}:\d{2}$/, "Invalid working hours format (HH:mm-HH:mm)").optional(),
+  working_hours: z.string().optional(), // "HH:mm-HH:mm" or "HH:mm-HH:mm Timezone"
   response_latency: z.object({
-    min: z.number(),
-    max: z.number(),
+    min_ms: z.number(),
+    max_ms: z.number(),
+    simulate_typing: z.boolean().optional().default(true),
   }).optional(),
   enabled: z.boolean().optional().default(true),
 });
@@ -29,11 +26,19 @@ export const PersonaConfigSchema = z.object({
 export type PersonaConfig = z.infer<typeof PersonaConfigSchema>;
 
 export class PersonaEngine {
+  private static instance: PersonaEngine;
   private config: PersonaConfig | null = null;
   private cwd: string;
 
   constructor(cwd: string = process.cwd()) {
     this.cwd = cwd;
+  }
+
+  public static getInstance(): PersonaEngine {
+    if (!PersonaEngine.instance) {
+      PersonaEngine.instance = new PersonaEngine();
+    }
+    return PersonaEngine.instance;
   }
 
   getConfig(): PersonaConfig | null {
@@ -43,7 +48,7 @@ export class PersonaEngine {
   async loadConfig(): Promise<void> {
     if (this.config) return;
 
-    let configPath = join(this.cwd, ".agent", "config", "persona.json");
+    let configPath = join(this.cwd, "persona.json");
 
     // Support Company Override
     const company = process.env.JULES_COMPANY;
@@ -60,13 +65,26 @@ export class PersonaEngine {
       if (existsSync(legacyPath)) {
         configPath = legacyPath;
       } else {
-        return;
+        // Try .agent/config/persona.json
+        const agentConfigPath = join(this.cwd, ".agent", "config", "persona.json");
+         if (existsSync(agentConfigPath)) {
+            configPath = agentConfigPath;
+         } else {
+             return;
+         }
       }
     }
 
     try {
       const content = await readFile(configPath, "utf-8");
       const parsed = JSON.parse(content);
+      // Map old schema to new if necessary, but we are enforcing new schema
+      // However, to be safe with existing files if any:
+      // The old schema had catchphrases as object { greeting, signoff, filler }
+      // The new schema has catchphrases as string[]
+      // We should probably adapt if we want backward compatibility, but the instruction implies a new schema.
+      // I'll stick to the requested schema.
+
       this.config = PersonaConfigSchema.parse(parsed);
     } catch (e) {
       console.error(`[Persona] Failed to load config from ${configPath}:`, e);
@@ -83,6 +101,9 @@ export class PersonaEngine {
     if (this.config.working_hours) {
       personalityPrompt += ` Your working hours are ${this.config.working_hours}.`;
     }
+    if (this.config.voice.catchphrases && this.config.voice.catchphrases.length > 0) {
+       personalityPrompt += ` You occasionally use catchphrases like: ${this.config.voice.catchphrases.join(", ")}.`;
+    }
 
     return `${personalityPrompt}\n\n${systemPrompt}`;
   }
@@ -91,55 +112,52 @@ export class PersonaEngine {
     if (!this.config || !this.config.enabled) return response;
 
     // Working Hours Check
-    if (this.config.working_hours && !this.isWithinWorkingHours(this.config.working_hours)) {
-      // Simulate typing even for offline message
-      if (this.config.response_latency) {
-        await this.simulateTyping("", this.config.response_latency, onTyping);
-      }
-      return {
-        ...response,
-        message: `I am currently offline. My working hours are ${this.config.working_hours}.`,
-        thought: "Working hours check failed. Sending offline message.",
-      };
-    }
+    // transformResponse is usually called after LLM generation, but we might want to intercept before if strictly enforcing offline mode.
+    // However, LLM generation usually happens if we are "online".
+    // If we are "offline", the interface layer should ideally catch it.
+    // But if we are here, we can still simulate latency.
 
     let message = response.message || "";
-    let thought = response.thought;
+    const thought = response.thought;
 
-    // Inject Greeting
-    if (this.config.catchphrases?.greeting?.length > 0) {
-      const greeting = this.getRandomElement(this.config.catchphrases.greeting);
-      if (!message.trim().startsWith(greeting)) {
-        message = `${greeting} ${message}`;
-      }
-    }
-
-    // Inject Filler Catchphrases
-    if (this.config.catchphrases?.filler && this.config.catchphrases.filler.length > 0) {
-      message = this.insertCatchphrases(message, this.config.catchphrases.filler);
+    // Inject Catchphrases (Simple random insertion)
+    if (this.config.voice.catchphrases && this.config.voice.catchphrases.length > 0) {
+         if (Math.random() < 0.2) { // 20% chance
+             const phrase = this.getRandomElement(this.config.voice.catchphrases);
+             if (!message.includes(phrase)) {
+                 if (Math.random() > 0.5) {
+                     message = `${phrase} ${message}`;
+                 } else {
+                     message = `${message} ${phrase}`;
+                 }
+             }
+         }
     }
 
     // Inject Emojis
-    if (this.config.emoji_usage) {
-      // Simple check to avoid double emojis if LLM already added some common ones
-      if (!/[\u{1F600}-\u{1F64F}]/u.test(message)) {
-        message += ` ${this.getRandomElement(DEFAULT_EMOJIS)}`;
-      }
+    if (this.config.voice.emoji_usage !== "none") {
+        const chance = this.config.voice.emoji_usage === "high" ? 0.5 : 0.2;
+        if (Math.random() < chance) {
+             if (!/[\u{1F600}-\u{1F64F}]/u.test(message)) {
+                message += ` ${this.getRandomElement(DEFAULT_EMOJIS)}`;
+             }
+        }
     }
 
-    // Inject Signoff
-    if (this.config.catchphrases?.signoff?.length > 0) {
-      const signoff = this.getRandomElement(this.config.catchphrases.signoff);
-      // Avoid appending if already ends with signoff-like structure
-      if (!message.trim().endsWith(signoff)) {
-        message = `${message}\n\n${signoff}`;
-      }
-    }
-
-    // Simulate Latency
-    if (this.config.response_latency) {
-      await this.simulateTyping(message, this.config.response_latency, onTyping);
-    }
+    // Simulate Latency (if not handled by interface)
+    // The interface usually handles pre-response latency (typing indicator).
+    // But if simulateLatency() wasn't called explicitly, we can do it here too?
+    // The requirement says "Provides simulateLatency(): Promise<void>".
+    // It also says "Update each adapter to Call persona.simulateLatency() before sending responses."
+    // So transformResponse might not need to simulate latency if the adapter does it.
+    // But existing code did it here. I'll keep the method but maybe not call it here if adapters are updated.
+    // Actually, LLM.generate calls transformResponse. If I remove it from here, LLM.generate won't delay.
+    // But adapters call simulateLatency BEFORE sending response.
+    // LLM.generate happens BEFORE adapter sends response.
+    // So if LLM.generate delays, it delays the *return* of the generation.
+    // If adapter calls simulateLatency, it delays the *sending* to the user.
+    // It's safer to have the adapter control the delay to show typing indicators during the delay.
+    // So I will remove `simulateTyping` call from `transformResponse` and rely on `simulateLatency` being called by the consumer (Adapter).
 
     return {
       ...response,
@@ -148,54 +166,112 @@ export class PersonaEngine {
     };
   }
 
-  async simulateTyping(response: string, latencyConfig: { min: number, max: number }, onTyping?: () => void): Promise<void> {
-    const { min, max } = latencyConfig;
-    const delay = Math.floor(Math.random() * (max - min + 1)) + min;
-
-    if (onTyping && delay > 100) {
-      onTyping();
-    }
-
+  async simulateLatency(): Promise<void> {
+    if (!this.config || !this.config.response_latency) return;
+    const { min_ms, max_ms } = this.config.response_latency;
+    const delay = Math.floor(Math.random() * (max_ms - min_ms + 1)) + min_ms;
     if (delay > 0) {
       await new Promise((resolve) => setTimeout(resolve, delay));
     }
   }
 
-  isWithinWorkingHours(workingHours: string): boolean {
-    if (!workingHours) return true;
-    const match = workingHours.match(/^(\d{2}):(\d{2})-(\d{2}):(\d{2})$/);
-    if (!match) return true;
+  getWorkingHoursStatus(): { isWorkingHours: boolean, nextAvailable: string } {
+    if (!this.config || !this.config.working_hours) {
+        return { isWorkingHours: true, nextAvailable: "now" };
+    }
 
-    const [_, startH, startM, endH, endM] = match.map(Number);
+    const workingHours = this.config.working_hours;
+    // Parse "HH:mm-HH:mm" or "HH:mm-HH:mm Timezone"
+    const match = workingHours.match(/^(\d{2}):(\d{2})-(\d{2}):(\d{2})(?:\s+(.+))?$/);
+
+    if (!match) {
+        // Fallback or invalid format
+        return { isWorkingHours: true, nextAvailable: "now" };
+    }
+
+    const [_, startHStr, startMStr, endHStr, endMStr, timezone] = match;
+    const startH = parseInt(startHStr, 10);
+    const startM = parseInt(startMStr, 10);
+    const endH = parseInt(endHStr, 10);
+    const endM = parseInt(endMStr, 10);
+
+    // Get current time in target timezone or local
     const now = new Date();
-    const currentH = now.getHours();
-    const currentM = now.getMinutes();
+    let currentH: number;
+    let currentM: number;
+
+    if (timezone) {
+        try {
+            const parts = new Intl.DateTimeFormat('en-US', {
+                timeZone: timezone,
+                hour: 'numeric',
+                minute: 'numeric',
+                hour12: false
+            }).formatToParts(now);
+            const hPart = parts.find(p => p.type === 'hour');
+            const mPart = parts.find(p => p.type === 'minute');
+            currentH = hPart ? parseInt(hPart.value, 10) : now.getHours();
+            currentM = mPart ? parseInt(mPart.value, 10) : now.getMinutes();
+            // Handle 24h wrapping if format returns 24 instead of 0
+            if (currentH === 24) currentH = 0;
+        } catch (e) {
+            // Invalid timezone, fallback to local
+            currentH = now.getHours();
+            currentM = now.getMinutes();
+        }
+    } else {
+        currentH = now.getHours();
+        currentM = now.getMinutes();
+    }
 
     const currentMinutes = currentH * 60 + currentM;
     const startMinutes = startH * 60 + startM;
     const endMinutes = endH * 60 + endM;
 
+    let isWorking = false;
     if (startMinutes <= endMinutes) {
-      return currentMinutes >= startMinutes && currentMinutes <= endMinutes;
+        isWorking = currentMinutes >= startMinutes && currentMinutes <= endMinutes;
     } else {
-      // Overnight shift
-      return currentMinutes >= startMinutes || currentMinutes <= endMinutes;
+        // Overnight shift (e.g. 22:00 - 06:00)
+        isWorking = currentMinutes >= startMinutes || currentMinutes <= endMinutes;
     }
+
+    if (isWorking) {
+        return { isWorkingHours: true, nextAvailable: "now" };
+    } else {
+        // Calculate next available
+        // Simple string for now
+        return { isWorkingHours: false, nextAvailable: `${startHStr}:${startMStr}` };
+    }
+  }
+
+  generateReaction(input: string): string {
+      if (!this.config || !this.config.enabled) return "";
+
+      const lower = input.toLowerCase();
+
+      // Simple keyword matching
+      if (lower.includes("bug") || lower.includes("error") || lower.includes("fail")) return "🐛";
+      if (lower.includes("great") || lower.includes("good") || lower.includes("thanks")) return "👍";
+      if (lower.includes("deploy") || lower.includes("ship")) return "🚀";
+      if (lower.includes("help") || lower.includes("question")) return "🤔";
+      if (lower.includes("joke") || lower.includes("fun")) return "😂";
+      if (lower.includes("urgent") || lower.includes("asap")) return "🔥";
+
+      // Default random if emoji usage is enabled
+      if (this.config.voice.emoji_usage !== "none") {
+          // Only react sometimes? Or always if input is short?
+          // Let's return empty string by default to avoid spamming reactions,
+          // unless specific keywords are found.
+          return "";
+      }
+      return "";
   }
 
   private getRandomElement<T>(arr: T[]): T {
     return arr[Math.floor(Math.random() * arr.length)];
   }
-
-  private insertCatchphrases(text: string, phrases: string[]): string {
-    if (!phrases || phrases.length === 0) return text;
-    // Insert a catchphrase after a sentence ending with roughly 20% probability
-    return text.replace(/([.!?])\s+/g, (match, p1) => {
-      if (Math.random() < 0.2) {
-        const phrase = this.getRandomElement(phrases);
-        return `${p1} ${phrase} `;
-      }
-      return match;
-    });
-  }
 }
+
+// Export Singleton
+export const persona = PersonaEngine.getInstance();

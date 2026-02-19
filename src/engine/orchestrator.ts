@@ -198,6 +198,10 @@ export class Engine {
         await this.mcp.startServer("company_context");
         this.log("success", "Company Context server started.");
       }
+      if (servers.find((s) => s.name === "persona" && s.status === "stopped")) {
+        await this.mcp.startServer("persona");
+        this.log("success", "Persona server started.");
+      }
     } catch (e) {
       console.error("Failed to start core servers:", e);
     }
