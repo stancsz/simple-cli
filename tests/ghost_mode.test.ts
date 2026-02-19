@@ -4,6 +4,12 @@ import { join } from 'path';
 import { mkdtemp, rm, writeFile, readFile, readdir, mkdir } from 'fs/promises';
 import { tmpdir } from 'os';
 import { existsSync } from 'fs';
+import { mockCallTool, mockGetClient } from './mocks/mcp_client.js';
+
+// Mock MCP
+vi.mock('../src/mcp.js', async () => {
+    return await vi.importActual('./mocks/mcp_client.js');
+});
 
 // Mock child_process to avoid actual spawning
 vi.mock('child_process', () => {
@@ -27,6 +33,11 @@ describe('Ghost Mode Persistence & Reviewer', () => {
   let scheduler: Scheduler;
 
   beforeEach(async () => {
+    vi.clearAllMocks();
+    mockCallTool.mockResolvedValue({ content: [] });
+    mockGetClient.mockReturnValue({
+        callTool: mockCallTool
+    });
     tempDir = await mkdtemp(join(tmpdir(), 'ghost-mode-test-'));
     scheduler = new Scheduler(tempDir);
   });

@@ -4,25 +4,11 @@ import { ReviewerAgent } from '../src/agents/reviewer_agent.js';
 import { TaskDefinition } from '../src/daemon/task_definitions.js';
 import * as path from 'path';
 import * as fs from 'fs/promises';
+import { mockCallTool, mockInit, mockStartServer, mockGetClient } from './mocks/mcp_client.js';
 
 // Mock MCP
-const mockCallTool = vi.fn();
-const mockGetClient = vi.fn().mockReturnValue({
-  callTool: mockCallTool
-});
-const mockInit = vi.fn();
-const mockStartServer = vi.fn();
-const mockListServers = vi.fn().mockReturnValue([{ name: "brain", status: "stopped" }]);
-
-vi.mock('../src/mcp.js', () => {
-  return {
-    MCP: vi.fn().mockImplementation(() => ({
-      init: mockInit,
-      startServer: mockStartServer,
-      listServers: mockListServers,
-      getClient: mockGetClient
-    }))
-  };
+vi.mock('../src/mcp.js', async () => {
+    return await vi.importActual('./mocks/mcp_client.js');
 });
 
 // Mock Trigger to avoid actual execution
@@ -36,6 +22,9 @@ describe('Brain Agent Integration', () => {
   beforeEach(async () => {
     vi.clearAllMocks();
     mockCallTool.mockReset();
+    mockGetClient.mockReturnValue({
+        callTool: mockCallTool
+    });
     // Clean up test logs
     try {
         await fs.rm(agentDir, { recursive: true, force: true });
