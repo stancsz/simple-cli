@@ -1,0 +1,6 @@
+{
+  "name": "Test Client",
+  "industry": "Tech",
+  "goals": ["Scale to 1M users", "Reduce latency"],
+  "tech_stack": ["Node.js", "React", "AWS"]
+}
