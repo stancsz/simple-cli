@@ -94,15 +94,22 @@ export class HRServer {
 
     // Take recent logs
     const recentLogs = logs.slice(-limit);
-    const logSummary = recentLogs.map(l => {
-      const status = l.result.success ? "SUCCESS" : "FAILURE";
-      const steps = l.result.logs.map(s => `  - [${s.status}] ${s.step}: ${s.output}`).join("\n");
-      return `[${l.timestamp}] SOP: ${l.sop} -> ${status}\n${steps}`;
+    const logSummary = recentLogs.map((l: any) => {
+      if (l.result) {
+        const status = l.result.success ? "SUCCESS" : "FAILURE";
+        const steps = l.result.logs.map((s: any) => `  - [${s.status}] ${s.step}: ${s.output}`).join("\n");
+        return `[${l.timestamp}] SOP: ${l.sop} -> ${status}\n${steps}`;
+      } else {
+        return `[${l.timestamp}] SOP: ${l.sop} Step ${l.step}: ${String(l.status).toUpperCase()} - ${l.details}`;
+      }
     }).join("\n\n");
 
     // 2. Query Memory for context (e.g. recent failures)
     // We search for "failure" or "error" if any logs failed
-    const hasFailures = recentLogs.some(l => !l.result.success);
+    const hasFailures = recentLogs.some((l: any) => {
+      if (l.result) return !l.result.success;
+      return l.status !== 'success';
+    });
     let pastExperiences = "No specific past experiences queried.";
 
     if (hasFailures) {

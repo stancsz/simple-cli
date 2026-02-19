@@ -3,7 +3,7 @@ services:
     build: .
     volumes:
       - ./.agent:/app/.agent
-      - ./persona.json:/app/.agent/persona.json
+      - ./persona.json:/app/persona.json
     ports:
       - "3002:3002"
     depends_on:

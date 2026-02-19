@@ -2,14 +2,13 @@ import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { z } from "zod";
 import { fileURLToPath } from "url";
-import { join, resolve, dirname, sep } from "path";
-import { readFile, writeFile, mkdir, copyFile, unlink } from "fs/promises";
+import { join, dirname, resolve, sep } from "path";
+import { readFile, writeFile, mkdir, copyFile } from "fs/promises";
 import { existsSync } from "fs";
 import { randomUUID } from "crypto";
-import * as Diff from "diff";
 
 import { CoreProposalSchema, ApplyUpdateSchema } from "./schema.js";
-import { CoreProposal } from "./types.js";
+import { CoreProposal, CoreChange } from "./types.js";
 import { CoreProposalStorage } from "./storage.js";
 import { EpisodicMemory } from "../../brain/episodic.js";
 import { loadConfig } from "../../config.js";
@@ -20,14 +19,12 @@ export class CoreUpdaterServer {
   private memory: EpisodicMemory;
   private rootDir: string;
   private srcDir: string;
-  private patchesDir: string;
 
   constructor(rootDir: string = process.cwd()) {
     this.rootDir = resolve(rootDir);
     this.srcDir = join(this.rootDir, "src");
-    this.patchesDir = join(this.rootDir, "src", "mcp_servers", "core_updater", "patches");
     this.storage = new CoreProposalStorage(rootDir);
-    this.memory = new EpisodicMemory();
+    this.memory = new EpisodicMemory(rootDir);
     this.server = new McpServer({
       name: "core_updater",
       version: "1.0.0",
@@ -38,12 +35,21 @@ export class CoreUpdaterServer {
 
   private setupTools() {
     this.server.tool(
-      "propose_core_update",
-      "Propose a change to core files using a patch. Requires approval or low risk + YOLO mode to apply.",
+      "read_core_file",
+      "Safely read a core file from the src/ directory.",
       {
-        analysis: CoreProposalSchema.shape.analysis,
-        change_summary: CoreProposalSchema.shape.change_summary,
-        patch_file_path: CoreProposalSchema.shape.patch_file_path,
+        filepath: z.string().describe("Relative path to the file (must start with src/)."),
+      },
+      async (args) => this.readCoreFile(args)
+    );
+
+    this.server.tool(
+      "propose_core_update",
+      "Propose a change to core files. Requires approval or low risk + YOLO mode to apply.",
+      {
+        title: CoreProposalSchema.shape.title,
+        description: CoreProposalSchema.shape.description,
+        changes: CoreProposalSchema.shape.changes,
       },
       async (args) => this.handleProposal(args)
     );
@@ -60,9 +66,19 @@ export class CoreUpdaterServer {
   }
 
   private validatePath(filepath: string): { isValid: boolean; error?: string; fullPath?: string } {
+    // 1. Basic check
+    if (!filepath.startsWith("src/")) {
+      return { isValid: false, error: "Path must start with 'src/'." };
+    }
+
+    // 2. Resolve path
     const fullPath = resolve(this.rootDir, filepath);
+
+    // 3. Check if it is within srcDir
+    // Ensure srcDir has trailing separator to avoid partial matches (e.g. src-backup)
     const srcDirWithSep = this.srcDir.endsWith(sep) ? this.srcDir : this.srcDir + sep;
 
+    // Also handle exact match if needed, though files are usually inside src/
     if (fullPath !== this.srcDir && !fullPath.startsWith(srcDirWithSep)) {
       return { isValid: false, error: "Path traversal detected. File must be inside src/." };
     }
@@ -70,65 +86,62 @@ export class CoreUpdaterServer {
     return { isValid: true, fullPath };
   }
 
-  public async handleProposal(args: z.infer<typeof CoreProposalSchema>) {
-    const patchPath = resolve(process.cwd(), args.patch_file_path);
-    if (!existsSync(patchPath)) {
+  public async readCoreFile({ filepath }: { filepath: string }) {
+    const validation = this.validatePath(filepath);
+    if (!validation.isValid) {
       return {
-        content: [{ type: "text" as const, text: `Error: Patch file '${args.patch_file_path}' not found.` }],
+        content: [{ type: "text" as const, text: `Error: ${validation.error}` }],
         isError: true,
       };
     }
 
-    let patchContent: string;
+    const fullPath = validation.fullPath!;
+
+    if (!existsSync(fullPath)) {
+      return {
+        content: [{ type: "text" as const, text: `Error: File '${filepath}' not found.` }],
+        isError: true,
+      };
+    }
     try {
-      patchContent = await readFile(patchPath, "utf-8");
+      const content = await readFile(fullPath, "utf-8");
+      return {
+        content: [{ type: "text" as const, text: content }],
+      };
     } catch (e) {
       return {
-        content: [{ type: "text" as const, text: `Error reading patch file: ${e}` }],
+        content: [{ type: "text" as const, text: `Error reading file: ${e}` }],
         isError: true,
       };
     }
+  }
 
-    const patches = Diff.parsePatch(patchContent);
-    if (patches.length === 0) {
-      return {
-        content: [{ type: "text" as const, text: "Error: Patch file contains no valid patches." }],
-        isError: true,
-      };
-    }
-
-    const affectedFiles: string[] = [];
-    for (const patch of patches) {
-      let filePath = patch.newFileName || patch.oldFileName;
-      if (!filePath) continue;
-
-      if (filePath.startsWith("a/") || filePath.startsWith("b/")) {
-        filePath = filePath.substring(2);
-      } else if (filePath.startsWith("Before: ") || filePath.startsWith("After: ")) {
-          filePath = filePath.split(": ")[1];
-      }
-
-      const validation = this.validatePath(filePath);
+  public async handleProposal(args: z.infer<typeof CoreProposalSchema>) {
+    // 1. Validate paths
+    for (const change of args.changes) {
+      const validation = this.validatePath(change.filepath);
       if (!validation.isValid) {
         return {
-          content: [{ type: "text" as const, text: `Error: Patch affects file outside src/: ${filePath}` }],
+          content: [{ type: "text" as const, text: `Error: Invalid path '${change.filepath}': ${validation.error}` }],
           isError: true,
         };
       }
-      affectedFiles.push(filePath);
     }
 
+    // 2. Check Risk Level
     let riskLevel: 'low' | 'high' | 'critical' = 'low';
-    const criticalFiles = ['src/builtins.ts', 'src/engine.ts', 'src/cli.ts'];
+    const criticalFiles = ['src/builtins.ts', 'src/engine.ts'];
 
-    for (const file of affectedFiles) {
-      if (criticalFiles.some(cf => file.endsWith(cf) || cf.endsWith(file))) {
+    for (const change of args.changes) {
+      if (criticalFiles.includes(change.filepath)) {
         riskLevel = 'critical';
         break;
       }
+      // Check history for failures (simplified check)
       try {
-        const pastFailures = await this.memory.recall(`failure error bug ${file}`, 3);
+        const pastFailures = await this.memory.recall(`failure error bug ${change.filepath}`, 3);
         if (pastFailures.length > 0) {
+          // Found past failures, elevate risk
           riskLevel = 'high';
         }
       } catch (e) {
@@ -136,20 +149,14 @@ export class CoreUpdaterServer {
       }
     }
 
+    // 3. Create Proposal
     const id = randomUUID();
-    const token = randomUUID().substring(0, 8);
-
-    if (!existsSync(this.patchesDir)) {
-      await mkdir(this.patchesDir, { recursive: true });
-    }
-    const storedPatchPath = join(this.patchesDir, `${id}.patch`);
-    await writeFile(storedPatchPath, patchContent);
-
+    const token = randomUUID().substring(0, 8); // Simple token
     const proposal: CoreProposal = {
       id,
-      title: args.change_summary,
-      description: args.analysis,
-      patchPath: storedPatchPath,
+      title: args.title,
+      description: args.description,
+      changes: args.changes.map(c => ({ ...c })), // Copy
       riskLevel,
       status: 'pending',
       createdAt: Date.now(),
@@ -182,9 +189,11 @@ export class CoreUpdaterServer {
       };
     }
 
+    // Load Config for YOLO mode
     const config = await loadConfig(this.rootDir);
     const yoloMode = config.yoloMode === true;
 
+    // Verify Safety
     let approved = false;
     let reason = "";
 
@@ -192,6 +201,7 @@ export class CoreUpdaterServer {
       approved = true;
       reason = "Valid approval token provided.";
     } else {
+      // Check YOLO conditions
       if (yoloMode && proposal.riskLevel === 'low') {
         approved = true;
         reason = "YOLO mode enabled and risk is low.";
@@ -209,82 +219,43 @@ export class CoreUpdaterServer {
       };
     }
 
+    // Backup & Apply
     const backupId = randomUUID();
     const backupDir = join(this.rootDir, ".agent", "backups", backupId);
     await mkdir(backupDir, { recursive: true });
 
-    let backups: { src: string, dest: string }[] = [];
-    let newFiles: string[] = [];
-    let patches: Diff.ParsedDiff[] = [];
-
     try {
-      if (!existsSync(proposal.patchPath)) {
-        throw new Error(`Stored patch file not found: ${proposal.patchPath}`);
-      }
-      const patchContent = await readFile(proposal.patchPath, "utf-8");
-      patches = Diff.parsePatch(patchContent);
-
-      // Pass 1: Validate and Backup
-      for (const patch of patches) {
-        let filePath = patch.oldFileName || patch.newFileName;
-        if (!filePath) continue;
-        if (filePath.startsWith("a/") || filePath.startsWith("b/")) filePath = filePath.substring(2);
-
-        const validation = this.validatePath(filePath);
-        if (!validation.isValid) throw new Error(`Invalid path in patch: ${filePath}`);
+      for (const change of proposal.changes) {
+        // Re-validate just in case (though proposal should be safe if created via tool)
+        const validation = this.validatePath(change.filepath);
+        if (!validation.isValid) throw new Error(`Invalid path in proposal: ${change.filepath}`);
 
         const fullPath = validation.fullPath!;
-        const backupPath = join(backupDir, filePath);
-        const backupFileDir = dirname(backupPath);
-        if (!existsSync(backupFileDir)) await mkdir(backupFileDir, { recursive: true });
 
+        // Backup
         if (existsSync(fullPath)) {
-          // Check if we already backed up this file (in case of multiple patches per file)
-          const alreadyBackedUp = backups.some(b => b.dest === fullPath);
-          if (!alreadyBackedUp) {
-              await copyFile(fullPath, backupPath);
-              backups.push({ src: backupPath, dest: fullPath });
-          }
-        } else {
-          // If it doesn't exist, it's a new file.
-          // But check if we already marked it as new
-          if (!newFiles.includes(fullPath)) {
-              newFiles.push(fullPath);
-          }
+          const backupPath = join(backupDir, change.filepath.replace(/\//g, "_"));
+          await copyFile(fullPath, backupPath);
         }
+
+        // Apply
+        const dir = dirname(fullPath);
+        if (!existsSync(dir)) await mkdir(dir, { recursive: true });
+        await writeFile(fullPath, change.newContent);
       }
 
-      // Pass 2: Apply
-      for (const patch of patches) {
-        let filePath = patch.oldFileName || patch.newFileName;
-        if (!filePath) continue;
-        if (filePath.startsWith("a/") || filePath.startsWith("b/")) filePath = filePath.substring(2);
-
-        const fullPath = resolve(this.rootDir, filePath);
-
-        if (existsSync(fullPath)) {
-          const originalContent = await readFile(fullPath, "utf-8");
-          const appliedContent = Diff.applyPatch(originalContent, patch);
-          if (appliedContent === false) throw new Error(`Failed to apply patch to ${filePath}. Hunk mismatch.`);
-          await writeFile(fullPath, appliedContent);
-        } else {
-          const appliedContent = Diff.applyPatch("", patch);
-          if (appliedContent === false) throw new Error(`Failed to apply patch to new file ${filePath}.`);
-          const dir = dirname(fullPath);
-          if (!existsSync(dir)) await mkdir(dir, { recursive: true });
-          await writeFile(fullPath, appliedContent);
-        }
-      }
-
+      // Update status
       proposal.status = 'applied';
-      await this.storage.save(proposal);
+      await this.storage.save(proposal); // Or delete? Let's keep for history.
+      // Actually, maybe move to 'history'? For now, just mark applied.
 
+      // Log to memory
       try {
         await this.memory.store(
           `update-${proposal.id}`,
           `Apply Core Update: ${proposal.title}`,
           `Success. Backup ID: ${backupId}`,
-          [proposal.patchPath]
+          proposal.changes.map(c => c.filepath)
         );
       } catch { }
 
@@ -293,28 +264,8 @@ export class CoreUpdaterServer {
       };
 
     } catch (e) {
-      // Rollback
-      console.error(`Error applying update: ${e}. Rolling back...`);
-      try {
-        // Restore backups
-        for (const backup of backups) {
-             const dir = dirname(backup.dest);
-             if (!existsSync(dir)) await mkdir(dir, { recursive: true });
-             await copyFile(backup.src, backup.dest);
-        }
-        // Delete new files
-        for (const file of newFiles) {
-             if (existsSync(file)) await unlink(file);
-        }
-      } catch (rollbackError) {
-         return {
-           content: [{ type: "text" as const, text: `CRITICAL ERROR: Update failed AND rollback failed. Manual intervention required. Backup ID: ${backupId}\nOriginal Error: ${e}\nRollback Error: ${rollbackError}` }],
-           isError: true
-         };
-      }
-
       return {
-        content: [{ type: "text" as const, text: `Error applying update: ${e}. Changes were rolled back. Backup ID: ${backupId}` }],
+        content: [{ type: "text" as const, text: `Error applying update: ${e}. Changes may be partially applied. Check backups in ${backupId}.` }],
         isError: true
       };
     }

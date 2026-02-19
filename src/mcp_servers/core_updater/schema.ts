@@ -1,9 +1,15 @@
 import { z } from "zod";
 
+export const CoreChangeSchema = z.object({
+  filepath: z.string().describe("Relative path to the file in src/ (e.g., 'src/engine.ts')."),
+  newContent: z.string().describe("The full new content of the file."),
+  diff: z.string().optional().describe("A diff string for context."),
+});
+
 export const CoreProposalSchema = z.object({
-  analysis: z.string().describe("Detailed analysis of why the change is needed."),
-  change_summary: z.string().describe("Brief summary of the changes."),
-  patch_file_path: z.string().describe("Path to the patch file (diff) containing the changes."),
+  title: z.string().describe("Short title of the proposal."),
+  description: z.string().describe("Detailed description of the change."),
+  changes: z.array(CoreChangeSchema).describe("List of files to be modified."),
 });
 
 export const ApplyUpdateSchema = z.object({

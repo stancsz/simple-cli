@@ -17,16 +17,7 @@ export class SOPExecutor {
     this.logDir = join(process.cwd(), '.agent', 'brain');
   }
 
-  private async logStep(executionLogs: any[], stepNumber: number, status: 'success' | 'failure', details: string) {
-    executionLogs.push({
-        step: `Step ${stepNumber}`,
-        status,
-        output: details,
-        timestamp: new Date().toISOString()
-    });
-  }
-
-  private async flushLogs(sopName: string, executionLogs: any[], success: boolean) {
+  private async logStep(sopName: string, stepNumber: number, status: 'success' | 'failure', details: string) {
     if (!existsSync(this.logDir)) {
       await mkdir(this.logDir, { recursive: true });
     }
@@ -42,12 +33,11 @@ export class SOPExecutor {
     }
 
     logs.push({
-      sop: sopName,
       timestamp: new Date().toISOString(),
-      result: {
-        success,
-        logs: executionLogs
-      }
+      sop: sopName,
+      step: stepNumber,
+      status,
+      details
     });
 
     // Keep last 1000 logs
@@ -57,28 +47,26 @@ export class SOPExecutor {
   }
 
   async execute(sop: SOP, input: string): Promise<string> {
-    const executionLogs: { step: string; status: string; output: string; timestamp: string }[] = [];
-
     // Initialize MCP to discover servers
     await this.mcp.init();
 
     // 1. Query Brain for past experiences
     let pastContext = "";
     try {
-      // Attempt to find brain_query tool
-      const tools = await this.mcp.getTools();
-      const brainQuery = tools.find(t => t.name === 'brain_query');
-      if (brainQuery) {
-        const result = await brainQuery.execute({ query: `SOP execution: ${sop.title} ${input}`, limit: 3 });
-        // Check if result is string or object with content
-        if (typeof result === 'string') {
-          pastContext = result;
-        } else if (result && (result as any).content && Array.isArray((result as any).content)) {
-          pastContext = (result as any).content.map((c: any) => c.text).join('\n');
+        // Attempt to find brain_query tool
+        const tools = await this.mcp.getTools();
+        const brainQuery = tools.find(t => t.name === 'brain_query');
+        if (brainQuery) {
+            const result = await brainQuery.execute({ query: `SOP execution: ${sop.title} ${input}`, limit: 3 });
+             // Check if result is string or object with content
+            if (typeof result === 'string') {
+                pastContext = result;
+            } else if (result.content && Array.isArray(result.content)) {
+                pastContext = result.content.map((c: any) => c.text).join('\n');
+            }
         }
-      }
     } catch (e) {
-      console.error(`[SOP] Failed to query brain: ${(e as Error).message}`);
+        console.error(`[SOP] Failed to query brain: ${(e as Error).message}`);
     }
 
     const context: string[] = []; // Stores summary of completed steps
@@ -114,9 +102,9 @@ export class SOPExecutor {
         const availableTools = [...mcpTools, ...controlTools];
 
         const toolDefs = availableTools.map((t: any) => {
-          const schema = t.inputSchema || {};
-          const args = schema.properties ? Object.keys(schema.properties).join(", ") : "";
-          return `- ${t.name}(${args}): ${t.description}`;
+            const schema = t.inputSchema || {};
+            const args = schema.properties ? Object.keys(schema.properties).join(", ") : "";
+            return `- ${t.name}(${args}): ${t.description}`;
         }).join("\n");
 
         const systemPrompt = `You are an autonomous agent executing a Standard Operating Procedure (SOP).
@@ -144,109 +132,106 @@ Do not ask the user for input unless absolutely necessary.
 `;
 
         try {
-          const response = await this.llm.generate(systemPrompt, fullHistory);
+            const response = await this.llm.generate(systemPrompt, fullHistory);
 
-          const { tool, args, thought, message } = response;
+            const { tool, args, thought, message } = response;
 
-          if (thought) console.error(`[SOP] Thought: ${thought}`);
-          if (message) console.error(`[SOP] Message: ${message}`);
+            if (thought) console.error(`[SOP] Thought: ${thought}`);
+            if (message) console.error(`[SOP] Message: ${message}`);
 
-          // Update history
-          fullHistory.push({ role: 'assistant', content: message || thought || "" });
+            // Update history
+            fullHistory.push({ role: 'assistant', content: message || thought || "" });
 
-          // Handle Tool Execution
-          if (tool) {
-            if (tool === 'complete_step') {
-              const summary = args.summary || message || "Step completed.";
-              context.push(`Step ${step.number} completed: ${summary}`);
-              console.error(`[SOP] Step ${step.number} Complete.`);
-              await this.logStep(executionLogs, step.number, 'success', summary);
-              stepComplete = true;
-              break;
-            }
-
-            if (tool === 'fail_step') {
-              const err = new Error(args.reason || "Step failed explicitly.");
-              (err as any).isFatal = true;
-              throw err;
-            }
-
-            if (tool !== 'none') {
-              const t = availableTools.find((x: any) => x.name === tool);
-              if (t) {
-                console.error(`[SOP] Executing tool: ${tool}`);
-                try {
-                  // Execute tool
-                  const result = await t.execute(args);
-
-                  // Add result to history
-                  fullHistory.push({
-                    role: 'user',
-                    content: `Tool '${tool}' output: ${typeof result === 'string' ? result : JSON.stringify(result)}`
-                  });
-
-                } catch (e: any) {
-                  console.error(`[SOP] Tool Error: ${e.message}`);
-                  fullHistory.push({ role: 'user', content: `Tool '${tool}' failed: ${e.message}` });
+            // Handle Tool Execution
+            if (tool) {
+                if (tool === 'complete_step') {
+                    const summary = args.summary || message || "Step completed.";
+                    context.push(`Step ${step.number} completed: ${summary}`);
+                    console.error(`[SOP] Step ${step.number} Complete.`);
+                    await this.logStep(sop.title, step.number, 'success', summary);
+                    stepComplete = true;
+                    break;
                 }
-              } else {
-                console.error(`[SOP] Tool not found: ${tool}`);
-                fullHistory.push({ role: 'user', content: `Error: Tool '${tool}' not found. Check spelling or available tools.` });
-              }
+
+                if (tool === 'fail_step') {
+                    const err = new Error(args.reason || "Step failed explicitly.");
+                    (err as any).isFatal = true;
+                    throw err;
+                }
+
+                if (tool !== 'none') {
+                    const t = availableTools.find((x: any) => x.name === tool);
+                    if (t) {
+                        console.error(`[SOP] Executing tool: ${tool}`);
+                        try {
+                            // Execute tool
+                            const result = await t.execute(args);
+
+                            // Add result to history
+                            fullHistory.push({
+                                role: 'user',
+                                content: `Tool '${tool}' output: ${typeof result === 'string' ? result : JSON.stringify(result)}`
+                            });
+
+                        } catch (e: any) {
+                             console.error(`[SOP] Tool Error: ${e.message}`);
+                             fullHistory.push({ role: 'user', content: `Tool '${tool}' failed: ${e.message}` });
+                        }
+                    } else {
+                         console.error(`[SOP] Tool not found: ${tool}`);
+                         fullHistory.push({ role: 'user', content: `Error: Tool '${tool}' not found. Check spelling or available tools.` });
+                    }
+                } else {
+                    // Tool is 'none', but message exists.
+                    // If the LLM is just talking, remind it to use tools.
+                    fullHistory.push({ role: 'user', content: "Please use a tool (like 'complete_step') to proceed." });
+                }
             } else {
-              // Tool is 'none', but message exists.
-              // If the LLM is just talking, remind it to use tools.
-              fullHistory.push({ role: 'user', content: "Please use a tool (like 'complete_step') to proceed." });
+                 fullHistory.push({ role: 'user', content: "Please use a tool to proceed." });
             }
-          } else {
-            fullHistory.push({ role: 'user', content: "Please use a tool to proceed." });
-          }
 
         } catch (e: any) {
-          if (e.isFatal) {
-            await this.logStep(executionLogs, step.number, 'failure', e.message);
-            await this.flushLogs(sop.title, executionLogs, false);
-            throw e;
-          }
-          console.error(`[SOP] Error in step execution: ${e.message}`);
+            if (e.isFatal) {
+                 await this.logStep(sop.title, step.number, 'failure', e.message);
+                 throw e;
+            }
+            console.error(`[SOP] Error in step execution: ${e.message}`);
 
-          // Exponential Backoff
-          retries++;
-          const delay = Math.pow(2, retries) * 1000;
-          console.error(`[SOP] Retrying in ${delay}ms... (Attempt ${retries}/${this.maxRetries})`);
-          await new Promise(resolve => setTimeout(resolve, delay));
+            // Exponential Backoff
+            retries++;
+            const delay = Math.pow(2, retries) * 1000;
+            console.error(`[SOP] Retrying in ${delay}ms... (Attempt ${retries}/${this.maxRetries})`);
+            await new Promise(resolve => setTimeout(resolve, delay));
 
-          fullHistory.push({ role: 'user', content: `System Error: ${e.message}` });
+            fullHistory.push({ role: 'user', content: `System Error: ${e.message}` });
         }
       }
 
       if (!stepComplete) {
-        const msg = `Failed to complete Step ${step.number} after ${this.maxRetries} retries.`;
-        await this.logStep(executionLogs, step.number, 'failure', msg);
-        await this.flushLogs(sop.title, executionLogs, false);
-        throw new Error(msg);
+          const msg = `Failed to complete Step ${step.number} after ${this.maxRetries} retries.`;
+          await this.logStep(sop.title, step.number, 'failure', msg);
+          throw new Error(msg);
       }
     }
 
     const finalSummary = `SOP '${sop.title}' executed successfully.\n\nSummary:\n${context.join('\n')}`;
-    await this.flushLogs(sop.title, executionLogs, true);
 
     // Log final experience to Brain
     try {
-      const tools = await this.mcp.getTools();
-      const logExp = tools.find(t => t.name === 'log_experience');
-      if (logExp) {
-        await logExp.execute({
-          taskId: `sop-${Date.now()}`,
-          task_type: 'sop_execution',
-          agent_used: 'sop_engine',
-          outcome: 'success',
-          summary: finalSummary,
-          artifacts: JSON.stringify([]) // TODO: Track artifacts?
-        });
-      }
+        const tools = await this.mcp.getTools();
+        const logExp = tools.find(t => t.name === 'log_experience');
+        if (logExp) {
+            await logExp.execute({
+                taskId: `sop-${Date.now()}`,
+                task_type: 'sop_execution',
+                agent_used: 'sop_engine',
+                outcome: 'success',
+                summary: finalSummary,
+                artifacts: JSON.stringify([]) // TODO: Track artifacts?
+            });
+        }
     } catch (e) {
-      console.error(`[SOP] Failed to log experience: ${(e as Error).message}`);
+        console.error(`[SOP] Failed to log experience: ${(e as Error).message}`);
     }
 
     return finalSummary;

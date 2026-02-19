@@ -11,6 +11,7 @@
     - [x] CrewAI (multi-agent research) - 3 days
     - [x] Kimi K2.5 (deep reasoning) - 1 day
     - [x] Devin (full-stack development) - 2 days
+    - [x] Picoclaw (reasoning framework) - 1 day
 - [x] **Digest Phase**: Standardize via MCP servers
     - [x] Created `src/mcp_servers/` architecture
     - [x] Implemented MCP protocol for all integrated frameworks
@@ -40,8 +41,6 @@
 - [x] **Configure Supervisor Agent**: Added `dify_agent_templates/supervisor_agent.json`.
 - [x] **Configure Coding Agent**: Added `dify_agent_templates/coding_agent.json`.
 - [x] **Documentation**: Added `docs/LOCAL_DIFY.md`.
-- [x] **MCP Server**: Implemented `src/mcp_servers/dify/` with `execute_supervisor_workflow` and `execute_coding_workflow`.
-- [x] **CLI Integration**: Added `--use-agent dify-supervisor` support.
 
 ## Sprint 1: The Awakening (Current)
 
@@ -74,11 +73,8 @@
     - [x] Deleted deprecated files.
 
 ### 4. Tests
-- [x] **Integration Testing**: Created `tests/integration/four_pillars.test.ts`.
-    - [x] Validated Company Context loading and RAG.
-    - [x] Validated SOP Engine execution and Brain logging.
-    - [x] Validated HR Loop (Ghost Mode) analysis and proposal generation.
-- [x] **Mocking**: Implemented robust MCP and LLM mocking strategy for end-to-end flows.
+- [ ] Update tests to mock MCP servers instead of local file paths.
+- [ ] Verify Ghost Mode triggers (Scheduler/JobDelegator) in CI/CD or local simulation.
 
 ### 5. Phase 4.5: SOP Engine
 - [x] **Core Logic**:
@@ -92,13 +88,10 @@
 - [x] **Persona Engine**:
     - [x] Create `src/persona.ts`: Load `persona.json` and wrap LLM responses.
     - [x] Implement `inject_personality()` function in `src/llm.ts`.
-    - [x] Implement `src/persona/middleware.ts`: LLM-based tone rewrite, catchphrases, latency.
-    - [x] Create `docs/PERSONA_ENGINE.md`.
 - [x] **Interfaces**:
     - [x] Create `src/interfaces/slack.ts`: Implement Slack Bolt.js adapter.
     - [x] Create `src/interfaces/teams.ts`: Implement Microsoft Bot Framework adapter.
     - [x] Create `src/interfaces/discord.ts`: Implement Discord.js adapter.
-    - [x] Integrate `BaseInterface` and `PersonaMiddleware` into all adapters.
 - [x] **Infrastructure**:
     - [x] Create `Dockerfile` for lightweight production image.
     - [x] Create `docker-compose.yml` for local "Agency" simulation (Redis + Agent).
@@ -123,11 +116,11 @@
     - [x] Create `docs/COMPANY_CONTEXT.md`.
     - [x] Validated Company Context with comprehensive E2E tests (including Slack/Teams flags).
 
-### 8. Phase 7: The Hive Mind (Active)
-- [x] **Swarm Orchestration**: Implement dynamic agent spawning via `hive_mind`.
-- [x] **Agent Negotiation**: Implement protocol for agents to "bid" on tasks.
+### 8. Phase 7: The Hive Mind (Planned)
+- [ ] **Swarm Orchestration**: Implement dynamic agent spawning via `opencowork`.
+- [ ] **Agent Negotiation**: Implement protocol for agents to "bid" on tasks.
 
 ### 9. Phase 8: Recursive Evolution (Active)
 - [x] **Self-Repair**: Implement `HR Loop` to fix `src/` files based on error logs (`src/mcp_servers/hr/`).
 - [x] **Automated Review**: Integrate HR MCP with Scheduler for weekly automated reviews.
-- [x] **Core Update**: Implement secure protocol for updating `src/` files (Patch-based, Dual-verification).
+- [x] **Core Update**: Implement secure protocol for updating `engine.ts`.
