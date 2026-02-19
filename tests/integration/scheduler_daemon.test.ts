@@ -1,5 +1,4 @@
-import { test } from 'node:test';
-import assert from 'node:assert';
+import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import { spawn } from 'child_process';
 import { join } from 'path';
 import { writeFile, mkdir, rm, readFile } from 'fs/promises';
@@ -9,14 +8,24 @@ const CWD = process.cwd();
 const AGENT_DIR = join(CWD, '.agent');
 const SCHEDULER_FILE = join(AGENT_DIR, 'scheduler.json');
 
-test('Scheduler-Daemon Integration', async (t) => {
-    // Backup existing scheduler.json
+describe('Scheduler-Daemon Integration', () => {
     let backupScheduler: string | null = null;
-    if (existsSync(SCHEDULER_FILE)) {
-        backupScheduler = await readFile(SCHEDULER_FILE, 'utf-8');
-    }
 
-    try {
+    beforeAll(async () => {
+        if (existsSync(SCHEDULER_FILE)) {
+            backupScheduler = await readFile(SCHEDULER_FILE, 'utf-8');
+        }
+    });
+
+    afterAll(async () => {
+        if (backupScheduler) {
+            await writeFile(SCHEDULER_FILE, backupScheduler);
+        } else {
+            if (existsSync(SCHEDULER_FILE)) await rm(SCHEDULER_FILE);
+        }
+    });
+
+    it('should run a scheduled task', async () => {
         await mkdir(AGENT_DIR, { recursive: true });
 
         // Create a scheduler.json with a task due every second
@@ -70,8 +79,6 @@ test('Scheduler-Daemon Integration', async (t) => {
             child.on('exit', (code) => {
                 if (!foundTrigger && code !== null) {
                      clearTimeout(timeout);
-                     // Don't reject if code is 0/1/signal, just check foundTrigger later?
-                     // If it exits early, it failed.
                      if (!foundTrigger) {
                          reject(new Error(`Daemon exited prematurely with code ${code}. Output:\n${output}`));
                      }
@@ -79,14 +86,6 @@ test('Scheduler-Daemon Integration', async (t) => {
             });
         });
 
-        assert.ok(foundTrigger, "Daemon should log '[Scheduler] Started...'");
-
-    } finally {
-        // Restore backup
-        if (backupScheduler) {
-            await writeFile(SCHEDULER_FILE, backupScheduler);
-        } else {
-            if (existsSync(SCHEDULER_FILE)) await rm(SCHEDULER_FILE);
-        }
-    }
+        expect(foundTrigger).toBe(true);
+    }, 35000); // Increased test timeout
 });

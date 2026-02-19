@@ -1,6 +1,5 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { MCP } from "../src/mcp";
-// Import mocked functions directly
 import { existsSync, readFileSync } from "fs";
 import { spawn } from "child_process";
 
@@ -27,6 +26,7 @@ vi.mock("fs", () => {
 vi.mock("fs/promises", () => {
   return {
     readdir: vi.fn().mockResolvedValue([]),
+    readFile: vi.fn().mockResolvedValue(""),
   };
 });
 
@@ -35,8 +35,11 @@ describe("MCP Agents Migration", () => {
 
   beforeEach(() => {
     vi.resetAllMocks();
-    // Re-setup fs/promises mock if needed
     mcp = new MCP();
+  });
+
+  afterEach(() => {
+    vi.clearAllMocks();
   });
 
   it("should load agents from mcp.json", async () => {
@@ -50,8 +53,16 @@ describe("MCP Agents Migration", () => {
       }
     };
 
-    (existsSync as any).mockReturnValue(true);
-    (readFileSync as any).mockReturnValue(JSON.stringify(mockConfig));
+    (existsSync as any).mockImplementation((path: string) => {
+        if (path.includes("mcp.json")) return true;
+        if (path.includes("mcp_servers")) return true;
+        return false;
+    });
+
+    (readFileSync as any).mockImplementation((path: string) => {
+         if (path.includes("mcp.json")) return JSON.stringify(mockConfig);
+         return "";
+    });
 
     await mcp.init();
 
@@ -81,7 +92,10 @@ describe("MCP Agents Migration", () => {
       }
     };
 
-    (existsSync as any).mockReturnValue(true);
+    (existsSync as any).mockImplementation((path: string) => {
+        if (path.includes("mcp.json")) return true;
+        return false;
+    });
     (readFileSync as any).mockReturnValue(JSON.stringify(mockConfig));
 
     const mockSpawn = spawn as unknown as ReturnType<typeof vi.fn>;
@@ -94,7 +108,8 @@ describe("MCP Agents Migration", () => {
     const mockProc = {
         stdout: { on: mockStdoutOn },
         stderr: { on: mockStderrOn },
-        on: mockProcOn
+        on: mockProcOn,
+        pid: 123
     };
     mockSpawn.mockReturnValue(mockProc);
 
@@ -148,7 +163,8 @@ describe("MCP Agents Migration", () => {
         stderr: { on: vi.fn() },
         on: vi.fn((event, cb) => {
              if (event === "close") cb(0);
-        })
+        }),
+        pid: 124
     };
     mockSpawn.mockReturnValue(mockProc);
 

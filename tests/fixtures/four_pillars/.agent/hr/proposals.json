@@ -10,5 +10,29 @@
     "status": "pending",
     "createdAt": 1771445021745,
     "updatedAt": 1771445021745
+  },
+  {
+    "id": "e68bdb0a-05ae-4b91-ad11-693a466d6a58",
+    "title": "Optimize Deployment",
+    "description": "Create a script to bump version.",
+    "affectedFiles": [
+      "scripts/bump_version.ts"
+    ],
+    "patch": "console.log('Bumping version');",
+    "status": "pending",
+    "createdAt": 1771469767364,
+    "updatedAt": 1771469767364
+  },
+  {
+    "id": "850fe992-e38a-4737-8966-fe4c7811823d",
+    "title": "Optimize Deployment",
+    "description": "Create a script to bump version.",
+    "affectedFiles": [
+      "scripts/bump_version.ts"
+    ],
+    "patch": "console.log('Bumping version');",
+    "status": "pending",
+    "createdAt": 1771469976368,
+    "updatedAt": 1771469976368
   }
 ]
