@@ -116,6 +116,9 @@
     - [x] Update `cli.ts` and `engine.ts` to support `--company` flag and context injection.
     - [x] Create `docs/COMPANY_CONTEXT.md`.
     - [x] Validated Company Context with comprehensive E2E tests (including Slack/Teams flags).
+- [x] **Dreaming (Offline Simulation)**:
+    - [x] Create `src/mcp_servers/dreaming/`: Implement `start_dreaming_session` and `get_dream_insights`.
+    - [x] Integration: Scans logs for failures, spawns Delegate Agents (CrewAI), and stores successful strategies in the Brain.
 
 ### 8. Phase 7: The Hive Mind (✅ Implemented)
 - [x] **Swarm Orchestration**: Implement dynamic agent spawning via `opencowork`.

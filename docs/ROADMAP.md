@@ -49,10 +49,13 @@ To transition from a "Wrapper" to a true "Universal AI Integration Platform," th
     - Global constraints.
 - **Mechanism:** `delegate_cli` automatically injects this context (goals, constraints, changes) into the prompt or file context of every sub-agent.
 
-### Phase 3: The Universal Tool Interface (MCP) (✅ Implemented)
-**Goal:** Standardize how agents call tools via the Model Context Protocol.
-- **Status:** Core MCP server logic implemented. Numerous specialized servers (CapRover, Cloudflare, Kimi, etc.) integrated.
-- **Benefit:** Direct, high-bandwidth tool access for sub-agents without regex parsing or manual wrapper overhead.
+### Phase 3: Shared Memory & Dreaming (MCP & Simulation) (✅ Implemented)
+**Goal:** Standardize how agents call tools via the Model Context Protocol and enable offline simulation.
+- **Status:** Core MCP server logic implemented. Dreaming capability active.
+- **Benefit:** Direct tool access and offline self-improvement.
+- **Features:**
+    - **MCP Servers:** (✅ Implemented) Standardized tool interface.
+    - **Dreaming:** (✅ Implemented) Offline simulation of past failures via `src/mcp_servers/dreaming/`. Replays logs, generates strategies, and updates the Brain.
 
 ### Phase 4: Human-in-the-Loop 2.0 (✅ Implemented)
 **Goal:** Enhanced control and review via TUI and Supervisor.
