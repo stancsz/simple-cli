@@ -62,8 +62,8 @@ export class WindsurfServer {
       "windsurf_create_session",
       "Create a new collaborative coding session.",
       {
-        projectPath: z.string().describe("Path to the project to open."),
-        collaborators: z.array(z.string()).optional().describe("List of emails/IDs to invite.")
+        projectPath: z.string().refine(s => !s.startsWith('-'), "Project path cannot start with a hyphen").describe("Path to the project to open."),
+        collaborators: z.array(z.string().refine(s => !s.startsWith('-'), "Collaborator ID/Email cannot start with a hyphen")).optional().describe("List of emails/IDs to invite.")
       },
       async ({ projectPath, collaborators }) => {
         const args = ["--new-session", projectPath];
@@ -93,7 +93,7 @@ export class WindsurfServer {
       "windsurf_join_session",
       "Join an existing collaborative session.",
       {
-        sessionId: z.string().describe("The ID of the session to join.")
+        sessionId: z.string().refine(s => !s.startsWith('-'), "Session ID cannot start with a hyphen").describe("The ID of the session to join.")
       },
       async ({ sessionId }) => {
         const result = await this.client.execute(["--join-session", sessionId]);
@@ -115,7 +115,7 @@ export class WindsurfServer {
       "windsurf_edit_code",
       "Edit code in a file using Windsurf.",
       {
-        filePath: z.string().describe("The file to edit."),
+        filePath: z.string().refine(s => !s.startsWith('-'), "File path cannot start with a hyphen").describe("The file to edit."),
         instruction: z.string().describe("Instructions for the edit."),
         context: z.string().optional().describe("Additional context.")
       },
@@ -160,7 +160,7 @@ export class WindsurfServer {
       "windsurf_get_feedback",
       "Get feedback on recent code changes from the collaborative session.",
       {
-        filePath: z.string().optional().describe("Specific file to check for feedback.")
+        filePath: z.string().refine(s => !s.startsWith('-'), "File path cannot start with a hyphen").optional().describe("Specific file to check for feedback.")
       },
       async ({ filePath }) => {
         const args = ["--get-feedback"];
