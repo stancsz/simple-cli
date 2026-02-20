@@ -59,7 +59,7 @@
 - [x] **Remove Logic Duplication**:
     - [x] Delete `delegate_cli` from `src/builtins.ts`. The engine should just call `run_crew_task` or `aider_edit`.
     - [x] Remove manual tool loading in `engine.ts`. Use standard MCP discovery.
-- [ ] **Context Management**:
+- [x] **Context Management**:
     - [x] Implement Concurrency Control: Added file locking to `ContextManager` to prevent race conditions.
     - [x] Implement a **Context MCP Server** (singleton) to handle `context.json` updates securely (fix race conditions).
     - [x] Update `engine.ts` to push/pull context via this server.
