@@ -66,6 +66,7 @@ To transition from a "Wrapper" to a true "Universal AI Integration Platform," th
     - **Brain Integration:** Recalls past experiences and logs new ones.
     - **Resilience:** Exponential backoff retries.
     - **Tool Discovery:** Uses any available MCP tool.
+    - **Validation:** ✅ Standalone integration tests verify Markdown parsing, Brain-integrated execution, resilience retries, and tool discovery. See `tests/integration/sop_engine_validation.test.ts`.
 
 ### Phase 5: The Digital Co-worker (Deployment & Persona) (✅ Implemented)
 **Goal:** Create a fully functional, human-like digital employee that lives where your team lives (Slack, Teams).
@@ -162,6 +163,7 @@ To achieve a true "Universal AI Integration Platform" capable of consulting for 
     - **Autonomous Execution:** Uses LLM to reason and select tools for each step.
     - **Resilience:** Automatic retries and error handling.
     - **Tool Integration:** Discovers and uses any available MCP tool (Git, Filesystem, Brain).
+    - **Validation:** ✅ Standalone integration tests verify Markdown parsing, Brain-integrated execution, resilience retries, and tool discovery. See `tests/integration/sop_engine_validation.test.ts`.
 
 ### 5. "Ghost Mode" Persistence (The 24/7 Employee) (✅ Active)
 *   **Concept:** Employees that work while you sleep.
