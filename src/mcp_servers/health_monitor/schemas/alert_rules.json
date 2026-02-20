@@ -1,0 +1,25 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Alert Rules",
+  "type": "array",
+  "items": {
+    "type": "object",
+    "properties": {
+      "id": { "type": "string" },
+      "metric": { "type": "string", "description": "The metric name to monitor (e.g., 'llm_latency')" },
+      "threshold": { "type": "number", "description": "The value to compare against" },
+      "operator": { "type": "string", "enum": [">", "<", ">=", "<=", "=="] },
+      "window": { "type": "number", "description": "Time window in minutes to average metrics (default: 5)" },
+      "channel": {
+        "type": "object",
+        "properties": {
+          "type": { "type": "string", "enum": ["slack", "webhook", "email"] },
+          "target": { "type": "string", "description": "Webhook URL or email address" }
+        },
+        "required": ["type", "target"]
+      },
+      "enabled": { "type": "boolean", "default": true }
+    },
+    "required": ["metric", "threshold", "operator", "channel"]
+  }
+}

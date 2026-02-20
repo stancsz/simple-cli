@@ -2,39 +2,15 @@ import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { z } from "zod";
 import { logMetric } from "../../logger.js";
-import { readFile, writeFile, readdir, mkdir } from "fs/promises";
-import { join, dirname } from "path";
-import { existsSync } from "fs";
-
-const AGENT_DIR = join(process.cwd(), '.agent');
-const METRICS_DIR = join(AGENT_DIR, 'metrics');
-const ALERT_RULES_FILE = join(process.cwd(), 'scripts', 'dashboard', 'alert_rules.json');
+import { AlertManager, AlertRuleSchema } from "./alerting.js";
+import { getMetricFiles, readNdjson } from "./utils.js";
 
 const server = new McpServer({
   name: "health_monitor",
-  version: "1.0.0"
+  version: "1.1.0"
 });
 
-// Helper to get files for a range of dates
-async function getMetricFiles(days: number): Promise<string[]> {
-  if (!existsSync(METRICS_DIR)) return [];
-  const files = await readdir(METRICS_DIR);
-  // Filter for YYYY-MM-DD.ndjson
-  const sorted = files.filter(f => /^\d{4}-\d{2}-\d{2}\.ndjson$/.test(f)).sort();
-  return sorted.slice(-days).map(f => join(METRICS_DIR, f));
-}
-
-// Helper to read ndjson
-async function readNdjson(filepath: string): Promise<any[]> {
-  try {
-    const content = await readFile(filepath, 'utf-8');
-    return content.trim().split('\n').map(line => {
-        try { return JSON.parse(line); } catch { return null; }
-    }).filter(Boolean);
-  } catch {
-    return [];
-  }
-}
+const alertManager = new AlertManager();
 
 server.tool(
   "track_metric",
@@ -102,8 +78,50 @@ server.tool(
 );
 
 server.tool(
+  "create_alert_rule",
+  "Create a new alert rule.",
+  AlertRuleSchema.omit({ id: true, created_at: true }).partial({ enabled: true, window: true }).extend({
+    channel: z.object({
+        type: z.enum(["slack", "webhook", "email"]),
+        target: z.string()
+    })
+  }),
+  async (args) => {
+     // @ts-ignore
+     const rule = await alertManager.addRule(args);
+     return { content: [{ type: "text", text: `Alert rule created: ${rule.metric} ${rule.operator} ${rule.threshold}` }] };
+  }
+);
+
+server.tool(
+  "list_active_alerts",
+  "List currently active alerts.",
+  {},
+  async () => {
+    const alerts = await alertManager.getActiveAlerts();
+    return { content: [{ type: "text", text: JSON.stringify(alerts, null, 2) }] };
+  }
+);
+
+server.tool(
+  "trigger_test_alert",
+  "Trigger a test alert to verify notification channels.",
+  {
+     metric: z.string(),
+     value: z.number()
+  },
+  async ({ metric, value }) => {
+     await logMetric('test', metric, value);
+     // Force check immediately
+     await alertManager.checkAlerts();
+     return { content: [{ type: "text", text: "Test metric logged and alert check triggered." }] };
+  }
+);
+
+// Deprecated: Kept for backward compatibility but routes to AlertManager
+server.tool(
   "alert_on_threshold",
-  "Configure an alert rule for a specific metric.",
+  "Configure an alert rule for a specific metric. (Deprecated: use create_alert_rule)",
   {
     metric: z.string(),
     threshold: z.number(),
@@ -111,21 +129,12 @@ server.tool(
     contact: z.string().optional().describe("Webhook URL or channel (e.g. slack)")
   },
   async ({ metric, threshold, operator, contact }) => {
-     let rules: any[] = [];
-     if (existsSync(ALERT_RULES_FILE)) {
-        try {
-            rules = JSON.parse(await readFile(ALERT_RULES_FILE, 'utf-8'));
-        } catch {}
-     } else {
-        const dir = dirname(ALERT_RULES_FILE);
-        if (!existsSync(dir)) {
-            await mkdir(dir, { recursive: true });
-        }
-     }
-
-     rules.push({ metric, threshold, operator, contact, created_at: new Date().toISOString() });
-     await writeFile(ALERT_RULES_FILE, JSON.stringify(rules, null, 2));
-
+     const rule = await alertManager.addRule({
+         metric,
+         threshold,
+         operator,
+         channel: { type: contact && contact.includes('slack') ? 'slack' : 'webhook', target: contact || 'http://localhost' }
+     });
      return { content: [{ type: "text", text: `Alert rule added for ${metric} ${operator} ${threshold}` }] };
   }
 );
@@ -135,57 +144,11 @@ server.tool(
   "Check current metrics against configured alert rules.",
   {},
   async () => {
-    if (!existsSync(ALERT_RULES_FILE)) {
-         return { content: [{ type: "text", text: "No alert rules configured." }] };
-    }
-
-    let rules: any[] = [];
-    try {
-        rules = JSON.parse(await readFile(ALERT_RULES_FILE, 'utf-8'));
-    } catch {
-        return { content: [{ type: "text", text: "Failed to parse alert rules." }] };
-    }
-
-    // Get last hour metrics for checking
-    const files = await getMetricFiles(1);
-    let metrics: any[] = [];
-    if (files.length > 0) {
-        metrics = await readNdjson(files[files.length - 1]);
-    }
-
-    // Check against average of last 5 mins
-    const now = Date.now();
-    const fiveMinutes = 5 * 60 * 1000;
-    const recentMetrics = metrics.filter(m => (now - new Date(m.timestamp).getTime()) < fiveMinutes);
-
-    const alerts: string[] = [];
-
-    for (const rule of rules) {
-        const relevant = recentMetrics.filter(m =>
-            m.metric === rule.metric || `${m.agent}:${m.metric}` === rule.metric
-        );
-
-        if (relevant.length === 0) continue;
-
-        const avgValue = relevant.reduce((sum, m) => sum + m.value, 0) / relevant.length;
-
-        let triggered = false;
-        if (rule.operator === ">" && avgValue > rule.threshold) triggered = true;
-        if (rule.operator === "<" && avgValue < rule.threshold) triggered = true;
-        if (rule.operator === ">=" && avgValue >= rule.threshold) triggered = true;
-        if (rule.operator === "<=" && avgValue <= rule.threshold) triggered = true;
-
-        if (triggered) {
-            const msg = `ALERT: ${rule.metric} is ${avgValue.toFixed(2)} (${rule.operator} ${rule.threshold})`;
-            alerts.push(msg);
-            console.error(msg);
-        }
-    }
-
+    await alertManager.checkAlerts();
+    const alerts = await alertManager.getActiveAlerts();
     if (alerts.length > 0) {
-        return { content: [{ type: "text", text: alerts.join("\n") }] };
+         return { content: [{ type: "text", text: alerts.map(a => `ALERT: ${a.metric} is ${a.value}`).join("\n") }] };
     }
-
     return { content: [{ type: "text", text: "No alerts triggered." }] };
   }
 );

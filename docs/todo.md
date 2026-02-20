@@ -142,4 +142,4 @@
 - [x] **Health Monitor MCP**: Created `src/mcp_servers/health_monitor/` to track metrics.
 - [x] **Dashboard**: Created `scripts/dashboard/` for real-time visualization.
 - [x] **Integration**: Metrics collection added to core engine and LLM.
-- [x] **Alerting**: Configurable threshold alerts via `alert_rules.json`.
+- [x] **Alerting**: Configurable threshold alerts via `alert_rules.json`. (✅ Completed: Added AlertManager, MCP tools, and Dashboard UI)

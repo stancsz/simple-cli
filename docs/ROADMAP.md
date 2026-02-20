@@ -144,7 +144,7 @@ To transition from a "Wrapper" to a true "Universal AI Integration Platform," th
 - **Mechanism:**
     - **Health Monitor MCP**: Tracks metrics (latency, tokens) and manages alerts.
     - **Dashboard**: Lightweight web UI for visualizing metrics.
-    - **Alerting**: Configurable thresholds for critical metrics.
+    - **Alerting**: (✅ Live) Configurable thresholds, multi-channel notifications (Slack/Webhook), and active alert monitoring via dashboard.
 
 ---
 

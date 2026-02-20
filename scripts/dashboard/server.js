@@ -10,6 +10,9 @@ const __dirname = path.dirname(__filename);
 const PORT = 3003;
 const AGENT_DIR = path.join(process.cwd(), '.agent');
 const METRICS_DIR = path.join(AGENT_DIR, 'metrics');
+const HEALTH_DIR = path.join(AGENT_DIR, 'health');
+const ALERT_RULES_FILE = path.join(HEALTH_DIR, 'alert_rules.json');
+const ACTIVE_ALERTS_FILE = path.join(HEALTH_DIR, 'active_alerts.json');
 
 // Helper to get files for a range of days
 function getMetricFiles(days) {
@@ -33,8 +36,35 @@ function readNdjson(filepath) {
 const server = http.createServer((req, res) => {
   const parsedUrl = url.parse(req.url, true);
 
-  // Serve static index.html
-  if (parsedUrl.pathname === '/' || parsedUrl.pathname === '/index.html') {
+  // Normalize path to prevent directory traversal
+  const pathname = parsedUrl.pathname;
+
+  // Serve static files from public/
+  if (pathname.startsWith('/public/')) {
+    const filePath = path.join(__dirname, pathname);
+    // Basic security check
+    if (!filePath.startsWith(path.join(__dirname, 'public'))) {
+        res.writeHead(403);
+        res.end('Forbidden');
+        return;
+    }
+
+    fs.readFile(filePath, (err, data) => {
+      if (err) {
+        res.writeHead(404);
+        res.end('Not Found');
+        return;
+      }
+      if (filePath.endsWith('.js')) res.writeHead(200, { 'Content-Type': 'application/javascript' });
+      else if (filePath.endsWith('.css')) res.writeHead(200, { 'Content-Type': 'text/css' });
+      else res.writeHead(200);
+      res.end(data);
+    });
+    return;
+  }
+
+  // Serve index.html
+  if (pathname === '/' || pathname === '/index.html') {
     fs.readFile(path.join(__dirname, 'index.html'), (err, data) => {
       if (err) {
         res.writeHead(500);
@@ -47,8 +77,8 @@ const server = http.createServer((req, res) => {
     return;
   }
 
-  // API Endpoint
-  if (parsedUrl.pathname === '/api/metrics') {
+  // API Endpoint: Metrics
+  if (pathname === '/api/metrics') {
     const timeframe = parsedUrl.query.timeframe || 'last_hour';
     let days = 1;
     if (timeframe === 'last_week') days = 7;
@@ -74,6 +104,23 @@ const server = http.createServer((req, res) => {
 
     res.writeHead(200, { 'Content-Type': 'application/json' });
     res.end(JSON.stringify(allMetrics));
+    return;
+  }
+
+  // API Endpoint: Alerts
+  if (pathname === '/api/alerts') {
+    let rules = [];
+    let alerts = [];
+    try {
+        if (fs.existsSync(ALERT_RULES_FILE)) rules = JSON.parse(fs.readFileSync(ALERT_RULES_FILE, 'utf-8'));
+        if (fs.existsSync(ACTIVE_ALERTS_FILE)) alerts = JSON.parse(fs.readFileSync(ACTIVE_ALERTS_FILE, 'utf-8'));
+    } catch {}
+
+    // Filter active alerts
+    alerts = alerts.filter(a => a.status === 'active');
+
+    res.writeHead(200, { 'Content-Type': 'application/json' });
+    res.end(JSON.stringify({ rules, alerts }));
     return;
   }
 
