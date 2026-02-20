@@ -125,6 +125,10 @@ Available Tools:
 ${toolDefs}
 
 Your Goal: Execute the current step using available tools.
+Decision Guidance:
+- For privacy-sensitive or local coding tasks, use 'run_supervisor_task' (Planning) or 'run_coding_task' (Implementation).
+- For general file edits, use native filesystem tools or 'aider'.
+
 1. If you need a tool that is not listed, check if you can start an MCP server using 'mcp_start_server' (e.g. 'git', 'filesystem').
 2. When the step is done, use 'complete_step' with a summary.
 3. If you cannot complete the step, use 'fail_step' with a reason.

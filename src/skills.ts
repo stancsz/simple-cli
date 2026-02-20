@@ -48,6 +48,9 @@ Important Rules:
    - **Simple Fix / Typo / Code Edit**: Use 'deepseek_aider'. It is fast and good at direct edits.
    - **Refactor / Feature / Architecture**: Use 'deepseek_claude'. It has strong reasoning and architectural grasp.
    - **Research / Writing**: Use 'deepseek_crewai'.
+   - **Privacy-Sensitive / Rapid Prototyping / Local Tasks**: Use **Dify Agents**.
+     - **Planning/Architecture**: Use 'run_supervisor_task'.
+     - **Coding/Implementation**: Use 'run_coding_task'.
    - **PR Management (Complex)**: Use 'jules' ONLY if native 'pr_comment' tool is not enough.
 
 5. **Tool Discovery (MCP)**:

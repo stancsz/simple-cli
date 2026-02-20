@@ -17,7 +17,7 @@ This specification serves as the primary source of truth for the implementation,
     *   **Role**: Quality Assurance (QA).
     *   **Action**: Approve (continue) or Reject (retry with feedback).
 3.  **Tool Registry**: Manages internal tools (FileSystem, Git) and dynamic MCP tools.
-4.  **Delegate Router**: Handles the spawning and communication with external CLI agents.
+4.  **Delegate Router**: Handles the spawning and communication with external CLI agents (e.g., Claude, Aider) and local agents (Dify Supervisor/Coding).
 5.  **Learning Manager**: A specialized component for persisting successful strategies and recalling them in future contexts.
 6.  **Scheduler**: A cron-like subsystem for managing autonomous, recurring tasks.
 

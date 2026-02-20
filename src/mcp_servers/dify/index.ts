@@ -29,6 +29,78 @@ export class DifyServer {
         return await this.runChat(query, user, conversation_id, inputs);
       }
     );
+
+    this.server.tool(
+      "run_supervisor_task",
+      "Delegate a complex planning or architectural task to the Dify Supervisor Agent.",
+      {
+        task: z.string().describe("The task description or requirement."),
+        context: z.string().optional().describe("Additional context or background information."),
+      },
+      async ({ task, context }) => {
+        return await this.runWorkflow("DIFY_SUPERVISOR_API_KEY", { task, context: context || "" }, "supervisor-user");
+      }
+    );
+
+    this.server.tool(
+      "run_coding_task",
+      "Delegate a coding or implementation task to the Dify Coding Agent.",
+      {
+        task: z.string().describe("The coding task description."),
+        plan: z.string().optional().describe("The implementation plan (if available)."),
+        code: z.string().optional().describe("Existing code snippet (if any)."),
+      },
+      async ({ task, plan, code }) => {
+        return await this.runWorkflow("DIFY_CODING_API_KEY", { task, plan: plan || "", code: code || "" }, "coding-user");
+      }
+    );
+  }
+
+  async runWorkflow(apiKeyEnv: string, inputs: Record<string, any> = {}, user: string) {
+    const apiKey = process.env[apiKeyEnv];
+    if (!apiKey) {
+        return {
+            content: [{ type: "text" as const, text: `Error: ${apiKeyEnv} environment variable is not set.` }]
+        };
+    }
+
+    const baseUrl = process.env.DIFY_API_URL || "http://localhost:5001/v1";
+
+    try {
+        const response = await fetch(`${baseUrl}/workflows/run`, {
+            method: "POST",
+            headers: {
+                "Authorization": `Bearer ${apiKey}`,
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify({
+                inputs,
+                user,
+                response_mode: "blocking"
+            })
+        });
+
+        if (!response.ok) {
+            const errorText = await response.text();
+            return {
+                content: [{ type: "text" as const, text: `Dify API Error (${response.status}): ${errorText}` }]
+            };
+        }
+
+        const data: any = await response.json();
+        const outputs = data.data?.outputs || data.data || {};
+
+        return {
+            content: [
+                { type: "text" as const, text: JSON.stringify(outputs, null, 2) }
+            ]
+        };
+
+    } catch (e: any) {
+        return {
+            content: [{ type: "text" as const, text: `Error calling Dify API: ${e.message}` }]
+        };
+    }
   }
 
   async runChat(query: string, user: string, conversation_id?: string, inputs: Record<string, any> = {}) {
