@@ -1,0 +1,26 @@
+{
+  "id": "showcase-corp",
+  "name": "Showcase Corp",
+  "industry": "Software Development",
+  "mission": "Demonstrate the power of autonomous AI agents in building software.",
+  "tech_stack": {
+    "frontend": "React",
+    "backend": "Node.js (Express)",
+    "database": "PostgreSQL",
+    "deployment": "Railway (Docker)"
+  },
+  "brand_voice": {
+    "tone": "Professional, tech-forward, slightly witty.",
+    "style": "Concise, actionable, and transparent."
+  },
+  "goals": [
+    "Build a TODO app from scratch.",
+    "Automate the deployment pipeline.",
+    "Continuously optimize the codebase for efficiency."
+  ],
+  "constraints": [
+    "Use TypeScript for all new code.",
+    "Ensure all features are tested.",
+    "Keep costs low."
+  ]
+}

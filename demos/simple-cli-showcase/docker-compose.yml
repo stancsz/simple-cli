@@ -1,0 +1,25 @@
+version: '3.8'
+
+services:
+  agent:
+    image: simple-cli:latest
+    container_name: showcase-agent
+    build:
+      context: ../../
+      dockerfile: Dockerfile
+    volumes:
+      - .:/app/showcase
+      - ./.agent:/app/.agent
+    environment:
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - JULES_AGENT_DIR=/app/showcase/.agent
+      - COMPANY_CONTEXT_FILE=/app/showcase/company_context.json
+    command: ["npm", "start", "--", "--daemon"]
+    restart: unless-stopped
+
+  mock-production:
+    image: node:18-alpine
+    container_name: showcase-production
+    volumes:
+      - ./dist:/app/dist
+    command: ["sh", "-c", "echo 'Simulating production environment...' && tail -f /dev/null"]
