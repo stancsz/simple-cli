@@ -12,6 +12,7 @@ export interface GenerateComponentResponse {
   language: string;
   framework: string;
   model: string;
+  preview_url?: string;
   usage?: {
     prompt_tokens: number;
     completion_tokens: number;
@@ -21,4 +22,12 @@ export interface GenerateComponentResponse {
 
 export interface ListFrameworksResponse {
   frameworks: string[];
+}
+
+export interface ErrorResponse {
+  error: {
+    message: string;
+    code: string;
+    status: number;
+  };
 }
