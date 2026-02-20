@@ -15,7 +15,9 @@ export class Scheduler extends EventEmitter {
   private cronJobs: any[] = [];
   private taskFileWatchers: any[] = [];
   private scheduleWatcher: any;
+  private mcpWatcher: any;
   private scheduleFile: string;
+  private mcpFile: string;
   private stateFile: string;
   private delegator: JobDelegator;
   private pendingTasks: Map<string, TaskDefinition> = new Map();
@@ -23,6 +25,10 @@ export class Scheduler extends EventEmitter {
   constructor(private agentDir: string) {
     super();
     this.scheduleFile = join(agentDir, 'scheduler.json');
+    // mcp.json is typically in the root, one level up from .agent if agentDir is .agent
+    // But we should check both or assume process.cwd() / mcp.json
+    // For consistency with daemon.ts which uses process.cwd()/mcp.json
+    this.mcpFile = join(process.cwd(), 'mcp.json');
     this.stateFile = join(agentDir, 'scheduler_state.json');
     this.delegator = new JobDelegator(agentDir);
   }
@@ -44,7 +50,7 @@ export class Scheduler extends EventEmitter {
 
     await this.applySchedule();
 
-    // Watch schedule file for changes
+    // Watch scheduler.json for changes
     if (existsSync(this.scheduleFile)) {
         this.watchScheduleFile();
     } else {
@@ -59,6 +65,23 @@ export class Scheduler extends EventEmitter {
                  }
              });
         }
+    }
+
+    // Watch mcp.json for changes
+    if (existsSync(this.mcpFile)) {
+        this.watchMcpFile();
+    } else {
+        const cwd = process.cwd();
+        const dirWatcher = chokidar.watch(cwd, { depth: 0, persistent: true, ignoreInitial: true });
+        dirWatcher.on('add', (path) => {
+             if (path === this.mcpFile) {
+                 this.watchMcpFile();
+                 this.applySchedule();
+                 // Don't close, might need to watch other things?
+                 // Actually close is fine if we only care about mcp.json appearing
+                 dirWatcher.close();
+             }
+        });
     }
   }
 
@@ -209,7 +232,16 @@ export class Scheduler extends EventEmitter {
       if (this.scheduleWatcher) return;
       this.scheduleWatcher = chokidar.watch(this.scheduleFile, { persistent: true, ignoreInitial: true });
       this.scheduleWatcher.on('change', async () => {
-          console.log("Schedule file changed. Reloading...");
+          console.log("scheduler.json changed. Reloading...");
+          await this.applySchedule();
+      });
+  }
+
+  private watchMcpFile() {
+      if (this.mcpWatcher) return;
+      this.mcpWatcher = chokidar.watch(this.mcpFile, { persistent: true, ignoreInitial: true });
+      this.mcpWatcher.on('change', async () => {
+          console.log("mcp.json changed. Reloading...");
           await this.applySchedule();
       });
   }
@@ -223,19 +255,48 @@ export class Scheduler extends EventEmitter {
         await this.scheduleWatcher.close();
         this.scheduleWatcher = null;
     }
+    if (this.mcpWatcher) {
+        await this.mcpWatcher.close();
+        this.mcpWatcher = null;
+    }
   }
 
   private async loadSchedule(): Promise<ScheduleConfig> {
-    if (!existsSync(this.scheduleFile)) {
-      return { tasks: [] };
+    let tasks: TaskDefinition[] = [];
+
+    // 1. Load from mcp.json (Primary)
+    if (existsSync(this.mcpFile)) {
+        try {
+            const content = await readFile(this.mcpFile, 'utf-8');
+            const config = JSON.parse(content);
+            if (config.scheduledTasks && Array.isArray(config.scheduledTasks)) {
+                tasks.push(...config.scheduledTasks);
+            }
+        } catch (e) {
+            console.error(`Error reading mcp.json: ${e}`);
+        }
     }
-    try {
-      const content = await readFile(this.scheduleFile, 'utf-8');
-      return JSON.parse(content);
-    } catch (e) {
-      console.error(`Error reading schedule: ${e}`);
-      return { tasks: [] };
+
+    // 2. Load from scheduler.json (Legacy/Fallback)
+    if (existsSync(this.scheduleFile)) {
+      try {
+        const content = await readFile(this.scheduleFile, 'utf-8');
+        const legacyConfig = JSON.parse(content);
+        if (legacyConfig.tasks && Array.isArray(legacyConfig.tasks)) {
+            // Avoid duplicates by ID
+            const existingIds = new Set(tasks.map(t => t.id));
+            legacyConfig.tasks.forEach((t: TaskDefinition) => {
+                if (!existingIds.has(t.id)) {
+                    tasks.push(t);
+                }
+            });
+        }
+      } catch (e) {
+        console.error(`Error reading scheduler.json: ${e}`);
+      }
     }
+
+    return { tasks };
   }
 
   private async applySchedule() {
