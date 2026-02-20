@@ -1,5 +1,7 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
+import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/streamableHttp.js";
+import express from "express";
 import { z } from "zod";
 import { fileURLToPath } from "url";
 import { EpisodicMemory } from "../../brain/episodic.js";
@@ -309,9 +311,32 @@ export class BrainServer {
   }
 
   async run() {
-    const transport = new StdioServerTransport();
-    await this.server.connect(transport);
-    console.error("Brain MCP Server running on stdio");
+    if (process.env.PORT) {
+      const app = express();
+      const transport = new StreamableHTTPServerTransport();
+      await this.server.connect(transport);
+
+      app.all("/sse", async (req, res) => {
+        await transport.handleRequest(req, res);
+      });
+
+      app.post("/messages", async (req, res) => {
+        await transport.handleRequest(req, res);
+      });
+
+      app.get("/health", (req, res) => {
+        res.sendStatus(200);
+      });
+
+      const port = process.env.PORT;
+      app.listen(port, () => {
+        console.error(`Brain MCP Server running on http://localhost:${port}/sse`);
+      });
+    } else {
+      const transport = new StdioServerTransport();
+      await this.server.connect(transport);
+      console.error("Brain MCP Server running on stdio");
+    }
   }
 }
 

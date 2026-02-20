@@ -1,0 +1,82 @@
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: {{ .Release.Name }}-agent
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app: {{ .Release.Name }}-agent
+spec:
+  serviceName: {{ .Release.Name }}-agent-headless
+  replicas: {{ .Values.agent.replicas }}
+  selector:
+    matchLabels:
+      app: {{ .Release.Name }}-agent
+  template:
+    metadata:
+      labels:
+        app: {{ .Release.Name }}-agent
+    spec:
+      containers:
+        - name: agent
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          command: ["node", "dist/daemon.js"]
+          env:
+            - name: COMPANY
+              value: "{{ .Values.company }}"
+            - name: PORT
+              value: "{{ .Values.agent.service.port }}"
+            # Optionally override MCP config path via env if supported, but we mount it
+          volumeMounts:
+            - name: mcp-config
+              mountPath: /app/mcp.json
+              subPath: mcp.json
+          ports:
+            - containerPort: {{ .Values.agent.service.port }}
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: {{ .Values.agent.service.port }}
+            initialDelaySeconds: 30
+            periodSeconds: 20
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: {{ .Values.agent.service.port }}
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          resources:
+            {{- toYaml .Values.agent.resources | nindent 12 }}
+
+        # Sidecar: Health Monitor
+        - name: health-monitor
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          command: ["node", "dist/mcp_servers/health_monitor/index.js"]
+          env:
+            - name: PORT
+              value: "{{ .Values.healthMonitor.port }}"
+          ports:
+            - containerPort: {{ .Values.healthMonitor.port }}
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: {{ .Values.healthMonitor.port }}
+            initialDelaySeconds: 15
+            periodSeconds: 20
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: {{ .Values.healthMonitor.port }}
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          resources:
+            {{- toYaml .Values.healthMonitor.resources | nindent 12 }}
+
+      volumes:
+        - name: mcp-config
+          configMap:
+            name: {{ .Release.Name }}-config
+            items:
+              - key: mcp.json
+                path: mcp.json

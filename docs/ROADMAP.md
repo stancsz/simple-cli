@@ -157,6 +157,17 @@ To transition from a "Wrapper" to a true "Universal AI Integration Platform," th
     - **Ghost Mode**: Simulates 24-hour autonomy (Morning Standups, HR Reviews).
     - **Validation**: Validated via `tests/integration/showcase_simulation.test.ts`.
 
+### Phase 12: Production-Grade Kubernetes Deployment (✅ Implemented)
+**Goal:** Run the Digital Agency as a scalable, multi-tenant service on Kubernetes.
+- **Concept:** Helm-based deployment for production environments (EKS, GKE, AKS).
+- **Status:** Fully implemented (`deployment/chart/`).
+- **Mechanism:**
+    - **Helm Chart**: Deploys Agent StatefulSet, Brain Deployment (LanceDB), and optional Redis.
+    - **Sidecars**: Runs MCP servers (`health_monitor`) as sidecars for low-latency access.
+    - **Multi-Tenancy**: Supports namespace-based isolation per company.
+    - **Persistence**: Managed via PVCs for Brain memory.
+    - **Documentation**: Comprehensive guides in `deployment/README.md`.
+
 ---
 
 ## 🚀 The 6-Pillar Vision

@@ -1,0 +1,25 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ .Release.Name }}-config
+  namespace: {{ .Release.Namespace }}
+data:
+  mcp.json: |
+    {
+      "mcpServers": {
+        "brain": {
+          "url": "http://{{ .Release.Name }}-brain:{{ .Values.brain.service.port }}/sse"
+        },
+        "health_monitor": {
+          "url": "http://localhost:{{ .Values.healthMonitor.port }}/sse"
+        },
+        "filesystem": {
+          "command": "node",
+          "args": ["/app/node_modules/@modelcontextprotocol/server-filesystem/dist/index.js", "/app"]
+        },
+        "git": {
+          "command": "node",
+          "args": ["/app/node_modules/@modelcontextprotocol/server-git/dist/index.js"]
+        }
+      }
+    }
