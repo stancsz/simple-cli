@@ -1,0 +1,21 @@
+{
+  "tasks": [
+    {
+      "id": "task-standup",
+      "name": "Morning Standup",
+      "trigger": "cron",
+      "schedule": "0 9 * * *",
+      "prompt": "Review recent logs and summarize activity.",
+      "yoloMode": true,
+      "company": "stellar-tech"
+    },
+    {
+      "id": "task-hr-review",
+      "name": "HR Review",
+      "trigger": "cron",
+      "schedule": "0 12 * * *",
+      "prompt": "Analyze error logs and propose fixes.",
+      "yoloMode": true
+    }
+  ]
+}
