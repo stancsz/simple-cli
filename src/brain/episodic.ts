@@ -3,6 +3,7 @@ import { join, dirname } from "path";
 import { mkdirSync, existsSync } from "fs";
 import { randomUUID } from "crypto";
 import { createLLM } from "../llm.js";
+import { LanceConnector } from "../mcp_servers/brain/lance_connector.js";
 
 export interface PastEpisode {
   id: string;
@@ -17,7 +18,7 @@ export interface PastEpisode {
 
 export class EpisodicMemory {
   private dbPath: string;
-  private db: lancedb.Connection | null = null;
+  private connector: LanceConnector;
   private llm: ReturnType<typeof createLLM>;
   private defaultTableName = "episodic_memories";
 
@@ -26,24 +27,15 @@ export class EpisodicMemory {
     // Unless overridden by BRAIN_STORAGE_ROOT env var
     const storageRoot = process.env.BRAIN_STORAGE_ROOT || join(baseDir, ".agent", "brain", "episodic");
     this.dbPath = storageRoot;
+    this.connector = new LanceConnector(this.dbPath);
     this.llm = llm || createLLM();
   }
 
   async init() {
-    if (this.db) return;
-
-    // Ensure directory exists
-    if (!existsSync(this.dbPath)) {
-      mkdirSync(this.dbPath, { recursive: true });
-    }
-
-    // Connect to DB
-    this.db = await lancedb.connect(this.dbPath);
+    await this.connector.connect();
   }
 
   private async getTable(company?: string): Promise<lancedb.Table | null> {
-    if (!this.db) await this.init();
-
     let tableName = this.defaultTableName;
     if (company) {
         if (/^[a-zA-Z0-9_-]+$/.test(company)) {
@@ -53,15 +45,7 @@ export class EpisodicMemory {
         }
     }
 
-    try {
-      const tableNames = await this.db!.tableNames();
-      if (tableNames.includes(tableName)) {
-        return await this.db!.openTable(tableName);
-      }
-    } catch (e) {
-      console.warn(`Failed to open table ${tableName}:`, e);
-    }
-    return null;
+    return await this.connector.getTable(tableName);
   }
 
   private async getEmbedding(text: string): Promise<number[] | undefined> {
@@ -75,8 +59,6 @@ export class EpisodicMemory {
   }
 
   async store(taskId: string, request: string, solution: string, artifacts: string[] = [], company?: string): Promise<void> {
-    if (!this.db) await this.init();
-
     // Embed the interaction (request + solution)
     const textToEmbed = `Task: ${taskId}\nRequest: ${request}\nSolution: ${solution}`;
     const embedding = await this.getEmbedding(textToEmbed);
@@ -102,28 +84,30 @@ export class EpisodicMemory {
         }
     }
 
-    let table = await this.getTable(company);
+    // Use the connector to acquire a lock for the company
+    await this.connector.withLock(company, async () => {
+        let table = await this.connector.getTable(tableName);
 
-    if (!table) {
-      try {
-        table = await this.db!.createTable(tableName, [data]);
-      } catch (e) {
-        // Handle race condition where table was created by another process/request
-        table = await this.getTable(company);
-        if (table) {
-          await table.add([data]);
+        if (!table) {
+          try {
+            table = await this.connector.createTable(tableName, [data]);
+          } catch (e) {
+            // Handle race condition where table was created by another process/request
+            // Although withLock should prevent this for the same company table
+            table = await this.connector.getTable(tableName);
+            if (table) {
+              await table.add([data]);
+            } else {
+              throw e;
+            }
+          }
         } else {
-          throw e;
+          await table.add([data]);
         }
-      }
-    } else {
-      await table.add([data]);
-    }
+    });
   }
 
   async recall(query: string, limit: number = 3, company?: string): Promise<PastEpisode[]> {
-    if (!this.db) await this.init();
-
     const table = await this.getTable(company);
     if (!table) return [];
 
