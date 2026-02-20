@@ -143,3 +143,9 @@
 - [x] **Dashboard**: Created `scripts/dashboard/` for real-time visualization.
 - [x] **Integration**: Metrics collection added to core engine and LLM.
 - [x] **Alerting**: Configurable threshold alerts via `alert_rules.json`.
+
+### 12. Phase 11: Production Showcase (✅ Implemented)
+- [x] **Showcase Corp Context**: Created `demos/simple-cli-showcase/company_context.json`.
+- [x] **SOP-as-Code**: Defined end-to-end workflow in `demos/simple-cli-showcase/docs/showcase_sop.md`.
+- [x] **Ghost Mode Simulation**: Implemented `demos/simple-cli-showcase/run_demo.ts` to orchestrate 24-hour autonomy.
+- [x] **Validation**: Verified full showcase flow via `tests/integration/showcase_simulation.test.ts`.

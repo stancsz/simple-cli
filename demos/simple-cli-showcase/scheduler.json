@@ -1,0 +1,22 @@
+{
+  "tasks": [
+    {
+      "id": "showcase-standup",
+      "name": "Morning Standup",
+      "trigger": "cron",
+      "schedule": "0 9 * * *",
+      "prompt": "Run the Morning Standup for Showcase Corp. Check for new files and list recent changes.",
+      "yoloMode": true,
+      "company": "showcase-corp"
+    },
+    {
+      "id": "showcase-hr-review",
+      "name": "Daily HR Review",
+      "trigger": "cron",
+      "schedule": "0 18 * * *",
+      "prompt": "Run the Daily HR Review. Analyze the 'ghost_logs' directory for any failures and propose improvements.",
+      "yoloMode": true,
+      "company": "showcase-corp"
+    }
+  ]
+}
