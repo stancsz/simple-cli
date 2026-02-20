@@ -77,3 +77,20 @@ To stop and remove volumes (reset data):
 ```bash
 docker compose -f docker-compose.dify.yml down -v
 ```
+
+## 6. Testing
+
+We have implemented comprehensive integration tests to validate the Dify local stack and agent templates without relying on external services.
+
+### Running the Tests
+To run the Dify integration tests:
+
+```bash
+npx vitest run tests/integration/dify_integration.test.ts
+```
+
+### What is Tested?
+1.  **Configuration Integrity**: Validates that `docker-compose.dify.yml` exists and contains required services.
+2.  **Template Validation**: Parses `dify_agent_templates/*.json` to ensure they are valid and contain required fields.
+3.  **API Simulation**: Mocks the Dify API to verify that the `DifyServer` (MCP) correctly constructs requests and handles responses.
+4.  **Workflow Simulation**: Simulates a Supervisor Agent -> Coding Agent delegation flow to ensure the orchestration logic holds up.
