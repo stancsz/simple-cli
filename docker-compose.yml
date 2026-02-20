@@ -20,6 +20,7 @@ services:
       timeout: 10s
       retries: 3
     restart: unless-stopped
+    command: npm run daemon
 
   redis:
     image: redis:alpine

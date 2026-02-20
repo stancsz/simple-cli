@@ -1,11 +1,9 @@
-import cron from 'node-cron';
-import chokidar from 'chokidar';
 import { spawn, ChildProcess } from 'child_process';
 import { join, dirname } from 'path';
-import { readFile, appendFile } from 'fs/promises';
-import { existsSync } from 'fs';
 import { fileURLToPath } from 'url';
-import { ScheduleConfig, TaskDefinition } from './interfaces/daemon.js';
+import { appendFile, mkdir } from 'fs/promises';
+import { existsSync } from 'fs';
+import { StateManager } from './daemon/state_manager.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -13,217 +11,161 @@ const isTs = __filename.endsWith('.ts');
 const ext = isTs ? '.ts' : '.js';
 
 const CWD = process.cwd();
-const AGENT_DIR = join(CWD, '.agent');
-const LOG_FILE = join(AGENT_DIR, 'daemon.log'); // Changed from ghost.log
-const MCP_CONFIG_FILE = join(CWD, 'mcp.json');
-const SCHEDULER_FILE = join(AGENT_DIR, 'scheduler.json'); // Legacy support
+const AGENT_DIR = process.env.JULES_AGENT_DIR || join(CWD, '.agent');
+const LOG_DIR = join(AGENT_DIR, 'logs');
+const LOG_FILE = join(LOG_DIR, 'daemon.log');
 
-// State tracking
-const activeChildren = new Set<ChildProcess>();
-const cronJobs: any[] = [];
-const taskFileWatchers: any[] = [];
+// Ensure log dir exists
+if (!existsSync(LOG_DIR)) {
+    // We can't use await at top level without top-level await support (ESM has it, but safe to wrap or sync check)
+    // mkdir is async, let's just do it in main
+}
+
+const stateManager = new StateManager(AGENT_DIR);
+let schedulerProcess: ChildProcess | null = null;
+let isShuttingDown = false;
 
 async function log(msg: string) {
   const timestamp = new Date().toISOString();
-  const line = `[${timestamp}] ${msg}\n`;
+  const line = `[${timestamp}] [DAEMON] ${msg}\n`;
   try {
-    if (!existsSync(AGENT_DIR)) {
-      // Create .agent dir if not exists (though usually it should)
-    }
-    await appendFile(LOG_FILE, line);
+      if (!existsSync(LOG_DIR)) await mkdir(LOG_DIR, { recursive: true });
+      await appendFile(LOG_FILE, line);
   } catch (e) {
-    console.error(`Failed to write log: ${e}`);
+      console.error(`Failed to write log: ${e}`);
   }
   console.log(line.trim());
 }
 
-async function loadSchedule(): Promise<ScheduleConfig> {
-  let tasks: TaskDefinition[] = [];
+async function startScheduler() {
+    if (isShuttingDown) return;
 
-  // 1. Load from mcp.json (Primary)
-  if (existsSync(MCP_CONFIG_FILE)) {
-      try {
-          const content = await readFile(MCP_CONFIG_FILE, 'utf-8');
-          const config = JSON.parse(content);
-          if (config.scheduledTasks && Array.isArray(config.scheduledTasks)) {
-              tasks.push(...config.scheduledTasks);
-          }
-      } catch (e) {
-          await log(`Error reading mcp.json: ${e}`);
-      }
-  }
+    await log("Starting Scheduler process...");
 
-  // 2. Load from scheduler.json (Legacy/Fallback)
-  if (existsSync(SCHEDULER_FILE)) {
-    try {
-      const content = await readFile(SCHEDULER_FILE, 'utf-8');
-      const legacyConfig = JSON.parse(content);
-      if (legacyConfig.tasks && Array.isArray(legacyConfig.tasks)) {
-          // Avoid duplicates by ID
-          const existingIds = new Set(tasks.map(t => t.id));
-          legacyConfig.tasks.forEach((t: TaskDefinition) => {
-              if (!existingIds.has(t.id)) {
-                  tasks.push(t);
-              }
-          });
-      }
-    } catch (e) {
-      await log(`Error reading scheduler.json: ${e}`);
+    // Path to scheduler service script
+    const serviceScript = join(__dirname, 'scheduler', `service${ext}`);
+
+    const args = isTs
+        ? ['--loader', 'ts-node/esm', serviceScript]
+        : [serviceScript];
+
+    schedulerProcess = spawn('node', args, {
+        cwd: CWD,
+        stdio: 'pipe', // We want to capture output to log it
+        env: { ...process.env, FORCE_COLOR: '1' }
+    });
+
+    if (schedulerProcess.pid) {
+        await stateManager.update(state => {
+            state.schedulerPid = schedulerProcess!.pid;
+            state.schedulerStatus = 'running';
+        });
+        await log(`Scheduler started with PID ${schedulerProcess.pid}`);
     }
-  }
 
-  return { tasks };
-}
+    schedulerProcess.stdout?.on('data', async (data) => {
+        const lines = data.toString().trim().split('\n');
+        for (const line of lines) {
+            if (!line) continue;
 
-async function runTask(task: TaskDefinition) {
-  await log(`Triggering task: ${task.name} (${task.id})`);
+            // Check for state updates
+            try {
+                if (line.includes('[STATE_ACTION]')) {
+                    const jsonStr = line.substring(line.indexOf('{'));
+                    const action = JSON.parse(jsonStr);
 
-  const env: NodeJS.ProcessEnv = {
-    ...process.env,
-    JULES_TASK_DEF: JSON.stringify(task)
-  };
+                    if (action.type === 'STATE_ACTION') {
+                        await stateManager.update(state => {
+                            if (action.action === 'add' && action.task) {
+                                // Avoid duplicates
+                                const exists = state.activeTasks.some(t => t.id === action.task.id);
+                                if (!exists) state.activeTasks.push(action.task);
+                            } else if (action.action === 'remove' && action.taskId) {
+                                state.activeTasks = state.activeTasks.filter(t => t.id !== action.taskId);
+                            }
+                        });
+                        continue; // Don't log state actions to avoid clutter
+                    }
+                }
+            } catch (e) {
+                // Not a valid JSON or state action, treat as log
+            }
 
-  if (task.company) {
-    env.JULES_COMPANY = task.company;
-  }
-
-  // Point to the new executor in src/scheduler/
-  const executorScript = join(__dirname, 'scheduler', `executor${ext}`);
-
-  const args = isTs
-       ? ['--loader', 'ts-node/esm', executorScript]
-       : [executorScript];
-
-  const child = spawn('node', args, {
-    env,
-    cwd: CWD,
-    stdio: 'pipe'
-  });
-
-  activeChildren.add(child);
-
-  child.stdout?.on('data', (d) => {
-    const output = d.toString().trim();
-    if (output) log(`[${task.name}] STDOUT: ${output}`);
-  });
-
-  child.stderr?.on('data', (d) => {
-    const output = d.toString().trim();
-    if (output) log(`[${task.name}] STDERR: ${output}`);
-  });
-
-  child.on('close', (code) => {
-    activeChildren.delete(child);
-    log(`Task ${task.name} exited with code ${code}`);
-  });
-
-  child.on('error', (err) => {
-    activeChildren.delete(child);
-    log(`Failed to spawn task ${task.name}: ${err.message}`);
-  });
-}
-
-async function applySchedule() {
-  await log("Applying schedule...");
-
-  cronJobs.forEach(job => job.stop());
-  cronJobs.length = 0;
-
-  await Promise.all(taskFileWatchers.map(w => w.close()));
-  taskFileWatchers.length = 0;
-
-  const config = await loadSchedule();
-  await log(`Loaded ${config.tasks.length} tasks.`);
-
-  if (config.tasks.length === 0) {
-    await log("No tasks scheduled.");
-  }
-
-  for (const task of config.tasks) {
-    try {
-      if (task.trigger === 'cron' && task.schedule) {
-        if (cron.validate(task.schedule)) {
-          const job = cron.schedule(task.schedule, () => {
-             log(`Cron triggered for task: ${task.name}`);
-             runTask(task);
-          });
-          cronJobs.push(job);
-          await log(`Scheduled cron task: ${task.name} at "${task.schedule}"`);
-        } else {
-          await log(`Invalid cron schedule for task: ${task.name}`);
+            log(`[SCHEDULER] ${line}`);
         }
-      } else if (task.trigger === 'file-watch' && task.path) {
-          const watchPath = join(CWD, task.path);
-          const watcher = chokidar.watch(watchPath, { persistent: true, ignoreInitial: true });
+    });
 
-          watcher.on('change', (path) => {
-              log(`File changed: ${path}. Triggering task ${task.name}`);
-              runTask(task);
-          });
+    schedulerProcess.stderr?.on('data', (data) => {
+        const lines = data.toString().trim().split('\n');
+        lines.forEach((line: string) => {
+             if (line) log(`[SCHEDULER ERROR] ${line}`);
+        });
+    });
 
-          taskFileWatchers.push(watcher);
-          await log(`Watching file: ${watchPath} for task: ${task.name}`);
-      } else if (task.trigger === 'webhook') {
-          await log(`Webhook trigger not implemented for task: ${task.name}`);
-      } else {
-        await log(`Unknown trigger or missing config for task: ${task.name}`);
-      }
-    } catch (e: any) {
-      await log(`Error scheduling task ${task.name}: ${e.message}`);
-    }
-  }
+    schedulerProcess.on('close', async (code) => {
+        await log(`Scheduler exited with code ${code}`);
+        schedulerProcess = null;
+
+        await stateManager.update(state => {
+            state.schedulerPid = null;
+            state.schedulerStatus = code === 0 ? 'stopped' : 'crashed';
+            if (code !== 0) state.restarts += 1;
+        });
+
+        if (!isShuttingDown) {
+            if (code !== 0) {
+                await log("Scheduler crashed. Restarting in 5 seconds...");
+                setTimeout(startScheduler, 5000);
+            } else {
+                await log("Scheduler stopped cleanly. Daemon will stay alive.");
+            }
+        }
+    });
+
+    schedulerProcess.on('error', async (err) => {
+        await log(`Failed to spawn Scheduler: ${err.message}`);
+        if (!isShuttingDown) {
+            setTimeout(startScheduler, 5000);
+        }
+    });
 }
 
 async function main() {
-  await log("Daemon starting...");
-  await log(`CWD: ${CWD}`);
+    await log("Daemon Supervisor starting...");
+    await log(`CWD: ${CWD}`);
 
-  await applySchedule();
+    // Initialize state
+    await stateManager.update(state => {
+        state.daemonStartedAt = Date.now();
+    });
 
-  // Watch mcp.json for changes
-  if (existsSync(MCP_CONFIG_FILE)) {
-      const mcpWatcher = chokidar.watch(MCP_CONFIG_FILE, { persistent: true, ignoreInitial: true });
-      mcpWatcher.on('change', async () => {
-          await log("mcp.json changed. Reloading schedule...");
-          await applySchedule();
-      });
-  } else {
-      // Watch cwd for creation of mcp.json
-      const dirWatcher = chokidar.watch(CWD, { depth: 0, persistent: true, ignoreInitial: true });
-      dirWatcher.on('add', async (path) => {
-          if (path === MCP_CONFIG_FILE) {
-               await log("mcp.json created. Loading schedule...");
-               await applySchedule();
-               // Could attach specific watcher now, but applySchedule re-runs so logic is fine
-               // We might want to restart to attach specific watcher properly or just rely on manual restart
-               // For now, reloading schedule is good enough.
-          }
-      });
-  }
+    await startScheduler();
 
-  // Watch scheduler.json as well
-  if (existsSync(SCHEDULER_FILE)) {
-      const legacyWatcher = chokidar.watch(SCHEDULER_FILE, { persistent: true, ignoreInitial: true });
-      legacyWatcher.on('change', async () => {
-          await log("scheduler.json changed. Reloading schedule...");
-          await applySchedule();
-      });
-  }
-
-  setInterval(() => {}, 1000 * 60 * 60); // Keep alive
+    // Heartbeat loop
+    setInterval(async () => {
+        await stateManager.update(state => {
+            state.lastHeartbeat = Date.now();
+        });
+    }, 1000 * 30); // 30s heartbeat
 }
 
 const shutdown = async (signal: string) => {
+    if (isShuttingDown) return;
+    isShuttingDown = true;
     await log(`Daemon stopping (${signal})...`);
-    if (activeChildren.size > 0) {
-        await log(`Killing ${activeChildren.size} active tasks...`);
-        for (const child of activeChildren) {
-            try {
-                child.kill('SIGTERM');
-            } catch (e) { }
-        }
+
+    if (schedulerProcess) {
+        await log(`Killing Scheduler (PID ${schedulerProcess.pid})...`);
+        schedulerProcess.kill('SIGTERM');
+        // Wait briefly?
     }
-    process.exit(0);
+
+    await stateManager.update(state => {
+        state.schedulerStatus = 'stopped';
+        state.schedulerPid = null;
+    });
+
+    setTimeout(() => process.exit(0), 1000);
 };
 
 process.on('SIGINT', () => shutdown('SIGINT'));

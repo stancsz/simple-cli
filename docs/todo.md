@@ -77,6 +77,16 @@
 - [x] Verify Ghost Mode triggers (Scheduler/JobDelegator) in CI/CD or local simulation.
 - [x] **Comprehensive Integration**: Implemented 24h simulation tests for Ghost Mode, Brain, and HR Loop (`tests/integration/ghost_mode_integration.test.ts`).
 
+## Sprint 2: Production Readiness
+
+**Goal:** Ensure 24/7 reliability and observability for enterprise deployment.
+
+- [x] **Daemon Resilience**:
+    - [x] Implement Daemon Supervisor (`src/daemon.ts`) with auto-restart.
+    - [x] Create State Manager (`src/daemon/state_manager.ts`) for persistence.
+    - [x] Create Daemon Health MCP (`src/mcp_servers/daemon_health.ts`).
+    - [x] Verify recovery via `tests/integration/daemon_resilience.test.ts`.
+
 ### 5. Phase 4.5: SOP Engine
 - [x] **Core Logic**:
     - [x] Create `sop_parser.ts`.
