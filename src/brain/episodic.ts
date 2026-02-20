@@ -105,7 +105,17 @@ export class EpisodicMemory {
     let table = await this.getTable(company);
 
     if (!table) {
-      table = await this.db!.createTable(tableName, [data]);
+      try {
+        table = await this.db!.createTable(tableName, [data]);
+      } catch (e) {
+        // Handle race condition where table was created by another process/request
+        table = await this.getTable(company);
+        if (table) {
+          await table.add([data]);
+        } else {
+          throw e;
+        }
+      }
     } else {
       await table.add([data]);
     }
