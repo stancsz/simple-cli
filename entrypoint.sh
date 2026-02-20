@@ -15,7 +15,7 @@ fi
 # Start Brain MCP Server in background
 echo "Starting Brain MCP Server..."
 # Using node directly on compiled output
-node dist/mcp_servers/brain/index.js &
+PORT=3002 node dist/mcp_servers/brain/index.js &
 BRAIN_PID=$!
 
 # Wait a moment for Brain server to start

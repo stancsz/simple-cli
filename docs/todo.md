@@ -97,6 +97,7 @@
     - [x] Create `Dockerfile` for lightweight production image.
     - [x] Create `docker-compose.yml` for local "Agency" simulation (Redis + Agent).
     - [x] ✅ Persona Engine validated with full integration tests
+    - [x] **Container Validation**: Added automated Docker build/run tests in `tests/integration/docker_validation.test.ts`.
 
 ### 7. Phase 6: Enterprise Cognition (The Brain) (✅ Completed)
 - [x] **Episodic Memory (Vector DB)**:

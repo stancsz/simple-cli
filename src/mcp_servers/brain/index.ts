@@ -1,5 +1,6 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
+import { SSEServerTransport } from "@modelcontextprotocol/sdk/server/sse.js";
 import { z } from "zod";
 import { fileURLToPath } from "url";
 import { EpisodicMemory } from "../../brain/episodic.js";
@@ -7,6 +8,7 @@ import { SemanticGraph } from "../../brain/semantic_graph.js";
 import { join } from "path";
 import { readFile, readdir } from "fs/promises";
 import { existsSync } from "fs";
+import express from "express";
 
 export class BrainServer {
   private server: McpServer;
@@ -309,9 +311,47 @@ export class BrainServer {
   }
 
   async run() {
-    const transport = new StdioServerTransport();
-    await this.server.connect(transport);
-    console.error("Brain MCP Server running on stdio");
+    const port = process.env.PORT;
+
+    if (port) {
+      const app = express();
+      app.use(express.json());
+
+      const transports = new Map<any, any>();
+
+      app.get("/sse", async (req, res) => {
+        const transport = new SSEServerTransport("/message", res);
+        transports.set(transport.sessionId, transport);
+
+        transport.onclose = () => {
+          transports.delete(transport.sessionId);
+        };
+
+        await this.server.connect(transport);
+      });
+
+      app.post("/message", async (req, res) => {
+        const sessionId = req.query.sessionId as string;
+        const transport = transports.get(sessionId);
+        if (!transport) {
+          res.status(404).send("Session not found");
+          return;
+        }
+        await transport.handlePostMessage(req, res, req.body);
+      });
+
+      app.get("/health", (req, res) => {
+        res.status(200).json({ status: "ok", service: "brain" });
+      });
+
+      app.listen(port, () => {
+        console.error(`Brain MCP Server running on SSE port ${port}`);
+      });
+    } else {
+      const transport = new StdioServerTransport();
+      await this.server.connect(transport);
+      console.error("Brain MCP Server running on stdio");
+    }
   }
 }
 
