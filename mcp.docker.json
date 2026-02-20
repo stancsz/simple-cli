@@ -63,6 +63,10 @@
     "vibecoder": {
       "command": "node",
       "args": ["/app/dist/mcp_servers/vibecoder/index.js"]
+    },
+    "dify": {
+      "command": "node",
+      "args": ["/app/dist/mcp_servers/dify/index.js"]
     }
   },
   "agents": {

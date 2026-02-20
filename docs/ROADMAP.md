@@ -134,6 +134,7 @@ To transition from a "Wrapper" to a true "Universal AI Integration Platform," th
 - **Mechanism:**
     - **Dify Integration**: (✅ Implemented) `docker-compose.dify.yml` for local API, Web, DB, and Redis.
     - **Agent Configuration**: (✅ Implemented) Pre-configured templates in `dify_agent_templates/` for "Supervisor Agent" and "Coding Agent".
+    - **Dify MCP Server**: (✅ Implemented) Created `src/mcp_servers/dify/` to enable orchestrator control over local workflows.
     - **Benefit:** Reduces reliance on cloud orchestration for sensitive projects and enables rapid iteration of agentic flows.
 
 ---

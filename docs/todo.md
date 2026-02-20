@@ -41,6 +41,7 @@
 - [x] **Configure Supervisor Agent**: Added `dify_agent_templates/supervisor_agent.json`.
 - [x] **Configure Coding Agent**: Added `dify_agent_templates/coding_agent.json`.
 - [x] **Documentation**: Added `docs/LOCAL_DIFY.md`.
+- [x] **Dify MCP Server**: Created `src/mcp_servers/dify/` and validated via `tests/integration/dify_integration.test.ts`.
 
 ## Sprint 1: The Awakening (Current)
 

@@ -163,6 +163,7 @@ Simple-CLI extends its capabilities via the Model Context Protocol (MCP). It inc
 *   **Cloudflare Browser (`cloudflare_browser`)**: Web browsing capabilities via Cloudflare.
 *   **Coolify (`coolify`)**: Integrates with Coolify for self-hosting.
 *   **CrewAI (`crewai`)**: Orchestrates multi-agent crews (Researcher + Writer) for complex tasks.
+*   **Dify (`dify`)**: Integration with Dify for local agent workflow orchestration.
 *   **Dokploy (`dokploy`)**: Deployment automation with Dokploy.
 *   **Jules (`jules`)**: Provides a bridge to the Jules API for autonomous PR creation and management.
 *   **Kamal (`kamal`)**: Deploy web apps anywhere.
