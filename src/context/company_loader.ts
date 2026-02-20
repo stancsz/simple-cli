@@ -1,7 +1,9 @@
 import { CompanyManager } from "../company_context/manager.js";
-import { ContextServer } from "../mcp_servers/context_server.js";
+import { MCP } from "../mcp.js";
 
 export class CompanyLoader {
+  constructor(private mcp: MCP) {}
+
   async load(company: string) {
     if (!company) return;
 
@@ -10,12 +12,23 @@ export class CompanyLoader {
     await companyManager.load();
     const companyContext = await companyManager.getContext();
 
-    // Update ContextManager
-    const contextServer = new ContextServer();
+    // Update ContextManager via MCP
+    const client = this.mcp.getClient("context_server");
+    if (!client) {
+      console.warn("Context server not available for CompanyLoader update.");
+      return;
+    }
+
     try {
-      await contextServer.updateContext({ company_context: companyContext });
+      await client.callTool({
+        name: "update_context",
+        arguments: {
+          updates: JSON.stringify({ company_context: companyContext }),
+          company: company
+        }
+      });
     } catch (e) {
-      console.warn("Failed to update company context in ContextManager:", e);
+      console.warn("Failed to update company context via MCP:", e);
     }
   }
 }

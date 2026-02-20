@@ -7,7 +7,7 @@ import { existsSync } from "fs";
 import { join, dirname } from "path";
 // @ts-ignore - No type definitions available
 import { lock } from "proper-lockfile";
-import { ContextSchema, ContextData, ContextManager } from "../core/context.js";
+import { ContextSchema, ContextData, ContextManager } from "../../core/context.js";
 
 // Deep merge helper
 function deepMerge(target: any, source: any): any {

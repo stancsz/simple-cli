@@ -1,27 +1,72 @@
 import { MCP } from "../mcp.js";
 import { ContextData, ContextManager as IContextManager } from "../core/context.js";
-import { ContextServer } from "../mcp_servers/context_server.js";
 
 export class ContextManager implements IContextManager {
-  private server: ContextServer;
   private mcp: MCP;
 
   constructor(mcp: MCP) {
     this.mcp = mcp;
-    this.server = new ContextServer();
   }
 
-  // Implementation of IContextManager (delegates to server/local file)
+  // Implementation of IContextManager (delegates to MCP server)
   async readContext(lockId?: string, company?: string): Promise<ContextData> {
-    return this.server.readContext(lockId, company);
+    const client = this.mcp.getClient("context_server");
+    if (!client) {
+      // If server is not ready (e.g. during very early startup), return empty.
+      // Ideally this shouldn't happen during normal operation.
+      return { goals: [], constraints: [], recent_changes: [], active_tasks: [] };
+    }
+
+    try {
+      const result: any = await client.callTool({
+        name: "read_context",
+        arguments: { company }
+      });
+      if (result && result.content && result.content[0]) {
+        return JSON.parse(result.content[0].text);
+      }
+    } catch (e) {
+      console.error(`Failed to read context via MCP for company ${company || 'default'}:`, e);
+    }
+    return { goals: [], constraints: [], recent_changes: [], active_tasks: [] };
   }
 
   async updateContext(updates: Partial<ContextData>, lockId?: string, company?: string): Promise<ContextData> {
-    return this.server.updateContext(updates, lockId, company);
+    const client = this.mcp.getClient("context_server");
+    if (!client) {
+      throw new Error("Context server not available for update.");
+    }
+
+    try {
+      const result: any = await client.callTool({
+        name: "update_context",
+        arguments: {
+            updates: JSON.stringify(updates),
+            company
+        }
+      });
+      if (result && result.content && result.content[0]) {
+        return JSON.parse(result.content[0].text);
+      }
+    } catch (e) {
+       console.error(`Failed to update context via MCP:`, e);
+       throw e;
+    }
+    throw new Error("Failed to get response from update_context");
   }
 
   async clearContext(lockId?: string, company?: string): Promise<void> {
-    return this.server.clearContext(lockId, company);
+    const client = this.mcp.getClient("context_server");
+    if (!client) return;
+
+    try {
+      await client.callTool({
+        name: "clear_context",
+        arguments: { company }
+      });
+    } catch (e) {
+      console.error(`Failed to clear context via MCP:`, e);
+    }
   }
 
   // New High-Level Methods for Long-Term Memory Integration
@@ -30,7 +75,7 @@ export class ContextManager implements IContextManager {
    * Loads context and enriches it with relevant past experiences from the Brain.
    */
   async loadContext(taskDescription: string, company?: string): Promise<ContextData & { relevant_past_experiences?: string[] }> {
-    // 1. Get base context (local file)
+    // 1. Get base context (from MCP server)
     const context = await this.readContext(undefined, company);
 
     // 2. Query Brain (Episodic Memory)
@@ -69,7 +114,7 @@ export class ContextManager implements IContextManager {
    * Saves the outcome of a task to the Brain and updates local context.
    */
   async saveContext(taskDescription: string, outcome: string, updates: Partial<ContextData> = {}, artifacts: string[] = [], company?: string): Promise<void> {
-     // 1. Update local context
+     // 1. Update local context (via MCP)
      await this.updateContext(updates, undefined, company);
 
      // 2. Store to Brain

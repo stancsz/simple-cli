@@ -221,7 +221,7 @@ export class Engine {
     if (companyName) {
       try {
         const { CompanyLoader } = await import("../context/company_loader.js");
-        const loader = new CompanyLoader();
+        const loader = new CompanyLoader(this.mcp);
         await loader.load(companyName);
         companyProfile = await loadCompanyProfile(companyName);
         this.log("success", `Loaded company context for ${companyName}`);

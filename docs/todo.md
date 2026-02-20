@@ -61,8 +61,8 @@
     - [x] Remove manual tool loading in `engine.ts`. Use standard MCP discovery.
 - [ ] **Context Management**:
     - [x] Implement Concurrency Control: Added file locking to `ContextManager` to prevent race conditions.
-    - [x] Implement a **Context MCP Server** (singleton) to handle `context.json` updates securely (fix race conditions).
-    - [x] Update `engine.ts` to push/pull context via this server.
+    - [x] Implement a **Context MCP Server** (singleton) to handle `context.json` updates securely (fix race conditions). (Refactored to true client-server model).
+    - [x] Update `engine.ts` to push/pull context via this server. (Refactored `ContextManager` to use MCP client).
     - [x] Verify `ContextManager` uses `Brain` MCP for long-term storage.
 
 ### 3. Cleanup & Polishing
