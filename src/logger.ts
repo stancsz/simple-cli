@@ -2,18 +2,23 @@ import { appendFile, mkdir } from 'fs/promises';
 import { join } from 'path';
 import { existsSync } from 'fs';
 
-const AGENT_DIR = join(process.cwd(), '.agent');
-const METRICS_DIR = join(AGENT_DIR, 'metrics');
+function getMetricsDir() {
+  return join(process.cwd(), '.agent', 'metrics');
+}
 
 // Ensure directory exists
 let dirChecked = false;
 
 async function ensureMetricsDir() {
-  if (dirChecked) return;
-  if (!existsSync(METRICS_DIR)) {
-    await mkdir(METRICS_DIR, { recursive: true });
+  // Always check logic if path can change (e.g. testing), but optimizing for "checked once per run" is fine usually.
+  // However, in tests process.cwd() changes. So dirChecked=true might be stale if cwd changes?
+  // But usually cwd changes once per test setup.
+  // To be safe in tests, we should re-check if path changed?
+  // Or just rely on mkdir recursive which is fast.
+  const dir = getMetricsDir();
+  if (!existsSync(dir)) {
+    await mkdir(dir, { recursive: true });
   }
-  dirChecked = true;
 }
 
 export interface MetricTags {
@@ -39,7 +44,7 @@ export async function logMetric(
     await ensureMetricsDir();
 
     const date = new Date().toISOString().split('T')[0];
-    const filename = join(METRICS_DIR, `${date}.ndjson`);
+    const filename = join(getMetricsDir(), `${date}.ndjson`);
 
     const entry = {
       timestamp: new Date().toISOString(),

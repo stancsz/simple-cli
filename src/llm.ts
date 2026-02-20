@@ -26,10 +26,15 @@ export type LLMConfig = { provider: string; model: string; apiKey?: string };
 export class LLM {
   private configs: LLMConfig[];
   public personaEngine: PersonaEngine;
+  private metricHandler?: (agent: string, metric: string, value: number, tags?: any) => void;
 
   constructor(config: LLMConfig | LLMConfig[]) {
     this.configs = Array.isArray(config) ? config : [config];
     this.personaEngine = new PersonaEngine();
+  }
+
+  setMetricHandler(handler: (agent: string, metric: string, value: number, tags?: any) => void) {
+    this.metricHandler = handler;
   }
 
   async embed(text: string): Promise<number[]> {
@@ -150,18 +155,40 @@ export class LLM {
         const duration = Date.now() - start;
 
         // Log Metrics
-        logMetric('llm', 'llm_latency', duration, { model: modelName, provider: providerName });
+        const tags = { model: modelName, provider: providerName };
+        if (this.metricHandler) {
+          this.metricHandler('llm', 'llm_latency', duration, tags);
+        } else {
+          logMetric('llm', 'llm_latency', duration, tags);
+        }
+
         if (usage) {
-          logMetric('llm', 'llm_tokens_total', usage.totalTokens, { model: modelName, provider: providerName });
-          logMetric('llm', 'llm_tokens_prompt', usage.promptTokens, { model: modelName, provider: providerName });
-          logMetric('llm', 'llm_tokens_completion', usage.completionTokens, { model: modelName, provider: providerName });
+          const total = usage.totalTokens || 0;
+          const prompt = (usage as any).promptTokens || 0;
+          const completion = (usage as any).completionTokens || 0;
+
+          if (this.metricHandler) {
+            this.metricHandler('llm', 'llm_tokens_total', total, tags);
+            this.metricHandler('llm', 'llm_tokens_prompt', prompt, tags);
+            this.metricHandler('llm', 'llm_tokens_completion', completion, tags);
+          } else {
+            logMetric('llm', 'llm_tokens_total', total, tags);
+            logMetric('llm', 'llm_tokens_prompt', prompt, tags);
+            logMetric('llm', 'llm_tokens_completion', completion, tags);
+          }
         }
 
         const parsed = this.parse(text, usage as any);
         return await this.personaEngine.transformResponse(parsed, onTyping);
       } catch (e: any) {
         lastError = e;
-        logMetric('llm', 'llm_error', 1, { model: modelName, provider: providerName, error: e.name });
+        const tags = { model: modelName, provider: providerName, error: e.name };
+        if (this.metricHandler) {
+          this.metricHandler('llm', 'llm_error', 1, tags);
+        } else {
+          logMetric('llm', 'llm_error', 1, tags);
+        }
+
         console.error(`[LLM] ${providerName}:${modelName} failed: ${e.message}`);
         if (this.configs.indexOf(config) === 0) {
           console.warn(

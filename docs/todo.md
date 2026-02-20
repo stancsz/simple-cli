@@ -143,3 +143,4 @@
 - [x] **Dashboard**: Created `scripts/dashboard/` for real-time visualization.
 - [x] **Integration**: Metrics collection added to core engine and LLM.
 - [x] **Alerting**: Configurable threshold alerts via `alert_rules.json`.
+- [x] **Docker Integration**: Services added to `docker-compose.yml` for production deployment.

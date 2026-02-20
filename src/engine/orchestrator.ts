@@ -148,6 +148,23 @@ export class Engine {
     protected mcp: MCP,
   ) {
     this.contextManager = new ContextManager(this.mcp);
+    this.llm.setMetricHandler(this.trackMetric.bind(this));
+  }
+
+  private async trackMetric(agent: string, metric: string, value: number, tags?: any) {
+    const client = this.mcp.getClient("health_monitor");
+    if (client) {
+      try {
+        await client.callTool({
+            name: "track_metric",
+            arguments: { agent, metric, value, tags }
+        });
+        return;
+      } catch (e) {
+        // Fallback to local logging if MCP fails
+      }
+    }
+    logMetric(agent, metric, value, tags);
   }
 
   protected async getUserInput(initialValue: string, interactive: boolean): Promise<string | undefined> {
@@ -419,8 +436,8 @@ export class Engine {
               try {
                 const result = await t.execute(tArgs, { signal });
                 const duration = Date.now() - start;
-                logMetric('engine', 'tool_execution_time', duration, { tool: tName });
-                logMetric('engine', 'tool_success', 1, { tool: tName });
+                this.trackMetric('engine', 'tool_execution_time', duration, { tool: tName });
+                this.trackMetric('engine', 'tool_success', 1, { tool: tName });
 
                 this.s.stop(`Executed ${tName}`);
                 toolExecuted = true;
@@ -485,8 +502,8 @@ export class Engine {
                 }
               } catch (e: any) {
                 const duration = Date.now() - start;
-                logMetric('engine', 'tool_execution_time', duration, { tool: tName, status: 'error' });
-                logMetric('engine', 'tool_error', 1, { tool: tName });
+                this.trackMetric('engine', 'tool_execution_time', duration, { tool: tName, status: 'error' });
+                this.trackMetric('engine', 'tool_error', 1, { tool: tName });
 
                 if (signal.aborted) throw e; // Re-throw if it was an abort
                 if (!toolExecuted) this.s.stop(`Error executing ${tName}`);

@@ -145,6 +145,7 @@ To transition from a "Wrapper" to a true "Universal AI Integration Platform," th
     - **Health Monitor MCP**: Tracks metrics (latency, tokens) and manages alerts.
     - **Dashboard**: Lightweight web UI for visualizing metrics.
     - **Alerting**: Configurable thresholds for critical metrics.
+    - **Production Deployment**: Fully containerized stack with `docker-compose` including Health Monitor and Dashboard services.
 
 ---
 

@@ -9,6 +9,7 @@ services:
     depends_on:
       - redis
       - postgres
+      - health_monitor
     environment:
       - NODE_ENV=production
       - MODEL=deepseek:deepseek-reasoner
@@ -19,6 +20,30 @@ services:
       interval: 30s
       timeout: 10s
       retries: 3
+    restart: unless-stopped
+
+  health_monitor:
+    build: .
+    command: ["node", "dist/mcp_servers/health_monitor/index.js"]
+    volumes:
+      - ./.agent:/app/.agent
+    ports:
+      - "3004:3004"
+    environment:
+      - PORT=3004
+      - NODE_ENV=production
+    restart: unless-stopped
+
+  dashboard:
+    build:
+      context: .
+      dockerfile: scripts/dashboard/Dockerfile
+    ports:
+      - "3003:3003"
+    environment:
+      - MCP_SERVER_URL=http://health_monitor:3004/sse
+    depends_on:
+      - health_monitor
     restart: unless-stopped
 
   redis:

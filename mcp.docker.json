@@ -65,8 +65,7 @@
       "args": ["/app/dist/mcp_servers/vibecoder/index.js"]
     },
     "health_monitor": {
-      "command": "node",
-      "args": ["/app/dist/mcp_servers/health_monitor/index.js"]
+      "url": "http://health_monitor:3004/sse"
     }
   },
   "scheduledTasks": [

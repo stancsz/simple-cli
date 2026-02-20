@@ -1,0 +1,15 @@
+{
+  "name": "dashboard",
+  "version": "1.0.0",
+  "description": "Health Monitor Dashboard",
+  "type": "module",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "express": "^4.22.1",
+    "cors": "^2.8.5",
+    "@modelcontextprotocol/sdk": "^1.0.0",
+    "eventsource": "^3.0.0"
+  }
+}

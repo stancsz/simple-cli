@@ -1,0 +1,3 @@
+{"timestamp":"2026-02-20T18:09:26.138Z","agent":"test_agent","metric":"test_latency","value":123,"tags":{"env":"test"}}
+{"timestamp":"2026-02-20T18:11:18.481Z","agent":"test_agent","metric":"test_latency","value":123,"tags":{"env":"test"}}
+{"timestamp":"2026-02-20T18:14:44.394Z","agent":"test_agent","metric":"test_latency","value":123,"tags":{"env":"test"}}

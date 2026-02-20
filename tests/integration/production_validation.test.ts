@@ -93,6 +93,7 @@ import { CompanyContextServer } from "../../src/mcp_servers/company_context.js";
 import { SOPEngineServer } from "../../src/mcp_servers/sop_engine/index.js";
 import { HRServer } from "../../src/mcp_servers/hr/index.js";
 import { BrainServer } from "../../src/mcp_servers/brain/index.js";
+import { HealthMonitorServer } from "../../src/mcp_servers/health_monitor/index.js";
 import { Scheduler } from "../../src/scheduler.js";
 
 describe("Production Validation Test (Multi-Tenant & 4-Pillar)", () => {
@@ -104,6 +105,7 @@ describe("Production Validation Test (Multi-Tenant & 4-Pillar)", () => {
     let sopServer: SOPEngineServer;
     let hrServer: HRServer;
     let brainServer: BrainServer;
+    let healthServer: HealthMonitorServer;
 
     beforeAll(() => {
         vi.useFakeTimers();
@@ -136,6 +138,7 @@ describe("Production Validation Test (Multi-Tenant & 4-Pillar)", () => {
         sopServer = new SOPEngineServer();
         hrServer = new HRServer();
         brainServer = new BrainServer();
+        healthServer = new HealthMonitorServer();
 
         // Start servers manually (in real app they start via stdio, here we just need them instantiated)
         // We can call .run() but it might block if not handled, MockMcpServer connects instantly.
@@ -419,6 +422,33 @@ describe("Production Validation Test (Multi-Tenant & 4-Pillar)", () => {
              arguments: { task_type: "Morning Standup", company: "client-a" }
         });
         expect(persistBrainRes.content[0].text).toContain("Found 1 relevant experiences");
+
+
+        // ==========================================
+        // Scenario 6: Health Monitor
+        // ==========================================
+        console.log("--- Scenario 6: Health Monitor ---");
+
+        const healthClient = mcp.getClient("health_monitor");
+
+        // Track a metric
+        await healthClient.callTool({
+            name: "track_metric",
+            arguments: { agent: "test_runner", metric: "validation_step", value: 1 }
+        });
+
+        // Wait for file write
+        await vi.advanceTimersByTimeAsync(100);
+
+        // Get metrics
+        const metricsRes = await healthClient.callTool({
+            name: "get_metrics",
+            arguments: { timeframe: "last_hour" }
+        });
+
+        const metrics = JSON.parse(metricsRes.content[0].text);
+        expect(metrics.length).toBeGreaterThan(0);
+        expect(metrics.find((m: any) => m.metric === "validation_step")).toBeDefined();
 
     });
 });
