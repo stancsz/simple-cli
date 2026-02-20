@@ -6,6 +6,7 @@ import { readdir } from "fs/promises";
 import { join } from "path";
 import { log } from "@clack/prompts";
 import { spawn } from "child_process";
+import { logMetric } from "./logger.js";
 
 // Local definition replacing exported one from config.ts
 interface AgentConfig {
@@ -411,8 +412,17 @@ export class MCP {
         all.push(
           ...tools.map((t) => ({
             ...t,
-            execute: (args: any) =>
-              client.callTool({ name: t.name, arguments: args }),
+            execute: async (args: any) => {
+              const start = Date.now();
+              try {
+                const res = await client.callTool({ name: t.name, arguments: args });
+                logMetric('mcp', 'mcp_tool_execution_time', Date.now() - start, { tool: t.name, server: name });
+                return res;
+              } catch (e) {
+                logMetric('mcp', 'mcp_tool_execution_time', Date.now() - start, { tool: t.name, server: name, status: 'error' });
+                throw e;
+              }
+            },
             source: "mcp" as const,
             server: name,
           })),

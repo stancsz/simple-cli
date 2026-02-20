@@ -136,6 +136,15 @@ To transition from a "Wrapper" to a true "Universal AI Integration Platform," th
     - **Agent Configuration**: (✅ Implemented) Pre-configured templates in `dify_agent_templates/` for "Supervisor Agent" and "Coding Agent".
     - **Benefit:** Reduces reliance on cloud orchestration for sensitive projects and enables rapid iteration of agentic flows.
 
+### Phase 10.5: Operational Excellence (✅ Implemented)
+**Goal:** Production monitoring, health checks, and dashboards.
+- **Concept:** Real-time visibility into agent performance and costs.
+- **Status:** Fully implemented (`src/mcp_servers/health_monitor/` & `scripts/dashboard/`).
+- **Mechanism:**
+    - **Health Monitor MCP**: Tracks metrics (latency, tokens) and manages alerts.
+    - **Dashboard**: Lightweight web UI for visualizing metrics.
+    - **Alerting**: Configurable thresholds for critical metrics.
+
 ---
 
 ## 🚀 The 6-Pillar Vision

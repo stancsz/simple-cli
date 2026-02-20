@@ -101,3 +101,13 @@ docker-compose up -d
 ```
 
 Ensure your `.env` file contains all necessary API keys.
+
+## 4. Health Monitoring
+
+For production observability, Simple CLI includes a built-in monitoring system.
+
+1.  **Metrics Collection**: The agent automatically logs performance metrics to `.agent/metrics/`. Ensure this directory is persisted in your Docker volume configuration.
+2.  **Dashboard**: A lightweight web dashboard is available to visualize agent health.
+    - Start it with: `node scripts/dashboard/server.js`
+    - Access at: `http://localhost:3003`
+3.  **Alerts**: Configure alerts for high latency or error rates in `scripts/dashboard/alert_rules.json`.

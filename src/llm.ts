@@ -5,6 +5,7 @@ import { createGoogleGenerativeAI } from "@ai-sdk/google";
 import { jsonrepair } from "jsonrepair";
 import chalk from "chalk";
 import { PersonaEngine } from "./persona.js";
+import { logMetric } from "./logger.js";
 
 export interface LLMResponse {
   thought: string;
@@ -139,17 +140,28 @@ export class LLM {
           continue; // Skip unsupported
         }
 
+        const start = Date.now();
         const { text, usage } = await generateText({
           model,
           system: systemWithPersona,
           messages: history as any,
           abortSignal: signal,
         });
+        const duration = Date.now() - start;
+
+        // Log Metrics
+        logMetric('llm', 'llm_latency', duration, { model: modelName, provider: providerName });
+        if (usage) {
+          logMetric('llm', 'llm_tokens_total', usage.totalTokens, { model: modelName, provider: providerName });
+          logMetric('llm', 'llm_tokens_prompt', usage.promptTokens, { model: modelName, provider: providerName });
+          logMetric('llm', 'llm_tokens_completion', usage.completionTokens, { model: modelName, provider: providerName });
+        }
 
         const parsed = this.parse(text, usage as any);
         return await this.personaEngine.transformResponse(parsed, onTyping);
       } catch (e: any) {
         lastError = e;
+        logMetric('llm', 'llm_error', 1, { model: modelName, provider: providerName, error: e.name });
         console.error(`[LLM] ${providerName}:${modelName} failed: ${e.message}`);
         if (this.configs.indexOf(config) === 0) {
           console.warn(
