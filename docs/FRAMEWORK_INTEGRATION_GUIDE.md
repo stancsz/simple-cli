@@ -63,3 +63,9 @@ Every integration must be accompanied by comprehensive integration tests.
 *   **Ingest:** Identified v0.dev as a UI generation API.
 *   **Digest:** Created `src/mcp_servers/v0dev/` with `generate_component` tool.
 *   **Deploy:** Configured in `mcp.json`.
+
+## Example: Bolt.new Integration
+(Completed in 1 day)
+*   **Ingest:** Identified Bolt.new as a rapid prototyping tool.
+*   **Digest:** Created `src/mcp_servers/boltnew/` with `boltnew_generate` tool.
+*   **Deploy:** Configured in `mcp.docker.json` and updated documentation.
