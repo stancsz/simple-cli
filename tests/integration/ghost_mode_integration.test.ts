@@ -4,7 +4,7 @@ import { join } from 'path';
 import { mkdtemp, rm, writeFile, mkdir } from 'fs/promises';
 import { tmpdir } from 'os';
 import { Scheduler } from '../../src/scheduler.js';
-import { BrainServer } from '../../src/mcp_servers/brain.js';
+import { BrainServer } from '../../src/mcp_servers/brain/index.js';
 import { HRServer } from '../../src/mcp_servers/hr/index.js';
 import { resetMocks, mockToolHandlers, mockServerTools } from './test_helpers/mock_mcp_server.js';
 

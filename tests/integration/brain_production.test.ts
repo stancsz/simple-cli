@@ -3,7 +3,7 @@ import { describe, it, expect, vi, beforeEach, afterEach, beforeAll, afterAll } 
 import { join } from "path";
 import { mkdtemp, rm, mkdir } from "fs/promises";
 import { tmpdir } from "os";
-import { BrainServer } from "../../src/mcp_servers/brain.js";
+import { BrainServer } from "../../src/mcp_servers/brain/index.js";
 
 // Mock LLM to avoid external calls
 vi.mock("../../src/llm.js", () => {

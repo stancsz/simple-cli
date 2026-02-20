@@ -107,7 +107,7 @@ vi.mock("../../src/scheduler/trigger.js", () => ({
 import { CompanyContextServer } from "../../src/mcp_servers/company_context.js";
 import { SOPEngineServer } from "../../src/mcp_servers/sop_engine/index.js";
 import { HRServer } from "../../src/mcp_servers/hr/index.js";
-import { BrainServer } from "../../src/mcp_servers/brain.js";
+import { BrainServer } from "../../src/mcp_servers/brain/index.js";
 import { Scheduler } from "../../src/scheduler.js";
 
 describe("Four Pillars Integration Test (Definitive)", () => {

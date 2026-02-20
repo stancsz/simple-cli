@@ -4,7 +4,7 @@ import { join } from 'path';
 import { mkdtemp, rm, mkdir } from 'fs/promises';
 import { tmpdir } from 'os';
 import { SwarmServer } from '../../src/mcp_servers/swarm/index.js';
-import { BrainServer } from '../../src/mcp_servers/brain.js';
+import { BrainServer } from '../../src/mcp_servers/brain/index.js';
 import { resetMocks, mockToolHandlers, mockServerTools } from './test_helpers/mock_mcp_server.js';
 
 // --- Mock Dependencies ---
