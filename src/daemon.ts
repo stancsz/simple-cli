@@ -6,6 +6,7 @@ import { readFile, appendFile } from 'fs/promises';
 import { existsSync } from 'fs';
 import { fileURLToPath } from 'url';
 import { ScheduleConfig, TaskDefinition } from './interfaces/daemon.js';
+import { DEFAULT_TASKS } from './scheduler/config.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -37,8 +38,18 @@ async function log(msg: string) {
   console.log(line.trim());
 }
 
-async function loadSchedule(): Promise<ScheduleConfig> {
-  let tasks: TaskDefinition[] = [];
+export async function loadSchedule(): Promise<ScheduleConfig> {
+  // Initialize with defaults
+  let tasks: TaskDefinition[] = [...DEFAULT_TASKS];
+
+  // Helper to merge tasks (override by ID)
+  const mergeTasks = (newTasks: TaskDefinition[]) => {
+      const taskMap = new Map(tasks.map(t => [t.id, t]));
+      for (const t of newTasks) {
+          taskMap.set(t.id, t);
+      }
+      tasks = Array.from(taskMap.values());
+  };
 
   // 1. Load from mcp.json (Primary)
   if (existsSync(MCP_CONFIG_FILE)) {
@@ -46,7 +57,7 @@ async function loadSchedule(): Promise<ScheduleConfig> {
           const content = await readFile(MCP_CONFIG_FILE, 'utf-8');
           const config = JSON.parse(content);
           if (config.scheduledTasks && Array.isArray(config.scheduledTasks)) {
-              tasks.push(...config.scheduledTasks);
+              mergeTasks(config.scheduledTasks);
           }
       } catch (e) {
           await log(`Error reading mcp.json: ${e}`);
@@ -59,7 +70,13 @@ async function loadSchedule(): Promise<ScheduleConfig> {
       const content = await readFile(SCHEDULER_FILE, 'utf-8');
       const legacyConfig = JSON.parse(content);
       if (legacyConfig.tasks && Array.isArray(legacyConfig.tasks)) {
-          // Avoid duplicates by ID
+          // Legacy behavior: also merge, avoiding duplicates if already overridden by mcp.json?
+          // Let's assume scheduler.json is secondary to mcp.json, but might override defaults if not in mcp.json
+          // My simple merge logic allows scheduler.json to override mcp.json if loaded second.
+          // I should load scheduler.json first? Or keep mcp.json as primary.
+          // The previous code loaded mcp.json THEN scheduler.json, but checked existingIds.
+          // "Avoid duplicates by ID" -> implies NO override if already present.
+
           const existingIds = new Set(tasks.map(t => t.id));
           legacyConfig.tasks.forEach((t: TaskDefinition) => {
               if (!existingIds.has(t.id)) {
@@ -226,7 +243,9 @@ const shutdown = async (signal: string) => {
     process.exit(0);
 };
 
-process.on('SIGINT', () => shutdown('SIGINT'));
-process.on('SIGTERM', () => shutdown('SIGTERM'));
+if (import.meta.url ===  "file://" + process.argv[1] || process.argv[1].endsWith("daemon.ts")) {
+    process.on('SIGINT', () => shutdown('SIGINT'));
+    process.on('SIGTERM', () => shutdown('SIGTERM'));
 
-main().catch(err => log(`Daemon fatal error: ${err}`));
+    main().catch(err => log(`Daemon fatal error: ${err}`));
+}
