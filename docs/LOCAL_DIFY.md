@@ -64,7 +64,30 @@ curl -X POST 'http://localhost:5001/v1/chat-messages' \
 }'
 ```
 
-## 5. Stopping the Stack
+## 5. MCP Integration & Router Configuration
+
+The Simple CLI Orchestrator is now aware of your local Dify agents.
+
+### Configuration
+To enable the router to pick Dify agents, set the following environment variables in `.env` or your environment:
+
+```bash
+DIFY_API_URL=http://localhost:5001/v1  # Default
+DIFY_SUPERVISOR_API_KEY=app-xxxxxxxxxxx  # API Key for Supervisor Agent
+DIFY_CODING_API_KEY=app-yyyyyyyyyyyy    # API Key for Coding Agent
+```
+
+### Smart Router Logic
+The orchestrator will prioritize Dify agents for tasks that match:
+- **Privacy-Sensitive**: "Analyze this internal HR document."
+- **Rapid Prototyping**: "Quickly mock up a Flask app."
+- **Local Execution**: "Plan a refactor of this directory."
+
+### Available Tools
+- `run_supervisor_task(task, context)`: Delegates planning to the local Supervisor.
+- `run_coding_task(task, plan, code)`: Delegates implementation to the local Coding Agent.
+
+## 6. Stopping the Stack
 
 To stop the services and remove containers:
 

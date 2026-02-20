@@ -41,6 +41,7 @@
 - [x] **Configure Supervisor Agent**: Added `dify_agent_templates/supervisor_agent.json`.
 - [x] **Configure Coding Agent**: Added `dify_agent_templates/coding_agent.json`.
 - [x] **Documentation**: Added `docs/LOCAL_DIFY.md`.
+- [x] **Smart Router Integration**: Updated `src/skills.ts` and `sop_engine` to delegate privacy-sensitive tasks to Dify.
 
 ## Sprint 1: The Awakening (Current)
 

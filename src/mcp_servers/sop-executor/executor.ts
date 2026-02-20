@@ -131,6 +131,8 @@ Analyze the instruction and choose the best tool:
 - **CrewAI**: For internet research, competitor analysis, or complex multi-step reasoning tasks.
 - **Claude**: For complex code refactoring, architecture, or deep reasoning.
 - **Aider**: For simple code edits, typos, or single-file changes.
+- **Dify Supervisor**: For planning complex tasks locally or with privacy constraints.
+- **Dify Coding**: For executing coding tasks locally.
 - **Brain**: To store/retrieve memories if explicitly asked.
 - **Wait**: If human intervention is clearly required and no tool exists (e.g., "Wait for approval"), return "tool": "none" with a message.
 
