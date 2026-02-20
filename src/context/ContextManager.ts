@@ -1,6 +1,7 @@
 import { MCP } from "../mcp.js";
 import { ContextData, ContextManager as IContextManager } from "../core/context.js";
 import { ContextServer } from "../mcp_servers/context_server.js";
+import { randomUUID } from "crypto";
 
 export class ContextManager implements IContextManager {
   private server: ContextServer;
@@ -76,16 +77,59 @@ export class ContextManager implements IContextManager {
      try {
        const brainClient = this.mcp.getClient("brain");
        if (brainClient) {
+           const taskId = randomUUID();
+           const companyId = company || process.env.JULES_COMPANY;
+
+           // A. Store Episodic Memory
            await brainClient.callTool({
                name: "brain_store",
                arguments: {
-                   taskId: "task-" + Date.now(), // Unique ID
+                   taskId: taskId,
                    request: taskDescription,
                    solution: outcome,
                    artifacts: JSON.stringify(artifacts),
-                   company: company || process.env.JULES_COMPANY
+                   company: companyId
                }
            });
+
+           // B. Link Artifacts in Semantic Graph
+           // Create Task Node
+           try {
+             await brainClient.callTool({
+               name: "brain_update_graph",
+               arguments: {
+                 operation: "add_node",
+                 args: JSON.stringify({ id: taskId, type: "task", properties: { description: taskDescription, outcome } }),
+                 company: companyId
+               }
+             });
+
+             // Link each artifact
+             for (const artifact of artifacts) {
+               // Create File Node (if not exists, or update)
+               await brainClient.callTool({
+                 name: "brain_update_graph",
+                 arguments: {
+                   operation: "add_node",
+                   args: JSON.stringify({ id: artifact, type: "file" }),
+                   company: companyId
+                 }
+               });
+
+               // Create Edge: Task -> Modifies -> File
+               await brainClient.callTool({
+                 name: "brain_update_graph",
+                 arguments: {
+                   operation: "add_edge",
+                   args: JSON.stringify({ from: taskId, to: artifact, relation: "modifies" }),
+                   company: companyId
+                 }
+               });
+             }
+           } catch (graphError) {
+             console.warn("Failed to update semantic graph:", graphError);
+             // Non-critical, do not fail the whole save
+           }
        }
      } catch (e) {
          console.warn("Failed to store brain memory:", e);

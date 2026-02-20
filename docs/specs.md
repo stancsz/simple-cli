@@ -177,6 +177,8 @@ To enable "long-term cognition," we reject simple text files in favor of a robus
     *   **Tech**: `sops/` directory containing standard markdown checklists which the agent can read and execute.
 
 ### 5.2 The "Recall" Protocol
+**Status**: ✅ Implemented and hardened with artifact linking.
+
 Before acting, the Agent MUST query The Brain:
 1.  **Mechanism**: The `ContextManager` acts as the interface between the Orchestrator and the Brain.
 2.  **Search**: When loading context (`loadContext`), the system calls the `brain_query` MCP tool with the current task description.
