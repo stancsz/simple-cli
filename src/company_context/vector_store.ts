@@ -19,6 +19,9 @@ export class JsonVectorStore implements VectorStore {
 
   async search(query: string, limit: number = 5): Promise<VectorDoc[]> {
     const q = query.toLowerCase();
+    const queryWords = q.split(/\s+/);
+    const queryWordsCount = queryWords.length;
+
     // Simple keyword matching for now
     const results = this.docs
       .map((doc) => {
@@ -26,9 +29,8 @@ export class JsonVectorStore implements VectorStore {
         let score = 0;
         if (text.includes(q)) score += 0.5;
         // Basic word overlap
-        const queryWords = q.split(/\s+/);
         const matchCount = queryWords.filter((w) => text.includes(w)).length;
-        score += (matchCount / queryWords.length) * 0.5;
+        score += (matchCount / queryWordsCount) * 0.5;
 
         return { ...doc, score };
       })
