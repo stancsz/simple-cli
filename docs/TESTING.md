@@ -19,3 +19,19 @@ npm test -- tests/integration/four_pillars_integration.test.ts
 -   **Mocks**: Uses `vitest` to mock `LLM` (deterministic responses) and `MCP` (in-process tool routing).
 -   **Fixtures**: Uses `tests/fixtures/four_pillars/` for company profiles and SOPs.
 -   **Assertions**: Verifies file creation, Brain log entries, and HR proposals.
+
+## End-to-End Production Simulation
+
+The E2E Production Simulation (`tests/integration/e2e_production_simulation.test.ts`) is the ultimate validation of the "4-Pillar Vision". It simulates a complete 24-hour cycle of a digital agency.
+
+### Scope
+1.  **Company Context**: Loads a mock company profile (Stellar Tech).
+2.  **SOP Execution**: Runs a realistic SOP (`onboard_new_project.md`) to verify task execution.
+3.  **Ghost Mode**: Simulates a 24-hour cycle, triggering "Morning Standup" (9 AM) and "HR Review" (12 PM) via a mock Scheduler.
+4.  **HR Loop**: Simulates error logs to trigger HR analysis and proposal generation.
+5.  **Artifact Validation**: Verifies Brain memories and HR proposals.
+
+### Running the Test
+```bash
+npm test -- tests/integration/e2e_production_simulation.test.ts
+```
