@@ -11,6 +11,7 @@ import { Skill } from "../skills.js";
 import { LLM } from "../llm.js";
 import { loadCompanyProfile, CompanyProfile } from "../context/company-profile.js";
 import { ContextManager } from "../context/ContextManager.js";
+import { logMetric } from "../logger.js";
 
 export interface Message {
   role: "user" | "assistant" | "system";
@@ -414,8 +415,13 @@ export class Engine {
               this.s.start(`Executing ${tName}...`);
               let toolExecuted = false;
               let qaStarted = false;
+              const start = Date.now();
               try {
                 const result = await t.execute(tArgs, { signal });
+                const duration = Date.now() - start;
+                logMetric('engine', 'tool_execution_time', duration, { tool: tName });
+                logMetric('engine', 'tool_success', 1, { tool: tName });
+
                 this.s.stop(`Executed ${tName}`);
                 toolExecuted = true;
 
@@ -478,6 +484,10 @@ export class Engine {
                   this.s.stop("[Supervisor] Verified");
                 }
               } catch (e: any) {
+                const duration = Date.now() - start;
+                logMetric('engine', 'tool_execution_time', duration, { tool: tName, status: 'error' });
+                logMetric('engine', 'tool_error', 1, { tool: tName });
+
                 if (signal.aborted) throw e; // Re-throw if it was an abort
                 if (!toolExecuted) this.s.stop(`Error executing ${tName}`);
                 else if (qaStarted) {

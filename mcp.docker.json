@@ -63,8 +63,27 @@
     "vibecoder": {
       "command": "node",
       "args": ["/app/dist/mcp_servers/vibecoder/index.js"]
+    },
+    "health_monitor": {
+      "command": "node",
+      "args": ["/app/dist/mcp_servers/health_monitor/index.js"]
     }
   },
+  "scheduledTasks": [
+    {
+      "id": "health_check",
+      "name": "System Health Check",
+      "trigger": "cron",
+      "schedule": "*/5 * * * *",
+      "action": "mcp.call_tool",
+      "args": {
+        "server": "health_monitor",
+        "tool": "check_alerts",
+        "arguments": {}
+      },
+      "description": "Periodically checks system health metrics against configured thresholds."
+    }
+  ],
   "agents": {
     "codex": {
       "command": "gh",
