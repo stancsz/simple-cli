@@ -7,7 +7,14 @@ import { existsSync } from "fs";
 import { join, dirname } from "path";
 // @ts-ignore - No type definitions available
 import { lock } from "proper-lockfile";
-import { ContextSchema, ContextData, ContextManager } from "../core/context.js";
+import { ContextSchema, ContextData, ContextManager } from "../../core/context.js";
+import { EpisodicMemory } from "../../brain/episodic.js";
+
+// NOTE: We import EpisodicMemory directly here for read-only access to the shared Brain database (LanceDB).
+// While standard MCP architecture separates servers, the Context Server requires low-latency, synchronous-like
+// enrichment of context with past experiences. Since LanceDB supports concurrent readers and this server
+// only performs read operations ('recall') on the Brain, this direct integration is safe and efficient.
+// Write operations to Brain are handled by the Brain MCP Server via the ContextManager client.
 
 // Deep merge helper
 function deepMerge(target: any, source: any): any {
@@ -33,9 +40,11 @@ function deepMerge(target: any, source: any): any {
 
 export class ContextServer implements ContextManager {
   private cwd: string;
+  private episodic: EpisodicMemory;
 
   constructor(cwd: string = process.cwd()) {
     this.cwd = cwd;
+    this.episodic = new EpisodicMemory(cwd);
   }
 
   private getContextFile(company?: string): string {
@@ -101,6 +110,39 @@ export class ContextServer implements ContextManager {
     });
   }
 
+  async getContextWithMemory(query?: string, company?: string): Promise<ContextData & { relevant_past_experiences?: string[] }> {
+      const context = await this.readContext(undefined, company);
+      let memories: string[] = [];
+
+      if (query) {
+          try {
+              const results = await this.episodic.recall(query, 3, company);
+              if (results.length > 0) {
+                   memories = results.map(r => {
+                      let artifacts: string[] = [];
+                      if (Array.isArray(r.artifacts)) {
+                        artifacts = r.artifacts;
+                      } else if (r.artifacts) {
+                        try {
+                          artifacts = Array.from(r.artifacts as any);
+                        } catch {
+                          artifacts = [];
+                        }
+                      }
+                      return `[Task: ${r.taskId}]\nTimestamp: ${new Date(r.timestamp).toISOString()}\nRequest: ${r.userPrompt}\nSolution: ${r.agentResponse}\nArtifacts: ${artifacts.length > 0 ? artifacts.join(", ") : "None"}`;
+                   });
+              }
+          } catch (e) {
+              console.warn("Failed to recall memories:", e);
+          }
+      }
+
+      return {
+          ...context,
+          relevant_past_experiences: memories
+      };
+  }
+
   async updateContext(updates: Partial<ContextData>, lockId?: string, company?: string): Promise<ContextData> {
     return this.withLock(company, async (file) => {
       let current = {};
@@ -142,16 +184,24 @@ const server = new McpServer({
 const manager = new ContextServer();
 
 server.tool(
-  "read_context",
-  "Read the current context.",
+  "get_context",
+  "Read the current context, optionally enriched with relevant past experiences.",
   {
     company: z.string().optional().describe("Company ID to read context for (optional)."),
+    query: z.string().optional().describe("Query string to find relevant past experiences."),
   },
-  async ({ company }) => {
-    const context = await manager.readContext(undefined, company);
-    return {
-      content: [{ type: "text", text: JSON.stringify(context, null, 2) }],
-    };
+  async ({ company, query }) => {
+    try {
+        const context = await manager.getContextWithMemory(query, company);
+        return {
+          content: [{ type: "text", text: JSON.stringify(context, null, 2) }],
+        };
+    } catch (e: any) {
+        return {
+            content: [{ type: "text", text: `Error reading context: ${e.message}` }],
+            isError: true
+        };
+    }
   }
 );
 
