@@ -111,7 +111,7 @@ export class LLM {
           model = createOpenAI({
             apiKey,
             baseURL: "https://api.deepseek.com",
-          })(modelName);
+          }).chat(modelName);
         } else if (providerName === "anthropic" || providerName === "claude") {
           model = createAnthropic({ apiKey });
           model = model(modelName);
@@ -134,7 +134,7 @@ export class LLM {
           model = createOpenAI({
             apiKey,
             baseURL: "https://api.deepseek.com",
-          })(modelName);
+          }).chat(modelName);
         } else {
           continue; // Skip unsupported
         }

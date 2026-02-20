@@ -59,6 +59,10 @@
     "boltnew": {
       "command": "node",
       "args": ["/app/dist/mcp_servers/boltnew/index.js"]
+    },
+    "vibecoder": {
+      "command": "node",
+      "args": ["/app/dist/mcp_servers/vibecoder/index.js"]
     }
   },
   "agents": {
