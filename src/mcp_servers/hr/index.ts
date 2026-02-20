@@ -3,22 +3,23 @@ import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js"
 import { z } from "zod";
 import { fileURLToPath } from "url";
 import { join } from "path";
-import { readFile } from "fs/promises";
-import { existsSync } from "fs";
+import { readFile, readdir, open } from "fs/promises";
+import { existsSync, statSync } from "fs";
 import { randomUUID } from "crypto";
 
 import { createLLM, LLMResponse } from "../../llm.js";
 import { EpisodicMemory } from "../../brain/episodic.js";
-import { ProposalStorage } from "./storage.js";
+import { ProposalManager } from "./proposal_manager.js";
 import { analyzePerformancePrompt } from "./prompts.js";
 import { Proposal, LogEntry } from "./types.js";
 
 export class HRServer {
   private server: McpServer;
   private memory: EpisodicMemory;
-  private storage: ProposalStorage;
+  private manager: ProposalManager;
   private llm: ReturnType<typeof createLLM>;
-  private logsPath: string;
+  private sopLogsPath: string;
+  private logsDir: string;
 
   constructor() {
     this.server = new McpServer({
@@ -27,9 +28,10 @@ export class HRServer {
     });
 
     this.memory = new EpisodicMemory();
-    this.storage = new ProposalStorage();
+    this.manager = new ProposalManager();
     this.llm = createLLM();
-    this.logsPath = join(process.cwd(), ".agent", "brain", "sop_logs.json");
+    this.sopLogsPath = join(process.cwd(), ".agent", "brain", "sop_logs.json");
+    this.logsDir = join(process.cwd(), "logs");
 
     this.setupTools();
   }
@@ -77,24 +79,76 @@ export class HRServer {
   }
 
   private async performAnalysis(limit: number) {
-    // 1. Read logs
+    // 1. Read SOP logs
     let logs: LogEntry[] = [];
-    if (existsSync(this.logsPath)) {
+    if (existsSync(this.sopLogsPath)) {
       try {
-        const content = await readFile(this.logsPath, "utf-8");
+        const content = await readFile(this.sopLogsPath, "utf-8");
         logs = JSON.parse(content);
       } catch (e) {
-        console.error("Error reading logs:", e);
+        console.error("Error reading SOP logs:", e);
       }
     }
 
-    if (logs.length === 0) {
+    // 2. Read General Logs from logs/
+    let generalLogs: string[] = [];
+    if (existsSync(this.logsDir)) {
+      try {
+        const files = await readdir(this.logsDir);
+        for (const file of files) {
+          const filePath = join(this.logsDir, file);
+          const stats = statSync(filePath);
+          if (stats.isFile()) {
+             // Read last 4KB to avoid reading huge files
+             let content = "";
+             try {
+                 const handle = await open(filePath, 'r');
+                 const size = stats.size;
+                 const bufferSize = Math.min(4096, size);
+                 const buffer = Buffer.alloc(bufferSize);
+                 await handle.read(buffer, 0, bufferSize, Math.max(0, size - bufferSize));
+                 await handle.close();
+                 content = buffer.toString('utf-8');
+             } catch (e) {
+                 console.error(`Failed to read tail of ${file}:`, e);
+                 continue;
+             }
+
+             // Heuristic: if JSON, try to parse arrays
+             if (file.endsWith('.json')) {
+                 try {
+                     const parsed = JSON.parse(content);
+                     if (Array.isArray(parsed)) {
+                        // If it matches LogEntry structure, add to logs, else add as string
+                        parsed.forEach(p => {
+                            if (p.sop && p.result) logs.push(p);
+                            else generalLogs.push(`[${file}] ${JSON.stringify(p)}`);
+                        });
+                     } else {
+                        generalLogs.push(`[${file}] ${JSON.stringify(parsed)}`);
+                     }
+                 } catch {
+                     generalLogs.push(`[${file}] (Invalid JSON) ${content.slice(-1000)}`);
+                 }
+             } else {
+                 // Plain text log
+                 const lines = content.split('\n').slice(-20); // Last 20 lines
+                 generalLogs.push(`[${file}] ...\n${lines.join('\n')}`);
+             }
+          }
+        }
+      } catch (e) {
+        console.error("Error reading logs dir:", e);
+      }
+    }
+
+    if (logs.length === 0 && generalLogs.length === 0) {
       return { content: [{ type: "text" as const, text: "No logs found to analyze." }] };
     }
 
-    // Take recent logs
+    // Take recent SOP logs
     const recentLogs = logs.slice(-limit);
-    const logSummary = recentLogs.map((l: any) => {
+    const sopLogSummary = recentLogs.map((l: any) => {
       if (l.result) {
         const status = l.result.success ? "SUCCESS" : "FAILURE";
         const steps = l.result.logs.map((s: any) => `  - [${s.status}] ${s.step}: ${s.output}`).join("\n");
@@ -104,12 +158,16 @@ export class HRServer {
       }
     }).join("\n\n");
 
+    const generalLogSummary = generalLogs.join("\n\n");
+    const fullLogSummary = `SOP LOGS:\n${sopLogSummary}\n\nGENERAL LOGS:\n${generalLogSummary}`;
+
     // 2. Query Memory for context (e.g. recent failures)
     // We search for "failure" or "error" if any logs failed
     const hasFailures = recentLogs.some((l: any) => {
       if (l.result) return !l.result.success;
       return l.status !== 'success';
-    });
+    }) || generalLogSummary.toLowerCase().includes("error");
+
     let pastExperiences = "No specific past experiences queried.";
 
     if (hasFailures) {
@@ -120,7 +178,7 @@ export class HRServer {
     }
 
     // 3. LLM Analysis
-    const prompt = analyzePerformancePrompt(logSummary, pastExperiences);
+    const prompt = analyzePerformancePrompt(fullLogSummary, pastExperiences);
     const response = await this.llm.generate(prompt, []);
 
     // Parse JSON from response
@@ -166,8 +224,8 @@ export class HRServer {
         updatedAt: Date.now()
       };
 
-      await this.storage.init();
-      await this.storage.add(proposal);
+      await this.manager.init();
+      await this.manager.add(proposal);
 
       return {
         content: [{ type: "text" as const, text: `Analysis Complete. Proposal Created: ${proposal.id}\nTitle: ${proposal.title}\nAnalysis: ${analysisData.analysis}` }]
@@ -193,7 +251,7 @@ export class HRServer {
       };
     }
 
-    await this.storage.init();
+    await this.manager.init();
 
     const proposal: Proposal = {
       id: randomUUID(),
@@ -206,15 +264,15 @@ export class HRServer {
       updatedAt: Date.now()
     };
 
-    await this.storage.add(proposal);
+    await this.manager.add(proposal);
     return {
       content: [{ type: "text" as const, text: `Proposal '${title}' created with ID: ${proposal.id}` }]
     };
   }
 
   public async listPendingProposals() {
-    await this.storage.init();
-    const pending = this.storage.getPending();
+    await this.manager.init();
+    const pending = await this.manager.getPending();
 
     if (pending.length === 0) {
       return { content: [{ type: "text" as const, text: "No pending proposals." }] };

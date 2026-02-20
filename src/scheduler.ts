@@ -86,7 +86,7 @@ export class Scheduler extends EventEmitter {
           name: taskName,
           trigger: "cron",
           schedule: "0 3 * * *", // Daily at 03:00 UTC
-          prompt: "Run the HR optimization loop to analyze agent performance and update souls.",
+          prompt: "Run the Daily HR Review using the 'analyze_logs' tool to analyze recent performance.",
           yoloMode: true
       });
       try {
