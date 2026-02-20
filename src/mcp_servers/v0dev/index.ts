@@ -4,11 +4,13 @@ import { z } from "zod";
 import { fileURLToPath } from "url";
 import { V0DevClient } from "./client.js";
 import { createLLM } from "../../llm.js";
+import { MCP } from "../../mcp.js";
 
 export class V0DevServer {
   private server: McpServer;
   private client: V0DevClient;
   private llm: ReturnType<typeof createLLM>;
+  private mcp: MCP;
 
   constructor() {
     this.server = new McpServer({
@@ -18,14 +20,47 @@ export class V0DevServer {
 
     this.client = new V0DevClient();
     this.llm = createLLM();
+    this.mcp = new MCP();
 
     this.setupTools();
+  }
+
+  private async logToBrain(prompt: string, result: any) {
+    try {
+      // Initialize MCP client to connect to Brain
+      // Note: In production, MCP client might already be initialized or managed globally,
+      // but here we ensure it's ready.
+      // However, MCP.init() typically connects to all servers defined in mcp.json.
+      // This might be heavy if done on every request.
+      // But based on Windsurf implementation, it calls init() every time.
+      await this.mcp.init();
+      const tools = await this.mcp.getTools();
+      const logExp = tools.find(t => t.name === 'log_experience');
+
+      if (logExp) {
+        await logExp.execute({
+          taskId: `v0dev-${result.id || Date.now()}`,
+          task_type: 'ui_generation',
+          agent_used: 'v0dev_server',
+          outcome: 'success',
+          summary: `Generated UI component for prompt: "${prompt.substring(0, 50)}..."`,
+          artifacts: JSON.stringify({
+            id: result.id,
+            preview_url: result.preview_url,
+            framework: result.framework,
+            model: result.model
+          })
+        });
+      }
+    } catch (e: any) {
+      console.error(`Failed to log to Brain: ${e.message}`);
+    }
   }
 
   private setupTools() {
     this.server.tool(
       "v0dev_generate_component",
-      "Generate a UI component using v0.dev.",
+      "Generate a UI component using v0.dev based on a text description.",
       {
         prompt: z.string().describe("Description of the UI component to generate."),
         framework: z.enum(["react", "vue", "html"]).optional().describe("Target framework (default: react)."),
@@ -33,11 +68,15 @@ export class V0DevServer {
       async ({ prompt, framework }) => {
         try {
           const result = await this.client.generateComponent(prompt, framework || 'react');
+
+          // Log to Brain
+          await this.logToBrain(prompt, result);
+
           return {
             content: [
               {
                 type: "text",
-                text: `Successfully generated component:\n\n${result.code}`,
+                text: `Successfully generated component (ID: ${result.id}):\nPreview: ${result.preview_url}\n\n${result.code}`,
               },
             ],
           };

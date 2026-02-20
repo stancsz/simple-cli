@@ -20,6 +20,10 @@ We have recently switched the default reasoner from Claude/GPT-4o to **DeepSeek 
 *   **Picoclaw**: A lightweight, efficient reasoning framework for specific sub-tasks.
 *   **Kimi**: Deep reasoning and long-context processing.
 *   **Devin**: Full-stack software engineering capabilities.
+*   **Cursor**: Advanced IDE integration for context-aware code generation.
+*   **Windsurf**: Collaborative coding agent.
+*   **Bolt.new**: Rapid prototyping tool (simulated integration).
+*   **v0.dev**: AI-powered UI generation for React/Vue/HTML components.
 
 ## Adding New Frameworks
 
@@ -28,3 +32,11 @@ To add a new framework:
 1.  **Ingest**: Analyze the CLI or API of the target framework.
 2.  **Digest**: Create a new MCP server in `src/mcp_servers/<framework_name>/`.
 3.  **Deploy**: Register the server in `src/cli.ts` (for local discovery) or `mcp.json` (for Docker/explicit config).
+
+## Specific Integration Notes
+
+### v0.dev Integration
+*   **Capabilities**: Generates UI components from text descriptions.
+*   **API**: v0.dev does not have a fully public, documented REST API at this time. The integration uses a client that mimics the expected structure (`https://api.v0.dev/...`) but includes robust fallback mechanisms (simulation/mocking) if the API is unreachable or changes.
+*   **Authentication**: Uses `V0DEV_API_KEY`.
+*   **Tools**: `v0dev_generate_component`, `v0dev_list_frameworks`, `v0dev_validate_prompt`.
