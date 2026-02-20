@@ -106,12 +106,12 @@ To transition from a "Wrapper" to a true "Universal AI Integration Platform," th
 **Goal:** The agent can safely upgrade its own source code to improve efficiency.
 - **Concept:** The system identifies bottlenecks (e.g., slow tools, repetitive failures) and proposes PRs to its own repo.
 - **Mechanism:** "HR Loop" (implemented) + "Core Update" protocols (Dual-verification required).
-    - **HR MCP Server**: Analyzes logs and suggests improvements (`analyze_logs`, `propose_change`, `perform_weekly_review`).
+    - **HR MCP Server**: Analyzes logs (SOP and general execution) and suggests improvements (`analyze_logs`, `propose_change`, `perform_weekly_review`).
     - **Core Update MCP**: Securely modifies `src/` files with `propose_core_update` and `apply_core_update`.
     - **Memory Integration**: Uses the Brain MCP to recall past failures and delegation patterns.
-    - **Safety Protocol**: Proposals are stored as 'pending' and require human approval (token or strict YOLO checks) before application.
+    - **Safety Protocol**: Proposals are stored as 'pending' in `.agent/hr/proposals/` and require human approval (token or strict YOLO checks) before application.
     - **Automated Review**: (✅ Implemented) Weekly automated review via Scheduler.
-    - **Validation**: (✅ Completed) Weekly automated review cycle validated via integration tests.
+    - **Validation**: (✅ Completed) Verified via `tests/integration/hr_operational.test.ts` with real log analysis and proposal generation.
 
 ### Phase 9: Comprehensive Integration Testing (✅ Implemented)
 **Goal:** Validate the full "4-Pillar Vision" workflow in a single, end-to-end simulation.

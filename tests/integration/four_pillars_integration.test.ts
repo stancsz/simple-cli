@@ -142,6 +142,7 @@ describe("Four Pillars Integration Test (Definitive)", () => {
         await mkdir(join(testRoot, ".agent", "companies"), { recursive: true });
         await mkdir(join(testRoot, "docs", "sops"), { recursive: true });
         await mkdir(join(testRoot, ".agent", "logs"), { recursive: true }); // For autonomous logs
+        await mkdir(join(testRoot, "logs"), { recursive: true }); // For HR logs
 
         // 2. Initialize Servers
         // They will register tools to MockMcpServer via the static map in mock_mcp_server.ts
