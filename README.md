@@ -58,6 +58,17 @@ $ simple "Refactor src/legacy.ts to functional style and write tests for it. Do 
 ✔  Goal Achieved.
 ```
 
+## 🚀 Try It Now: The Digital Agency
+
+Don't just take our word for it. Run the **Showcase Corp Demo** to see the full "Digital Agency" capability in action. Watch as the agent ingests a company context, executes a project initialization SOP, and runs autonomous maintenance loops—all in a simulated 24-hour cycle.
+
+**[👉 View the Live Demo Documentation](docs/SHOWCASE_DEMO.md)**
+
+```bash
+# Run the simulation immediately
+npm run demo
+```
+
 ---
 
 ## 🔄 The Ingest-Digest-Deploy Cycle

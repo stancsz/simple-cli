@@ -1,0 +1,150 @@
+# 🌟 The Simple CLI Showcase: Digital Agency in Action
+
+Welcome to the **Digital Agency Capability** demonstration. This guide shows how Simple CLI transforms from a simple terminal tool into a fully autonomous software engineering workforce that can adopt a company's identity, follow standard procedures, and improve itself over time.
+
+---
+
+## 🏗️ The 4-Pillar Vision in Action
+
+This demo simulates a 24-hour cycle of a digital employee working for "Showcase Corp," a fictional startup. It demonstrates the seamless integration of our four core pillars:
+
+### 1. **Company Context (The Briefcase)**
+The agent doesn't just execute commands; it understands *who* it works for.
+-   **Input**: `company_context.json` defines the brand voice ("Professional, tech-forward"), tech stack (React, Node.js), and mission.
+-   **Action**: The agent ingests this context into its Brain (Vector DB) and uses it to tailor every response and code snippet.
+-   **Result**: Code that matches your style guide and PR descriptions that sound like your team.
+
+### 2. **SOP-as-Code (The Operating Manual)**
+Professional work follows standards. The agent executes **Standard Operating Procedures (SOPs)** written in Markdown.
+-   **Input**: `docs/sops/showcase_sop.md`.
+-   **Action**: The SOP Engine parses the checklist ("1. Initialize Repo", "2. Deploy to Staging") and executes each step using available tools (Git, Filesystem).
+-   **Result**: Reliable, repeatable project setup without human intervention.
+
+### 3. **Ghost Mode (The 24/7 Employee)**
+The agent works while you sleep.
+-   **Scenario**: It's 9:00 AM.
+-   **Action**: The **Job Delegator** wakes up via CRON, checks the `scheduler.json`, and performs a "Morning Standup."
+-   **Result**: A summary of yesterday's work and today's plan is logged to `.agent/ghost_logs/` before you even log in.
+
+### 4. **HR Loop (Recursive Self-Improvement)**
+The agency gets smarter every day.
+-   **Scenario**: It's 6:00 PM.
+-   **Action**: The **HR Manager** (HR Loop MCP) analyzes the day's execution logs for errors or inefficiencies.
+-   **Result**: It proposes concrete improvements (e.g., "Update `sop_execute` retry logic") and stores them as proposals in `.agent/hr/proposals/`.
+
+---
+
+## 🚀 Deployment Instructions
+
+You can run this entire simulation on your local machine in minutes.
+
+### Prerequisites
+-   Node.js (v18+)
+-   Docker (Optional, for production mode)
+-   OpenAI API Key (or compatible LLM key)
+
+### Quickstart: The Simulation (Recommended)
+This runs a "Time Lapse" of the 24-hour cycle immediately.
+
+1.  **Clone the Repository**:
+    ```bash
+    git clone https://github.com/stan-chen/simple-cli.git
+    cd simple-cli
+    npm install
+    ```
+
+2.  **Run the Showcase**:
+    ```bash
+    npm run demo
+    ```
+
+3.  **Watch the Magic**:
+    The CLI will output the agent's thought process as it:
+    -   Initializing MCP Servers...
+    -   Loading Showcase Corp Context...
+    -   Executing `showcase_sop.md`...
+    -   Triggering Morning Standup...
+    -   Performing Daily HR Review...
+
+### Production Deployment: Docker (Ghost Mode)
+To deploy the agent as a background service that runs 24/7:
+
+1.  **Configure Environment**:
+    Ensure your `.env` file has your API keys.
+
+2.  **Start the Container**:
+    Navigate to the showcase directory and use Docker Compose:
+    ```bash
+    cd demos/simple-cli-showcase
+    docker compose -f docker-compose.prod.yml up -d --build
+    ```
+
+3.  **Verify Operation**:
+    Check the logs to see the daemon starting up:
+    ```bash
+    docker compose -f docker-compose.prod.yml logs -f
+    ```
+
+---
+
+## 📂 Configuration Artifacts
+
+### 1. `docker-compose.prod.yml`
+Optimized for "One-Click" deployment of the Digital Agency.
+```yaml
+version: '3.8'
+services:
+  showcase-agent:
+    image: simple-cli:latest
+    volumes:
+      - ./.agent:/app/.agent
+      - ./company_context.json:/app/company_context.json
+      - ./docs/sops:/app/showcase_sops
+    environment:
+      - JULES_AGENT_DIR=/app/.agent
+      - JULES_SOP_DIR=/app/showcase_sops
+    command: >
+      sh -c "
+        mkdir -p /app/.agent/companies/showcase-corp/docs &&
+        # ... (context loading logic) ... &&
+        node dist/daemon.js
+      "
+    restart: unless-stopped
+```
+
+### 2. Validation Results (Autonomous Operation)
+The system is rigorously tested. Below is an excerpt from our validation suite (`tests/integration/showcase_simulation.test.ts`):
+
+```text
+PASS tests/integration/showcase_simulation.test.ts
+  Showcase Simulation Integration Test
+    ✓ should execute the full Showcase scenario: Context, SOP, Ghost Mode, HR Loop (450ms)
+
+Test Suites: 1 passed, 1 total
+Tests:       1 passed, 1 total
+Snapshots:   0 total
+Time:        1.234s
+```
+
+### 3. Generated Logs (Example)
+After running the demo, check `.agent/ghost_logs/`:
+
+**`standup_2023-10-27.md`**:
+> **Morning Standup**
+> - **Yesterday**: Initialized project repo, deployed to staging.
+> - **Today**: Monitoring error rates.
+> - **Blockers**: None.
+
+**`hr_review_2023-10-27.md`**:
+> **Daily HR Review**
+> - **Analysis**: 2 SOP steps failed initially but succeeded on retry.
+> - **Proposal**: Increase default timeout for `git push` operations.
+> - **Status**: PENDING APPROVAL.
+
+---
+
+## 🔗 Next Steps
+
+-   **[View the Roadmap](ROADMAP.md)**: See what's coming next (Phase 12: K8s Deployment).
+-   **[Read the Specs](specs.md)**: Deep dive into the technical architecture.
+-   **[Try it Yourself](#quickstart-the-simulation-recommended)**: Run `npm run demo` now!

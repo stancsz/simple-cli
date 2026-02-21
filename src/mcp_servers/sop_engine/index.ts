@@ -20,7 +20,7 @@ export class SOPEngineServer {
       version: "1.0.0",
     });
 
-    this.sopsDir = join(process.cwd(), "docs", "sops");
+    this.sopsDir = process.env.JULES_SOP_DIR || join(process.cwd(), "docs", "sops");
     if (!existsSync(this.sopsDir)) {
       mkdirSync(this.sopsDir, { recursive: true });
     }

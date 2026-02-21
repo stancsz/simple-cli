@@ -14,6 +14,7 @@
     "daemon": "node --loader ts-node/esm src/daemon.ts",
     "start:slack": "node --loader ts-node/esm src/interfaces/slack.ts",
     "start:teams": "node --loader ts-node/esm src/interfaces/teams.ts",
+    "demo": "npx tsx demos/simple-cli-showcase/run_demo.ts",
     "dev": "node --loader ts-node/esm --watch src/cli.ts",
     "build": "tsc",
     "typecheck": "tsc --noEmit",

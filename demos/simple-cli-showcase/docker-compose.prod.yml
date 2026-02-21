@@ -1,0 +1,30 @@
+version: '3.8'
+
+services:
+  showcase-agent:
+    image: simple-cli:latest
+    container_name: showcase-agent
+    build:
+      context: ../../
+      dockerfile: Dockerfile
+    volumes:
+      - ./.agent:/app/.agent
+      - ./company_context.json:/app/company_context.json
+      - ./docs/sops:/app/showcase_sops
+    environment:
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - JULES_AGENT_DIR=/app/.agent
+      - JULES_SOP_DIR=/app/showcase_sops
+      # Ensure Brain and other servers know where to look if needed
+    command: >
+      sh -c "
+        echo '🚀 Setting up Showcase Corp...' &&
+        mkdir -p /app/.agent/companies/showcase-corp/docs &&
+        echo '\`\`\`json' > /app/.agent/companies/showcase-corp/docs/context.md &&
+        cat /app/company_context.json >> /app/.agent/companies/showcase-corp/docs/context.md &&
+        echo '\`\`\`' >> /app/.agent/companies/showcase-corp/docs/context.md &&
+        echo '✅ Context loaded.' &&
+        echo '👻 Starting Ghost Mode Daemon...' &&
+        node dist/daemon.js
+      "
+    restart: unless-stopped
