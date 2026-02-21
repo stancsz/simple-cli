@@ -73,7 +73,7 @@ export class HRServer {
     );
   }
 
-  public async performWeeklyReview({ company }: { company?: string }) {
+  public async performWeeklyReview({ company }: { company?: string } = {}) {
     // Analyze last 50 logs for a broader weekly context
     return this.performAnalysis(50, company);
   }
@@ -257,7 +257,7 @@ export class HRServer {
     };
   }
 
-  public async analyzeLogs({ limit = 10, company }: { limit?: number, company?: string }) {
+  public async analyzeLogs({ limit = 10, company }: { limit?: number, company?: string } = {}) {
     return this.performAnalysis(limit, company);
   }
 

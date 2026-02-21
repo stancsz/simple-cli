@@ -151,6 +151,6 @@ describe('HRServer Unit', () => {
 
     await server.performWeeklyReview();
 
-    expect(spy).toHaveBeenCalledWith(50);
+    expect(spy).toHaveBeenCalledWith(50, undefined);
   });
 });
