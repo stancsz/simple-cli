@@ -1,0 +1,4 @@
+{"timestamp":"2026-02-21T03:34:07.848Z","agent":"mcp","metric":"mcp_tool_execution_time","value":0,"tags":{"tool":"brain_store","server":"brain"}}
+{"timestamp":"2026-02-21T03:34:07.898Z","agent":"mcp","metric":"mcp_tool_execution_time","value":0,"tags":{"tool":"brain_store","server":"brain"}}
+{"timestamp":"2026-02-21T03:34:07.898Z","agent":"mcp","metric":"mcp_tool_execution_time","value":0,"tags":{"tool":"brain_store","server":"brain"}}
+{"timestamp":"2026-02-21T03:34:07.900Z","agent":"mcp","metric":"mcp_tool_execution_time","value":0,"tags":{"tool":"brain_store","server":"brain","status":"retry"}}

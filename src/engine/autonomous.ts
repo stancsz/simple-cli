@@ -1,5 +1,5 @@
 import { Engine, Context, Registry } from "./orchestrator.js";
-import { MCP } from "../mcp.js";
+import { MCPManager } from "../mcp_manager.js";
 import { appendFile, mkdir } from "fs/promises";
 import { join, dirname } from "path";
 import pc from "picocolors";
@@ -10,7 +10,7 @@ export class AutonomousOrchestrator extends Engine {
   constructor(
     llm: any,
     registry: Registry,
-    mcp: MCP,
+    mcp: MCPManager,
     private options: {
       logPath: string;
       yoloMode: boolean;

@@ -6,7 +6,7 @@ import { existsSync } from "fs";
 import { readdir } from "fs/promises";
 import { pathToFileURL } from "url";
 import { relative, join } from "path";
-import { MCP } from "../mcp.js";
+import { MCPManager } from "../mcp_manager.js";
 import { Skill } from "../skills.js";
 import { LLM } from "../llm.js";
 import { loadCompanyProfile, CompanyProfile } from "../context/company-profile.js";
@@ -145,7 +145,7 @@ export class Engine {
   constructor(
     protected llm: LLM,
     protected registry: Registry,
-    protected mcp: MCP,
+    protected mcp: MCPManager,
   ) {
     this.contextManager = new ContextManager(this.mcp);
   }
@@ -176,32 +176,8 @@ export class Engine {
     let bufferedInput = "";
     await this.mcp.init();
 
-    // Auto-start Brain and Context servers
-    try {
-      const servers = this.mcp.listServers();
-      if (servers.find((s) => s.name === "brain" && s.status === "stopped")) {
-        await this.mcp.startServer("brain");
-        this.log("success", "Brain server started.");
-      }
-      if (servers.find((s) => s.name === "context_server" && s.status === "stopped")) {
-        await this.mcp.startServer("context_server");
-        this.log("success", "Context server started.");
-      }
-      if (servers.find((s) => s.name === "aider" && s.status === "stopped")) {
-        await this.mcp.startServer("aider");
-        this.log("success", "Aider server started.");
-      }
-      if (servers.find((s) => s.name === "claude" && s.status === "stopped")) {
-        await this.mcp.startServer("claude");
-        this.log("success", "Claude server started.");
-      }
-      if (servers.find((s) => s.name === "company_context" && s.status === "stopped")) {
-        await this.mcp.startServer("company_context");
-        this.log("success", "Company Context server started.");
-      }
-    } catch (e) {
-      console.error("Failed to start core servers:", e);
-    }
+    // Lazy loading: Tools are registered via MCPManager without starting servers immediately.
+    // The orchestrator relies on the manager to start servers on demand.
 
     (await this.mcp.getTools()).forEach((t) =>
       this.registry.tools.set(t.name, t as any),

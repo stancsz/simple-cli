@@ -1,7 +1,7 @@
 import "dotenv/config";
 import { fileURLToPath } from "url";
 import { Context, Registry } from "../engine/orchestrator.js";
-import { MCP } from "../mcp.js";
+import { MCPManager } from "../mcp_manager.js";
 import { createLLM } from "../llm.js";
 import { TaskDefinition } from "../interfaces/daemon.js";
 import { join, dirname } from "path";
@@ -23,7 +23,7 @@ export class Executor {
   constructor(
     private llm: any,
     private registry: Registry,
-    private mcp: MCP,
+    private mcp: MCPManager,
     private options: {
         yoloMode: boolean;
         timeout?: number;
@@ -38,19 +38,8 @@ export class Executor {
     // Initialize MCP and load tools
     await this.mcp.init();
 
-    // Auto-start core servers
-    try {
-      const servers = this.mcp.listServers();
-      const coreServers = ["brain", "context_server", "aider", "claude"];
-      for (const name of coreServers) {
-         if (servers.find((s) => s.name === name && s.status === "stopped")) {
-            await this.mcp.startServer(name);
-            logger.success(`${name} server started.`);
-         }
-      }
-    } catch (e: any) {
-       logger.error(`Failed to start core servers: ${e.message}`);
-    }
+    // Lazy loading: Tools are registered via MCPManager without starting servers immediately.
+    // The executor relies on the manager to start servers on demand.
 
     (await this.mcp.getTools()).forEach((t) =>
       this.registry.tools.set(t.name, t as any),
@@ -274,7 +263,7 @@ export async function executeTask(taskDef: TaskDefinition) {
     // --- NEW: Direct Tool Execution ---
     if (taskDef.action === 'mcp.call_tool') {
             console.log(`Executing direct action: ${taskDef.action}`);
-            const mcp = new MCP();
+            const mcp = new MCPManager();
             await mcp.init();
 
             const { server, tool, arguments: args } = taskDef.args || {};
@@ -283,7 +272,8 @@ export async function executeTask(taskDef: TaskDefinition) {
             }
 
             try {
-                // Start server if needed
+                // MCPManager handles lazy loading, but getClient returns undefined if not started.
+                // We should ensure the server is started for direct execution.
                 if (!mcp.isServerRunning(server)) {
                     console.log(`Starting server: ${server}`);
                     await mcp.startServer(server);
@@ -326,7 +316,7 @@ export async function executeTask(taskDef: TaskDefinition) {
 
     // await registry.loadProjectTools(cwd);
 
-    const mcp = new MCP();
+    const mcp = new MCPManager();
     const provider = createLLM();
 
     const runner = new Executor(provider, registry, mcp, {

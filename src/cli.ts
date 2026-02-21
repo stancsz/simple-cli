@@ -3,7 +3,7 @@ import "dotenv/config";
 import { statSync } from "fs";
 import { Engine, Context, Registry } from "./engine/orchestrator.js";
 import { createLLM } from "./llm.js";
-import { MCP } from "./mcp.js";
+import { MCPManager } from "./mcp_manager.js";
 import { getActiveSkill } from "./skills.js";
 import { showBanner } from "./tui.js";
 import { outro } from "@clack/prompts";
@@ -110,13 +110,15 @@ async function main() {
   const sopTool = createExecuteSOPTool(workflowEngine);
   registry.tools.set(sopTool.name, sopTool as any);
 
-  const mcp = new MCP();
+  const mcp = new MCPManager();
 
   // Auto-start core local servers to maintain default capabilities
   await mcp.init();
   // Ensure essential servers are running.
   // 'filesystem' and 'git' should be configured in mcp.json via migration.
-  const coreServers = ["filesystem", "git", "context_server", "company_context", "aider-server", "claude-server", "openclaw", "picoclaw", "hr"];
+  // Note: Lazy loading enabled for context_server, company_context, aider-server, claude-server.
+  // We still manually start some that might not be in lazy registry or are needed for initialization.
+  const coreServers = ["filesystem", "git", "openclaw", "picoclaw", "hr"];
   for (const s of coreServers) {
     try {
       if (mcp.isServerRunning(s)) continue; // Already running

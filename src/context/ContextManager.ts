@@ -1,13 +1,13 @@
-import { MCP } from "../mcp.js";
+import { MCPManager } from "../mcp_manager.js";
 import { ContextData, ContextManager as IContextManager } from "../core/context.js";
 import { ContextServer } from "../mcp_servers/context_server.js";
 import { randomUUID } from "crypto";
 
 export class ContextManager implements IContextManager {
   private server: ContextServer;
-  private mcp: MCP;
+  private mcp: MCPManager;
 
-  constructor(mcp: MCP) {
+  constructor(mcp: MCPManager) {
     this.mcp = mcp;
     this.server = new ContextServer();
   }
