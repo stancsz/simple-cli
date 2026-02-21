@@ -95,6 +95,7 @@ To transition from a "Wrapper" to a true "Universal AI Integration Platform," th
     - **Validation:** ✅ Company Context production-tested with multi-tenant isolation
     - **Production Validation:** (✅ Completed) Validated concurrency, persistence, and performance under 12-tenant simulated load via `tests/integration/brain_production.test.ts`.
     - **Production Hardening:** (✅ Implemented) Robust concurrency control via `LanceConnector` (file-based locking & connection pooling) and `SemanticGraph` (file-locking & async-mutex) ensuring data integrity under high multi-tenant load.
+    - **Automated Onboarding:** (✅ Implemented) `simple init-company` command automates directory creation and context initialization.
 
 ### Phase 7: The Hive Mind (Multi-Agent Swarms) (✅ Implemented & Validated)
 **Goal:** Advanced multi-agent collaboration and hierarchical swarms.
@@ -191,6 +192,7 @@ To achieve a true "Universal AI Integration Platform" capable of consulting for 
 ### 3. "Company Context" Onboarding (The Briefcase) (✅ Implemented)
 *   **Concept:** Agents shouldn't just run in a folder; they should understand the "Client Profile."
 *   **Mechanism:** Multi-tenant RAG (Vector DB) per company. When you run `simple --company client-a`, the agent loads specific brand voices, internal docs, and past decisions.
+*   **Automation:** `simple init-company <name>` streamlines the onboarding process.
 
 ### 4. SOP-as-Code (The Operating Manual) (✅ Implemented)
 *   **Concept:** Automating professional workflows.

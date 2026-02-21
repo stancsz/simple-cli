@@ -6,6 +6,7 @@ export interface Config {
   mcpServers?: Record<string, any>;
   yoloMode?: boolean;
   autoDecisionTimeout?: number;
+  companies?: string[];
 }
 
 export async function loadConfig(cwd: string = process.cwd()): Promise<Config> {
