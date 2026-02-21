@@ -16,10 +16,7 @@ import { Proposal, LogEntry } from "./types.js";
 export class HRServer {
   private server: McpServer;
   private memory: EpisodicMemory;
-  private manager: ProposalManager;
   private llm: ReturnType<typeof createLLM>;
-  private sopLogsPath: string;
-  private logsDir: string;
 
   constructor() {
     this.server = new McpServer({
@@ -28,10 +25,7 @@ export class HRServer {
     });
 
     this.memory = new EpisodicMemory();
-    this.manager = new ProposalManager();
     this.llm = createLLM();
-    this.sopLogsPath = join(process.cwd(), ".agent", "brain", "sop_logs.json");
-    this.logsDir = join(process.cwd(), "logs");
 
     this.setupTools();
   }
@@ -42,6 +36,7 @@ export class HRServer {
       "Scans recent logs and past experiences to identify patterns and propose improvements.",
       {
         limit: z.number().optional().default(10).describe("Number of recent logs to analyze."),
+        company: z.string().optional().describe("The company/client identifier for namespacing.")
       },
       async (args) => this.analyzeLogs(args)
     );
@@ -54,6 +49,7 @@ export class HRServer {
         description: z.string().describe("Detailed description of the change."),
         affectedFiles: z.array(z.string()).describe("List of files to be modified."),
         patch: z.string().describe("The content of the change (diff or instructions)."),
+        company: z.string().optional().describe("The company/client identifier for namespacing.")
       },
       async (args) => this.proposeChange(args)
     );
@@ -61,29 +57,53 @@ export class HRServer {
     this.server.tool(
       "list_pending_proposals",
       "List all proposals awaiting review.",
-      {},
-      async () => this.listPendingProposals()
+      {
+        company: z.string().optional().describe("The company/client identifier for namespacing.")
+      },
+      async (args) => this.listPendingProposals(args)
     );
 
     this.server.tool(
       "perform_weekly_review",
       "Performs a deep analysis of logs and experiences from the past week to identify long-term patterns.",
-      {},
-      async () => this.performWeeklyReview()
+      {
+        company: z.string().optional().describe("The company/client identifier for namespacing.")
+      },
+      async (args) => this.performWeeklyReview(args)
     );
   }
 
-  public async performWeeklyReview() {
+  public async performWeeklyReview({ company }: { company?: string }) {
     // Analyze last 50 logs for a broader weekly context
-    return this.performAnalysis(50);
+    return this.performAnalysis(50, company);
   }
 
-  private async performAnalysis(limit: number) {
+  private getSopLogsPath(company?: string) {
+      if (company) return join(process.cwd(), ".agent", "companies", company, "brain", "sop_logs.json");
+      return join(process.cwd(), ".agent", "brain", "sop_logs.json");
+  }
+
+  private getLogsDir(company?: string) {
+      // Assuming general logs might also be namespaced if supported, otherwise fallback to global
+      // For now, let's look in global logs as they might contain system-wide issues,
+      // but maybe in future we want isolated logs.
+      // Given the requirement for isolation, let's try to look in company specific logs if they exist.
+      if (company) {
+          const companyLogs = join(process.cwd(), ".agent", "companies", company, "logs");
+          if (existsSync(companyLogs)) return companyLogs;
+      }
+      return join(process.cwd(), "logs");
+  }
+
+  private async performAnalysis(limit: number, company?: string) {
+    const sopLogsPath = this.getSopLogsPath(company);
+    const logsDir = this.getLogsDir(company);
+
     // 1. Read SOP logs
     let logs: LogEntry[] = [];
-    if (existsSync(this.sopLogsPath)) {
+    if (existsSync(sopLogsPath)) {
       try {
-        const content = await readFile(this.sopLogsPath, "utf-8");
+        const content = await readFile(sopLogsPath, "utf-8");
         logs = JSON.parse(content);
       } catch (e) {
         console.error("Error reading SOP logs:", e);
@@ -92,11 +112,11 @@ export class HRServer {
 
     // 2. Read General Logs from logs/
     let generalLogs: string[] = [];
-    if (existsSync(this.logsDir)) {
+    if (existsSync(logsDir)) {
       try {
-        const files = await readdir(this.logsDir);
+        const files = await readdir(logsDir);
         for (const file of files) {
-          const filePath = join(this.logsDir, file);
+          const filePath = join(logsDir, file);
           const stats = statSync(filePath);
           if (stats.isFile()) {
              // Read last 4KB to avoid reading huge files
@@ -171,7 +191,7 @@ export class HRServer {
     let pastExperiences = "No specific past experiences queried.";
 
     if (hasFailures) {
-      const results = await this.memory.recall("failure error bug", 5);
+      const results = await this.memory.recall("failure error bug", 5, company);
       if (results.length > 0) {
         pastExperiences = results.map(r => `[Task: ${r.taskId}] ${r.userPrompt} -> ${r.agentResponse}`).join("\n---\n");
       }
@@ -224,8 +244,8 @@ export class HRServer {
         updatedAt: Date.now()
       };
 
-      await this.manager.init();
-      await this.manager.add(proposal);
+      const manager = new ProposalManager(process.cwd(), company);
+      await manager.add(proposal);
 
       return {
         content: [{ type: "text" as const, text: `Analysis Complete. Proposal Created: ${proposal.id}\nTitle: ${proposal.title}\nAnalysis: ${analysisData.analysis}` }]
@@ -237,11 +257,11 @@ export class HRServer {
     };
   }
 
-  public async analyzeLogs({ limit = 10 }: { limit?: number }) {
-    return this.performAnalysis(limit);
+  public async analyzeLogs({ limit = 10, company }: { limit?: number, company?: string }) {
+    return this.performAnalysis(limit, company);
   }
 
-  public async proposeChange({ title, description, affectedFiles, patch }: { title: string, description: string, affectedFiles: string[], patch: string }) {
+  public async proposeChange({ title, description, affectedFiles, patch, company }: { title: string, description: string, affectedFiles: string[], patch: string, company?: string }) {
     // CHECK IF CORE UPDATE
     const isCoreUpdate = affectedFiles.some((f: string) => f.startsWith("src/"));
     if (isCoreUpdate) {
@@ -251,7 +271,7 @@ export class HRServer {
       };
     }
 
-    await this.manager.init();
+    const manager = new ProposalManager(process.cwd(), company);
 
     const proposal: Proposal = {
       id: randomUUID(),
@@ -264,15 +284,15 @@ export class HRServer {
       updatedAt: Date.now()
     };
 
-    await this.manager.add(proposal);
+    await manager.add(proposal);
     return {
       content: [{ type: "text" as const, text: `Proposal '${title}' created with ID: ${proposal.id}` }]
     };
   }
 
-  public async listPendingProposals() {
-    await this.manager.init();
-    const pending = await this.manager.getPending();
+  public async listPendingProposals({ company }: { company?: string } = {}) {
+    const manager = new ProposalManager(process.cwd(), company);
+    const pending = await manager.getPending();
 
     if (pending.length === 0) {
       return { content: [{ type: "text" as const, text: "No pending proposals." }] };

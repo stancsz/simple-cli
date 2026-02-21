@@ -6,8 +6,12 @@ import { Proposal, ProposalStatus } from "./types.js";
 export class ProposalManager {
   private baseDir: string;
 
-  constructor(baseDir: string = process.cwd()) {
-    this.baseDir = join(baseDir, ".agent", "hr", "proposals");
+  constructor(rootDir: string = process.cwd(), company?: string) {
+    if (company) {
+       this.baseDir = join(rootDir, ".agent", "companies", company, "hr", "proposals");
+    } else {
+       this.baseDir = join(rootDir, ".agent", "hr", "proposals");
+    }
   }
 
   async init() {

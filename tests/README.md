@@ -11,6 +11,9 @@ This directory contains the automated and live test suites for the Simple-CLI pr
 - `tools/`: Unit tests for specific tools.
 - `mcp/`: Tests for the Model Context Protocol implementation.
 - `manual_scripts/`: Scripts for manual validation.
+- `integration/`: Integration tests for key components and workflows.
+  - `production_validation.test.ts`: Validates the "4-Pillar Vision" (SOPs, Ghost Mode, HR Loop, Context).
+  - `multi_company_stress.test.ts`: Validates multi-tenant isolation and concurrency under load.
 
 ## Running Tests
 
