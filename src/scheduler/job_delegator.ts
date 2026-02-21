@@ -3,6 +3,7 @@ import { writeFile, mkdir } from 'fs/promises';
 import { TaskDefinition } from '../daemon/task_definitions.js';
 import { handleTaskTrigger } from './trigger.js';
 import { MCP } from '../mcp.js';
+import { logMetric } from '../../logger.js';
 
 export class JobDelegator {
   private logsDir: string;
@@ -64,6 +65,10 @@ export class JobDelegator {
       status = 'failed';
       errorMessage = e.message;
     } finally {
+      const duration = Date.now() - startTime;
+      logMetric('scheduler', 'task_duration', duration, { task: task.name, status });
+      logMetric('scheduler', 'task_outcome', 1, { task: task.name, status });
+
       await this.logTaskEnd(task, startTime, status, errorMessage);
 
       // Log Experience

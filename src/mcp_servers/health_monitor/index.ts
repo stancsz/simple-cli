@@ -10,7 +10,7 @@ import { existsSync } from "fs";
 
 const AGENT_DIR = process.env.JULES_AGENT_DIR || join(process.cwd(), '.agent');
 const METRICS_DIR = join(AGENT_DIR, 'metrics');
-const ALERT_RULES_FILE = join(process.cwd(), 'scripts', 'dashboard', 'alert_rules.json');
+const ALERT_RULES_FILE = process.env.JULES_ALERT_RULES_FILE || join(process.cwd(), 'scripts', 'dashboard', 'alert_rules.json');
 
 const server = new McpServer({
   name: "health_monitor",
@@ -36,6 +36,24 @@ async function readNdjson(filepath: string): Promise<any[]> {
   } catch {
     return [];
   }
+}
+
+async function sendAlert(message: string, contact?: string) {
+    const webhookUrl = contact || process.env.SLACK_WEBHOOK_URL;
+    if (!webhookUrl) return;
+
+    if (webhookUrl.startsWith('http')) {
+        try {
+            await fetch(webhookUrl, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ text: message })
+            });
+            console.error(`[HealthMonitor] Alert sent to ${webhookUrl}`);
+        } catch (e) {
+            console.error(`[HealthMonitor] Failed to send alert to ${webhookUrl}:`, e);
+        }
+    }
 }
 
 server.tool(
@@ -181,6 +199,7 @@ server.tool(
             const msg = `ALERT: ${rule.metric} is ${avgValue.toFixed(2)} (${rule.operator} ${rule.threshold})`;
             alerts.push(msg);
             console.error(msg);
+            await sendAlert(msg, rule.contact);
         }
     }
 

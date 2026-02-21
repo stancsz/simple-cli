@@ -32,6 +32,7 @@ export class Scheduler extends EventEmitter {
     await this.ensureHRTask();
     await this.ensureMorningStandupTask();
     await this.ensureWeeklyReviewTask();
+    await this.ensureHealthCheckTask();
 
     // Resume pending tasks
     if (this.pendingTasks.size > 0) {
@@ -159,6 +160,39 @@ export class Scheduler extends EventEmitter {
           await writeFile(this.scheduleFile, JSON.stringify(config, null, 2));
       } catch (e) {
           console.error("Failed to write scheduler.json with default Weekly HR Review task:", e);
+      }
+    }
+  }
+
+  private async ensureHealthCheckTask() {
+    let config: ScheduleConfig = { tasks: [] };
+    if (existsSync(this.scheduleFile)) {
+      try {
+        const content = await readFile(this.scheduleFile, 'utf-8');
+        config = JSON.parse(content);
+      } catch (e) {
+        config = { tasks: [] };
+      }
+    }
+
+    const taskName = "Hourly Health Check";
+    const hasTask = config.tasks?.some((t: any) => t.id === "health-check");
+
+    if (!hasTask) {
+      console.log("Adding default Hourly Health Check task.");
+      if (!config.tasks) config.tasks = [];
+      config.tasks.push({
+          id: "health-check",
+          name: taskName,
+          trigger: "cron",
+          schedule: "0 * * * *", // Hourly
+          prompt: "Run the Health Monitor check using the 'check_alerts' tool.",
+          yoloMode: true
+      });
+      try {
+          await writeFile(this.scheduleFile, JSON.stringify(config, null, 2));
+      } catch (e) {
+          console.error("Failed to write scheduler.json with default Health Check task:", e);
       }
     }
   }

@@ -50,12 +50,17 @@ export class LLM {
           continue;
         }
 
+        const start = Date.now();
         const { embedding } = await embed({
           model: embeddingModel,
           value: text,
         });
+        const duration = Date.now() - start;
+        logMetric('llm', 'embed_latency', duration, { provider: providerName });
+        logMetric('llm', 'embed_success', 1, { provider: providerName });
         return embedding;
-      } catch (e) {
+      } catch (e: any) {
+        logMetric('llm', 'embed_error', 1, { provider: providerName, error: e.name });
         console.error(`[LLM] Embedding failed with ${providerName}:`, e);
       }
     }
@@ -64,13 +69,18 @@ export class LLM {
     const openaiKey = process.env.OPENAI_API_KEY;
     if (openaiKey) {
       try {
+        const start = Date.now();
         const embeddingModel = createOpenAI({ apiKey: openaiKey }).embedding("text-embedding-3-small");
         const { embedding } = await embed({
           model: embeddingModel,
           value: text,
         });
+        const duration = Date.now() - start;
+        logMetric('llm', 'embed_latency', duration, { provider: 'openai-fallback' });
+        logMetric('llm', 'embed_success', 1, { provider: 'openai-fallback' });
         return embedding;
-      } catch (e) {
+      } catch (e: any) {
+        logMetric('llm', 'embed_error', 1, { provider: 'openai-fallback', error: e.name });
         console.error(`[LLM] Fallback OpenAI embedding failed:`, e);
       }
     }
