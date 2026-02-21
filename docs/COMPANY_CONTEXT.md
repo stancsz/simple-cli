@@ -72,3 +72,26 @@ The company context feature is validated by a comprehensive test suite:
 1.  **Context Isolation**: `tests/company_context_integration.test.ts` verifies that `ContextServer` maintains separate context files for each company and that `ContextManager` queries the Brain MCP with the correct company ID.
 2.  **Interface Integration**: `tests/interface_integration.test.ts` verifies that Slack and Teams adapters correctly parse the `--company` flag and pass it to the agent engine.
 3.  **Vector Database**: Integration tests confirm that `CompanyContextServer` ingests and queries documents from isolated `lancedb` instances for each company.
+
+## Brain-Backed Memory Architecture
+
+The Company Context system is fully integrated with the **Brain MCP Server** to provide deep, persistent memory with enterprise-grade concurrency guarantees.
+
+### Concurrency & Data Integrity
+
+To support high-concurrency multi-tenant environments (e.g., Kubernetes), the Brain employs a robust three-layer protection strategy:
+
+1.  **Connection Pooling (LanceConnector)**:
+    -   Implements a singleton pattern with promise-based locking to prevent race conditions during initial database connection.
+    -   Ensures efficient resource usage across thousands of operations.
+
+2.  **File-Based Locking (proper-lockfile)**:
+    -   **Episodic Memory**: Cross-process file locking ensures that simultaneous writes to the LanceDB vector store from different pods or processes do not corrupt data.
+    -   **Semantic Graph**: Graph updates (`addNode`, `addEdge`) are protected by file locks, forcing a reload of data from disk to guarantee freshness and prevent overwrites.
+    -   **Retry Logic**: Built-in exponential backoff handles contention gracefully.
+
+3.  **In-Process Synchronization (Async Mutex)**:
+    -   Fine-grained mutexes handle thread safety within a single Node.js process, reducing the overhead of file locking for local operations.
+
+### Validation
+These guarantees are validated by `tests/integration/brain_production.test.ts`, which simulates 12+ concurrent tenants performing hundreds of parallel reads and writes with zero data loss or cross-contamination.

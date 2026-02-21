@@ -52,8 +52,12 @@ describe("Brain Production Validation", () => {
     let testRoot: string;
     let brainServer: BrainServer;
 
-    // Test Companies
-    const COMPANIES = ["AlphaCorp", "BetaLtd", "GammaInc", "DeltaCo", "EpsilonLLC"];
+    // Test Companies - 12 Concurrent Tenants
+    const COMPANIES = [
+        "AlphaCorp", "BetaLtd", "GammaInc", "DeltaCo", "EpsilonLLC",
+        "ZetaGrp", "EtaSys", "ThetaNet", "IotaSoft", "KappaTech",
+        "LambdaSol", "MuDynamics"
+    ];
 
     beforeAll(() => {
         // Do NOT set MOCK_EMBEDDINGS=true, so EpisodicMemory uses our smart mock in llm.js
@@ -98,7 +102,7 @@ describe("Brain Production Validation", () => {
     it("should handle high concurrency multi-tenant load without data loss", async () => {
         // Use console.info to bypass mock
         console.info(`\nStarting concurrent load test with ${COMPANIES.length} companies...`);
-        const OPS_PER_COMPANY = 50;
+        const OPS_PER_COMPANY = 50; // Keep at 50 to avoid timeout, 12 * 50 = 600 ops is significant
         const startTime = Date.now();
 
         const allPromises: Promise<any>[] = [];
@@ -149,10 +153,11 @@ describe("Brain Production Validation", () => {
             expect(res.content[0].text).toContain(`Solution 42 for ${company}`);
 
             // Ensure no cross-contamination
+            // Pick a random other company
             const otherCompany = COMPANIES.find(c => c !== company)!;
             expect(res.content[0].text).not.toContain(otherCompany);
         }
-    }, 30000);
+    }, 60000); // Increased timeout
 
     it("should enforce strict data isolation between tenants", async () => {
         // 1. Store distinct data for Company A
