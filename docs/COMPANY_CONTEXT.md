@@ -23,13 +23,26 @@ Data is stored in `.agent/companies/{company_id}/`:
 
 ## Usage
 
-### 1. Create a Company Context
+### 1. Quick Start: Adding a New Company
 
-Create a directory:
+The easiest way to onboard a new company is using the `init-company` command:
+
+```bash
+simple init-company acme-corp
+```
+
+This interactive command will:
+1.  Create the directory structure in `.agent/companies/acme-corp/`.
+2.  Prompt you for basic details (Brand Voice, Goals, Tech Stack).
+3.  Generate a `company_context.json` file.
+4.  Initialize a fresh LanceDB vector store for the company.
+5.  Register the company in `.agent/config.json`.
+
+Alternatively, you can manually create the structure:
 ```bash
 mkdir -p .agent/companies/acme-corp/docs
 ```
-Add documents (e.g., `brand_guidelines.md`) to this folder.
+And add documents (e.g., `brand_guidelines.md`) to this folder.
 
 ### 2. Run with Context
 

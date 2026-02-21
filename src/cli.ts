@@ -86,6 +86,17 @@ async function main() {
     return;
   }
 
+  if (remainingArgs[0] === "init-company") {
+    try {
+      const { initCompany } = await import("./commands/init-company.js");
+      const companyName = remainingArgs[1];
+      await initCompany(companyName);
+    } catch (e: any) {
+      console.error("Failed to execute init-company:", e);
+    }
+    return;
+  }
+
   if (remainingArgs[0] === "daemon") {
     try {
       const { daemon } = await import("./daemon/daemon_cli.js");

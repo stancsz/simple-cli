@@ -1,0 +1,16 @@
+{
+  "name": "{{COMPANY_NAME}}",
+  "brand_voice": "Professional, innovative, and customer-centric.",
+  "key_contacts": [
+    { "name": "Jane Doe", "role": "Project Manager", "email": "jane@example.com" }
+  ],
+  "project_goals": [
+    "Launch MVP by Q3",
+    "Improve user retention by 20%"
+  ],
+  "tech_stack": [
+    "React",
+    "Node.js",
+    "PostgreSQL"
+  ]
+}
