@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { ContextServer } from "./mcp_servers/context_server.js";
+import { AgentContextManager } from "./context/manager.js";
 
 export const change_dir = {
   name: "change_dir",
@@ -36,7 +36,7 @@ export const update_context = {
     constraint?: string;
     change?: string;
   }) => {
-    const cm = new ContextServer();
+    const cm = new AgentContextManager();
     const current = await cm.readContext();
     const updates: any = {};
     const logUpdates = [];
