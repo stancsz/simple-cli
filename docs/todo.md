@@ -13,6 +13,7 @@
     - [x] Devin (full-stack development) - 2 days
     - [x] Picoclaw (reasoning framework) - 1 day
     - [x] Cursor (IDE integration) - 1 day
+    - [x] Cursor (IDE integration) - 1 day
 - [x] **Digest Phase**: Standardize via MCP servers
     - [x] Created `src/mcp_servers/` architecture
     - [x] Implemented MCP protocol for all integrated frameworks
@@ -150,3 +151,8 @@
 - [x] **SOP-as-Code**: Defined end-to-end workflow in `demos/simple-cli-showcase/docs/showcase_sop.md`.
 - [x] **Ghost Mode Simulation**: Implemented `demos/simple-cli-showcase/run_demo.ts` to orchestrate 24-hour autonomy.
 - [x] **Validation**: Verified full showcase flow via `tests/integration/showcase_simulation.test.ts`.
+
+### 13. Phase 12: Production-Grade Kubernetes Deployment (✅ Completed)
+- [x] **Helm Chart**: Create `deployment/chart/` with Agent, Brain, and Redis.
+- [x] **Documentation**: Create `deployment/README.md` with cloud provider instructions.
+- [x] **Validation**: Implement and verify `tests/integration/kubernetes_deployment.test.ts` (Full pipeline).
