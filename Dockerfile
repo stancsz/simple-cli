@@ -15,9 +15,6 @@ RUN npm ci
 # Copy source code and config
 COPY . .
 
-# Install MCP servers (adding to dependencies so they survive prune)
-RUN npm install @modelcontextprotocol/server-filesystem @modelcontextprotocol/server-git
-
 # Build TypeScript
 RUN npm run build
 
@@ -43,7 +40,9 @@ WORKDIR /app
 
 # Install runtime dependencies (if any)
 # better-sqlite3 binaries are copied from builder
-RUN apk add --no-cache libstdc++
+# git: required for simple-git and SOPs
+# curl: useful for SOPs
+RUN apk add --no-cache libstdc++ git curl
 
 # Copy artifacts from builder
 COPY --from=builder /app/package.json /app/package-lock.json ./

@@ -89,16 +89,13 @@ export TEST_K8S=true
 export BRAIN_URL="http://localhost:3002/sse"
 export AGENT_URL="http://localhost:3000"
 export HEALTH_URL="http://localhost:3004/sse"
-export COMPANY_URL="http://localhost:3000" # If exposed via HTTP, otherwise we use direct tool calls via Agent?
-# Actually, only Brain and Health Monitor expose SSE directly in this setup.
-# Company Context is internal to Agent.
-# But if Agent exposes MCP over SSE on 3000, we can use that.
-# The default Agent implementation exposes HTTP API, but maybe not SSE for all tools?
-# We'll see how the test is implemented.
+export COMPANY_URL="http://localhost:3000"
 
+# Use set +e to capture exit code without terminating script
+set +e
 npm test tests/integration/production_validation.test.ts
-
 TEST_EXIT_CODE=$?
+set -e
 
 # 8. Run Internal Showcase Job
 echo "🎬 Running Internal Showcase Job..."

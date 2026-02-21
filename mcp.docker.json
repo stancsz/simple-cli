@@ -3,14 +3,14 @@
     "filesystem": {
       "command": "node",
       "args": [
-        "/app/node_modules/@modelcontextprotocol/server-filesystem/dist/index.js",
+        "/app/dist/mcp_servers/filesystem/index.js",
         "/app"
       ]
     },
     "git": {
       "command": "node",
       "args": [
-        "/app/node_modules/@modelcontextprotocol/server-git/dist/index.js"
+        "/app/dist/mcp_servers/git/index.js"
       ]
     },
     "brain": {
