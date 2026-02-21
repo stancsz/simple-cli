@@ -332,11 +332,11 @@ To balance safety with autonomy, the system supports configurable permission lev
 
 ## 11. Development Roadmap
 
-1.  **Phase 1 (Current)**: Basics. `delegate_cli` works with `stdout`. MCP servers supported. Simple `learnings.json` RAG.
-2.  **Phase 2**: Structured Communication. Implement JSON schema for agent-to-agent talk.
-3.  **Phase 3**: Shared Memory & **Dreaming**. Agents share a vector database and perform offline simulations.
-4.  **Phase 4**: Autonomous Scheduler. Implementation of the cron-based task runner and daemon mode.
-5.  **Phase 5**: Recursive Self-Improvement. Agent gains safe write-access to its own `src/` directory.
+> **Note:** For the most up-to-date status, refer to the [Main Roadmap](ROADMAP.md).
+
+1.  **Phases 1-10 (Completed)**: Core engine, MCP integration, Brain (Vector+Graph), SOPs, and Ghost Mode.
+2.  **Phase 11 (Showcase)**: Autonomous "Digital Agency" simulation. See **[Showcase Documentation](SHOWCASE_DEMO.md)**.
+3.  **Phase 12 (K8s)**: Production deployment (Completed).
 
 ---
 

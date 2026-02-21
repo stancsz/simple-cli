@@ -150,6 +150,7 @@
 - [x] **SOP-as-Code**: Defined end-to-end workflow in `demos/simple-cli-showcase/docs/showcase_sop.md`.
 - [x] **Ghost Mode Simulation**: Implemented `demos/simple-cli-showcase/run_demo.ts` to orchestrate 24-hour autonomy.
 - [x] **Validation**: Verified full showcase flow via `tests/integration/showcase_simulation.test.ts`.
+- [x] **Documentation**: Created `docs/SHOWCASE_DEMO.md` with deployment guide.
 
 ### 13. Phase 12: Production-Grade Kubernetes Deployment (✅ Completed)
 - [x] **Helm Chart**: Created `deployment/chart/simple-cli` with StatefulSets and Sidecars.

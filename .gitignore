@@ -112,3 +112,6 @@ vibecoder/
 
 # Test results
 test-results/
+
+# Agent state
+**/.agent/

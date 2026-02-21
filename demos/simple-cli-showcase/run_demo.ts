@@ -1,18 +1,22 @@
 
 import { MCP } from '../../src/mcp.js';
 import { JobDelegator } from '../../src/scheduler/job_delegator.js';
-import { join, resolve } from 'path';
+import { join, resolve, dirname } from 'path';
+import { fileURLToPath } from 'url';
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'fs';
 
 async function main() {
     console.log("🚀 Starting Showcase Simulation...");
 
-    // Assuming we are running from demos/simple-cli-showcase
-    const showcaseDir = process.cwd();
+    const __filename = fileURLToPath(import.meta.url);
+    const showcaseDir = dirname(__filename);
     const agentDir = join(showcaseDir, '.agent');
+    const sopsDir = join(showcaseDir, 'docs', 'sops');
 
     // Set environment variable for agent directory (for JobDelegator and others respecting it)
     process.env.JULES_AGENT_DIR = agentDir;
+    // Set environment variable for SOP directory (for SOP Engine)
+    process.env.JULES_SOP_DIR = sopsDir;
 
     // Ensure directories exist
     if (!existsSync(agentDir)) mkdirSync(agentDir, { recursive: true });
@@ -80,9 +84,6 @@ async function main() {
     if (sopClient) {
         console.log("Executing Showcase SOP...");
         try {
-            // The SOP Engine looks in process.cwd()/docs/sops by default.
-            // We moved the SOP to docs/sops/showcase_sop.md relative to CWD.
-
             const result = await sopClient.callTool({
                 name: "sop_execute",
                 arguments: {
