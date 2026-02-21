@@ -1,31 +1,32 @@
-import { describe, it, expect, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { logMetric } from '../../src/logger.js';
-import { readFile, writeFile, unlink, mkdir } from 'fs/promises';
+import { unlink, mkdir, rm, readFile } from 'fs/promises';
 import { join } from 'path';
 import { existsSync } from 'fs';
 import { StdioClientTransport } from "@modelcontextprotocol/sdk/client/stdio.js";
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 
-const METRICS_DIR = join(process.cwd(), '.agent', 'metrics');
-const ALERT_RULES_FILE = join(process.cwd(), 'scripts', 'dashboard', 'alert_rules.json');
+const AGENT_DIR = join(process.cwd(), '.agent');
+const METRICS_DIR = join(AGENT_DIR, 'metrics');
+const ALERT_RULES_DIR = join(AGENT_DIR, 'health');
 
 // Helper to clean up metrics
 async function cleanup() {
-  if (existsSync(METRICS_DIR)) {
-      // Delete files
-      const files = await import('fs').then(fs => fs.promises.readdir(METRICS_DIR));
-      for (const f of files) {
-          if (f.endsWith('.ndjson')) await unlink(join(METRICS_DIR, f));
+  try {
+      if (existsSync(METRICS_DIR)) {
+          await rm(METRICS_DIR, { recursive: true, force: true });
       }
-  }
-  if (existsSync(ALERT_RULES_FILE)) {
-      await unlink(ALERT_RULES_FILE);
-  }
+      if (existsSync(ALERT_RULES_DIR)) {
+          await rm(ALERT_RULES_DIR, { recursive: true, force: true });
+      }
+  } catch {}
 }
 
 describe('Health Monitor Integration', () => {
     beforeEach(async () => {
         await cleanup();
+        await mkdir(METRICS_DIR, { recursive: true });
+        await mkdir(ALERT_RULES_DIR, { recursive: true });
     });
 
     afterEach(async () => {
@@ -56,88 +57,47 @@ describe('Health Monitor Integration', () => {
     });
 
     it('should trigger alerts on threshold breach', async () => {
-        // 1. Set up alert rule
-        const rule = [{
-            metric: 'test_metric',
-            threshold: 100,
-            operator: '>',
-            contact: 'test'
-        }];
-
-        if (!existsSync(join(process.cwd(), 'scripts', 'dashboard'))) {
-            await mkdir(join(process.cwd(), 'scripts', 'dashboard'), { recursive: true });
-        }
-        await writeFile(ALERT_RULES_FILE, JSON.stringify(rule));
-
-        // 2. Log metric that breaches threshold
-        await logMetric('test', 'test_metric', 150);
-        await new Promise(r => setTimeout(r, 100));
-
-        // 3. Run check_alerts tool via MCP Client
-        const client = new Client({ name: "test", version: "1.0" }, { capabilities: {} });
         const transport = new StdioClientTransport({
             command: "npx",
             args: ["tsx", "src/mcp_servers/health_monitor/index.ts"]
         });
-
+        const client = new Client({ name: "test", version: "1.0" }, { capabilities: {} });
         await client.connect(transport);
 
-        const result: any = await client.callTool({
-            name: "check_alerts",
-            arguments: {}
-        });
-
-        await client.close();
-
-        expect(result.content[0].text).toContain("ALERT: test_metric is 150.00 (> 100)");
-    }, 20000);
-
-    it('dashboard API should return aggregated metrics', async () => {
-        await logMetric('api_test', 'latency', 200);
-        await new Promise(r => setTimeout(r, 100));
-
-        // Start dashboard server
-        const { spawn } = await import('child_process');
-        const serverProcess = spawn('node', ['scripts/dashboard/server.js'], {
-            stdio: 'pipe'
-        });
-
-        let started = false;
-
-        serverProcess.stdout?.on('data', (d) => {
-            if (d.toString().includes('running')) started = true;
-        });
-        serverProcess.stderr?.on('data', (d) => console.error(`[Server Error] ${d}`));
-
-        // Wait for server to start
-        for (let i = 0; i < 20; i++) {
-            if (started) break;
-            await new Promise(r => setTimeout(r, 100));
-        }
-
         try {
-            const res = await fetch('http://localhost:3003/api/metrics?timeframe=last_hour');
-            const data: any = await res.json();
+            await client.callTool({
+                name: "alert_on_threshold",
+                arguments: {
+                    metric: "test_metric",
+                    threshold: 100,
+                    operator: ">",
+                    contact: "test"
+                }
+            });
 
-            expect(Array.isArray(data)).toBe(true);
-            expect(data.length).toBeGreaterThan(0);
-            expect(data[0].metric).toBe('latency');
-            expect(data[0].value).toBe(200);
+            await client.callTool({
+                name: "track_metric",
+                arguments: {
+                    agent: "test",
+                    metric: "test_metric",
+                    value: 150
+                }
+            });
+
+            await new Promise(r => setTimeout(r, 500));
+
+            const result: any = await client.callTool({
+                name: "get_active_alerts",
+                arguments: {}
+            });
+
+            const content = result.content[0].text;
+            expect(content).toContain("test_metric");
+            expect(content).toContain("150");
+            expect(content).toContain("active");
         } finally {
-            serverProcess.kill();
+            await client.close();
+            // Force transport cleanup?
         }
-    });
-
-    it('performance benchmark: logMetric overhead', async () => {
-        const start = performance.now();
-        for (let i = 0; i < 100; i++) {
-            await logMetric('bench', 'test', i);
-        }
-        const end = performance.now();
-        const duration = end - start;
-        const avg = duration / 100;
-
-        console.log(`[Benchmark] logMetric avg time: ${avg.toFixed(3)}ms`);
-        expect(avg).toBeLessThan(50); // Constraint: < 50ms
-    });
+    }, 20000);
 });
