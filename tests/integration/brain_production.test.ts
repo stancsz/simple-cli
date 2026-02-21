@@ -98,7 +98,7 @@ describe("Brain Production Validation", () => {
     it("should handle high concurrency multi-tenant load without data loss", async () => {
         // Use console.info to bypass mock
         console.info(`\nStarting concurrent load test with ${COMPANIES.length} companies...`);
-        const OPS_PER_COMPANY = 50;
+        const OPS_PER_COMPANY = 100; // Increased load to verify hardening
         const startTime = Date.now();
 
         const allPromises: Promise<any>[] = [];

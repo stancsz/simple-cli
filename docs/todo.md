@@ -103,7 +103,7 @@
 - [x] **Episodic Memory (Vector DB)**:
     - [x] Evaluate `lancedb` vs `chromadb` (node-compatible).
     - [x] Create `src/brain/episodic.ts`: Implement embedding generation + storage.
-    - [x] **Brain production hardening**: Implemented `LanceConnector` and `SemanticGraph` with concurrency locking. Validated via 5-tenant simulation.
+    - [x] **Brain production hardening**: Implemented `LanceConnector` (file-based locking) and `SemanticGraph` (async-mutex + robust error handling) to ensure data integrity. Validated via `tests/integration/brain_production.test.ts`.
 - [x] **Semantic Memory (Graph)**:
     - [x] Create `src/brain/semantic.ts`: JSON-based graph store.
     - [x] Implement entity extraction prompt in `src/llm/prompts.ts`.

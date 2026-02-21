@@ -59,8 +59,9 @@ export class SemanticGraph {
       try {
         const content = await readFile(filePath, "utf-8");
         data = JSON.parse(content);
-      } catch (e) {
+      } catch (e: any) {
         console.error(`Failed to load semantic graph for ${key}:`, e);
+        throw new Error(`Failed to load semantic graph for ${key}: ${e.message}`);
       }
     } else {
        // Create directory if it doesn't exist

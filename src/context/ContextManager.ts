@@ -57,7 +57,7 @@ export class ContextManager implements IContextManager {
       }
     } catch (e) {
       // Brain might be unavailable or errored; proceed with base context but log warning
-      console.warn("Failed to query brain memories:", e);
+      console.warn("Failed to query brain memories (Brain might be offline):", e);
     }
 
     return {
