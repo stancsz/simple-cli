@@ -16,6 +16,9 @@ spec:
       labels:
         app: {{ .Release.Name }}-agent
     spec:
+      {{- if .Values.serviceAccount.create }}
+      serviceAccountName: {{ .Values.serviceAccount.name | default (printf "%s-sa" .Release.Name) }}
+      {{- end }}
       containers:
         - name: agent
           image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
@@ -31,6 +34,8 @@ spec:
             - name: mcp-config
               mountPath: /app/mcp.json
               subPath: mcp.json
+            - name: agent-storage
+              mountPath: /app/.agent
           ports:
             - containerPort: {{ .Values.agent.service.port }}
           livenessProbe:
@@ -80,3 +85,10 @@ spec:
             items:
               - key: mcp.json
                 path: mcp.json
+        - name: agent-storage
+        {{- if .Values.agent.persistence.enabled }}
+          persistentVolumeClaim:
+            claimName: {{ .Release.Name }}-agent-pvc
+        {{- else }}
+          emptyDir: {}
+        {{- end }}

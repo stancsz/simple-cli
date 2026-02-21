@@ -18,6 +18,7 @@ brain:
     size: 10Gi
     storageClass: "" # default
     accessMode: ReadWriteOnce
+    existingClaim: ""
   resources:
     limits:
       cpu: 1000m
@@ -32,6 +33,12 @@ agent:
   service:
     type: ClusterIP
     port: 3000 # If agent exposes HTTP
+  persistence:
+    enabled: true
+    size: 1Gi
+    storageClass: "" # default
+    accessMode: ReadWriteOnce
+    existingClaim: ""
   resources:
     limits:
       cpu: 2000m
@@ -73,3 +80,15 @@ ingress:
         - path: /
           pathType: ImplementationSpecific
   tls: []
+
+serviceAccount:
+  # Specifies whether a service account should be created
+  create: true
+  # Annotations to add to the service account
+  annotations: {}
+  # The name of the service account to use.
+  # If not set and create is true, a name is generated using the fullname template
+  name: ""
+
+rbac:
+  create: true
