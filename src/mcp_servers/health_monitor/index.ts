@@ -1,5 +1,7 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
+import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/streamableHttp.js";
+import express from "express";
 import { z } from "zod";
 import { logMetric } from "../../logger.js";
 import { readFile, writeFile, readdir, mkdir } from "fs/promises";
@@ -191,8 +193,31 @@ server.tool(
 );
 
 async function main() {
-  const transport = new StdioServerTransport();
-  await server.connect(transport);
+  if (process.env.PORT) {
+    const app = express();
+    const transport = new StreamableHTTPServerTransport();
+    await server.connect(transport);
+
+    app.all("/sse", async (req, res) => {
+      await transport.handleRequest(req, res);
+    });
+
+    app.post("/messages", async (req, res) => {
+      await transport.handleRequest(req, res);
+    });
+
+    app.get("/health", (req, res) => {
+      res.sendStatus(200);
+    });
+
+    const port = process.env.PORT;
+    app.listen(port, () => {
+      console.error(`Health Monitor MCP Server running on http://localhost:${port}/sse`);
+    });
+  } else {
+    const transport = new StdioServerTransport();
+    await server.connect(transport);
+  }
 }
 
 main().catch((error) => {

@@ -1,0 +1,53 @@
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: {{ .Release.Name }}-brain
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app: {{ .Release.Name }}-brain
+spec:
+  serviceName: {{ .Release.Name }}-brain-headless
+  replicas: 1
+  selector:
+    matchLabels:
+      app: {{ .Release.Name }}-brain
+  template:
+    metadata:
+      labels:
+        app: {{ .Release.Name }}-brain
+    spec:
+      containers:
+        - name: brain
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          command: ["node", "dist/mcp_servers/brain/index.js"]
+          env:
+            - name: PORT
+              value: "{{ .Values.brain.port }}"
+          ports:
+            - containerPort: {{ .Values.brain.port }}
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: {{ .Values.brain.port }}
+            initialDelaySeconds: 15
+            periodSeconds: 20
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: {{ .Values.brain.port }}
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          volumeMounts:
+            - name: brain-storage
+              mountPath: /app/.agent/brain
+          resources:
+            {{- toYaml .Values.brain.resources | nindent 12 }}
+      volumes:
+        - name: brain-storage
+        {{- if .Values.brain.persistence.enabled }}
+          persistentVolumeClaim:
+            claimName: {{ .Release.Name }}-brain-pvc
+        {{- else }}
+          emptyDir: {}
+        {{- end }}

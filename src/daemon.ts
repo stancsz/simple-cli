@@ -5,6 +5,7 @@ import { join, dirname } from 'path';
 import { readFile, appendFile } from 'fs/promises';
 import { existsSync } from 'fs';
 import { fileURLToPath } from 'url';
+import { createServer } from 'http';
 import { ScheduleConfig, TaskDefinition } from './interfaces/daemon.js';
 import { DEFAULT_TASKS } from './scheduler/config.js';
 
@@ -225,6 +226,23 @@ async function main() {
           await log("scheduler.json changed. Reloading schedule...");
           await applySchedule();
       });
+  }
+
+  // Start Health Check Server
+  if (process.env.PORT) {
+    const port = parseInt(process.env.PORT, 10);
+    const server = createServer((req, res) => {
+      if (req.url === '/health') {
+        res.writeHead(200);
+        res.end('OK');
+      } else {
+        res.writeHead(404);
+        res.end();
+      }
+    });
+    server.listen(port, () => {
+      log(`Health check server running on port ${port}`);
+    });
   }
 
   setInterval(() => {}, 1000 * 60 * 60); // Keep alive
