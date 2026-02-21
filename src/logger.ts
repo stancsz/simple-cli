@@ -2,7 +2,7 @@ import { appendFile, mkdir } from 'fs/promises';
 import { join } from 'path';
 import { existsSync } from 'fs';
 
-const AGENT_DIR = join(process.cwd(), '.agent');
+const AGENT_DIR = process.env.JULES_AGENT_DIR || join(process.cwd(), '.agent');
 const METRICS_DIR = join(AGENT_DIR, 'metrics');
 
 // Ensure directory exists

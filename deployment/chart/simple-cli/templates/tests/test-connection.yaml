@@ -14,5 +14,5 @@ spec:
     - name: wget
       image: busybox
       command: ['wget']
-      args: ['{{ .Release.Name }}-agent:{{ .Values.agent.service.port }}/health']
+      args: ['-q', '-O', '-', '{{ .Release.Name }}-agent:{{ .Values.agent.service.port }}/health']
   restartPolicy: Never

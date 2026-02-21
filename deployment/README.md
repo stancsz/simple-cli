@@ -122,3 +122,14 @@ If the agent needs to access Kubernetes API (e.g. for self-management), update `
 The agent runs a `health_monitor` sidecar exposing metrics at `/health`.
 You can configure Prometheus to scrape this endpoint.
 Ensure your ServiceMonitor targets port `3004` (health monitor) or `3000` (agent).
+
+## Validation & Hardening
+
+For detailed instructions on validating the deployment (including multi-tenancy and persistence) and production hardening guidelines, please refer to:
+
+[Kubernetes Deployment Guide](../docs/K8S_DEPLOYMENT.md)
+
+We include a comprehensive integration test suite that simulates the K8s environment:
+```bash
+npm run test tests/integration/k8s_production_validation.test.ts
+```

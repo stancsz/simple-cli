@@ -6,7 +6,7 @@ import { z } from "zod";
 import { fileURLToPath } from "url";
 import { EpisodicMemory } from "../../brain/episodic.js";
 import { SemanticGraph } from "../../brain/semantic_graph.js";
-import { join } from "path";
+import { join, dirname } from "path";
 import { readFile, readdir } from "fs/promises";
 import { existsSync } from "fs";
 
@@ -22,9 +22,12 @@ export class BrainServer {
       version: "1.0.0",
     });
 
-    this.episodic = new EpisodicMemory();
-    this.semantic = new SemanticGraph();
-    this.sopsDir = join(process.cwd(), ".agent", "sops");
+    const baseDir = process.env.JULES_AGENT_DIR ? dirname(process.env.JULES_AGENT_DIR) : process.cwd();
+    this.episodic = new EpisodicMemory(baseDir);
+    this.semantic = new SemanticGraph(baseDir);
+    this.sopsDir = process.env.JULES_AGENT_DIR
+        ? join(process.env.JULES_AGENT_DIR, "sops")
+        : join(process.cwd(), ".agent", "sops");
 
     this.setupTools();
   }
