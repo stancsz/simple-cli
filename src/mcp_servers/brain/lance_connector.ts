@@ -3,7 +3,6 @@ import { Mutex } from "async-mutex";
 import { join, dirname } from "path";
 import { mkdir, writeFile } from "fs/promises";
 import { existsSync } from "fs";
-// @ts-ignore
 import { lock } from "proper-lockfile";
 
 export class LanceConnector {

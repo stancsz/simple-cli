@@ -50,6 +50,7 @@ export class ContextManager implements IContextManager {
         if (result && result.content && result.content[0] && result.content[0].text) {
              const text = result.content[0].text;
              if (!text.includes("No relevant memories found")) {
+                 console.log(`[Brain] Found relevant memories for task: "${taskDescription}"`);
                  // Split by the separator used in brain.ts
                  memories = text.split("\n\n---\n\n").filter((m: string) => m.trim().length > 0);
              }
@@ -106,6 +107,7 @@ export class ContextManager implements IContextManager {
 
              // Link each artifact
              for (const artifact of artifacts) {
+               console.log(`[Brain] Linking artifact: ${artifact}`);
                // Create File Node (if not exists, or update)
                await brainClient.callTool({
                  name: "brain_update_graph",
