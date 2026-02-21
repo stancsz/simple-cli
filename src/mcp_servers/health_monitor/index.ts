@@ -8,7 +8,7 @@ import { readFile, writeFile, readdir, mkdir } from "fs/promises";
 import { join, dirname } from "path";
 import { existsSync } from "fs";
 
-const AGENT_DIR = join(process.cwd(), '.agent');
+const AGENT_DIR = process.env.JULES_AGENT_DIR || join(process.cwd(), '.agent');
 const METRICS_DIR = join(AGENT_DIR, 'metrics');
 const ALERT_RULES_FILE = join(process.cwd(), 'scripts', 'dashboard', 'alert_rules.json');
 
