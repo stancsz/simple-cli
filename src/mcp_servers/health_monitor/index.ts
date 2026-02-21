@@ -4,18 +4,20 @@ import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/
 import express from "express";
 import { z } from "zod";
 import { logMetric } from "../../logger.js";
-import { readFile, writeFile, readdir, mkdir } from "fs/promises";
-import { join, dirname } from "path";
+import { readFile, readdir } from "fs/promises";
+import { join } from "path";
 import { existsSync } from "fs";
+import { AlertManager } from "./alert_manager.js";
 
 const AGENT_DIR = process.env.JULES_AGENT_DIR || join(process.cwd(), '.agent');
 const METRICS_DIR = join(AGENT_DIR, 'metrics');
-const ALERT_RULES_FILE = join(process.cwd(), 'scripts', 'dashboard', 'alert_rules.json');
 
 const server = new McpServer({
   name: "health_monitor",
   version: "1.0.0"
 });
+
+const alertManager = new AlertManager(AGENT_DIR);
 
 // Helper to get files for a range of dates
 async function getMetricFiles(days: number): Promise<string[]> {
@@ -49,6 +51,11 @@ server.tool(
   },
   async ({ agent, metric, value, tags }) => {
     await logMetric(agent, metric, value, tags || {});
+
+    // Check alerts asynchronously to not block
+    alertManager.checkMetric(metric, value).catch(err => console.error("Error checking alert:", err));
+    alertManager.checkMetric(`${agent}:${metric}`, value).catch(err => console.error("Error checking alert:", err));
+
     return { content: [{ type: "text", text: `Metric ${metric} tracked.` }] };
   }
 );
@@ -110,89 +117,66 @@ server.tool(
     metric: z.string(),
     threshold: z.number(),
     operator: z.enum([">", "<", ">=", "<=", "=="]),
-    contact: z.string().optional().describe("Webhook URL or channel (e.g. slack)")
+    contact: z.string().optional().describe("Webhook URL or channel (e.g. slack:https://...)")
   },
   async ({ metric, threshold, operator, contact }) => {
-     let rules: any[] = [];
-     if (existsSync(ALERT_RULES_FILE)) {
-        try {
-            rules = JSON.parse(await readFile(ALERT_RULES_FILE, 'utf-8'));
-        } catch {}
-     } else {
-        const dir = dirname(ALERT_RULES_FILE);
-        if (!existsSync(dir)) {
-            await mkdir(dir, { recursive: true });
-        }
-     }
-
-     rules.push({ metric, threshold, operator, contact, created_at: new Date().toISOString() });
-     await writeFile(ALERT_RULES_FILE, JSON.stringify(rules, null, 2));
-
+     await alertManager.addRule(metric, threshold, operator, contact);
      return { content: [{ type: "text", text: `Alert rule added for ${metric} ${operator} ${threshold}` }] };
   }
 );
 
 server.tool(
-  "check_alerts",
-  "Check current metrics against configured alert rules.",
+  "get_active_alerts",
+  "Get a list of currently active (unresolved) alerts.",
   {},
   async () => {
-    if (!existsSync(ALERT_RULES_FILE)) {
-         return { content: [{ type: "text", text: "No alert rules configured." }] };
+    const alerts = alertManager.getActiveAlerts();
+    if (alerts.length === 0) {
+        return { content: [{ type: "text", text: "No active alerts." }] };
     }
+    return { content: [{ type: "text", text: JSON.stringify(alerts, null, 2) }] };
+  }
+);
 
-    let rules: any[] = [];
-    try {
-        rules = JSON.parse(await readFile(ALERT_RULES_FILE, 'utf-8'));
-    } catch {
-        return { content: [{ type: "text", text: "Failed to parse alert rules." }] };
+server.tool(
+  "resolve_alert",
+  "Resolve an active alert by ID.",
+  {
+    id: z.string().describe("ID of the alert to resolve")
+  },
+  async ({ id }) => {
+    const success = await alertManager.resolveAlert(id);
+    if (success) {
+        return { content: [{ type: "text", text: `Alert ${id} resolved.` }] };
     }
+    return { content: [{ type: "text", text: `Alert ${id} not found or already resolved.` }] };
+  }
+);
 
-    // Get last hour metrics for checking
-    const files = await getMetricFiles(1);
-    let metrics: any[] = [];
-    if (files.length > 0) {
-        metrics = await readNdjson(files[files.length - 1]);
-    }
-
-    // Check against average of last 5 mins
-    const now = Date.now();
-    const fiveMinutes = 5 * 60 * 1000;
-    const recentMetrics = metrics.filter(m => (now - new Date(m.timestamp).getTime()) < fiveMinutes);
-
-    const alerts: string[] = [];
-
-    for (const rule of rules) {
-        const relevant = recentMetrics.filter(m =>
-            m.metric === rule.metric || `${m.agent}:${m.metric}` === rule.metric
-        );
-
-        if (relevant.length === 0) continue;
-
-        const avgValue = relevant.reduce((sum, m) => sum + m.value, 0) / relevant.length;
-
-        let triggered = false;
-        if (rule.operator === ">" && avgValue > rule.threshold) triggered = true;
-        if (rule.operator === "<" && avgValue < rule.threshold) triggered = true;
-        if (rule.operator === ">=" && avgValue >= rule.threshold) triggered = true;
-        if (rule.operator === "<=" && avgValue <= rule.threshold) triggered = true;
-
-        if (triggered) {
-            const msg = `ALERT: ${rule.metric} is ${avgValue.toFixed(2)} (${rule.operator} ${rule.threshold})`;
-            alerts.push(msg);
-            console.error(msg);
-        }
-    }
-
+server.tool(
+  "check_alerts",
+  "Force a check of metrics against rules and return active alerts.",
+  {},
+  async () => {
+    // Note: Alerts are now checked in real-time on track_metric and via background escalation.
+    // This tool now mainly serves to view status, similar to get_active_alerts.
+    const alerts = alertManager.getActiveAlerts();
     if (alerts.length > 0) {
-        return { content: [{ type: "text", text: alerts.join("\n") }] };
+        const lines = alerts.map(a => `[${a.status.toUpperCase()}] ${a.metric}: ${a.value} (${a.operator} ${a.threshold})`);
+        return { content: [{ type: "text", text: lines.join("\n") }] };
     }
-
     return { content: [{ type: "text", text: "No alerts triggered." }] };
   }
 );
 
 async function main() {
+  await alertManager.init();
+
+  // Start background escalation check (every 60s)
+  setInterval(() => {
+    alertManager.checkEscalation().catch(err => console.error("Escalation check failed:", err));
+  }, 60000);
+
   if (process.env.PORT) {
     const app = express();
     const transport = new StreamableHTTPServerTransport();
