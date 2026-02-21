@@ -17,7 +17,9 @@ brain:
     enabled: true
     size: 10Gi
     storageClass: "" # default
-    accessMode: ReadWriteOnce
+    # Use ReadWriteMany if sharing PVC across pods (e.g. Agent mounting Brain storage).
+    # Requires a compatible StorageClass (e.g., NFS, EFS).
+    accessMode: ReadWriteMany
     existingClaim: ""
   resources:
     limits:
@@ -37,7 +39,9 @@ agent:
     enabled: true
     size: 1Gi
     storageClass: "" # default
-    accessMode: ReadWriteOnce
+    # Use ReadWriteMany if sharing PVC across pods.
+    # Requires a compatible StorageClass.
+    accessMode: ReadWriteMany
     existingClaim: ""
   resources:
     limits:

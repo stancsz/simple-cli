@@ -41,7 +41,7 @@ The Helm chart is located in `deployment/chart/simple-cli/`. It deploys:
 ### AWS EKS
 1.  Create EKS cluster.
 2.  Configure `kubectl` context.
-3.  Ensure `gp2` or `gp3` storage class exists (for PVC).
+3.  Ensure you have an EFS StorageClass or similar that supports `ReadWriteMany` if shared access is needed.
 4.  Run install command.
     ```bash
     helm install agency deployment/chart/simple-cli --namespace agency --create-namespace --set image.repository=<your-ecr-repo>
@@ -65,29 +65,42 @@ The Helm chart is located in `deployment/chart/simple-cli/`. It deploys:
 
 ## Configuration
 
-### Company Contexts
-To deploy for a specific company context, use the `company` value:
+### Company Contexts (Multi-Tenancy)
+To deploy for a specific company context, use the `company` value and a dedicated namespace. This ensures isolation of data and resources.
 
 ```bash
-helm install company-a deployment/chart/simple-cli --namespace company-a --set company="Company A"
-```
+# Deploy for Company A
+helm install company-a deployment/chart/simple-cli --namespace company-a --create-namespace --set company="Company A"
 
-This ensures the agent initializes with the correct company profile.
+# Deploy for Company B
+helm install company-b deployment/chart/simple-cli --namespace company-b --create-namespace --set company="Company B"
+```
 
 ### Persistence
 The chart uses PersistentVolumeClaims (PVC) for both Agent and Brain to ensure data survives pod restarts.
 - **Agent**: Stores `.agent/` (logs, context.json).
 - **Brain**: Stores `.agent/brain/` (LanceDB vectors).
 
-Configure storage size in `values.yaml`:
+Both components mount the `.agent/brain` volume, which requires `ReadWriteMany` access mode if you plan to run them on different nodes or scale replicas.
+
+Configure storage size and class in `values.yaml`:
 ```yaml
 agent:
   persistence:
     size: 1Gi
+    storageClass: "nfs-client" # Required for ReadWriteMany
+    accessMode: ReadWriteMany
 brain:
   persistence:
     size: 10Gi
+    storageClass: "nfs-client"
+    accessMode: ReadWriteMany
 ```
+
+### Sidecar Architecture
+The `health_monitor` runs as a sidecar container within the Agent pod. It shares the `.agent` volume to read metrics and logs produced by the Agent.
+- **Agent Container**: Writes metrics to `.agent/metrics`.
+- **Health Monitor Sidecar**: Reads from `.agent/metrics` and exposes `/health` on port 3004.
 
 ### Ingress
 To expose the agent externally (e.g., for dashboards), enable Ingress:
@@ -109,10 +122,3 @@ If the agent needs to access Kubernetes API (e.g. for self-management), update `
 The agent runs a `health_monitor` sidecar exposing metrics at `/health`.
 You can configure Prometheus to scrape this endpoint.
 Ensure your ServiceMonitor targets port `3004` (health monitor) or `3000` (agent).
-
-## Scaling
-The Agent is deployed as a StatefulSet. While it supports `replicas > 1`, be aware that:
-- **Brain**: Currently single-writer (LanceDB file lock). Multi-replica setups require careful consideration or read-only replicas.
-- **Agent**: Context is shared via `.agent/`. Parallel writes to the same context file might conflict without external locking (currently handled by file locks).
-
-For multi-tenancy, deployment per namespace is recommended over scaling replicas within a namespace.

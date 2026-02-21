@@ -36,6 +36,8 @@ spec:
               subPath: mcp.json
             - name: agent-storage
               mountPath: /app/.agent
+            - name: brain-storage
+              mountPath: /app/.agent/brain
           ports:
             - containerPort: {{ .Values.agent.service.port }}
           livenessProbe:
@@ -75,6 +77,9 @@ spec:
               port: {{ .Values.healthMonitor.port }}
             initialDelaySeconds: 5
             periodSeconds: 10
+          volumeMounts:
+            - name: agent-storage
+              mountPath: /app/.agent
           resources:
             {{- toYaml .Values.healthMonitor.resources | nindent 12 }}
 
@@ -89,6 +94,13 @@ spec:
         {{- if .Values.agent.persistence.enabled }}
           persistentVolumeClaim:
             claimName: {{ .Release.Name }}-agent-pvc
+        {{- else }}
+          emptyDir: {}
+        {{- end }}
+        - name: brain-storage
+        {{- if .Values.brain.persistence.enabled }}
+          persistentVolumeClaim:
+            claimName: {{ .Release.Name }}-brain-pvc
         {{- else }}
           emptyDir: {}
         {{- end }}
