@@ -87,6 +87,7 @@
     "zod": "^3.25.76"
   },
   "devDependencies": {
+    "@kubernetes/client-node": "^1.4.0",
     "@oclif/test": "^4.0.0",
     "@playwright/test": "^1.58.2",
     "@types/better-sqlite3": "^7.6.13",

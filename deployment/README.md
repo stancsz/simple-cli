@@ -118,7 +118,21 @@ ingress:
 RBAC is enabled by default to allow the agent to run with a dedicated ServiceAccount.
 If the agent needs to access Kubernetes API (e.g. for self-management), update `rbac.yaml` with appropriate rules.
 
-## Monitoring
-The agent runs a `health_monitor` sidecar exposing metrics at `/health`.
-You can configure Prometheus to scrape this endpoint.
-Ensure your ServiceMonitor targets port `3004` (health monitor) or `3000` (agent).
+## Production Validation
+
+To validate the deployment logic, multi-tenancy isolation, and sidecar integration without a live cluster, run the integration test suite:
+
+```bash
+npm test -- tests/integration/k8s_production_validation.test.ts
+```
+
+This test suite:
+1.  **Simulates Multi-Tenant Deployment**: Verifies that deploying multiple companies (e.g., `acme-corp`, `beta-llc`) results in isolated PVCs and StatefulSets.
+2.  **Validates Persistence**: Simulates pod deletion and restart, confirming that new pods re-attach to the correct existing PVCs.
+3.  **Checks Sidecar Integration**: Verifies that the Agent StatefulSet includes the Health Monitor sidecar and correct volume mounts.
+4.  **Tests Concurrency**: Ensures the deployment logic handles simultaneous requests without race conditions.
+
+To run a live validation against a local cluster (Kind/Minikube), ensure `kubectl` is configured and run:
+```bash
+npm test -- tests/integration/kubernetes_deployment.test.ts
+```

@@ -150,3 +150,11 @@
 - [x] **SOP-as-Code**: Defined end-to-end workflow in `demos/simple-cli-showcase/docs/showcase_sop.md`.
 - [x] **Ghost Mode Simulation**: Implemented `demos/simple-cli-showcase/run_demo.ts` to orchestrate 24-hour autonomy.
 - [x] **Validation**: Verified full showcase flow via `tests/integration/showcase_simulation.test.ts`.
+
+### 13. Phase 12: Production-Grade Kubernetes Deployment (✅ Production-Validated)
+- [x] **Helm Chart**: Create `deployment/chart/simple-cli` with Ingress/RBAC.
+- [x] **Sidecars**: Integrate `health_monitor` as sidecar.
+- [x] **Multi-Tenancy**: Support `--company` flag via values.yaml and PVC isolation.
+- [x] **Persistence**: Configure PVCs for `.agent` and `.agent/brain`.
+- [x] **Documentation**: Create `deployment/README.md`.
+- [x] **Validation**: Implement `tests/integration/k8s_production_validation.test.ts` to verify multi-tenant isolation, persistence, and sidecars.
