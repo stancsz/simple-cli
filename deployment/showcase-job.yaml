@@ -1,0 +1,18 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: showcase-job
+  namespace: default
+spec:
+  template:
+    spec:
+      containers:
+      - name: showcase
+        image: simple-agency:latest
+        imagePullPolicy: IfNotPresent
+        command: ["node", "demos/simple-cli-showcase/run_demo.js"]
+        env:
+        - name: JULES_AGENT_DIR
+          value: "/app/.agent"
+      restartPolicy: Never
+  backoffLimit: 0

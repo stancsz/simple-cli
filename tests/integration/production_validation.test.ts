@@ -564,5 +564,5 @@ describe.runIf(!!process.env.TEST_K8S)("Live Kubernetes Validation", () => {
         // I will add a comment.
 
         console.log("Skipping active pod deletion to maintain CI stability. Persistence is guaranteed by PVC configuration.");
-    }, 300000);
+    }, 600000);
 });

@@ -99,12 +99,8 @@ set -e
 
 # 8. Run Internal Showcase Job
 echo "🎬 Running Internal Showcase Job..."
-kubectl run showcase-job \
-    --image=$IMAGE_NAME \
-    --image-pull-policy=IfNotPresent \
-    --restart=Never \
-    --env="JULES_AGENT_DIR=/app/.agent" \
-    --command -- node demos/simple-cli-showcase/run_demo.js
+# Use a manifest to ensure we create a Job object, not a Pod, so we can wait for completion
+sed "s|image: simple-agency:latest|image: $IMAGE_NAME|g" deployment/showcase-job.yaml | kubectl apply -f -
 
 echo "   Waiting for job completion..."
 kubectl wait --for=condition=complete job/showcase-job -n $NAMESPACE --timeout=300s || {
