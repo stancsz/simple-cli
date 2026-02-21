@@ -1,8 +1,9 @@
 # Stage 1: Builder
-FROM node:20-alpine AS builder
+FROM node:22-alpine AS builder
 
 # Install build dependencies for native modules
-RUN apk add --no-cache python3 make g++
+# git, cmake, linux-headers required for node-llama-cpp build
+RUN apk add --no-cache python3 make g++ git cmake linux-headers
 
 WORKDIR /app
 
@@ -20,11 +21,23 @@ RUN npm install @modelcontextprotocol/server-filesystem @modelcontextprotocol/se
 # Build TypeScript
 RUN npm run build
 
+# Compile Showcase Demo (run_demo.ts -> run_demo.js)
+# We need to compile it because the runner image doesn't have src/ or ts-node.
+# We also rewrite imports from ../../src/ to ../../dist/ so it runs against compiled code.
+RUN npx tsc demos/simple-cli-showcase/run_demo.ts \
+    --target es2022 \
+    --module esnext \
+    --moduleResolution node \
+    --esModuleInterop \
+    --skipLibCheck \
+    --allowSyntheticDefaultImports
+RUN sed -i 's|../../src/|../../dist/|g' demos/simple-cli-showcase/run_demo.js
+
 # Remove devDependencies
 RUN npm prune --production
 
 # Stage 2: Runner
-FROM node:20-alpine AS runner
+FROM node:22-alpine AS runner
 
 WORKDIR /app
 

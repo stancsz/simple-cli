@@ -107,7 +107,7 @@ kubectl run showcase-job \
     --image-pull-policy=IfNotPresent \
     --restart=Never \
     --env="JULES_AGENT_DIR=/app/.agent" \
-    --command -- node demos/simple-cli-showcase/run_demo.ts
+    --command -- node demos/simple-cli-showcase/run_demo.js
 
 echo "   Waiting for job completion..."
 kubectl wait --for=condition=complete job/showcase-job -n $NAMESPACE --timeout=300s || {
