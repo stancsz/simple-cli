@@ -1,0 +1,12 @@
+{
+  "id": "93dc0946-a6f1-435f-83d5-6da871e832aa",
+  "title": "Test Improvement",
+  "description": "Improve logs",
+  "affectedFiles": [
+    "test.ts"
+  ],
+  "patch": "diff content",
+  "status": "pending",
+  "createdAt": 1771633545515,
+  "updatedAt": 1771633545515
+}
