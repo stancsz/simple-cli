@@ -16,6 +16,9 @@ spec:
       labels:
         app: {{ .Release.Name }}-brain
     spec:
+      {{- if .Values.serviceAccount.create }}
+      serviceAccountName: {{ .Values.serviceAccount.name | default (printf "%s-sa" .Release.Name) }}
+      {{- end }}
       containers:
         - name: brain
           image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"

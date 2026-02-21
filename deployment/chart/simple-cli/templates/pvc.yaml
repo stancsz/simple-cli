@@ -1,0 +1,37 @@
+{{- if .Values.brain.persistence.enabled }}
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: {{ .Release.Name }}-brain-pvc
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app: {{ .Release.Name }}-brain
+spec:
+  accessModes:
+    - {{ .Values.brain.persistence.accessMode }}
+  resources:
+    requests:
+      storage: {{ .Values.brain.persistence.size }}
+  {{- if .Values.brain.persistence.storageClass }}
+  storageClassName: {{ .Values.brain.persistence.storageClass }}
+  {{- end }}
+{{- end }}
+---
+{{- if .Values.agent.persistence.enabled }}
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: {{ .Release.Name }}-agent-pvc
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app: {{ .Release.Name }}-agent
+spec:
+  accessModes:
+    - {{ .Values.agent.persistence.accessMode }}
+  resources:
+    requests:
+      storage: {{ .Values.agent.persistence.size }}
+  {{- if .Values.agent.persistence.storageClass }}
+  storageClassName: {{ .Values.agent.persistence.storageClass }}
+  {{- end }}
+{{- end }}
