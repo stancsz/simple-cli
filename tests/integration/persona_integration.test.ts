@@ -84,7 +84,8 @@ describe('Persona Integration Test', () => {
     };
 
     // 2. Setup Engine dependencies
-    const llm = createLLM();
+    // Use OpenAI explicitly to match the stubbed API key
+    const llm = createLLM("openai:gpt-4o");
 
     const registry = new Registry();
     const mcp = new MCP();
