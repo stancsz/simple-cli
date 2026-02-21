@@ -1,6 +1,6 @@
 {
   "name": "@stan-chen/simple-cli",
-  "version": "0.2.9",
+  "version": "1.0.0",
   "description": "A lean, lightweight coding agent. Packs a punch with token efficiency.",
   "type": "module",
   "main": "dist/cli.js",
@@ -9,6 +9,7 @@
     "simple-daemon": "bin/simple-daemon"
   },
   "scripts": {
+    "setup-company": "node --loader ts-node/esm scripts/setup_company.ts",
     "start": "node --loader ts-node/esm src/cli.ts",
     "start:brain": "npx tsx src/mcp_servers/brain/index.ts",
     "daemon": "node --loader ts-node/esm src/daemon.ts",

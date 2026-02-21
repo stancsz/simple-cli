@@ -19,6 +19,37 @@ Unlike traditional AI tools that lock you into a single model or framework, Simp
 
 **The Vision:** A digital consulting agency that can adopt any new AI capability and make it an integral part of your workforce—fast, cheap, and with perfect memory.
 
+## 🏛️ The 4-Pillar Vision
+We believe a true Digital Employee needs more than just intelligence; it needs structure, memory, and autonomy. Simple-CLI is built on four pillars:
+
+### 1️⃣ Company Context (Multi-Tenancy)
+**"Know who you work for."**
+Agents instantly adapt to the client they are serving.
+- **Data Isolation**: Client A's secrets never leak to Client B.
+- **Brand Voice**: The agent adopts the tone, style, and rules of the specific company.
+- **RAG Memory**: Automatically indexes and retrieves client-specific documentation.
+
+### 2️⃣ SOP Engine (Procedural Memory)
+**"Know how to do the job."**
+Don't just give instructions; give *protocols*.
+- **Standardization**: Enforce strict workflows (e.g., "Deployment Protocol", "Code Review Checklist").
+- **Compliance**: Ensure every step is followed before marking a task complete.
+- **Evolution**: SOPs are version-controlled and improve over time.
+
+### 3️⃣ Ghost Mode (Autonomy)
+**"Work while you sleep."**
+The agent doesn't stop when you log off.
+- **Scheduled Tasks**: Run daily standups, weekly reports, or hourly health checks.
+- **Self-Healing**: Detects issues in the background and fixes them (or alerts you).
+- **24/7 Operations**: Your digital workforce is always on.
+
+### 4️⃣ HR Loop (Self-Improvement)
+**"Get better every day."**
+An autonomous feedback loop that critiques performance.
+- **Weekly Reviews**: The agent analyzes its own logs to find inefficiencies.
+- **Proposal System**: It submits PRs to update its own prompts or SOPs.
+- **Continuous Learning**: Mistakes are recorded in `learnings.json` and never repeated.
+
 ## 🏢 Digital Employee Framework
 Simple-CLI allows you to "hire" and "equip" specialized digital workers for your projects:
 *   **Persona-Driven Work (Skills)**: Define specialized roles like `LeadStrategist`, `SecurityAuditor`, or `UXResearcher` using the Skill system.
@@ -96,7 +127,6 @@ Most AI tools trap you in a never-ending chat loop. Simple-CLI is built for **au
 *   **Deployable Results**: Give a high-level goal and walk away. The orchestrator handles the planning, delegation, and verification.
 *   **Specialized Workforce**: Hire `Jules` for GitHub PR surgery, `DeepSeek Claude` for architectural heavy lifting, and `Aider` for rapid-fire edits.
 *   **Ghost Mode**: Your digital co-workers run 24/7. The `Smart Job Delegator` wakes up hourly to check the Roadmap and assign tasks while you sleep.
-*   **Recursive Optimization**: The system performs weekly automated HR reviews to analyze logs and propose self-improvements.
 *   **The Brain**: Hybrid Memory Architecture (Vector + Graph) ensures your agents remember past solutions, user preferences, and project context forever.
 *   **Parallel Productivity**: Run a frontend refactor and a backend test suite simultaneously. Simple-CLI manages the threads so you don't have to.
 
