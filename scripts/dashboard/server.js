@@ -10,6 +10,7 @@ const __dirname = path.dirname(__filename);
 const PORT = 3003;
 const AGENT_DIR = path.join(process.cwd(), '.agent');
 const METRICS_DIR = path.join(AGENT_DIR, 'metrics');
+const ALERTS_LOG_FILE = path.join(AGENT_DIR, 'alerts_log.ndjson');
 
 // Helper to get files for a range of days
 function getMetricFiles(days) {
@@ -34,7 +35,7 @@ const server = http.createServer((req, res) => {
   const parsedUrl = url.parse(req.url, true);
 
   // Serve static index.html
-  if (parsedUrl.pathname === '/' || parsedUrl.pathname === '/index.html') {
+  if (parsedUrl.pathname === '/' || parsedUrl.pathname === '/index.html' || parsedUrl.pathname === '/dashboard') {
     fs.readFile(path.join(__dirname, 'index.html'), (err, data) => {
       if (err) {
         res.writeHead(500);
@@ -75,6 +76,29 @@ const server = http.createServer((req, res) => {
     res.writeHead(200, { 'Content-Type': 'application/json' });
     res.end(JSON.stringify(allMetrics));
     return;
+  }
+
+  // API Alerts
+  if (parsedUrl.pathname === '/api/alerts') {
+      if (!fs.existsSync(ALERTS_LOG_FILE)) {
+          res.writeHead(200, { 'Content-Type': 'application/json' });
+          res.end('[]');
+          return;
+      }
+      try {
+          const content = fs.readFileSync(ALERTS_LOG_FILE, 'utf-8');
+          const alerts = content.trim().split('\n')
+            .map(line => { try { return JSON.parse(line); } catch { return null; } })
+            .filter(Boolean)
+            .reverse()
+            .slice(0, 50);
+          res.writeHead(200, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify(alerts));
+      } catch (e) {
+          res.writeHead(500);
+          res.end(JSON.stringify({ error: "Failed to read alerts" }));
+      }
+      return;
   }
 
   res.writeHead(404);

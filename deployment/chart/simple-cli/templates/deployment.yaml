@@ -56,32 +56,7 @@ spec:
             {{- toYaml .Values.agent.resources | nindent 12 }}
 
         # Sidecar: Health Monitor
-        - name: health-monitor
-          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
-          imagePullPolicy: {{ .Values.image.pullPolicy }}
-          command: ["node", "dist/mcp_servers/health_monitor/index.js"]
-          env:
-            - name: PORT
-              value: "{{ .Values.healthMonitor.port }}"
-          ports:
-            - containerPort: {{ .Values.healthMonitor.port }}
-          livenessProbe:
-            httpGet:
-              path: /health
-              port: {{ .Values.healthMonitor.port }}
-            initialDelaySeconds: 15
-            periodSeconds: 20
-          readinessProbe:
-            httpGet:
-              path: /health
-              port: {{ .Values.healthMonitor.port }}
-            initialDelaySeconds: 5
-            periodSeconds: 10
-          volumeMounts:
-            - name: agent-storage
-              mountPath: /app/.agent
-          resources:
-            {{- toYaml .Values.healthMonitor.resources | nindent 12 }}
+{{- include "health-monitor-sidecar" . | nindent 8 }}
 
       volumes:
         - name: mcp-config

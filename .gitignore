@@ -112,3 +112,6 @@ vibecoder/
 
 # Test results
 test-results/
+.agent/metrics/
+.agent/alerts_log.ndjson
+.agent/alert_rules.json

@@ -138,14 +138,15 @@ To transition from a "Wrapper" to a true "Universal AI Integration Platform," th
     - **Agent Configuration**: (✅ Implemented) Pre-configured templates in `dify_agent_templates/`.
     - **Benefit:** Reduces reliance on cloud orchestration for sensitive projects and enables rapid iteration of agentic flows.
 
-### Phase 10.5: Operational Excellence (✅ Implemented)
+### Phase 10.5: Operational Excellence (✅ Hardened & Production-Ready)
 **Goal:** Production monitoring, health checks, and dashboards.
 - **Concept:** Real-time visibility into agent performance and costs.
-- **Status:** Fully implemented (`src/mcp_servers/health_monitor/` & `scripts/dashboard/`).
+- **Status:** Fully implemented and hardened (`src/mcp_servers/health_monitor/` & `scripts/dashboard/`).
 - **Mechanism:**
-    - **Health Monitor MCP**: Tracks metrics (latency, tokens) and manages alerts.
-    - **Dashboard**: Lightweight web UI for visualizing metrics.
-    - **Alerting**: Configurable thresholds for critical metrics.
+    - **Health Monitor MCP**: (✅ Enhanced) Metrics collection (`metrics_collector.ts`) and rule-based alerting (`alert_manager.ts`).
+    - **Dashboard**: (✅ Enhanced) Lightweight web UI displaying real-time metrics and alert history.
+    - **Alerting**: (✅ Implemented) Configurable thresholds via `.agent/alert_rules.json` supporting Slack and Webhooks.
+    - **K8s Integration**: (✅ Completed) Deployed as a sidecar via Helm chart with dedicated Service and PVC access.
 
 ### Phase 11: Production Showcase (✅ Implemented)
 **Goal:** Demonstrate the full 'Digital Agency' capability in an autonomous simulation.
