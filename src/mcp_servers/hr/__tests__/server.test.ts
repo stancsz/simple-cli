@@ -23,7 +23,7 @@ vi.mock("../../../llm.js", () => {
   };
 });
 
-vi.mock("../../brain/episodic.js", () => {
+vi.mock("../../../brain/episodic.js", () => {
   return {
     EpisodicMemory: class {
       recall() {
