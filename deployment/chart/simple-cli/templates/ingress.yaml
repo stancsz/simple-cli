@@ -4,6 +4,11 @@ kind: Ingress
 metadata:
   name: {{ .Release.Name }}-ingress
   namespace: {{ .Release.Namespace }}
+  labels:
+    app: {{ .Release.Name }}
+    chart: {{ .Chart.Name }}-{{ .Chart.Version | replace "+" "_" }}
+    release: {{ .Release.Name }}
+    heritage: {{ .Release.Service }}
   {{- with .Values.ingress.annotations }}
   annotations:
     {{- toYaml . | nindent 4 }}
@@ -32,9 +37,9 @@ spec:
             pathType: {{ .pathType }}
             backend:
               service:
-                name: {{ $.Release.Name }}-agent
+                name: {{ if .backend }}{{ .backend.service.name }}{{ else }}{{ $.Release.Name }}-agent{{ end }}
                 port:
-                  number: {{ $.Values.agent.service.port }}
+                  number: {{ if .backend }}{{ .backend.service.port }}{{ else }}{{ $.Values.agent.service.port }}{{ end }}
           {{- end }}
     {{- end }}
 {{- end -}}

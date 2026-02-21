@@ -1,0 +1,25 @@
+{{- if .Values.ingress.enabled }}
+apiVersion: v1
+kind: Pod
+metadata:
+  name: "{{ .Release.Name }}-ingress-test"
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app: {{ .Release.Name }}
+    chart: {{ .Chart.Name }}-{{ .Chart.Version | replace "+" "_" }}
+    release: {{ .Release.Name }}
+    heritage: {{ .Release.Service }}
+  annotations:
+    "helm.sh/hook": test
+spec:
+  containers:
+    - name: wget
+      image: busybox
+      command: ['wget']
+      args:
+        - '--header'
+        - 'Host: {{ (index .Values.ingress.hosts 0).host }}'
+        # We target the Ingress Controller Service in the ingress-nginx namespace
+        - 'http://ingress-nginx-controller.ingress-nginx.svc.cluster.local'
+  restartPolicy: Never
+{{- end }}

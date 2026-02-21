@@ -17,6 +17,7 @@ The Helm chart is located in `deployment/chart/simple-cli/`. It deploys:
 - **Services**: Headless and ClusterIP services for internal communication.
 - **Ingress**: Optional external access.
 - **RBAC**: ServiceAccount and Role bindings.
+- **Network Policies**: Optional network isolation.
 
 ## Installation
 
@@ -90,16 +91,78 @@ brain:
 ```
 
 ### Ingress
-To expose the agent externally (e.g., for dashboards), enable Ingress:
+To expose the agent externally (e.g., for dashboards), enable Ingress.
+
+#### 1. Basic Nginx Ingress
 ```yaml
 ingress:
   enabled: true
+  className: "nginx"
+  annotations:
+    kubernetes.io/ingress.class: nginx
   hosts:
     - host: agency.example.com
       paths:
         - path: /
           pathType: Prefix
 ```
+
+#### 2. TLS with Cert-Manager
+Ensure `cert-manager` is installed in your cluster.
+
+```yaml
+ingress:
+  enabled: true
+  className: "nginx"
+  annotations:
+    cert-manager.io/cluster-issuer: letsencrypt-prod
+  hosts:
+    - host: agency.example.com
+      paths:
+        - path: /
+          pathType: Prefix
+  tls:
+    - secretName: agency-tls
+      hosts:
+        - agency.example.com
+```
+
+#### 3. Cloud Specific Annotations
+
+**AWS ALB:**
+```yaml
+ingress:
+  className: alb
+  annotations:
+    alb.ingress.kubernetes.io/scheme: internet-facing
+    alb.ingress.kubernetes.io/target-type: ip
+```
+
+**GKE Ingress:**
+```yaml
+ingress:
+  className: gce
+  annotations:
+    kubernetes.io/ingress.class: gce
+    kubernetes.io/ingress.global-static-ip-name: "my-static-ip"
+```
+
+### Network Policies
+To enforce tenant isolation and restrict pod-to-pod communication, enable Network Policies.
+
+```yaml
+networkPolicy:
+  enabled: true
+  ingress:
+    enabled: true
+    # Allow traffic from your Ingress Controller namespace
+    from:
+      - namespaceSelector:
+          matchLabels:
+            kubernetes.io/metadata.name: ingress-nginx
+```
+
+**Note:** By default, enabling `networkPolicy` denies all ingress traffic from other namespaces unless explicitly allowed. Ensure you configure the `ingress.from` selector to match your Ingress Controller's namespace to allow external access.
 
 ### RBAC
 RBAC is enabled by default to allow the agent to run with a dedicated ServiceAccount.

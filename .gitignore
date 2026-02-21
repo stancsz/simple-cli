@@ -112,3 +112,8 @@ vibecoder/
 
 # Test results
 test-results/
+
+# Binaries downloaded for testing
+bin/helm
+bin/kind
+bin/kubectl

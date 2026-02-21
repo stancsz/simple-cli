@@ -1,0 +1,38 @@
+{{- if .Values.networkPolicy.enabled }}
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: {{ .Release.Name }}-isolation
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app: {{ .Release.Name }}
+    release: {{ .Release.Name }}
+    chart: {{ .Chart.Name }}-{{ .Chart.Version | replace "+" "_" }}
+spec:
+  # Apply to all pods in the release/namespace
+  podSelector: {}
+  policyTypes:
+  - Ingress
+  ingress:
+  # 1. Allow all traffic from within the same namespace (Inter-service communication: Agent <-> Brain <-> Redis)
+  - from:
+    - podSelector: {}
+
+  # 2. Allow external traffic for Ingress
+  {{- if .Values.networkPolicy.ingress.enabled }}
+  - ports:
+    - protocol: TCP
+      port: {{ .Values.agent.service.port }}
+    - protocol: TCP
+      port: {{ .Values.healthMonitor.port }}
+    from:
+    {{- if .Values.networkPolicy.ingress.from }}
+    {{- toYaml .Values.networkPolicy.ingress.from | nindent 4 }}
+    {{- else }}
+    # Default: Allow all namespaces to ensure Ingress works out of the box.
+    # SECURITY WARNING: This allows traffic from any namespace.
+    # Configure 'networkPolicy.ingress.from' in values.yaml to restrict to your Ingress Controller's namespace.
+    - namespaceSelector: {}
+    {{- end }}
+  {{- end }}
+{{- end }}
