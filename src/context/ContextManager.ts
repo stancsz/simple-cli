@@ -57,7 +57,7 @@ export class ContextManager implements IContextManager {
       }
     } catch (e) {
       // Brain might be unavailable or errored; proceed with base context but log warning
-      console.warn("Failed to query brain memories:", e);
+      console.warn(`Failed to query brain memories for company ${company || process.env.JULES_COMPANY}:`, e);
     }
 
     return {
@@ -127,12 +127,12 @@ export class ContextManager implements IContextManager {
                });
              }
            } catch (graphError) {
-             console.warn("Failed to update semantic graph:", graphError);
+             console.warn(`Failed to update semantic graph for company ${companyId}:`, graphError);
              // Non-critical, do not fail the whole save
            }
        }
      } catch (e) {
-         console.warn("Failed to store brain memory:", e);
+         console.warn(`Failed to store brain memory for company ${company || process.env.JULES_COMPANY}:`, e);
      }
   }
 }

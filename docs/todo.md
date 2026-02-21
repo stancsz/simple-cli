@@ -103,7 +103,7 @@
 - [x] **Episodic Memory (Vector DB)**:
     - [x] Evaluate `lancedb` vs `chromadb` (node-compatible).
     - [x] Create `src/brain/episodic.ts`: Implement embedding generation + storage.
-    - [x] **Brain production hardening**: Implemented `LanceConnector` and `SemanticGraph` with concurrency locking. Validated via 5-tenant simulation.
+    - [x] **Brain production hardening**: Implemented `LanceConnector` and `SemanticGraph` with concurrency locking. Validated via 12-tenant simulation.
 - [x] **Semantic Memory (Graph)**:
     - [x] Create `src/brain/semantic.ts`: JSON-based graph store.
     - [x] Implement entity extraction prompt in `src/llm/prompts.ts`.
@@ -119,7 +119,7 @@
     - [x] Update `cli.ts` and `engine.ts` to support `--company` flag and context injection.
     - [x] Create `docs/COMPANY_CONTEXT.md`.
     - [x] Validated Company Context with comprehensive E2E tests (including Slack/Teams flags).
-    - [x] ✅ Company Context production-tested with multi-tenant isolation
+    - [x] ✅ Company Context production-tested with multi-tenant isolation and high-concurrency (12 tenants).
 
 ### 8. Phase 7: The Hive Mind (✅ Implemented)
 - [x] **Swarm Orchestration**: Implement dynamic agent spawning via `opencowork`.

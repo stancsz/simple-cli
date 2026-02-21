@@ -8,6 +8,7 @@ import { lock } from "proper-lockfile";
 
 export class LanceConnector {
   private connection: lancedb.Connection | null = null;
+  private connectionPromise: Promise<lancedb.Connection> | null = null;
   private dbPath: string;
   private companyMutexes: Map<string, Mutex> = new Map();
 
@@ -18,12 +19,26 @@ export class LanceConnector {
   async connect(): Promise<lancedb.Connection> {
     if (this.connection) return this.connection;
 
-    if (!existsSync(this.dbPath)) {
-      await mkdir(this.dbPath, { recursive: true });
-    }
+    // Use a promise lock to prevent race conditions during initial connection
+    if (this.connectionPromise) return this.connectionPromise;
 
-    this.connection = await lancedb.connect(this.dbPath);
-    return this.connection;
+    this.connectionPromise = (async () => {
+      try {
+        if (!existsSync(this.dbPath)) {
+          await mkdir(this.dbPath, { recursive: true });
+        }
+        const conn = await lancedb.connect(this.dbPath);
+        this.connection = conn;
+        return conn;
+      } catch (error) {
+        console.error("Failed to connect to LanceDB:", error);
+        throw error;
+      } finally {
+        this.connectionPromise = null;
+      }
+    })();
+
+    return this.connectionPromise;
   }
 
   private getMutex(company: string): Mutex {
