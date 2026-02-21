@@ -96,6 +96,7 @@ Most AI tools trap you in a never-ending chat loop. Simple-CLI is built for **au
 *   **Deployable Results**: Give a high-level goal and walk away. The orchestrator handles the planning, delegation, and verification.
 *   **Specialized Workforce**: Hire `Jules` for GitHub PR surgery, `DeepSeek Claude` for architectural heavy lifting, and `Aider` for rapid-fire edits.
 *   **Ghost Mode**: Your digital co-workers run 24/7. The `Smart Job Delegator` wakes up hourly to check the Roadmap and assign tasks while you sleep.
+*   **Recursive Optimization**: The system performs weekly automated HR reviews to analyze logs and propose self-improvements.
 *   **The Brain**: Hybrid Memory Architecture (Vector + Graph) ensures your agents remember past solutions, user preferences, and project context forever.
 *   **Parallel Productivity**: Run a frontend refactor and a backend test suite simultaneously. Simple-CLI manages the threads so you don't have to.
 

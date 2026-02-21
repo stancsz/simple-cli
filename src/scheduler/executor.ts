@@ -270,6 +270,98 @@ export class Executor {
   }
 }
 
+export async function executeTask(taskDef: TaskDefinition) {
+    // --- NEW: Direct Tool Execution ---
+    if (taskDef.action === 'mcp.call_tool') {
+            console.log(`Executing direct action: ${taskDef.action}`);
+            const mcp = new MCP();
+            await mcp.init();
+
+            const { server, tool, arguments: args } = taskDef.args || {};
+            if (!server || !tool) {
+                throw new Error("Missing server or tool in task arguments.");
+            }
+
+            try {
+                // Start server if needed
+                if (!mcp.isServerRunning(server)) {
+                    console.log(`Starting server: ${server}`);
+                    await mcp.startServer(server);
+                }
+
+                const client = mcp.getClient(server);
+                if (!client) {
+                    throw new Error(`Failed to get client for server: ${server}`);
+                }
+
+                // Inject Context
+                const finalArgs = {
+                    ...args,
+                    projectRoot: process.cwd(),
+                    company: taskDef.company
+                };
+
+                console.log(`Calling tool ${tool} on server ${server}...`);
+                const result = await client.callTool({
+                    name: tool,
+                    arguments: finalArgs
+                });
+                console.log(`Tool execution result:`, JSON.stringify(result, null, 2));
+                console.log(`Task ${taskDef.name} completed successfully.`);
+                return;
+            } catch (e: any) {
+                console.error(`Task ${taskDef.name} failed:`, e);
+                throw e;
+            }
+    }
+    // ----------------------------------
+
+    if (!taskDef.prompt) {
+        throw new Error("Task definition missing 'prompt' and 'action' is not 'mcp.call_tool'.");
+    }
+
+    const cwd = process.cwd();
+
+    const registry = new Registry();
+
+    // await registry.loadProjectTools(cwd);
+
+    const mcp = new MCP();
+    const provider = createLLM();
+
+    const runner = new Executor(provider, registry, mcp, {
+        yoloMode: taskDef.yoloMode ?? true,
+        timeout: taskDef.autoDecisionTimeout,
+        taskId: taskDef.id,
+        taskName: taskDef.name
+    });
+
+    const skill = await getActiveSkill(cwd);
+
+    // Load and inject Agent Soul if exists
+    const soulPath = join(cwd, "src", "agents", "souls", `${taskDef.name}.md`);
+    if (existsSync(soulPath)) {
+        try {
+            const soulContent = await readFile(soulPath, "utf-8");
+            skill.systemPrompt += `\n\n## Agent Instructions (Soul)\n${soulContent}`;
+            console.log(`Loaded soul for agent: ${taskDef.name}`);
+        } catch (e) {
+            console.error(`Failed to load soul for agent ${taskDef.name}:`, e);
+        }
+    }
+
+    const ctx = new Context(cwd, skill);
+
+    console.log(`Starting task: ${taskDef.name} (ID: ${taskDef.id})`);
+
+    try {
+        await runner.run(ctx, taskDef.prompt);
+        console.log(`Task ${taskDef.name} completed successfully.`);
+    } catch (e: any) {
+        console.error(`Task ${taskDef.name} failed:`, e);
+        throw e;
+    }
+}
 
 // Script Entry Point
 if (import.meta.url ===  "file://" + process.argv[1] || process.argv[1].endsWith("executor.ts") || process.argv[1].endsWith("executor.js")) {
@@ -288,47 +380,12 @@ if (import.meta.url ===  "file://" + process.argv[1] || process.argv[1].endsWith
           process.exit(1);
         }
 
-        const cwd = process.cwd();
-
-        const registry = new Registry();
-
-        // await registry.loadProjectTools(cwd);
-
-        const mcp = new MCP();
-        const provider = createLLM();
-
-        const runner = new Executor(provider, registry, mcp, {
-          yoloMode: taskDef.yoloMode ?? true,
-          timeout: taskDef.autoDecisionTimeout,
-          taskId: taskDef.id,
-          taskName: taskDef.name
-        });
-
-        const skill = await getActiveSkill(cwd);
-
-        // Load and inject Agent Soul if exists
-        const soulPath = join(cwd, "src", "agents", "souls", `${taskDef.name}.md`);
-        if (existsSync(soulPath)) {
-            try {
-                const soulContent = await readFile(soulPath, "utf-8");
-                skill.systemPrompt += `\n\n## Agent Instructions (Soul)\n${soulContent}`;
-                console.log(`Loaded soul for agent: ${taskDef.name}`);
-            } catch (e) {
-                console.error(`Failed to load soul for agent ${taskDef.name}:`, e);
-            }
-        }
-
-        const ctx = new Context(cwd, skill);
-
-        console.log(`Starting task: ${taskDef.name} (ID: ${taskDef.id})`);
-
         try {
-          await runner.run(ctx, taskDef.prompt);
-          console.log(`Task ${taskDef.name} completed successfully.`);
-          process.exit(0);
-        } catch (e: any) {
-          console.error(`Task ${taskDef.name} failed:`, e);
-          process.exit(1);
+            await executeTask(taskDef);
+            process.exit(0);
+        } catch (e) {
+            console.error(e);
+            process.exit(1);
         }
     };
 
