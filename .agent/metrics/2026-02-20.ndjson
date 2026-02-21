@@ -1,6 +1,0 @@
-{"timestamp":"2026-02-20T19:11:44.681Z","agent":"llm","metric":"llm_latency","value":0,"tags":{"model":"deepseek-reasoner","provider":"deepseek"}}
-{"timestamp":"2026-02-20T19:11:44.681Z","agent":"llm","metric":"llm_tokens_total","value":15,"tags":{"model":"deepseek-reasoner","provider":"deepseek"}}
-{"timestamp":"2026-02-20T19:11:44.681Z","agent":"llm","metric":"llm_tokens_prompt","value":10,"tags":{"model":"deepseek-reasoner","provider":"deepseek"}}
-{"timestamp":"2026-02-20T19:11:44.681Z","agent":"llm","metric":"llm_tokens_completion","value":5,"tags":{"model":"deepseek-reasoner","provider":"deepseek"}}
-{"timestamp":"2026-02-20T19:11:54.924Z","agent":"engine","metric":"tool_execution_time","value":0,"tags":{"tool":"write_files"}}
-{"timestamp":"2026-02-20T19:11:54.925Z","agent":"engine","metric":"tool_success","value":1,"tags":{"tool":"write_files"}}
