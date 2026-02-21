@@ -110,7 +110,8 @@
 - [x] **Integration**:
     - [x] Update `ContextManager` to query "The Brain" on initialization.
     - [x] Create `src/mcp_servers/brain`: Expose memory via MCP for sub-agents.
-    - [x] **Validation**: Verified `ContextManager` correctly integrates with Brain MCP. `loadContext` recalls relevant past experiences, and `saveContext` persists outcomes to LanceDB. Artifacts are correctly stored and retrieved. Integration tests passed.
+    - [x] **Brain-Context Integration**: (✅ Completed) Fully integrated Brain MCP with ContextManager. `loadContext` queries vector/graph memory, and `saveContext` updates it with cross-process locking safety.
+    - [x] **Validation**: Verified `ContextManager` correctly integrates with Brain MCP via `tests/integration/brain_context_integration.test.ts`. Verified SemanticGraph concurrency via `tests/integration/brain_concurrency.test.ts`.
     - [x] **Agent Integration**:
         - [x] Integrated Brain with Job Delegator (log experience, recall patterns).
         - [x] Created Reviewer Agent with Brain integration.

@@ -2,6 +2,7 @@ import { readFile, writeFile, mkdir } from "fs/promises";
 import { existsSync } from "fs";
 import { join, dirname } from "path";
 import { Mutex } from "async-mutex";
+import { lock } from "proper-lockfile";
 
 export interface GraphNode {
   id: string;
@@ -46,11 +47,60 @@ export class SemanticGraph {
     return join(this.baseDir, ".agent", "brain", filename);
   }
 
+  // Cross-process locking helper
+  private async withLock<T>(company: string | undefined, action: () => Promise<T>): Promise<T> {
+      const mutex = this.getMutex(company);
+      // 1. In-process lock
+      return await mutex.runExclusive(async () => {
+          const filePath = this.getFilePath(company);
+          const lockDir = join(dirname(filePath), "locks");
+          if (!existsSync(lockDir)) {
+              await mkdir(lockDir, { recursive: true });
+          }
+
+          // Use a dedicated lock file to avoid issues if graph.json doesn't exist
+          const safeCompany = (company || "default").replace(/[^a-zA-Z0-9_-]/g, "_");
+          const lockFile = join(lockDir, `${safeCompany}_graph.lock`);
+
+          if (!existsSync(lockFile)) {
+              await writeFile(lockFile, "");
+          }
+
+          let release: () => Promise<void>;
+          try {
+             // 2. Cross-process lock
+             release = await lock(lockFile, {
+                 retries: {
+                     retries: 20,
+                     factor: 2,
+                     minTimeout: 100,
+                     maxTimeout: 2000,
+                     randomize: true
+                 },
+                 stale: 10000 // 10 seconds lock expiration
+             });
+          } catch (e: any) {
+              throw new Error(`Failed to acquire graph lock for ${safeCompany}: ${e.message}`);
+          }
+
+          try {
+              return await action();
+          } finally {
+              await release();
+          }
+      });
+  }
+
   private async load(company?: string): Promise<GraphData> {
     const key = company || "default";
-    if (this.cache.has(key)) {
-        return this.cache.get(key)!;
-    }
+    // We do NOT use memory cache if we want to be multi-process safe,
+    // OR we must invalidate it. Since we are in a locked section when we write,
+    // but reading might happen elsewhere...
+    // To be safe and simple: always reload from disk inside the lock.
+    // Or, if we trust the lock, we can reload.
+    // But if another process updated it, our memory cache is stale.
+    // So we should invalidate cache or just reload.
+    // For graph size (usually small), reloading is safer.
 
     const filePath = this.getFilePath(company);
     let data: GraphData = { nodes: [], edges: [] };
@@ -85,41 +135,40 @@ export class SemanticGraph {
   }
 
   async addNode(id: string, type: string, properties: Record<string, any> = {}, company?: string): Promise<void> {
-    const mutex = this.getMutex(company);
-    await mutex.runExclusive(async () => {
+    await this.withLock(company, async () => {
         const data = await this.load(company);
         const existing = data.nodes.find((n) => n.id === id);
         if (existing) {
-        existing.properties = { ...existing.properties, ...properties };
-        existing.type = type; // Update type if provided
+            existing.properties = { ...existing.properties, ...properties };
+            existing.type = type; // Update type if provided
         } else {
-        data.nodes.push({ id, type, properties });
+            data.nodes.push({ id, type, properties });
         }
         await this.save(data, company);
     });
   }
 
   async addEdge(from: string, to: string, relation: string, properties: Record<string, any> = {}, company?: string): Promise<void> {
-    const mutex = this.getMutex(company);
-    await mutex.runExclusive(async () => {
+    await this.withLock(company, async () => {
         const data = await this.load(company);
         // Check if edge exists
         const existingIndex = data.edges.findIndex(
-        (e) => e.from === from && e.to === to && e.relation === relation
+            (e) => e.from === from && e.to === to && e.relation === relation
         );
 
         if (existingIndex >= 0) {
             data.edges[existingIndex].properties = { ...data.edges[existingIndex].properties, ...properties };
         } else {
-        data.edges.push({ from, to, relation, properties });
+            data.edges.push({ from, to, relation, properties });
         }
         await this.save(data, company);
     });
   }
 
   async query(query: string, company?: string): Promise<any> {
-      const mutex = this.getMutex(company);
-      return await mutex.runExclusive(async () => {
+      // Query also needs lock to ensure we read consistent state?
+      // Yes, prevents reading partial write.
+      return await this.withLock(company, async () => {
           const data = await this.load(company);
           // Simple keyword search for now
           const q = query.toLowerCase();
@@ -141,8 +190,7 @@ export class SemanticGraph {
   }
 
   async getGraphData(company?: string): Promise<GraphData> {
-    const mutex = this.getMutex(company);
-    return await mutex.runExclusive(async () => {
+    return await this.withLock(company, async () => {
         return this.load(company);
     });
   }

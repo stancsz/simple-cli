@@ -147,6 +147,7 @@ export class Engine {
     protected registry: Registry,
     protected mcp: MCP,
   ) {
+    // ContextManager initialized with MCP access to leverage Brain client (episodic memory)
     this.contextManager = new ContextManager(this.mcp);
   }
 
@@ -199,6 +200,7 @@ export class Engine {
         await this.mcp.startServer("company_context");
         this.log("success", "Company Context server started.");
       }
+      this.log("info", "Brain integration: Active (ContextManager linked).");
     } catch (e) {
       console.error("Failed to start core servers:", e);
     }

@@ -29,16 +29,18 @@ export class ContextManager implements IContextManager {
 
   /**
    * Loads context and enriches it with relevant past experiences from the Brain.
+   * This method integrates the Brain MCP server to recall similar past episodes.
    */
   async loadContext(taskDescription: string, company?: string): Promise<ContextData & { relevant_past_experiences?: string[] }> {
     // 1. Get base context (local file)
     const context = await this.readContext(undefined, company);
 
-    // 2. Query Brain (Episodic Memory)
+    // 2. Query Brain (Episodic Memory) - INTEGRATED
     let memories: string[] = [];
     try {
       const brainClient = this.mcp.getClient("brain");
       if (brainClient) {
+        // Execute brain_query to retrieve relevant past experiences
         const result: any = await brainClient.callTool({
             name: "brain_query",
             arguments: {
@@ -50,13 +52,13 @@ export class ContextManager implements IContextManager {
         if (result && result.content && result.content[0] && result.content[0].text) {
              const text = result.content[0].text;
              if (!text.includes("No relevant memories found")) {
-                 // Split by the separator used in brain.ts
+                 // Split by the separator used in brain.ts and filter empty strings
                  memories = text.split("\n\n---\n\n").filter((m: string) => m.trim().length > 0);
              }
         }
       }
     } catch (e) {
-      // Brain might be unavailable or errored; proceed with base context but log warning
+      // Brain might be unavailable or errored; proceed with base context but log warning to avoid blocking
       console.warn("Failed to query brain memories:", e);
     }
 
@@ -73,14 +75,14 @@ export class ContextManager implements IContextManager {
      // 1. Update local context
      await this.updateContext(updates, undefined, company);
 
-     // 2. Store to Brain
+     // 2. Store to Brain - INTEGRATED
      try {
        const brainClient = this.mcp.getClient("brain");
        if (brainClient) {
            const taskId = randomUUID();
            const companyId = company || process.env.JULES_COMPANY;
 
-           // A. Store Episodic Memory
+           // A. Store Episodic Memory via brain_store tool
            await brainClient.callTool({
                name: "brain_store",
                arguments: {

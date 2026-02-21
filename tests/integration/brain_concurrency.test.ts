@@ -1,5 +1,6 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import { EpisodicMemory } from "../../src/brain/episodic.js";
+import { SemanticGraph } from "../../src/brain/semantic_graph.js";
 import { join } from "path";
 import { rm, mkdir } from "fs/promises";
 import { existsSync } from "fs";
@@ -125,4 +126,44 @@ describe("Brain Concurrency", () => {
     const results = await memory.recall("req", 10, company);
     expect(results.length).toBe(1);
   });
+});
+
+
+describe("Semantic Graph Concurrency Standalone", () => {
+    const GRAPH_TEST_DIR = join(process.cwd(), "test_brain_concurrency_graph");
+    let graph: SemanticGraph;
+
+    beforeEach(async () => {
+        if (existsSync(GRAPH_TEST_DIR)) {
+            await rm(GRAPH_TEST_DIR, { recursive: true, force: true }).catch(() => {});
+        }
+        await mkdir(GRAPH_TEST_DIR, { recursive: true });
+        graph = new SemanticGraph(GRAPH_TEST_DIR);
+    });
+
+    afterEach(async () => {
+         if (existsSync(GRAPH_TEST_DIR)) {
+            await rm(GRAPH_TEST_DIR, { recursive: true, force: true }).catch(e => console.warn("Failed to cleanup test dir:", e));
+        }
+    });
+
+    it("should handle concurrent node additions safely", async () => {
+        const numNodes = 20;
+        const company = "graph_corp";
+
+        // Pre-create tasks to run concurrently
+        const tasks = Array.from({ length: numNodes }).map((_, i) => {
+            return graph.addNode(`node-${i}`, "test", { index: i }, company);
+        });
+
+        await Promise.all(tasks);
+
+        const data = await graph.query("node", company);
+        // data.nodes should contain all nodes
+        expect(data.nodes.length).toBe(numNodes);
+
+        // Check for duplicates
+        const ids = new Set(data.nodes.map((n: any) => n.id));
+        expect(ids.size).toBe(numNodes);
+    });
 });

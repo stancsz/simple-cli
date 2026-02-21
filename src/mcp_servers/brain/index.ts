@@ -51,10 +51,17 @@ export class BrainServer {
             artifactList = [];
           }
         }
-        await this.episodic.store(taskId, request, solution, artifactList, company);
-        return {
-          content: [{ type: "text", text: "Memory stored successfully." }],
-        };
+        try {
+          await this.episodic.store(taskId, request, solution, artifactList, company);
+          return {
+            content: [{ type: "text", text: "Memory stored successfully." }],
+          };
+        } catch (e: any) {
+          return {
+            content: [{ type: "text", text: `Error storing memory: ${e.message}` }],
+            isError: true,
+          };
+        }
       }
     );
 
@@ -67,30 +74,37 @@ export class BrainServer {
         company: z.string().optional().describe("The company/client identifier for namespacing."),
       },
       async ({ query, limit = 3, company }) => {
-        const results = await this.episodic.recall(query, limit, company);
-        if (results.length === 0) {
-          return { content: [{ type: "text", text: "No relevant memories found." }] };
-        }
-        const text = results
-          .map(
-            (r) => {
-              // Ensure artifacts is treated as an array (LanceDB might return array-like object)
-              let artifacts: string[] = [];
-              if (Array.isArray(r.artifacts)) {
-                artifacts = r.artifacts;
-              } else if (r.artifacts) {
-                try {
-                  artifacts = Array.from(r.artifacts as any);
-                } catch {
-                  // Fallback if not iterable
-                  artifacts = [];
+        try {
+          const results = await this.episodic.recall(query, limit, company);
+          if (results.length === 0) {
+            return { content: [{ type: "text", text: "No relevant memories found." }] };
+          }
+          const text = results
+            .map(
+              (r) => {
+                // Ensure artifacts is treated as an array (LanceDB might return array-like object)
+                let artifacts: string[] = [];
+                if (Array.isArray(r.artifacts)) {
+                  artifacts = r.artifacts;
+                } else if (r.artifacts) {
+                  try {
+                    artifacts = Array.from(r.artifacts as any);
+                  } catch {
+                    // Fallback if not iterable
+                    artifacts = [];
+                  }
                 }
+                return `[Task: ${r.taskId}]\nTimestamp: ${new Date(r.timestamp).toISOString()}\nRequest: ${r.userPrompt}\nSolution: ${r.agentResponse}\nArtifacts: ${artifacts.length > 0 ? artifacts.join(", ") : "None"}`;
               }
-              return `[Task: ${r.taskId}]\nTimestamp: ${new Date(r.timestamp).toISOString()}\nRequest: ${r.userPrompt}\nSolution: ${r.agentResponse}\nArtifacts: ${artifacts.length > 0 ? artifacts.join(", ") : "None"}`;
-            }
-          )
-          .join("\n\n---\n\n");
-        return { content: [{ type: "text", text }] };
+            )
+            .join("\n\n---\n\n");
+          return { content: [{ type: "text", text }] };
+        } catch (e: any) {
+          return {
+            content: [{ type: "text", text: `Error querying memory: ${e.message}` }],
+            isError: true,
+          };
+        }
       }
     );
 
@@ -136,47 +150,54 @@ export class BrainServer {
           };
         }
 
-        if (operation === "add_node") {
-          const { id, type, properties } = parsedArgs;
-          if (!id || !type) {
+        try {
+          if (operation === "add_node") {
+            const { id, type, properties } = parsedArgs;
+            if (!id || !type) {
+              return {
+                content: [
+                  {
+                    type: "text",
+                    text: "Error: add_node requires 'id' and 'type'.",
+                  },
+                ],
+                isError: true,
+              };
+            }
+            await this.semantic.addNode(id, type, properties || {}, company);
+            return {
+              content: [{ type: "text", text: `Node '${id}' added/updated.` }],
+            };
+          } else if (operation === "add_edge") {
+            const { from, to, relation, properties } = parsedArgs;
+            if (!from || !to || !relation) {
+              return {
+                content: [
+                  {
+                    type: "text",
+                    text: "Error: add_edge requires 'from', 'to', and 'relation'.",
+                  },
+                ],
+                isError: true,
+              };
+            }
+            await this.semantic.addEdge(from, to, relation, properties || {}, company);
             return {
               content: [
                 {
                   type: "text",
-                  text: "Error: add_node requires 'id' and 'type'.",
+                  text: `Edge '${from}' -[${relation}]-> '${to}' added/updated.`,
                 },
               ],
-              isError: true,
             };
           }
-          await this.semantic.addNode(id, type, properties || {}, company);
+          return { content: [{ type: "text", text: "Unknown operation." }] };
+        } catch (e: any) {
           return {
-            content: [{ type: "text", text: `Node '${id}' added/updated.` }],
-          };
-        } else if (operation === "add_edge") {
-          const { from, to, relation, properties } = parsedArgs;
-          if (!from || !to || !relation) {
-            return {
-              content: [
-                {
-                  type: "text",
-                  text: "Error: add_edge requires 'from', 'to', and 'relation'.",
-                },
-              ],
-              isError: true,
-            };
-          }
-          await this.semantic.addEdge(from, to, relation, properties || {}, company);
-          return {
-            content: [
-              {
-                type: "text",
-                text: `Edge '${from}' -[${relation}]-> '${to}' added/updated.`,
-              },
-            ],
+            content: [{ type: "text", text: `Error updating graph: ${e.message}` }],
+            isError: true,
           };
         }
-        return { content: [{ type: "text", text: "Unknown operation." }] };
       }
     );
 
