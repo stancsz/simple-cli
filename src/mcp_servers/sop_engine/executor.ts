@@ -17,11 +17,16 @@ export class SOPExecutor {
     this.logDir = join(process.cwd(), '.agent', 'brain');
   }
 
-  private async logStep(sopName: string, stepNumber: number, status: 'success' | 'failure', details: string) {
-    if (!existsSync(this.logDir)) {
-      await mkdir(this.logDir, { recursive: true });
+  private async logStep(sopName: string, stepNumber: number, status: 'success' | 'failure', details: string, company?: string) {
+    // Determine log directory based on company
+    const targetDir = company
+      ? join(process.cwd(), '.agent', 'companies', company, 'brain')
+      : this.logDir;
+
+    if (!existsSync(targetDir)) {
+      await mkdir(targetDir, { recursive: true });
     }
-    const logFile = join(this.logDir, 'sop_logs.json');
+    const logFile = join(targetDir, 'sop_logs.json');
     let logs: any[] = [];
     if (existsSync(logFile)) {
       try {
@@ -46,7 +51,7 @@ export class SOPExecutor {
     await writeFile(logFile, JSON.stringify(logs, null, 2));
   }
 
-  async execute(sop: SOP, input: string): Promise<string> {
+  async execute(sop: SOP, input: string, company?: string): Promise<string> {
     // Initialize MCP to discover servers
     await this.mcp.init();
 
@@ -57,7 +62,10 @@ export class SOPExecutor {
         const tools = await this.mcp.getTools();
         const brainQuery = tools.find(t => t.name === 'brain_query');
         if (brainQuery) {
-            const result = await brainQuery.execute({ query: `SOP execution: ${sop.title} ${input}`, limit: 3 });
+            const args: any = { query: `SOP execution: ${sop.title} ${input}`, limit: 3 };
+            if (company) args.company = company;
+
+            const result = await brainQuery.execute(args);
              // Check if result is string or object with content
             if (typeof result === 'string') {
                 pastContext = result;
@@ -152,7 +160,7 @@ Do not ask the user for input unless absolutely necessary.
                     const summary = args.summary || message || "Step completed.";
                     context.push(`Step ${step.number} completed: ${summary}`);
                     console.error(`[SOP] Step ${step.number} Complete.`);
-                    await this.logStep(sop.title, step.number, 'success', summary);
+                    await this.logStep(sop.title, step.number, 'success', summary, company);
                     stepComplete = true;
                     break;
                 }
@@ -196,7 +204,7 @@ Do not ask the user for input unless absolutely necessary.
 
         } catch (e: any) {
             if (e.isFatal) {
-                 await this.logStep(sop.title, step.number, 'failure', e.message);
+                 await this.logStep(sop.title, step.number, 'failure', e.message, company);
                  throw e;
             }
             console.error(`[SOP] Error in step execution: ${e.message}`);
@@ -213,7 +221,7 @@ Do not ask the user for input unless absolutely necessary.
 
       if (!stepComplete) {
           const msg = `Failed to complete Step ${step.number} after ${this.maxRetries} retries.`;
-          await this.logStep(sop.title, step.number, 'failure', msg);
+          await this.logStep(sop.title, step.number, 'failure', msg, company);
           throw new Error(msg);
       }
     }
@@ -225,14 +233,17 @@ Do not ask the user for input unless absolutely necessary.
         const tools = await this.mcp.getTools();
         const logExp = tools.find(t => t.name === 'log_experience');
         if (logExp) {
-            await logExp.execute({
+            const args: any = {
                 taskId: `sop-${Date.now()}`,
                 task_type: 'sop_execution',
                 agent_used: 'sop_engine',
                 outcome: 'success',
                 summary: finalSummary,
                 artifacts: JSON.stringify([]) // TODO: Track artifacts?
-            });
+            };
+            if (company) args.company = company;
+
+            await logExp.execute(args);
         }
     } catch (e) {
         console.error(`[SOP] Failed to log experience: ${(e as Error).message}`);

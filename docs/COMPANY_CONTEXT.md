@@ -72,3 +72,30 @@ The company context feature is validated by a comprehensive test suite:
 1.  **Context Isolation**: `tests/company_context_integration.test.ts` verifies that `ContextServer` maintains separate context files for each company and that `ContextManager` queries the Brain MCP with the correct company ID.
 2.  **Interface Integration**: `tests/interface_integration.test.ts` verifies that Slack and Teams adapters correctly parse the `--company` flag and pass it to the agent engine.
 3.  **Vector Database**: Integration tests confirm that `CompanyContextServer` ingests and queries documents from isolated `lancedb` instances for each company.
+
+## Multi-Tenancy Guarantees
+
+The 4-Pillar Vision (Company Context, SOP Engine, Ghost Mode, HR Loop) is built with strict multi-tenancy in mind. This ensures that agents can operate on multiple client projects simultaneously without data leakage.
+
+### Isolation Mechanisms
+
+-   **Memory Isolation:** The Brain MCP Server namespaces all episodic memories and semantic graphs by `company_id`. Queries for "Acme" will never return memories from "Beta".
+-   **Artifact Isolation:**
+    -   **Company Context:** Documents are stored in `.agent/companies/{company}/docs` and indexed in isolated vector databases.
+    -   **SOP Logs:** Execution logs are stored in `.agent/companies/{company}/brain/sop_logs.json`, preventing cross-contamination of operational history.
+    -   **HR Proposals:** Automated improvement proposals are stored in `.agent/companies/{company}/hr/proposals/`, ensuring that optimization suggestions are specific to the client's codebase and history.
+-   **Metric Tagging:** The Health Monitor MCP Server tags all performance metrics with `{ company: "acme" }`, allowing for per-client resource usage and performance tracking.
+
+### Validation
+
+Multi-tenant isolation is rigorously validated via `tests/integration/multi_tenant_4pillars.test.ts`. This comprehensive integration test simulates a concurrent environment where the agent:
+1.  Switches context between two companies ("Acme" and "Beta").
+2.  Executes SOPs for both companies simultaneously (interleaved).
+3.  Performs HR reviews for each company independently.
+4.  Tracks and queries health metrics separately.
+
+The test asserts that:
+-   Brain queries return only company-specific memories.
+-   SOP execution logs are written to the correct company directories.
+-   HR proposals are generated only for the company with issues and stored in the correct location.
+-   Health metrics can be filtered by company.

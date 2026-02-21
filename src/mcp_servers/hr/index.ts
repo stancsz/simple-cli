@@ -2,7 +2,7 @@ import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { z } from "zod";
 import { fileURLToPath } from "url";
-import { join } from "path";
+import { join, dirname } from "path";
 import { readFile, readdir, open } from "fs/promises";
 import { existsSync, statSync } from "fs";
 import { randomUUID } from "crypto";
@@ -42,6 +42,7 @@ export class HRServer {
       "Scans recent logs and past experiences to identify patterns and propose improvements.",
       {
         limit: z.number().optional().default(10).describe("Number of recent logs to analyze."),
+        company: z.string().optional().describe("The company/client identifier for namespacing.")
       },
       async (args) => this.analyzeLogs(args)
     );
@@ -54,6 +55,7 @@ export class HRServer {
         description: z.string().describe("Detailed description of the change."),
         affectedFiles: z.array(z.string()).describe("List of files to be modified."),
         patch: z.string().describe("The content of the change (diff or instructions)."),
+        company: z.string().optional().describe("The company/client identifier for namespacing.")
       },
       async (args) => this.proposeChange(args)
     );
@@ -61,29 +63,41 @@ export class HRServer {
     this.server.tool(
       "list_pending_proposals",
       "List all proposals awaiting review.",
-      {},
-      async () => this.listPendingProposals()
+      {
+        company: z.string().optional().describe("The company/client identifier for namespacing.")
+      },
+      async (args) => this.listPendingProposals(args)
     );
 
     this.server.tool(
       "perform_weekly_review",
       "Performs a deep analysis of logs and experiences from the past week to identify long-term patterns.",
-      {},
-      async () => this.performWeeklyReview()
+      {
+        company: z.string().optional().describe("The company/client identifier for namespacing.")
+      },
+      async (args) => this.performWeeklyReview(args)
     );
   }
 
-  public async performWeeklyReview() {
+  public async performWeeklyReview({ company }: { company?: string } = {}) {
     // Analyze last 50 logs for a broader weekly context
-    return this.performAnalysis(50);
+    return this.performAnalysis(50, company);
   }
 
-  private async performAnalysis(limit: number) {
+  private async performAnalysis(limit: number, company?: string) {
     // 1. Read SOP logs
     let logs: LogEntry[] = [];
-    if (existsSync(this.sopLogsPath)) {
+
+    // Determine SOP logs path based on company (matching SOPExecutor logic)
+    const targetDir = company
+      ? join(process.cwd(), '.agent', 'companies', company, 'brain')
+      : dirname(this.sopLogsPath); // fallback to original location
+
+    const sopLogsPath = join(targetDir, "sop_logs.json");
+
+    if (existsSync(sopLogsPath)) {
       try {
-        const content = await readFile(this.sopLogsPath, "utf-8");
+        const content = await readFile(sopLogsPath, "utf-8");
         logs = JSON.parse(content);
       } catch (e) {
         console.error("Error reading SOP logs:", e);
@@ -171,7 +185,7 @@ export class HRServer {
     let pastExperiences = "No specific past experiences queried.";
 
     if (hasFailures) {
-      const results = await this.memory.recall("failure error bug", 5);
+      const results = await this.memory.recall("failure error bug", 5, company);
       if (results.length > 0) {
         pastExperiences = results.map(r => `[Task: ${r.taskId}] ${r.userPrompt} -> ${r.agentResponse}`).join("\n---\n");
       }
@@ -224,8 +238,10 @@ export class HRServer {
         updatedAt: Date.now()
       };
 
-      await this.manager.init();
-      await this.manager.add(proposal);
+      // Use company-specific manager if needed
+      const manager = company ? new ProposalManager(process.cwd(), company) : this.manager;
+      await manager.init();
+      await manager.add(proposal);
 
       return {
         content: [{ type: "text" as const, text: `Analysis Complete. Proposal Created: ${proposal.id}\nTitle: ${proposal.title}\nAnalysis: ${analysisData.analysis}` }]
@@ -237,11 +253,11 @@ export class HRServer {
     };
   }
 
-  public async analyzeLogs({ limit = 10 }: { limit?: number }) {
-    return this.performAnalysis(limit);
+  public async analyzeLogs({ limit = 10, company }: { limit?: number, company?: string }) {
+    return this.performAnalysis(limit, company);
   }
 
-  public async proposeChange({ title, description, affectedFiles, patch }: { title: string, description: string, affectedFiles: string[], patch: string }) {
+  public async proposeChange({ title, description, affectedFiles, patch, company }: { title: string, description: string, affectedFiles: string[], patch: string, company?: string }) {
     // CHECK IF CORE UPDATE
     const isCoreUpdate = affectedFiles.some((f: string) => f.startsWith("src/"));
     if (isCoreUpdate) {
@@ -251,7 +267,8 @@ export class HRServer {
       };
     }
 
-    await this.manager.init();
+    const manager = company ? new ProposalManager(process.cwd(), company) : this.manager;
+    await manager.init();
 
     const proposal: Proposal = {
       id: randomUUID(),
@@ -264,15 +281,16 @@ export class HRServer {
       updatedAt: Date.now()
     };
 
-    await this.manager.add(proposal);
+    await manager.add(proposal);
     return {
       content: [{ type: "text" as const, text: `Proposal '${title}' created with ID: ${proposal.id}` }]
     };
   }
 
-  public async listPendingProposals() {
-    await this.manager.init();
-    const pending = await this.manager.getPending();
+  public async listPendingProposals({ company }: { company?: string } = {}) {
+    const manager = company ? new ProposalManager(process.cwd(), company) : this.manager;
+    await manager.init();
+    const pending = await manager.getPending();
 
     if (pending.length === 0) {
       return { content: [{ type: "text" as const, text: "No pending proposals." }] };

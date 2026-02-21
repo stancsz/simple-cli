@@ -102,9 +102,10 @@ export class SOPEngineServer {
       "Execute a Standard Operating Procedure (SOP) step-by-step.",
       {
         name: z.string().describe("The name of the SOP to execute (e.g., 'market_research')."),
-        input: z.string().describe("The input or context for the SOP execution.")
+        input: z.string().describe("The input or context for the SOP execution."),
+        company: z.string().optional().describe("The company/client identifier for namespacing.")
       },
-      async ({ name, input }) => {
+      async ({ name, input, company }) => {
         const safeName = name.replace(/[^a-zA-Z0-9_\-\.]/g, "_");
         const filename = safeName.endsWith(".md") ? safeName : `${safeName}.md`;
         const filePath = join(this.sopsDir, filename);
@@ -133,7 +134,7 @@ export class SOPEngineServer {
           // Initialize MCP happens inside executor.execute()
 
           const executor = new SOPExecutor(llm, mcp);
-          const result = await executor.execute(sop, input);
+          const result = await executor.execute(sop, input, company);
 
           return {
             content: [{ type: "text", text: result }]

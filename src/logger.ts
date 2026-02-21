@@ -2,18 +2,12 @@ import { appendFile, mkdir } from 'fs/promises';
 import { join } from 'path';
 import { existsSync } from 'fs';
 
-const AGENT_DIR = join(process.cwd(), '.agent');
-const METRICS_DIR = join(AGENT_DIR, 'metrics');
-
 // Ensure directory exists
-let dirChecked = false;
-
 async function ensureMetricsDir() {
-  if (dirChecked) return;
-  if (!existsSync(METRICS_DIR)) {
-    await mkdir(METRICS_DIR, { recursive: true });
+  const metricsDir = join(process.cwd(), '.agent', 'metrics');
+  if (!existsSync(metricsDir)) {
+    await mkdir(metricsDir, { recursive: true });
   }
-  dirChecked = true;
 }
 
 export interface MetricTags {
@@ -38,8 +32,9 @@ export async function logMetric(
   try {
     await ensureMetricsDir();
 
+    const metricsDir = join(process.cwd(), '.agent', 'metrics');
     const date = new Date().toISOString().split('T')[0];
-    const filename = join(METRICS_DIR, `${date}.ndjson`);
+    const filename = join(metricsDir, `${date}.ndjson`);
 
     const entry = {
       timestamp: new Date().toISOString(),
