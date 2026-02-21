@@ -139,7 +139,8 @@ export class V0DevServer {
           let parsed;
           try {
             // Attempt to parse JSON from the response text
-            const jsonMatch = response.message.match(/\{[\s\S]*\}/);
+            const message = response.message || response.raw || "";
+            const jsonMatch = message.match(/\{[\s\S]*\}/);
             if (jsonMatch) {
               parsed = JSON.parse(jsonMatch[0]);
             } else {

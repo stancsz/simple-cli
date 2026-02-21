@@ -58,11 +58,11 @@ export class SOPExecutor {
         const brainQuery = tools.find(t => t.name === 'brain_query');
         if (brainQuery) {
             const result = await brainQuery.execute({ query: `SOP execution: ${sop.title} ${input}`, limit: 3 });
-             // Check if result is string or object with content
+            // Check if result is string or object with content
             if (typeof result === 'string') {
                 pastContext = result;
-            } else if (result.content && Array.isArray(result.content)) {
-                pastContext = result.content.map((c: any) => c.text).join('\n');
+            } else if (result && typeof result === 'object' && 'content' in result && Array.isArray((result as any).content)) {
+                pastContext = (result as any).content.map((c: any) => c.text).join('\n');
             }
         }
     } catch (e) {

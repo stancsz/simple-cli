@@ -71,7 +71,7 @@ describe('Cursor MCP Server', () => {
     });
 
     const callArgs = mockSpawn.mock.calls[0][1];
-    expect(callArgs[0]).toMatch(/\.cursor\/tasks\/.*_Test_Task\.md$/);
+    expect(callArgs[0]).toMatch(/[\\/]\.cursor[\\/]tasks[\\/].*_Test_Task\.md$/);
     expect(callArgs[1]).toBe('file1.ts');
     expect(result.content[0].text).toContain('Task created');
   });
@@ -83,7 +83,7 @@ describe('Cursor MCP Server', () => {
     });
 
     const callArgs = mockSpawn.mock.calls[0][1];
-    expect(callArgs[0]).toMatch(/\.cursor\/tasks\/.*_edit_src_main\.ts\.md$/);
+    expect(callArgs[0]).toMatch(/[\\/]\.cursor[\\/]tasks[\\/].*_edit_src_main\.ts\.md$/);
     expect(callArgs[1]).toBe('src/main.ts');
   });
 
@@ -94,7 +94,7 @@ describe('Cursor MCP Server', () => {
     });
 
     const callArgs = mockSpawn.mock.calls[0][1];
-    expect(callArgs[0]).toMatch(/\.cursor\/tasks\/.*_generate\.md$/);
+    expect(callArgs[0]).toMatch(/[\\/]\.cursor[\\/]tasks[\\/].*_generate\.md$/);
     expect(callArgs[1]).toBe('server.ts');
   });
 

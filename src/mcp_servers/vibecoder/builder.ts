@@ -22,10 +22,11 @@ Rules:
     const response = await this.llm.generate(systemPrompt, [{ role: "user", content }]);
 
     // Extract code block if present
-    const codeBlock = response.message.match(/```(?:typescript|ts|js|javascript|json|tsx|jsx)?\n([\s\S]*?)```/);
+    const message = response.message || response.raw || "";
+    const codeBlock = message.match(/```(?:typescript|ts|js|javascript|json|tsx|jsx)?\n([\s\S]*?)```/);
     if (codeBlock) {
         return codeBlock[1];
     }
-    return response.message;
+    return message;
   }
 }

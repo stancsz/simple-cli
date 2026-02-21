@@ -16,7 +16,7 @@ Based on the initial prompt, ask 3-5 crucial questions to clarify the "Must-Have
 Do not ask trivial questions. Focus on architectural decisions, tech stack, and user experience.`;
 
     const response = await this.llm.generate(systemPrompt, [{ role: "user", content: context }]);
-    return response.message;
+    return response.message || response.raw || "";
   }
 
   async analyzeReference(path: string): Promise<string> {
@@ -67,6 +67,6 @@ Use Markdown format.`;
 
     const content = `User Answers/Context:\n${answers}\n\nReference Heuristics:\n${refs}`;
     const response = await this.llm.generate(systemPrompt, [{ role: "user", content }]);
-    return response.message;
+    return response.message || response.raw || "";
   }
 }

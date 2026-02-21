@@ -1,0 +1,2 @@
+{"timestamp":"2026-02-21T04:25:44.646Z","agent":"engine","metric":"tool_execution_time","value":0,"tags":{"tool":"write_files"}}
+{"timestamp":"2026-02-21T04:25:44.646Z","agent":"engine","metric":"tool_success","value":1,"tags":{"tool":"write_files"}}

@@ -1,0 +1,12 @@
+{
+  "id": "5e449d59-a5ff-49f9-9151-26dcdad1cf0f",
+  "title": "Manual Fix",
+  "description": "Fixing X",
+  "affectedFiles": [
+    "x.ts"
+  ],
+  "patch": "diff",
+  "status": "pending",
+  "createdAt": 1771647943004,
+  "updatedAt": 1771647943004
+}

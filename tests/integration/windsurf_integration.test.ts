@@ -140,7 +140,7 @@ describe('Windsurf MCP Server Integration', () => {
     // Verify Task File Creation
     const callArgs = mockSpawn.mock.calls[0][1];
     // Expected args: [taskFilePath, filePath]
-    expect(callArgs[0]).toMatch(/\.windsurf\/tasks\/.*_edit_src_main\.ts\.md$/);
+    expect(callArgs[0]).toMatch(/[\\/]\.windsurf[\\/]tasks[\\/].*_edit_src_main\.ts\.md$/);
     expect(callArgs[1]).toBe('src/main.ts');
 
     // Verify Brain Logging

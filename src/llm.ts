@@ -152,9 +152,15 @@ export class LLM {
         // Log Metrics
         logMetric('llm', 'llm_latency', duration, { model: modelName, provider: providerName });
         if (usage) {
-          logMetric('llm', 'llm_tokens_total', usage.totalTokens, { model: modelName, provider: providerName });
-          logMetric('llm', 'llm_tokens_prompt', usage.promptTokens, { model: modelName, provider: providerName });
-          logMetric('llm', 'llm_tokens_completion', usage.completionTokens, { model: modelName, provider: providerName });
+          // Handle potential undefined values
+          const totalTokens = usage.totalTokens ?? 0;
+          logMetric('llm', 'llm_tokens_total', totalTokens, { model: modelName, provider: providerName });
+          
+          // The AI SDK may have different property names - check for common patterns
+          const promptTokens = (usage as any).promptTokens ?? (usage as any).inputTokens ?? 0;
+          const completionTokens = (usage as any).completionTokens ?? (usage as any).outputTokens ?? 0;
+          logMetric('llm', 'llm_tokens_prompt', promptTokens, { model: modelName, provider: providerName });
+          logMetric('llm', 'llm_tokens_completion', completionTokens, { model: modelName, provider: providerName });
         }
 
         const parsed = this.parse(text, usage as any);

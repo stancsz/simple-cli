@@ -23,6 +23,6 @@ The Blueprint must be verified against the Specs. Any deviation must be justifie
 Format as Markdown.`;
 
     const response = await this.llm.generate(systemPrompt, [{ role: "user", content: `Here are the Specs:\n${specs}` }]);
-    return response.message;
+    return response.message || response.raw || "";
   }
 }
