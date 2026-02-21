@@ -166,6 +166,7 @@ To transition from a "Wrapper" to a true "Universal AI Integration Platform," th
     - **Sidecars**: Runs MCP servers (`health_monitor`) as sidecars for low-latency access.
     - **Multi-Tenancy**: Supports namespace-based isolation per company.
     - **Persistence**: Managed via PVCs for Brain memory.
+    - **Validation**: (✅ Active) Comprehensive E2E validation suite `tests/integration/kubernetes_production.test.ts` confirms deployment readiness, multi-tenancy isolation, and persistence recovery.
     - **Documentation**: Comprehensive guides in `deployment/README.md`.
 
 ---

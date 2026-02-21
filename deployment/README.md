@@ -52,3 +52,21 @@ To deploy for multiple companies, use separate namespaces or release names:
 helm install company-a deployment/chart --namespace company-a --set company="Company A"
 helm install company-b deployment/chart --namespace company-b --set company="Company B"
 ```
+
+## Validation
+
+To ensure production readiness, run the Kubernetes integration tests:
+
+```bash
+# Requires helm, kubectl, and a running cluster (e.g., k3d, minikube)
+npm test tests/integration/kubernetes_production.test.ts
+```
+
+The test suite will:
+1.  Check for `helm` and `kubectl` availability.
+2.  Validate Helm chart templates.
+3.  Deploy the agent and brain to a test namespace.
+4.  Verify multi-tenant isolation.
+5.  Execute an SOP inside the running pod.
+6.  Test persistence recovery by restarting pods.
+7.  Clean up all resources.

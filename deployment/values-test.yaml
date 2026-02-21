@@ -1,0 +1,42 @@
+# Test values for CI/CD
+company: "test-company"
+
+image:
+  repository: simple-agency
+  tag: "test"
+  pullPolicy: IfNotPresent
+
+agent:
+  replicas: 1
+  resources:
+    limits:
+      cpu: 500m
+      memory: 1Gi
+    requests:
+      cpu: 100m
+      memory: 512Mi
+  env:
+    LOG_LEVEL: debug
+    # specific test env vars
+    CI_TEST: "true"
+
+brain:
+  persistence:
+    enabled: true
+    size: 1Gi
+  resources:
+    limits:
+      cpu: 500m
+      memory: 1Gi
+    requests:
+      cpu: 100m
+      memory: 512Mi
+
+healthMonitor:
+  resources:
+    limits:
+      cpu: 200m
+      memory: 256Mi
+    requests:
+      cpu: 50m
+      memory: 128Mi
