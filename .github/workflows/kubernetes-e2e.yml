@@ -1,0 +1,38 @@
+name: Kubernetes E2E Validation
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  k8s-test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '20'
+        cache: 'npm'
+
+    - name: Install Dependencies
+      run: npm ci
+
+    - name: Setup Minikube
+      uses: medyagh/setup-minikube@master
+      with:
+        minikube-version: latest
+        driver: docker
+        container-runtime: docker
+
+    - name: Wait for Minikube
+      run: minikube status
+
+    - name: Run E2E Deployment Test
+      run: chmod +x scripts/test-k8s-deployment.sh && ./scripts/test-k8s-deployment.sh

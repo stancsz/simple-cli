@@ -167,6 +167,7 @@ To transition from a "Wrapper" to a true "Universal AI Integration Platform," th
     - **Multi-Tenancy**: Supports namespace-based isolation per company.
     - **Persistence**: Managed via PVCs for Brain memory.
     - **Documentation**: Comprehensive guides in `deployment/README.md`.
+    - **CI/CD**: Automated E2E validation via `.github/workflows/kubernetes-e2e.yml` and `scripts/test-k8s-deployment.sh`, ensuring robust 4-pillar operation before every release.
 
 ---
 

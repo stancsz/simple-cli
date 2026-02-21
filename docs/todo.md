@@ -150,3 +150,10 @@
 - [x] **SOP-as-Code**: Defined end-to-end workflow in `demos/simple-cli-showcase/docs/showcase_sop.md`.
 - [x] **Ghost Mode Simulation**: Implemented `demos/simple-cli-showcase/run_demo.ts` to orchestrate 24-hour autonomy.
 - [x] **Validation**: Verified full showcase flow via `tests/integration/showcase_simulation.test.ts`.
+
+## Phase 12: Production-Grade Kubernetes Deployment (✅ Implemented)
+- [x] **Helm Chart**: Created `deployment/chart/` for scalable deployment.
+- [x] **Docker Optimization**: Multi-stage build in `Dockerfile`.
+- [x] **CI/CD Pipeline**: Created `.github/workflows/kubernetes-e2e.yml` for automated validation.
+- [x] **E2E Validation**: Implemented `scripts/test-k8s-deployment.sh` to spin up K8s, deploy, and verify the 4-pillar system.
+- [x] **Production Hardening**: Validated multi-tenancy, persistence, and health monitoring in a live cluster environment.

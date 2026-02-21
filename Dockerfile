@@ -43,6 +43,7 @@ COPY --from=builder /app/persona.json ./persona.json
 COPY --from=builder /app/docs ./docs
 COPY --from=builder /app/sops ./sops
 COPY --from=builder /app/templates ./templates
+COPY --from=builder /app/demos ./demos
 
 # Ensure entrypoint is executable
 RUN chmod +x entrypoint.sh

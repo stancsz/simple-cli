@@ -52,3 +52,15 @@ To deploy for multiple companies, use separate namespaces or release names:
 helm install company-a deployment/chart --namespace company-a --set company="Company A"
 helm install company-b deployment/chart --namespace company-b --set company="Company B"
 ```
+
+## Testing & Validation
+
+The deployment includes an automated end-to-end validation suite that verifies the 4-Pillar System (Context, SOP, Ghost Mode, HR) in a live Kubernetes environment.
+
+To run the tests locally (requires `minikube` or `kind`):
+
+```bash
+./scripts/test-k8s-deployment.sh
+```
+
+See [VALIDATION.md](./VALIDATION.md) for detailed validation procedures and metrics.
