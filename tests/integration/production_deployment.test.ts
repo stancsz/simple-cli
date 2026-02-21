@@ -33,11 +33,11 @@ describe("Production Deployment Integration Test", () => {
     let testRoot: string;
 
     beforeAll(() => {
-        vi.useFakeTimers();
+        // vi.useFakeTimers();
     });
 
     afterAll(() => {
-        vi.useRealTimers();
+        // vi.useRealTimers();
     });
 
     beforeEach(async () => {
@@ -136,7 +136,7 @@ describe("Production Deployment Integration Test", () => {
             isServerRunning: () => true,
             init: async () => {},
             getClient: () => null, // Return null client to avoid calls or simulate empty
-            listServers: async () => []
+            listServers: () => []
         };
 
         const registry = new Registry();
