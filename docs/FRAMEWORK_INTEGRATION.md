@@ -24,6 +24,7 @@ We have recently switched the default reasoner from Claude/GPT-4o to **DeepSeek 
 *   **Windsurf**: Collaborative coding agent.
 *   **Bolt.new**: Rapid prototyping tool (simulated integration).
 *   **v0.dev**: AI-powered UI generation for React/Vue/HTML components.
+*   **Gemini**: Google's multimodal AI models (Pro and Flash).
 
 ## Adding New Frameworks
 
@@ -40,3 +41,9 @@ To add a new framework:
 *   **API**: v0.dev does not have a fully public, documented REST API at this time. The integration uses a client that mimics the expected structure (`https://api.v0.dev/...`) but includes robust fallback mechanisms (simulation/mocking) if the API is unreachable or changes.
 *   **Authentication**: Uses `V0DEV_API_KEY`.
 *   **Tools**: `v0dev_generate_component`, `v0dev_list_frameworks`, `v0dev_validate_prompt`.
+
+### Google Gemini Integration
+*   **Capabilities**: Multimodal generation, chat, and streaming using Gemini 1.5 Pro and Flash.
+*   **API**: Uses the official Google Generative AI SDK (`@google/generative-ai`).
+*   **Authentication**: Uses `GOOGLE_API_KEY`.
+*   **Tools**: `gemini_generate_content`, `gemini_chat`, `gemini_stream_content`.

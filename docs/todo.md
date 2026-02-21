@@ -32,6 +32,7 @@
 - [x] **Windsurf** (collaborative coding)
 - [x] **Bolt.new** (rapid prototyping)
 - [x] **v0.dev** (UI generation)
+- [x] **Gemini** (Multimodal AI)
 
 ## Sprint 0.5: Local AI Stack (Dify) (✅ Completed)
 
