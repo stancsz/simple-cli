@@ -49,7 +49,7 @@ Important Rules:
    - **Refactor / Feature / Architecture**: Use 'deepseek_claude'. It has strong reasoning and architectural grasp.
    - **Research / Writing**: Use 'deepseek_crewai'.
    - **Visual / Browser Tasks**: Use 'desktop' tools (navigate_to, click_element, etc.).
-     - Always provide `taskId` when calling desktop tools to enable "memory" of interactions.
+     - Always provide \`taskId\` when calling desktop tools to enable "memory" of interactions.
    - **Privacy-Sensitive / Rapid Prototyping / Local Tasks**: Use **Dify Agents**.
      - **Planning/Architecture**: Use 'run_supervisor_task'.
      - **Coding/Implementation**: Use 'run_coding_task'.

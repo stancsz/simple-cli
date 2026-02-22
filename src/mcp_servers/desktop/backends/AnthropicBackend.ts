@@ -8,15 +8,15 @@ export class AnthropicBackend implements DesktopBackend {
     }
   }
 
-  async navigate_to(url: string) {
+  async navigate_to(url: string): Promise<string> {
     throw new Error("Anthropic Computer Use Backend: navigate_to not implemented yet.");
   }
 
-  async click_element(selector: string) {
+  async click_element(selector: string): Promise<string> {
     throw new Error("Anthropic Computer Use Backend: click_element not implemented yet.");
   }
 
-  async type_text(selector: string, text: string) {
+  async type_text(selector: string, text: string): Promise<string> {
     throw new Error("Anthropic Computer Use Backend: type_text not implemented yet.");
   }
 
@@ -24,7 +24,7 @@ export class AnthropicBackend implements DesktopBackend {
     throw new Error("Anthropic Computer Use Backend: take_screenshot not implemented yet.");
   }
 
-  async extract_page_text() {
+  async extract_page_text(): Promise<string> {
     throw new Error("Anthropic Computer Use Backend: extract_page_text not implemented yet.");
   }
 

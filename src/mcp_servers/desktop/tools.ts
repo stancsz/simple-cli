@@ -32,9 +32,9 @@ export const createTools = (backend: DesktopBackend, memory?: EpisodicMemory) =>
       try {
         const result = await backend.navigate_to(url);
         await logInteraction(memory, taskId, `navigate_to: ${url}`, result, company);
-        return { content: [{ type: "text", text: result }] };
+        return { content: [{ type: "text" as const, text: result }] };
       } catch (e) {
-        return { content: [{ type: "text", text: `Error: ${(e as Error).message}` }], isError: true };
+        return { content: [{ type: "text" as const, text: `Error: ${(e as Error).message}` }], isError: true };
       }
     },
   },
@@ -50,9 +50,9 @@ export const createTools = (backend: DesktopBackend, memory?: EpisodicMemory) =>
       try {
         const result = await backend.click_element(selector);
         await logInteraction(memory, taskId, `click_element: ${selector}`, result, company);
-        return { content: [{ type: "text", text: result }] };
+        return { content: [{ type: "text" as const, text: result }] };
       } catch (e) {
-        return { content: [{ type: "text", text: `Error: ${(e as Error).message}` }], isError: true };
+        return { content: [{ type: "text" as const, text: `Error: ${(e as Error).message}` }], isError: true };
       }
     },
   },
@@ -69,9 +69,9 @@ export const createTools = (backend: DesktopBackend, memory?: EpisodicMemory) =>
       try {
         const result = await backend.type_text(selector, text);
         await logInteraction(memory, taskId, `type_text: ${text} into ${selector}`, result, company);
-        return { content: [{ type: "text", text: result }] };
+        return { content: [{ type: "text" as const, text: result }] };
       } catch (e) {
-        return { content: [{ type: "text", text: `Error: ${(e as Error).message}` }], isError: true };
+        return { content: [{ type: "text" as const, text: `Error: ${(e as Error).message}` }], isError: true };
       }
     },
   },
@@ -89,14 +89,14 @@ export const createTools = (backend: DesktopBackend, memory?: EpisodicMemory) =>
         return {
           content: [
             {
-              type: "image",
+              type: "image" as const,
               data: base64Image,
               mimeType: "image/png",
             },
           ],
         };
       } catch (e) {
-        return { content: [{ type: "text", text: `Error: ${(e as Error).message}` }], isError: true };
+        return { content: [{ type: "text" as const, text: `Error: ${(e as Error).message}` }], isError: true };
       }
     },
   },
@@ -111,9 +111,9 @@ export const createTools = (backend: DesktopBackend, memory?: EpisodicMemory) =>
       try {
         const text = await backend.extract_page_text();
         await logInteraction(memory, taskId, `extract_page_text`, `Extracted text (length: ${text.length})`, company);
-        return { content: [{ type: "text", text }] };
+        return { content: [{ type: "text" as const, text }] };
       } catch (e) {
-        return { content: [{ type: "text", text: `Error: ${(e as Error).message}` }], isError: true };
+        return { content: [{ type: "text" as const, text: `Error: ${(e as Error).message}` }], isError: true };
       }
     },
   },

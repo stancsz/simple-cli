@@ -1,10 +1,9 @@
 import { DesktopBackend } from "../interfaces/DesktopBackend.js";
-import { Stagehand } from "@browserbasehq/stagehand";
-import { Page } from "playwright";
+import { Stagehand, Page } from "@browserbasehq/stagehand";
 
 export class StagehandBackend implements DesktopBackend {
   private stagehand: Stagehand | null = null;
-  private page: Page | null = null;
+  private page: Page | undefined | null = null;
 
   async init() {
     if (!this.stagehand) {
@@ -12,10 +11,9 @@ export class StagehandBackend implements DesktopBackend {
       this.stagehand = new Stagehand({
         env: "LOCAL",
         verbose: 1,
-        debugDom: true,
       });
       await this.stagehand.init();
-      this.page = this.stagehand.page;
+      this.page = this.stagehand.context.activePage();
       console.log("Stagehand initialized.");
     }
   }
@@ -33,7 +31,7 @@ export class StagehandBackend implements DesktopBackend {
     if (!this.page) throw new Error("Browser not initialized");
     console.log(`Clicking element ${selector}...`);
     try {
-        await this.page.click(selector);
+        await this.page.locator(selector).click();
         return `Clicked element ${selector}`;
     } catch (e) {
         throw new Error(`Failed to click ${selector}: ${(e as Error).message}`);
@@ -44,7 +42,7 @@ export class StagehandBackend implements DesktopBackend {
     await this.init();
     if (!this.page) throw new Error("Browser not initialized");
     console.log(`Typing "${text}" into ${selector}...`);
-    await this.page.fill(selector, text);
+    await this.page.locator(selector).type(text);
     return `Typed text into ${selector}`;
   }
 
@@ -60,7 +58,7 @@ export class StagehandBackend implements DesktopBackend {
     await this.init();
     if (!this.page) throw new Error("Browser not initialized");
     const text = await this.page.evaluate(() => document.body.innerText);
-    return text;
+    return text as string;
   }
 
   async shutdown() {
