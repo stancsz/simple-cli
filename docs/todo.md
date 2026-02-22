@@ -34,6 +34,7 @@
 - [x] **v0.dev** (UI generation)
 - [x] **Gemini** (Multimodal AI)
 - [x] **Stagehand** (browser automation)
+- [x] **Desktop Backend Expansion** (Anthropic, OpenAI, Skyvern stubs)
 
 ## Sprint 0.5: Local AI Stack (Dify) (✅ Completed)
 

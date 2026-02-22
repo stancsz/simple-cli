@@ -37,7 +37,8 @@
         "src/mcp_servers/desktop/index.ts"
       ],
       "env": {
-        "MCP_DISABLE_DEPENDENCIES": "true"
+        "MCP_DISABLE_DEPENDENCIES": "true",
+        "DESKTOP_BACKEND": "stagehand"
       }
     }
   }

@@ -196,9 +196,11 @@ To transition from a "Wrapper" to a true "Universal AI Integration Platform," th
 - **Status:** Core MCP server implemented (`src/mcp_servers/desktop/`).
 - **Mechanism:**
     - **Stagehand Integration:** Wraps Stagehand library to provide `navigate`, `click`, `type`, `screenshot`, and `extract` tools.
+    - **Pluggable Backends:** (✅ Implemented) Support for Stagehand (Default), Anthropic Computer Use, OpenAI Operator, and Skyvern via `DESKTOP_BACKEND` config.
     - **MCP Server:** Exposes browser automation capabilities to the orchestrator.
+    - **Brain Integration:** (✅ Implemented) Logs visual interactions to Episodic Memory for future recall.
     - **Validation:** Integration tests mock Stagehand to verify tool execution flows.
-    - **Documentation:** See `src/mcp_servers/desktop/README.md`.
+    - **Documentation:** See `src/mcp_servers/desktop/README.md` and `docs/DESKTOP_BACKENDS.md`.
     - **Alignment:** See [Technical Specification Section 12](specs.md#12-design--desktop-orchestration-computer-use).
 
 ---
