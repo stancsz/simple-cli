@@ -35,3 +35,19 @@ The E2E Production Simulation (`tests/integration/e2e_production_simulation.test
 ```bash
 npm test -- tests/integration/e2e_production_simulation.test.ts
 ```
+
+## Long-Running Stress Test
+
+The Stress Test (`tests/stress/long_running_stress.test.ts`) simulates an extended 7-day operational period to validate system stability, self-healing, and metric tracking under load.
+
+### Scope
+1.  **7-Day Simulation**: Compressed timeline (minutes instead of days) simulating a full week of operation.
+2.  **Daily Routine**: Triggers Morning Standups, Workload Bursts, HR Reviews, and Nightly Dreaming.
+3.  **Chaos Injection**: Randomly injects high latency and errors into tool calls.
+4.  **Resilience**: Verifies the system recovers from errors and HR Loop proposes fixes.
+5.  **Metrics & Alerting**: Validates that the Health Monitor tracks metrics and alerts on anomalies.
+
+### Running the Test
+```bash
+npm test -- tests/stress/long_running_stress.test.ts
+```
