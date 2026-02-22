@@ -12,7 +12,7 @@ import { fileURLToPath } from "url";
 
 export class SOPEngineServer {
   private server: McpServer;
-  private sopsDir: string;
+  private sopDirs: string[];
 
   constructor() {
     this.server = new McpServer({
@@ -20,12 +20,34 @@ export class SOPEngineServer {
       version: "1.0.0",
     });
 
-    this.sopsDir = process.env.JULES_SOP_DIR || join(process.cwd(), "docs", "sops");
-    if (!existsSync(this.sopsDir)) {
-      mkdirSync(this.sopsDir, { recursive: true });
+    // Check both docs/sops (primary) and sops/ (secondary)
+    this.sopDirs = [
+      process.env.JULES_SOP_DIR || join(process.cwd(), "docs", "sops"),
+      join(process.cwd(), "sops")
+    ];
+
+    // Ensure at least the primary directory exists
+    if (!existsSync(this.sopDirs[0])) {
+      mkdirSync(this.sopDirs[0], { recursive: true });
     }
 
     this.setupTools();
+  }
+
+  private async findSopPath(name: string): Promise<string | null> {
+    const safeName = name.replace(/[^a-zA-Z0-9_\-\.]/g, "_");
+    const filename = safeName.endsWith(".md") ? safeName : `${safeName}.md`;
+
+    for (const dir of this.sopDirs) {
+      if (existsSync(dir)) {
+        const filePath = join(dir, filename);
+        if (existsSync(filePath)) {
+           // Security check: ensure file is within dir
+           if (filePath.startsWith(dir)) return filePath;
+        }
+      }
+    }
+    return null;
   }
 
   private setupTools() {
@@ -35,13 +57,20 @@ export class SOPEngineServer {
       {},
       async () => {
         try {
-          if (!existsSync(this.sopsDir)) {
-             return { content: [{ type: "text", text: "No SOPs found (directory missing)." }] };
+          const allSops = new Set<string>();
+          for (const dir of this.sopDirs) {
+            if (existsSync(dir)) {
+                const files = await readdir(dir);
+                files.filter(f => f.endsWith(".md")).forEach(f => allSops.add(f.replace(".md", "")));
+            }
           }
-          const files = await readdir(this.sopsDir);
-          const sops = files.filter(f => f.endsWith(".md")).map(f => f.replace(".md", ""));
+
+          if (allSops.size === 0) {
+             return { content: [{ type: "text", text: "No SOPs found." }] };
+          }
+
           return {
-            content: [{ type: "text", text: sops.length > 0 ? sops.join(", ") : "No SOPs found." }],
+            content: [{ type: "text", text: Array.from(allSops).join(", ") }],
           };
         } catch (e: any) {
           return {
@@ -59,19 +88,9 @@ export class SOPEngineServer {
         name: z.string().describe("The name of the SOP to validate."),
       },
       async ({ name }) => {
-        const safeName = name.replace(/[^a-zA-Z0-9_\-\.]/g, "_");
-        const filename = safeName.endsWith(".md") ? safeName : `${safeName}.md`;
-        const filePath = join(this.sopsDir, filename);
+        const filePath = await this.findSopPath(name);
 
-        // Security check
-        if (!filePath.startsWith(this.sopsDir)) {
-          return {
-            content: [{ type: "text", text: "Invalid SOP name." }],
-            isError: true
-          };
-        }
-
-        if (!existsSync(filePath)) {
+        if (!filePath) {
           return {
             content: [{ type: "text", text: `SOP '${name}' not found.` }],
             isError: true
@@ -105,19 +124,9 @@ export class SOPEngineServer {
         input: z.string().describe("The input or context for the SOP execution.")
       },
       async ({ name, input }) => {
-        const safeName = name.replace(/[^a-zA-Z0-9_\-\.]/g, "_");
-        const filename = safeName.endsWith(".md") ? safeName : `${safeName}.md`;
-        const filePath = join(this.sopsDir, filename);
+        const filePath = await this.findSopPath(name);
 
-        // Security check
-        if (!filePath.startsWith(this.sopsDir)) {
-          return {
-            content: [{ type: "text", text: "Invalid SOP name." }],
-            isError: true
-          };
-        }
-
-        if (!existsSync(filePath)) {
+        if (!filePath) {
           return {
             content: [{ type: "text", text: `SOP '${name}' not found.` }],
             isError: true
@@ -157,10 +166,11 @@ export class SOPEngineServer {
       async ({ name, content }) => {
         const safeName = name.replace(/[^a-zA-Z0-9_\-\.]/g, "_");
         const filename = safeName.endsWith(".md") ? safeName : `${safeName}.md`;
-        const filePath = join(this.sopsDir, filename);
+        // Always create in primary directory
+        const filePath = join(this.sopDirs[0], filename);
 
         // Security check
-        if (!filePath.startsWith(this.sopsDir)) {
+        if (!filePath.startsWith(this.sopDirs[0])) {
           return {
             content: [{ type: "text", text: "Invalid SOP name." }],
             isError: true
@@ -170,7 +180,7 @@ export class SOPEngineServer {
         try {
           await writeFile(filePath, content, "utf-8");
           return {
-            content: [{ type: "text", text: `SOP '${name}' created successfully.` }]
+            content: [{ type: "text", text: `SOP '${name}' created successfully in ${this.sopDirs[0]}.` }]
           };
         } catch (e: any) {
           return {

@@ -121,6 +121,7 @@
     - [x] Create `docs/COMPANY_CONTEXT.md`.
     - [x] Validated Company Context with comprehensive E2E tests (including Slack/Teams flags).
     - [x] ✅ Company Context production-tested with multi-tenant isolation and high-concurrency (12 tenants).
+    - [x] **Automated Onboarding**: Implemented `simple onboard-company` command (6-Pillar Setup).
 
 ### 8. Phase 7: The Hive Mind (✅ Implemented)
 - [x] **Swarm Orchestration**: Implement dynamic agent spawning via `opencowork`.

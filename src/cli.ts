@@ -87,6 +87,17 @@ async function main() {
     return;
   }
 
+  if (remainingArgs[0] === "onboard-company") {
+    try {
+      const { onboardCompany } = await import("./commands/onboard-company.js");
+      const companyName = remainingArgs[1];
+      await onboardCompany(companyName);
+    } catch (e: any) {
+      console.error("Failed to execute onboard-company:", e);
+    }
+    return;
+  }
+
   if (remainingArgs[0] === "init-company") {
     try {
       const { initCompany } = await import("./commands/init-company.js");

@@ -38,7 +38,7 @@ This SOP handles the deployment process for the main application.
 The SOP Engine exposes the following MCP tools:
 
 ### `sop_list`
-Lists all available SOPs in the `docs/sops/` directory.
+Lists all available SOPs in the `docs/sops/` and `sops/` directories.
 
 ### `sop_execute(name: string, input: string)`
 Executes a specific SOP.
