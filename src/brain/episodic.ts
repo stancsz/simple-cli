@@ -13,6 +13,8 @@ export interface PastEpisode {
   agentResponse: string;
   artifacts: string[];
   vector: number[];
+  simulation_attempts?: string[];
+  resolved_via_dreaming?: boolean;
   _distance?: number;
 }
 
@@ -58,7 +60,16 @@ export class EpisodicMemory {
      return await this.llm.embed(text);
   }
 
-  async store(taskId: string, request: string, solution: string, artifacts: string[] = [], company?: string): Promise<void> {
+  async store(
+      taskId: string,
+      request: string,
+      solution: string,
+      artifacts: string[] = [],
+      company?: string,
+      simulation_attempts?: string[],
+      resolved_via_dreaming?: boolean,
+      id?: string
+  ): Promise<void> {
     // Embed the interaction (request + solution)
     const textToEmbed = `Task: ${taskId}\nRequest: ${request}\nSolution: ${solution}`;
     const embedding = await this.getEmbedding(textToEmbed);
@@ -67,14 +78,16 @@ export class EpisodicMemory {
         throw new Error("Failed to generate embedding for memory.");
     }
 
-    const data = {
-      id: randomUUID(),
+    const data: PastEpisode = {
+      id: id || randomUUID(),
       taskId,
       timestamp: Date.now(),
       userPrompt: request,
       agentResponse: solution,
       artifacts: artifacts.length > 0 ? artifacts : ["none"],
       vector: embedding,
+      simulation_attempts,
+      resolved_via_dreaming
     };
 
     let tableName = this.defaultTableName;
@@ -103,6 +116,26 @@ export class EpisodicMemory {
           }
         } else {
           await table.add([data]);
+        }
+    });
+  }
+
+  async delete(id: string, company?: string): Promise<void> {
+    let tableName = this.defaultTableName;
+    if (company) {
+        if (/^[a-zA-Z0-9_-]+$/.test(company)) {
+            tableName = `episodic_memories_${company}`;
+        }
+    }
+
+    await this.connector.withLock(company, async () => {
+        const table = await this.connector.getTable(tableName);
+        if (table) {
+            try {
+                await table.delete(`id = '${id}'`);
+            } catch (e) {
+                console.warn(`Failed to delete episode ${id}:`, e);
+            }
         }
     });
   }

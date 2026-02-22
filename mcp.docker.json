@@ -67,9 +67,26 @@
     "health_monitor": {
       "command": "node",
       "args": ["/app/dist/mcp_servers/health_monitor/index.js"]
+    },
+    "dreaming": {
+      "command": "node",
+      "args": ["/app/dist/mcp_servers/dreaming/index.js"]
     }
   },
   "scheduledTasks": [
+    {
+      "id": "nightly_dreaming",
+      "name": "Nightly Dreaming",
+      "trigger": "cron",
+      "schedule": "0 2 * * *",
+      "action": "mcp.call_tool",
+      "args": {
+        "server": "dreaming",
+        "tool": "start_dreaming_session",
+        "arguments": { "simulation_count": 5 }
+      },
+      "description": "Offline simulation to replay and fix past failures."
+    },
     {
       "id": "health_check",
       "name": "System Health Check",

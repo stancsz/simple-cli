@@ -43,8 +43,11 @@ export class BrainServer {
         solution: z.string().describe("The agent's final solution or response."),
         artifacts: z.string().optional().describe("JSON string array of modified file paths."),
         company: z.string().optional().describe("The company/client identifier for namespacing."),
+        simulation_attempts: z.string().optional().describe("JSON string array of simulation attempts."),
+        resolved_via_dreaming: z.boolean().optional().describe("Whether this episode was resolved via dreaming."),
+        id: z.string().optional().describe("The unique ID of the episode (optional, for updates/overrides)."),
       },
-      async ({ taskId, request, solution, artifacts, company }) => {
+      async ({ taskId, request, solution, artifacts, company, simulation_attempts, resolved_via_dreaming, id }) => {
         let artifactList: string[] = [];
         if (artifacts) {
           try {
@@ -54,10 +57,32 @@ export class BrainServer {
             artifactList = [];
           }
         }
-        await this.episodic.store(taskId, request, solution, artifactList, company);
+        let simAttempts: string[] | undefined = undefined;
+        if (simulation_attempts) {
+            try {
+                simAttempts = JSON.parse(simulation_attempts);
+                if (!Array.isArray(simAttempts)) simAttempts = undefined;
+            } catch {
+                simAttempts = undefined;
+            }
+        }
+        await this.episodic.store(taskId, request, solution, artifactList, company, simAttempts, resolved_via_dreaming, id);
         return {
           content: [{ type: "text", text: "Memory stored successfully." }],
         };
+      }
+    );
+
+    this.server.tool(
+      "brain_delete_episode",
+      "Delete a specific episodic memory by ID.",
+      {
+        id: z.string().describe("The ID of the episode to delete."),
+        company: z.string().optional().describe("The company/client identifier for namespacing."),
+      },
+      async ({ id, company }) => {
+        await this.episodic.delete(id, company);
+        return { content: [{ type: "text", text: `Episode ${id} deleted.` }] };
       }
     );
 
@@ -68,12 +93,18 @@ export class BrainServer {
         query: z.string().describe("The search query."),
         limit: z.number().optional().default(3).describe("Max number of results."),
         company: z.string().optional().describe("The company/client identifier for namespacing."),
+        format: z.enum(["text", "json"]).optional().default("text").describe("Output format: 'text' (default) or 'json'."),
       },
-      async ({ query, limit = 3, company }) => {
+      async ({ query, limit = 3, company, format }) => {
         const results = await this.episodic.recall(query, limit, company);
         if (results.length === 0) {
           return { content: [{ type: "text", text: "No relevant memories found." }] };
         }
+
+        if (format === "json") {
+            return { content: [{ type: "text", text: JSON.stringify(results, null, 2) }] };
+        }
+
         const text = results
           .map(
             (r) => {

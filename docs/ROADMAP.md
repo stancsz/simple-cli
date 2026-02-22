@@ -111,6 +111,11 @@ To transition from a "Wrapper" to a true "Universal AI Integration Platform," th
 - **Concept:** The system identifies bottlenecks (e.g., slow tools, repetitive failures) and proposes PRs to its own repo.
 - **Mechanism:** "HR Loop" (implemented) + "Core Update" protocols (Dual-verification required).
     - **HR MCP Server**: Analyzes logs (SOP and general execution) and suggests improvements (`analyze_logs`, `propose_change`, `perform_weekly_review`).
+    - **Dreaming (Offline Simulation)**: (✅ Implemented)
+        - **Mechanism**: Nightly simulation loop (`src/mcp_servers/dreaming/`) replays recent failures from Brain memory during idle periods.
+        - **Execution**: Spawns specialized sub-agents via Swarm protocol to retry failed tasks with new strategies.
+        - **Learning**: Updates Brain episodic memory with successful resolutions (`resolved_via_dreaming`), enabling future recall of the fix.
+        - **Scheduling**: Triggered via `mcp.docker.json` scheduled tasks (default: 2 AM).
     - **Core Update MCP**: Securely modifies `src/` files with `propose_core_update` and `apply_core_update`.
     - **Memory Integration**: Uses the Brain MCP to recall past failures and delegation patterns.
     - **Safety Protocol**: Proposals are stored as 'pending' in `.agent/hr/proposals/` and require human approval (token or strict YOLO checks) before application.
