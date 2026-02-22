@@ -198,7 +198,8 @@ To transition from a "Wrapper" to a true "Universal AI Integration Platform," th
     - **Smart Router:** Uses LLM to classify tasks and select the best backend (e.g., "Fill form" -> Skyvern, "Click button" -> Stagehand).
     - **Polyglot Drivers:** Adapter pattern supporting multiple backends.
         - **Stagehand:** (✅ Active) Fast, local automation.
-        - **Anthropic/OpenAI/Skyvern:** (✅ Skeleton) Ready for API integration.
+        - **Anthropic:** (✅ Implemented) Beta driver with Computer Use API.
+        - **OpenAI/Skyvern:** (✅ Skeleton) Ready for API integration.
     - **Unified Interface:** Standardized `navigate`, `click`, `type`, `screenshot` tools.
     - **Validation:** Integration tests verify routing logic and driver selection.
     - **Documentation:** See `docs/DESKTOP_ORCHESTRATION.md`.

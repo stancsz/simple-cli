@@ -9,9 +9,9 @@ The server acts as a smart router, dispatching commands to one of the available 
 1.  **Stagehand (Default)**:
     *   **Best for**: Web automation, form filling, known selectors, speed.
     *   **Mechanism**: Uses Playwright + Stagehand library.
-2.  **Anthropic Computer Use** (Planned/Skeleton):
-    *   **Best for**: Desktop applications, complex visual tasks, when selectors are unknown.
-    *   **Mechanism**: Uses Anthropic's Computer Use API.
+2.  **Anthropic Computer Use (Beta)**:
+    *   **Best for**: Complex visual tasks, semantic instructions ("click the login button"), when selectors are unknown.
+    *   **Mechanism**: Uses Anthropic's Claude 3.5 Sonnet Computer Use API + Playwright for execution.
 3.  **OpenAI Operator** (Planned/Skeleton):
     *   **Best for**: General web browsing and research.
     *   **Mechanism**: Uses OpenAI's Operator model.
@@ -49,7 +49,19 @@ In `mcp.json`:
   "args": ["tsx", "src/mcp_servers/desktop_orchestrator/index.ts"],
   "env": {
     "DESKTOP_PREFERRED_BACKEND": "stagehand",
+    "ANTHROPIC_API_KEY": "sk-ant-...",
     "MCP_DISABLE_DEPENDENCIES": "true"
   }
 }
 ```
+
+### Driver Setup
+
+#### Stagehand
+- Included by default.
+- Requires no extra API keys (unless using LLM features for complex acts).
+
+#### Anthropic Computer Use
+- Requires `ANTHROPIC_API_KEY` with access to `computer-use-2024-10-22` beta.
+- Uses local Playwright browser (controlled by Stagehand internally) for execution.
+- Supports semantic actions like "click the login button" by taking screenshots and asking Claude to locate coordinates.

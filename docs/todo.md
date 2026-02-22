@@ -178,6 +178,7 @@
     - [x] Added support for `preferred_backend` configuration.
 - [x] **Drivers**:
     - [x] **Stagehand**: Ported existing functionality.
-    - [x] **Polyglot Stubs**: Created skeleton drivers for Anthropic, OpenAI, Skyvern.
+    - [x] **Anthropic**: Implemented full Computer Use driver.
+    - [x] **Polyglot Stubs**: Created skeleton drivers for OpenAI, Skyvern.
 - [x] **Validation**:
     - [x] Integration tests for routing and driver selection.

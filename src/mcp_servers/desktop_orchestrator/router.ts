@@ -1,8 +1,5 @@
 import { DesktopDriver } from "./types.js";
-import { StagehandDriver } from "./drivers/StagehandDriver.js";
-import { AnthropicComputerUseDriver } from "./drivers/AnthropicComputerUseDriver.js";
-import { OpenAIOperatorDriver } from "./drivers/OpenAIOperatorDriver.js";
-import { SkyvernDriver } from "./drivers/SkyvernDriver.js";
+import { StagehandDriver, AnthropicComputerUseDriver, OpenAIOperatorDriver, SkyvernDriver } from "./drivers/index.js";
 import { createLLM } from "../../llm.js";
 
 export class DesktopRouter {
