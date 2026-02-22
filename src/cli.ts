@@ -87,6 +87,27 @@ async function main() {
     return;
   }
 
+  if (remainingArgs[0] === "quick-start") {
+    try {
+      const { quickStart } = await import("./commands/quick-start.js");
+      let scenario;
+      let demoMode = false;
+      const originalArgs = process.argv.slice(2);
+      for (let i = 0; i < originalArgs.length; i++) {
+        if (originalArgs[i] === "--scenario" && i + 1 < originalArgs.length) {
+          scenario = originalArgs[i + 1];
+        }
+        if (originalArgs[i] === "--demo-mode") {
+          demoMode = true;
+        }
+      }
+      await quickStart(scenario, demoMode);
+    } catch (e: any) {
+      console.error("Failed to execute quick-start:", e);
+    }
+    return;
+  }
+
   if (remainingArgs[0] === "onboard-company") {
     try {
       const { onboardCompany } = await import("./commands/onboard-company.js");
