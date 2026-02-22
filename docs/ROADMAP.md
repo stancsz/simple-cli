@@ -190,16 +190,18 @@ To transition from a "Wrapper" to a true "Universal AI Integration Platform," th
     - **Contribution Guidelines:** (✅ Completed) Created `docs/CONTRIBUTING.md` to establish clear standards for code, PRs, and testing.
     - **Documentation Improvements:** (✅ Implemented) Updated README and Roadmaps to reflect the "Integration First" philosophy.
 
-### Phase 14: Visual & Desktop Agency (✅ Implemented)
-**Goal:** Enable the agent to interact with web interfaces and desktop applications visually.
-- **Concept:** Use browser automation (Stagehand) to perform tasks that require visual context or DOM interaction.
-- **Status:** Core MCP server implemented (`src/mcp_servers/desktop/`).
+### Phase 14: Visual & Desktop Agency (✅ Enhanced: Polyglot Orchestrator)
+**Goal:** Enable the agent to interact with web interfaces and desktop applications visually using any backend.
+- **Concept:** A unified "Desktop Orchestrator" that intelligently routes tasks to Stagehand, Anthropic, OpenAI, or Skyvern.
+- **Status:** Polyglot Orchestrator implemented (`src/mcp_servers/desktop_orchestrator/`).
 - **Mechanism:**
-    - **Stagehand Integration:** Wraps Stagehand library to provide `navigate`, `click`, `type`, `screenshot`, and `extract` tools.
-    - **MCP Server:** Exposes browser automation capabilities to the orchestrator.
-    - **Validation:** Integration tests mock Stagehand to verify tool execution flows.
-    - **Documentation:** See `src/mcp_servers/desktop/README.md`.
-    - **Alignment:** See [Technical Specification Section 12](specs.md#12-design--desktop-orchestration-computer-use).
+    - **Smart Router:** Uses LLM to classify tasks and select the best backend (e.g., "Fill form" -> Skyvern, "Click button" -> Stagehand).
+    - **Polyglot Drivers:** Adapter pattern supporting multiple backends.
+        - **Stagehand:** (✅ Active) Fast, local automation.
+        - **Anthropic/OpenAI/Skyvern:** (✅ Skeleton) Ready for API integration.
+    - **Unified Interface:** Standardized `navigate`, `click`, `type`, `screenshot` tools.
+    - **Validation:** Integration tests verify routing logic and driver selection.
+    - **Documentation:** See `docs/DESKTOP_ORCHESTRATION.md`.
 
 ---
 

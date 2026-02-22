@@ -1,13 +1,15 @@
 import { Stagehand } from "@browserbasehq/stagehand";
 import { Page } from "playwright";
+import { DesktopDriver } from "../types.js";
 
-export class StagehandClient {
+export class StagehandDriver implements DesktopDriver {
+  name = "stagehand";
   private stagehand: Stagehand | null = null;
   private page: Page | null = null;
 
   async init() {
     if (!this.stagehand) {
-      console.log("Initializing Stagehand...");
+      console.log("Initializing Stagehand Driver...");
       this.stagehand = new Stagehand({
         env: "LOCAL",
         verbose: 1,
@@ -19,7 +21,7 @@ export class StagehandClient {
     }
   }
 
-  async navigate_to(url: string) {
+  async navigate(url: string) {
     await this.init();
     if (!this.page) throw new Error("Browser not initialized");
     console.log(`Navigating to ${url}...`);
@@ -27,7 +29,7 @@ export class StagehandClient {
     return `Navigated to ${url}`;
   }
 
-  async click_element(selector: string) {
+  async click(selector: string) {
     await this.init();
     if (!this.page) throw new Error("Browser not initialized");
     console.log(`Clicking element ${selector}...`);
@@ -39,7 +41,7 @@ export class StagehandClient {
     }
   }
 
-  async type_text(selector: string, text: string) {
+  async type(selector: string, text: string) {
     await this.init();
     if (!this.page) throw new Error("Browser not initialized");
     console.log(`Typing "${text}" into ${selector}...`);
@@ -47,7 +49,7 @@ export class StagehandClient {
     return `Typed text into ${selector}`;
   }
 
-  async take_screenshot() {
+  async screenshot() {
     await this.init();
     if (!this.page) throw new Error("Browser not initialized");
     console.log("Taking screenshot...");
@@ -55,11 +57,25 @@ export class StagehandClient {
     return buffer.toString("base64");
   }
 
-  async extract_page_text() {
+  async extract_text() {
     await this.init();
     if (!this.page) throw new Error("Browser not initialized");
     const text = await this.page.evaluate(() => document.body.innerText);
     return text;
+  }
+
+  async execute_complex_flow(goal: string) {
+      await this.init();
+      if (!this.stagehand) throw new Error("Stagehand not initialized");
+
+      console.log(`Executing complex flow: ${goal}`);
+      try {
+          // Stagehand's act method
+          await this.stagehand.act(goal);
+          return `Successfully executed action: ${goal}`;
+      } catch (e) {
+          throw new Error(`Failed to execute flow: ${(e as Error).message}`);
+      }
   }
 
   async shutdown() {

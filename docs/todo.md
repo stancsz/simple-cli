@@ -168,3 +168,16 @@
 - [x] **User-Friendly Website**: Host a documentation site on GitHub Pages. (Live at https://stan-chen.github.io/simple-cli/)
 - [x] **Getting Started Tutorial**: Create a comprehensive guide for new users (`docs/GETTING_STARTED.md`).
 - [x] **Contribution Guidelines**: Establish clear guidelines for contributors.
+
+### 15. Phase 14: Visual & Desktop Agency (✅ Enhanced: Polyglot Orchestrator)
+- [x] **Core Architecture**:
+    - [x] Implemented `DesktopOrchestrator` server.
+    - [x] Created `DesktopDriver` interface for polyglot support.
+- [x] **Smart Router**:
+    - [x] Implemented LLM-based routing logic.
+    - [x] Added support for `preferred_backend` configuration.
+- [x] **Drivers**:
+    - [x] **Stagehand**: Ported existing functionality.
+    - [x] **Polyglot Stubs**: Created skeleton drivers for Anthropic, OpenAI, Skyvern.
+- [x] **Validation**:
+    - [x] Integration tests for routing and driver selection.
