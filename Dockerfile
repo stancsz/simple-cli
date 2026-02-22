@@ -1,8 +1,8 @@
 # Stage 1: Builder
 FROM node:20-alpine AS builder
 
-# Install build dependencies for native modules
-RUN apk add --no-cache python3 make g++
+# Install build dependencies for native modules (including git and cmake for node-llama-cpp)
+RUN apk add --no-cache python3 make g++ git cmake
 
 WORKDIR /app
 

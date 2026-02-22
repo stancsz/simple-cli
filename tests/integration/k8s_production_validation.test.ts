@@ -59,6 +59,8 @@ const isKindAvailable = (() => {
   try {
     execSync("kind version", { stdio: "ignore" });
     execSync("kubectl version --client", { stdio: "ignore" });
+    // Also check if a cluster is actually running/accessible
+    execSync("kubectl cluster-info", { stdio: "ignore", timeout: 5000 });
     return true;
   } catch {
     return false;
