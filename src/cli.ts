@@ -11,6 +11,7 @@ import { WorkflowEngine } from "./workflows/workflow_engine.js";
 import { SOPRegistry } from "./workflows/sop_registry.js";
 import { createExecuteSOPTool } from "./workflows/execute_sop_tool.js";
 import { Briefcase, createSwitchCompanyTool } from "./context/briefcase.js";
+import { loadConfig } from "./config.js";
 
 async function main() {
   const args = process.argv.slice(2);
@@ -97,6 +98,18 @@ async function main() {
     return;
   }
 
+  if (remainingArgs[0] === "company") {
+    try {
+      const { companyCommand } = await import("./commands/company.js");
+      const subcommand = remainingArgs[1];
+      const args = remainingArgs.slice(2);
+      await companyCommand(subcommand, ...args);
+    } catch (e: any) {
+      console.error("Failed to execute company command:", e);
+    }
+    return;
+  }
+
   if (remainingArgs[0] === "daemon") {
     try {
       const { daemon } = await import("./daemon/daemon_cli.js");
@@ -144,9 +157,16 @@ async function main() {
   const switchTool = createSwitchCompanyTool(briefcase);
   registry.tools.set(switchTool.name, switchTool as any);
 
-  // Apply initial company context if env var is set
-  if (process.env.JULES_COMPANY) {
-    await briefcase.switchCompany(process.env.JULES_COMPANY);
+  // Apply initial company context if env var is set or active in config
+  let company = process.env.JULES_COMPANY;
+  if (!company) {
+    const config = await loadConfig();
+    company = config.active_company;
+  }
+
+  if (company) {
+    process.env.JULES_COMPANY = company;
+    await briefcase.switchCompany(company);
   }
 
   const engine = new Engine(provider, registry, mcp);

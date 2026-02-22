@@ -1,7 +1,23 @@
-import { mkdir, readFile, writeFile } from "fs/promises";
+import { mkdir, readFile, writeFile, copyFile, readdir, stat } from "fs/promises";
 import { existsSync } from "fs";
 import { join } from "path";
 import { LanceConnector } from "../mcp_servers/brain/lance_connector.js";
+
+async function copyDir(src: string, dest: string) {
+    await mkdir(dest, { recursive: true });
+    const entries = await readdir(src, { withFileTypes: true });
+
+    for (const entry of entries) {
+        const srcPath = join(src, entry.name);
+        const destPath = join(dest, entry.name);
+
+        if (entry.isDirectory()) {
+            await copyDir(srcPath, destPath);
+        } else {
+            await copyFile(srcPath, destPath);
+        }
+    }
+}
 
 export async function setupCompany(name: string, context?: any): Promise<void> {
     const cwd = process.cwd();
@@ -18,6 +34,25 @@ export async function setupCompany(name: string, context?: any): Promise<void> {
         if (!existsSync(dir)) {
             await mkdir(dir, { recursive: true });
             console.log(`  Created ${dir}`);
+        }
+    }
+
+    // Copy templates
+    const templateDir = join(cwd, "templates", "company_onboarding");
+    if (existsSync(templateDir)) {
+        console.log("Copying onboarding templates...");
+        try {
+            if (existsSync(join(templateDir, "default_sops"))) {
+                await copyDir(join(templateDir, "default_sops"), join(companyDir, "sops"));
+            }
+            if (existsSync(join(templateDir, "default_brain_config.json"))) {
+                await copyFile(join(templateDir, "default_brain_config.json"), join(companyDir, "brain", "config.json"));
+            }
+            if (existsSync(join(templateDir, "default_persona.json"))) {
+                 await copyFile(join(templateDir, "default_persona.json"), join(companyDir, "config", "persona.json"));
+            }
+        } catch (e: any) {
+            console.warn(`Warning: Failed to copy some templates: ${e.message}`);
         }
     }
 
@@ -90,10 +125,20 @@ export async function setupCompany(name: string, context?: any): Promise<void> {
         config.companies = [];
     }
 
+    let updated = false;
     if (!config.companies.includes(name)) {
         config.companies.push(name);
-        await writeFile(configPath, JSON.stringify(config, null, 2));
+        updated = true;
         console.log(`  Added ${name} to .agent/config.json`);
+    }
+
+    // Always switch to the newly created/setup company
+    config.active_company = name;
+    updated = true;
+    console.log(`  Set active company to ${name}`);
+
+    if (updated) {
+        await writeFile(configPath, JSON.stringify(config, null, 2));
     } else {
         console.log(`  Company ${name} already in config.`);
     }

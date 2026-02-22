@@ -1,0 +1,5 @@
+{
+  "context_retention_days": 30,
+  "max_context_tokens": 4000,
+  "embedding_model": "text-embedding-3-small"
+}
