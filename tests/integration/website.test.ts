@@ -1,12 +1,28 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, beforeAll } from 'vitest';
 import fs from 'fs';
 import path from 'path';
+import { execSync } from 'child_process';
 
 describe('Website Structure and Build', () => {
   const rootDir = process.cwd();
   const websiteDir = path.join(rootDir, 'docs/website');
   const apiDir = path.join(websiteDir, 'api');
   const siteDir = path.join(rootDir, '_site');
+
+  beforeAll(() => {
+    // Ensure API docs are generated before running tests
+    // This makes the test robust in CI environments that don't run build:docs beforehand
+    if (!fs.existsSync(apiDir)) {
+      console.log('API docs not found. Generating...');
+      try {
+        execSync('npm run build:docs', { stdio: 'inherit' });
+      } catch (error) {
+        console.error('Failed to generate API docs:', error);
+        // We don't throw here to let assertions fail naturally if needed,
+        // but likely tests will fail if this fails.
+      }
+    }
+  }, 120000); // Increase timeout for build process
 
   it('should have the correct source structure', () => {
     expect(fs.existsSync(path.join(websiteDir, 'index.md'))).toBe(true);
