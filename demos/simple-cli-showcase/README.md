@@ -15,7 +15,7 @@ The demo simulates a 24-hour cycle in just a few minutes:
 ## 🚀 Quickstart
 
 ### Option 1: Fast Simulation (Recommended)
-Run the simulation script to see the 4 pillars in action immediately.
+Run the self-contained simulation script to see the 4 pillars in action immediately.
 
 ```bash
 # From the root of the repository
@@ -28,7 +28,21 @@ npm run demo
 -   Execution of the `showcase_sop.md`.
 -   Simulated "Morning Standup" and "HR Review" tasks.
 
-### Option 2: Production Deployment (Docker)
+### Option 2: CLI Installation (Interactive Mode)
+Install "Showcase Corp" into your main CLI environment to interact with it manually using the `simple` command.
+
+```bash
+# Setup the company context
+npx tsx scripts/setup-showcase.ts
+
+# Switch to the context
+simple company switch showcase-corp
+
+# Interact with the agent
+simple chat "What is the tech stack?"
+```
+
+### Option 3: Production Deployment (Docker)
 Deploy the agent as a background daemon (Ghost Mode) that runs 24/7.
 
 ```bash
