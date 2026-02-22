@@ -106,6 +106,15 @@ To transition from a "Wrapper" to a true "Universal AI Integration Platform," th
     - **Negotiation:** `negotiate_task` enables agents to bid for tasks based on cost/quality trade-offs.
     - **Brain Integration:** Logs all spawning and negotiation events for future optimization.
 
+### Phase 7.2: Dreaming (Offline Simulation) (✅ Implemented)
+**Goal**: Allow the agent to learn from failure while the user sleeps.
+- **Concept**: A nightly process that retries past failures using simulation agents.
+- **Mechanism**:
+    - **Dreaming MCP Server**: Queries the Brain for failed tasks.
+    - **Swarm Simulation**: Spawns specialized agents to attempt new strategies in a sandbox.
+    - **Learning Integration**: Successful strategies are written to the Brain and HR logs for review.
+    - **Scheduling**: Automatically triggered at 2 AM via Scheduler.
+
 ### Phase 8: Recursive Evolution (Self-Modifying Code) (✅ Implemented)
 **Goal:** The agent can safely upgrade its own source code to improve efficiency.
 - **Concept:** The system identifies bottlenecks (e.g., slow tools, repetitive failures) and proposes PRs to its own repo.

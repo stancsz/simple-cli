@@ -32,6 +32,7 @@ export class Scheduler extends EventEmitter {
     await this.ensureHRTask();
     await this.ensureMorningStandupTask();
     await this.ensureWeeklyReviewTask();
+    await this.ensureDreamingTask();
 
     // Resume pending tasks
     if (this.pendingTasks.size > 0) {
@@ -159,6 +160,39 @@ export class Scheduler extends EventEmitter {
           await writeFile(this.scheduleFile, JSON.stringify(config, null, 2));
       } catch (e) {
           console.error("Failed to write scheduler.json with default Weekly HR Review task:", e);
+      }
+    }
+  }
+
+  private async ensureDreamingTask() {
+    let config: ScheduleConfig = { tasks: [] };
+    if (existsSync(this.scheduleFile)) {
+      try {
+        const content = await readFile(this.scheduleFile, 'utf-8');
+        config = JSON.parse(content);
+      } catch (e) {
+        config = { tasks: [] };
+      }
+    }
+
+    const taskName = "Nightly Dreaming Simulation";
+    const hasTask = config.tasks?.some((t: any) => t.id === "dreaming-simulation");
+
+    if (!hasTask) {
+      console.log("Adding default Nightly Dreaming Simulation task.");
+      if (!config.tasks) config.tasks = [];
+      config.tasks.push({
+          id: "dreaming-simulation",
+          name: taskName,
+          trigger: "cron",
+          schedule: "0 2 * * *", // Daily at 02:00 UTC
+          prompt: "Run the Nightly Dreaming Simulation using the 'start_dreaming_session' tool from the 'dreaming' server.",
+          yoloMode: true
+      });
+      try {
+          await writeFile(this.scheduleFile, JSON.stringify(config, null, 2));
+      } catch (e) {
+          console.error("Failed to write scheduler.json with default Dreaming task:", e);
       }
     }
   }

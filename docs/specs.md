@@ -262,12 +262,12 @@ To move towards AGI-like behavior, the system must not just *learn* but *rewrite
 *   **Safety**: Updates to the Core Logic require a **Dual-Verification** (Supervisor + Human Approval).
 *   **Goal**: If the agent realizes its `learnings.json` lookup is inefficient, it can write a new vector-based adapter and hot-swap it.
 
-### 7.2 "Dreaming" (Offline Simulation)
+### 7.2 "Dreaming" (Offline Simulation) (✅ Implemented)
 *   **Concept**: When idle (no user tasks), the Orchestrator enters a simulation state.
 *   **Activity**:
-    1.  Replays past failures from `logs/`.
-    2.  Spins up Delegate Agents to retry those failures with new strategies.
-    3.  If a new strategy works, it updates `learnings.json`.
+    1.  Replays past failures from `logs/` and Brain memories.
+    2.  Spins up Delegate Agents (Swarm) to retry those failures with new strategies via `run_simulation`.
+    3.  If a new strategy works, it updates the Brain and logs to `sop_logs.json` for HR review.
 *   **Benefit**: The agent improves while the user sleeps.
 
 ---

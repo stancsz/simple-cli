@@ -67,6 +67,10 @@
     "health_monitor": {
       "command": "node",
       "args": ["/app/dist/mcp_servers/health_monitor/index.js"]
+    },
+    "dreaming": {
+      "command": "node",
+      "args": ["/app/dist/mcp_servers/dreaming/index.js"]
     }
   },
   "scheduledTasks": [

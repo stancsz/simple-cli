@@ -41,6 +41,19 @@ export class SwarmServer {
     );
 
     this.server.tool(
+      "run_simulation",
+      "Run a synchronous simulation of a task to fix a past failure.",
+      {
+        task: z.string().describe("The task to simulate."),
+        context: z.string().describe("Context about the failure."),
+        company_id: z.string().optional().describe("The company context ID."),
+      },
+      async ({ task, context, company_id }) => {
+        return await this.runSimulation(task, context, company_id);
+      }
+    );
+
+    this.server.tool(
       "negotiate_task",
       "Facilitate bidding/negotiation between multiple agents for task assignment.",
       {
@@ -60,6 +73,88 @@ export class SwarmServer {
         return await this.listAgents();
       }
     );
+  }
+
+  async runSimulation(task: string, failureContext: string, companyId?: string) {
+    const agentId = `sim-${Date.now()}`;
+    const role = "Simulation Agent";
+
+    // Initialize Engine
+    const llm = createLLM();
+    const mcp = new MCP();
+    const registry = new Registry();
+    const engine = new Engine(llm, registry, mcp);
+
+    this.workers.set(agentId, engine);
+
+    // Setup Context
+    const baseSkill = builtinSkills.code;
+    const systemPrompt = `You are a ${role} (Agent ID: ${agentId}).
+    Your goal is to fix a past failure.
+
+    Context:
+    ${failureContext}
+
+    Task:
+    ${task}
+
+    Analyze the failure and implement a fix. verify your work.
+    If you succeed, end with "Outcome: Success" and a summary.
+    If you fail, end with "Outcome: Failure".`;
+
+    const skill = {
+      ...baseSkill,
+      name: role,
+      systemPrompt: systemPrompt,
+    };
+
+    const context = new Context(process.cwd(), skill as any);
+    this.workerContexts.set(agentId, context);
+    this.workerDetails.set(agentId, { role, parentId: "dreaming-server" });
+
+    // Run Simulation
+    try {
+        await engine.run(context, `[Simulation Start]`, { interactive: false, company: companyId });
+    } catch (e) {
+        console.error(`[Swarm] Simulation ${agentId} failed: ${(e as Error).message}`);
+        return {
+             content: [{ type: "text", text: JSON.stringify({ status: "error", result: (e as Error).message }) }]
+        };
+    }
+
+    // Extract Result
+    const history = context.history;
+    const lastMsg = history.filter(m => m.role === "assistant").pop();
+    const resultText = lastMsg ? lastMsg.content : "No response";
+
+    const isSuccess = resultText.toLowerCase().includes("outcome: success") || resultText.toLowerCase().includes("verified");
+
+    // Simple artifact detection
+    const artifacts: string[] = [];
+    history.forEach(m => {
+        if (m.role === "assistant") {
+            try {
+                const data = JSON.parse(m.content);
+                if (data.args && (data.args.filepath || data.args.path)) {
+                   artifacts.push(data.args.filepath || data.args.path);
+                }
+            } catch {}
+        }
+    });
+
+    return {
+      content: [
+        {
+          type: "text",
+          text: JSON.stringify({
+              status: isSuccess ? "success" : "failure",
+              result: resultText,
+              artifacts: artifacts,
+              agent_id: agentId
+          }),
+        },
+      ],
+    };
   }
 
   async spawnSubAgent(role: string, task: string, parentId: string, companyId?: string) {
