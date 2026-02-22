@@ -1,0 +1,44 @@
+{
+  "mcpServers": {
+    "filesystem": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@modelcontextprotocol/server-filesystem",
+        "."
+      ]
+    },
+    "git": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@modelcontextprotocol/server-git",
+        "."
+      ]
+    },
+    "brain": {
+      "command": "npx",
+      "args": [
+        "tsx",
+        "src/mcp_servers/brain/index.ts"
+      ]
+    },
+    "health_monitor": {
+      "command": "npx",
+      "args": [
+        "tsx",
+        "src/mcp_servers/health_monitor/index.ts"
+      ]
+    },
+    "desktop": {
+      "command": "npx",
+      "args": [
+        "tsx",
+        "src/mcp_servers/desktop/index.ts"
+      ],
+      "env": {
+        "MCP_DISABLE_DEPENDENCIES": "true"
+      }
+    }
+  }
+}
