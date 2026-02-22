@@ -33,6 +33,7 @@
 - [x] **Bolt.new** (rapid prototyping)
 - [x] **v0.dev** (UI generation)
 - [x] **Gemini** (Multimodal AI)
+- [x] **Stagehand** (browser automation)
 
 ## Sprint 0.5: Local AI Stack (Dify) (✅ Completed)
 

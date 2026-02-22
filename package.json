@@ -46,6 +46,7 @@
     "@ai-sdk/google": "^3.0.20",
     "@ai-sdk/openai": "^3.0.25",
     "@anthropic-ai/sdk": "^0.74.0",
+    "@browserbasehq/stagehand": "^3.0.8",
     "@clack/prompts": "^0.7.0",
     "@google/generative-ai": "^0.24.1",
     "@lancedb/lancedb": "^0.26.2",

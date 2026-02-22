@@ -74,6 +74,13 @@
     },
     "operational_persona": {
       "url": "http://operational_persona:3005/sse"
+    },
+    "desktop": {
+      "command": "node",
+      "args": ["/app/dist/mcp_servers/desktop/index.js"],
+      "env": {
+         "MCP_DISABLE_DEPENDENCIES": "true"
+      }
     }
   },
   "scheduledTasks": [
