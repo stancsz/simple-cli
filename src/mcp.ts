@@ -7,6 +7,7 @@ import { join } from "path";
 import { log } from "@clack/prompts";
 import { spawn } from "child_process";
 import { logMetric } from "./logger.js";
+import { FrameworkIngestionEngine } from "./framework_ingestion/ingest.js";
 
 // Local definition replacing exported one from config.ts
 interface AgentConfig {
@@ -103,6 +104,17 @@ export class MCP {
     const count = this.discoveredServers.size;
     if (count > 0) {
         log.info(`Discovered ${count} MCP servers (not started). Use 'mcp_list_servers' and 'mcp_start_server' to manage them.`);
+    }
+
+    // Integrate Framework Ingestion
+    const engine = new FrameworkIngestionEngine();
+    try {
+        const frameworks = await engine.scanForFrameworks();
+        if (frameworks.length > 0) {
+            log.info(`Framework Ingestion: Discovered ${frameworks.length} frameworks compatible with Brain memory.`);
+        }
+    } catch (e) {
+        log.error(`Framework Ingestion failed: ${e}`);
     }
   }
 
