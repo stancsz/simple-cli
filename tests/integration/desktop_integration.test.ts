@@ -1,30 +1,24 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { tools } from "../../src/mcp_servers/desktop/tools.js";
+import { createTools } from "../../src/mcp_servers/desktop/tools.js";
+import { DesktopBackend } from "../../src/mcp_servers/desktop/interfaces/DesktopBackend.js";
 
-// Mock Stagehand
-const mockPage = {
-  goto: vi.fn(),
-  click: vi.fn(),
-  fill: vi.fn(),
-  screenshot: vi.fn().mockResolvedValue(Buffer.from("fake-image")),
-  evaluate: vi.fn().mockResolvedValue("Page content"),
-};
-
-const mockStagehandInstance = {
+// Mock Backend
+const mockBackend: DesktopBackend = {
   init: vi.fn(),
-  page: mockPage,
-  close: vi.fn(),
+  navigate_to: vi.fn().mockResolvedValue("Navigated to https://example.com"),
+  click_element: vi.fn().mockResolvedValue("Clicked #btn"),
+  type_text: vi.fn().mockResolvedValue("Typed hello"),
+  take_screenshot: vi.fn().mockResolvedValue("fake-base64-image"),
+  extract_page_text: vi.fn().mockResolvedValue("Page content"),
+  shutdown: vi.fn(),
 };
-
-vi.mock("@browserbasehq/stagehand", () => {
-  return {
-    Stagehand: vi.fn(() => mockStagehandInstance),
-  };
-});
 
 describe("Desktop Orchestration Integration", () => {
+  let tools: ReturnType<typeof createTools>;
+
   beforeEach(() => {
     vi.clearAllMocks();
+    tools = createTools(mockBackend);
   });
 
   it("should define all required tools", () => {
@@ -43,8 +37,7 @@ describe("Desktop Orchestration Integration", () => {
 
     const result = await tool.handler({ url: "https://example.com" } as any);
 
-    expect(mockStagehandInstance.init).toHaveBeenCalled();
-    expect(mockPage.goto).toHaveBeenCalledWith("https://example.com", { waitUntil: "domcontentloaded" });
+    expect(mockBackend.navigate_to).toHaveBeenCalledWith("https://example.com");
     // @ts-ignore
     expect(result.content[0].text).toContain("Navigated to https://example.com");
   });
@@ -56,7 +49,7 @@ describe("Desktop Orchestration Integration", () => {
 
     await tool.handler({ selector: "#btn" } as any);
 
-    expect(mockPage.click).toHaveBeenCalledWith("#btn");
+    expect(mockBackend.click_element).toHaveBeenCalledWith("#btn");
   });
 
   it("should type text", async () => {
@@ -66,7 +59,7 @@ describe("Desktop Orchestration Integration", () => {
 
     await tool.handler({ selector: "#input", text: "hello" } as any);
 
-    expect(mockPage.fill).toHaveBeenCalledWith("#input", "hello");
+    expect(mockBackend.type_text).toHaveBeenCalledWith("#input", "hello");
   });
 
   it("should take a screenshot", async () => {
@@ -76,9 +69,9 @@ describe("Desktop Orchestration Integration", () => {
 
     const result = await tool.handler({} as any);
 
-    expect(mockPage.screenshot).toHaveBeenCalled();
+    expect(mockBackend.take_screenshot).toHaveBeenCalled();
     // @ts-ignore
-    expect(result.content[0].data).toBe(Buffer.from("fake-image").toString("base64"));
+    expect(result.content[0].data).toBe("fake-base64-image");
     // @ts-ignore
     expect(result.content[0].mimeType).toBe("image/png");
   });
@@ -90,7 +83,7 @@ describe("Desktop Orchestration Integration", () => {
 
     const result = await tool.handler({} as any);
 
-    expect(mockPage.evaluate).toHaveBeenCalled();
+    expect(mockBackend.extract_page_text).toHaveBeenCalled();
     // @ts-ignore
     expect(result.content[0].text).toBe("Page content");
   });
