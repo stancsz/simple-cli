@@ -9,12 +9,14 @@ import { SemanticGraph } from "../../brain/semantic_graph.js";
 import { join, dirname } from "path";
 import { readFile, readdir } from "fs/promises";
 import { existsSync } from "fs";
+import { FrameworkIngestionEngine } from "../../framework_ingestion/ingest.js";
 
 export class BrainServer {
   private server: McpServer;
   private episodic: EpisodicMemory;
   private semantic: SemanticGraph;
   private sopsDir: string;
+  private frameworkEngine: FrameworkIngestionEngine;
 
   constructor() {
     this.server = new McpServer({
@@ -25,14 +27,42 @@ export class BrainServer {
     const baseDir = process.env.JULES_AGENT_DIR ? dirname(process.env.JULES_AGENT_DIR) : process.cwd();
     this.episodic = new EpisodicMemory(baseDir);
     this.semantic = new SemanticGraph(baseDir);
+    this.frameworkEngine = new FrameworkIngestionEngine(baseDir);
     this.sopsDir = process.env.JULES_AGENT_DIR
         ? join(process.env.JULES_AGENT_DIR, "sops")
         : join(process.cwd(), ".agent", "sops");
+
+    // Auto-discover frameworks on startup
+    this.frameworkEngine.scanForFrameworks().then(discovered => {
+        if (discovered.length > 0) {
+            console.error(`Brain auto-discovered ${discovered.length} frameworks.`);
+        }
+    }).catch(e => console.error("Error scanning for frameworks:", e));
 
     this.setupTools();
   }
 
   private setupTools() {
+    this.server.tool(
+        "brain_register_framework",
+        "Manually register a framework to enable memory sharing.",
+        {
+            name: z.string().describe("The name of the framework (must match folder in src/mcp_servers/)."),
+        },
+        async ({ name }) => {
+            const result = await this.frameworkEngine.registerFramework(name);
+            if (!result) {
+                return {
+                    content: [{ type: "text", text: `Framework '${name}' not found or could not be registered.` }],
+                    isError: true
+                };
+            }
+            return {
+                content: [{ type: "text", text: `Successfully registered framework '${name}' with policy: ${JSON.stringify(result.memoryPolicy)}` }]
+            };
+        }
+    );
+
     // Episodic Memory Tools
     this.server.tool(
       "brain_store",

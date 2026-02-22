@@ -21,41 +21,69 @@ export interface PastEpisode {
 }
 
 export class EpisodicMemory {
-  private dbPath: string;
-  private connector: LanceConnector;
+  private baseDir: string;
+  private connectors: Map<string, LanceConnector> = new Map();
   private llm: ReturnType<typeof createLLM>;
   private defaultTableName = "episodic_memories";
 
   constructor(baseDir: string = process.cwd(), llm?: ReturnType<typeof createLLM>) {
-    // Store vector data in .agent/brain/episodic/
-    // Unless overridden by BRAIN_STORAGE_ROOT env var
-    const storageRoot = process.env.BRAIN_STORAGE_ROOT || join(baseDir, ".agent", "brain", "episodic");
-    this.dbPath = storageRoot;
-    this.connector = new LanceConnector(this.dbPath);
+    this.baseDir = baseDir;
     this.llm = llm || createLLM();
   }
 
   async init() {
-    await this.connector.connect();
+    // Initialize default connector
+    await this.getConnector();
+  }
+
+  private async getConnector(company?: string): Promise<LanceConnector> {
+    const key = company || "default";
+    if (!this.connectors.has(key)) {
+        let dbPath;
+        if (company && company !== "default") {
+            // Check if legacy table exists in default DB?
+            // For simplicity and performance in this task, we enforce directory isolation for named companies
+            // as per "Each company's Brain data should be isolated in .agent/brain/<company_id>/"
+
+            if (!/^[a-zA-Z0-9_-]+$/.test(company)) {
+                throw new Error(`Invalid company name: ${company}`);
+            }
+
+            // Path: .agent/brain/<company>/episodic
+            dbPath = join(this.baseDir, ".agent", "brain", company, "episodic");
+        } else {
+            // Default path (root)
+            dbPath = process.env.BRAIN_STORAGE_ROOT || join(this.baseDir, ".agent", "brain", "episodic");
+        }
+
+        const connector = new LanceConnector(dbPath);
+        await connector.connect();
+        this.connectors.set(key, connector);
+    }
+    return this.connectors.get(key)!;
   }
 
   private async getTable(company?: string): Promise<lancedb.Table | null> {
-    let tableName = this.defaultTableName;
-    if (company) {
-        if (/^[a-zA-Z0-9_-]+$/.test(company)) {
-            tableName = `episodic_memories_${company}`;
-        } else {
-            console.warn(`Invalid company name: ${company}, falling back to default table.`);
-        }
-    }
+    const connector = await this.getConnector(company);
 
-    return await this.connector.getTable(tableName);
+    // For isolated directories, we can just use "episodic_memories" as the table name
+    // regardless of company name, because the DB itself is isolated.
+    // However, to be extra safe or allow merging later, we can keep the suffix if we want.
+    // But the requirement implies isolation.
+    // Let's use defaultTableName ("episodic_memories") for isolated DBs.
+    // For the default DB (no company), we use defaultTableName.
+
+    // WAIT: If we are modifying existing logic, we must be careful.
+    // Existing logic used `episodic_memories_<company>` in the default DB.
+    // If we now point to a new DB, we should use a consistent table name inside it.
+
+    const tableName = this.defaultTableName;
+    return await connector.getTable(tableName);
   }
 
   private async getEmbedding(text: string): Promise<number[] | undefined> {
      if (process.env.MOCK_EMBEDDINGS === "true") {
          const hash = text.split("").reduce((acc, char) => acc + char.charCodeAt(0), 0);
-         // Use a fixed size vector.
          const vector = new Array(1536).fill(0).map((_, i) => ((hash * (i + 1)) % 1000) / 1000);
          return vector;
      }
@@ -74,7 +102,6 @@ export class EpisodicMemory {
       tokens?: number,
       duration?: number
   ): Promise<void> {
-    // Embed the interaction (request + solution)
     const textToEmbed = `Task: ${taskId}\nRequest: ${request}\nSolution: ${solution}`;
     const embedding = await this.getEmbedding(textToEmbed);
 
@@ -96,25 +123,17 @@ export class EpisodicMemory {
       duration: duration || 0
     };
 
-    let tableName = this.defaultTableName;
-    if (company) {
-        if (/^[a-zA-Z0-9_-]+$/.test(company)) {
-            tableName = `episodic_memories_${company}`;
-        }
-    }
+    const connector = await this.getConnector(company);
+    const tableName = this.defaultTableName;
 
-    // Use the connector to acquire a lock for the company
-    await this.connector.withLock(company, async () => {
-        let table = await this.connector.getTable(tableName);
+    await connector.withLock(company, async () => {
+        let table = await connector.getTable(tableName);
 
         if (!table) {
           try {
-            // Cast to any because lancedb types might not match strict TS interface
-            table = await this.connector.createTable(tableName, [data as any]);
+            table = await connector.createTable(tableName, [data as any]);
           } catch (e) {
-            // Handle race condition where table was created by another process/request
-            // Although withLock should prevent this for the same company table
-            table = await this.connector.getTable(tableName);
+            table = await connector.getTable(tableName);
             if (table) {
               await table.add([data as any]);
             } else {
@@ -128,15 +147,11 @@ export class EpisodicMemory {
   }
 
   async delete(id: string, company?: string): Promise<void> {
-    let tableName = this.defaultTableName;
-    if (company) {
-        if (/^[a-zA-Z0-9_-]+$/.test(company)) {
-            tableName = `episodic_memories_${company}`;
-        }
-    }
+    const connector = await this.getConnector(company);
+    const tableName = this.defaultTableName;
 
-    await this.connector.withLock(company, async () => {
-        const table = await this.connector.getTable(tableName);
+    await connector.withLock(company, async () => {
+        const table = await connector.getTable(tableName);
         if (table) {
             try {
                 await table.delete(`id = '${id}'`);
@@ -165,10 +180,6 @@ export class EpisodicMemory {
     const table = await this.getTable(company);
     if (!table) return [];
 
-    // Retrieve recent episodes
-    // Note: LanceDB query() without search() does full table scan unless filtered
-    // We fetch all (or reasonable amount) and sort by timestamp in memory as LanceDB
-    // doesn't support 'order by' in all versions or it might be slower without index.
     const results = await table.query()
         .limit(limit)
         .toArray();

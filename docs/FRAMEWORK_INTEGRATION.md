@@ -26,6 +26,35 @@ We have recently switched the default reasoner from Claude/GPT-4o to **DeepSeek 
 *   **v0.dev**: AI-powered UI generation for React/Vue/HTML components.
 *   **Gemini**: Google's multimodal AI models (Pro and Flash).
 
+## Framework Auto-Registration
+
+The Brain now includes an auto-discovery mechanism for framework integration.
+
+### Mechanism
+
+1.  **Discovery**: On startup, the `FrameworkIngestionEngine` scans `src/mcp_servers/` for available frameworks.
+2.  **Registration**: It registers them with a default memory policy (Read-Write, Shared).
+3.  **Injection**: The Brain makes the memory configuration available. The framework wrapper can call `FrameworkIngestionEngine.injectContext(name)` to retrieve the policy and configure its toolset to include Brain capabilities.
+
+### Manual Registration
+
+You can also manually register a framework using the Brain tool:
+
+```bash
+simple call brain_register_framework --name my_framework
+```
+
+### Memory Policy
+
+Default policy for auto-discovered frameworks:
+```json
+{
+  "access": "read-write",
+  "shared": true,
+  "isolation": "shared"
+}
+```
+
 ## Adding New Frameworks
 
 To add a new framework:
@@ -33,6 +62,7 @@ To add a new framework:
 1.  **Ingest**: Analyze the CLI or API of the target framework.
 2.  **Digest**: Create a new MCP server in `src/mcp_servers/<framework_name>/`.
 3.  **Deploy**: Register the server in `src/cli.ts` (for local discovery) or `mcp.json` (for Docker/explicit config).
+4.  **Auto-Register**: The Brain will automatically detect the new server and enable memory sharing capabilities.
 
 ## Specific Integration Notes
 

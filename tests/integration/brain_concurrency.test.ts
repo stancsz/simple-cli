@@ -101,7 +101,7 @@ describe("Brain Concurrency", () => {
     // We can try to manually create a lock file and see if it recovers or fails.
 
     const company = "locked_company";
-    const connector = (memory as any).connector;
+    const connector = await (memory as any).getConnector(company);
 
     // Manually acquire lock to simulate another process holding it
     // We start an async operation that holds the lock for a while

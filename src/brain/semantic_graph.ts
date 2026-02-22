@@ -44,8 +44,12 @@ export class SemanticGraph {
       console.warn(`Invalid company name for graph: ${company}, falling back to default.`);
       return join(this.baseDir, ".agent", "brain", "graph.json");
     }
-    const filename = company ? `graph_${company}.json` : "graph.json";
-    return join(this.baseDir, ".agent", "brain", filename);
+
+    if (company && company !== "default") {
+        return join(this.baseDir, ".agent", "brain", company, "graph.json");
+    }
+
+    return join(this.baseDir, ".agent", "brain", "graph.json");
   }
 
   private async withFileLock<T>(company: string | undefined, action: () => Promise<T>): Promise<T> {
