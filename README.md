@@ -7,6 +7,10 @@
 
 Simple-CLI is a **Meta-Orchestrator** with a unique superpower: **rapid framework ingestion**. Point it at any AI framework (Jules, Claude, Aider, CrewAI, Kimi, Devin), and it will digest, wrap, and deploy it as a specialized sub-agent—complete with token-efficient long-term memory and autonomous execution capabilities.
 
+## 📚 Getting Started
+New to Simple CLI? Start here to set up your digital agency in minutes.
+**[👉 Read the Comprehensive Getting Started Guide](docs/GETTING_STARTED.md)**
+
 ## 🎯 Core Strength
 **Simple-CLI is a Framework-Agnostic Integration Engine.**
 
