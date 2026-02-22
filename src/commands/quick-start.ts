@@ -3,19 +3,27 @@ import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { StdioClientTransport } from "@modelcontextprotocol/sdk/client/stdio.js";
 import { Transport } from "@modelcontextprotocol/sdk/shared/transport.js";
 import { JSONRPCMessage } from "@modelcontextprotocol/sdk/types.js";
-import { spawn } from "child_process";
-import { join } from "path";
-import { mkdtemp, rm, writeFile, mkdir } from "fs/promises";
+import { join, dirname } from "path";
+import { mkdtemp, rm } from "fs/promises";
 import { tmpdir } from "os";
 import pc from "picocolors";
 import ora from "ora";
+import { fileURLToPath } from "url";
+
+// Import demo scripts
+import { runAiderDemo } from "../quick-start/demo-scripts/aider.js";
+import { runCrewAIDemo } from "../quick-start/demo-scripts/crewai.js";
+import { runV0DevDemo } from "../quick-start/demo-scripts/v0dev.js";
+import { showBrainMemories } from "../quick-start/brain-demo.js";
+import { showSharedContext } from "../quick-start/shared-context.js";
 
 // Logging Transport Wrapper
 class LoggingTransport implements Transport {
     constructor(private inner: Transport, private log: (msg: string) => void) {
         inner.onmessage = (msg) => {
-            // Filter out notifications to reduce noise if needed, but for demo we show everything
-            this.log(pc.dim(`[MCP Rx] ${JSON.stringify(msg)}`));
+            const str = JSON.stringify(msg);
+            if (str.length < 200) this.log(pc.dim(`[MCP Rx] ${str}`));
+            else this.log(pc.dim(`[MCP Rx] ${str.substring(0, 100)}...`));
             this.onmessage?.(msg);
         };
         inner.onclose = () => this.onclose?.();
@@ -27,23 +35,33 @@ class LoggingTransport implements Transport {
 
     async start() { await this.inner.start(); }
     async send(message: JSONRPCMessage) {
-        this.log(pc.dim(`[MCP Tx] ${JSON.stringify(message)}`));
+        const str = JSON.stringify(message);
+        if (str.length < 200) this.log(pc.dim(`[MCP Tx] ${str}`));
+        else this.log(pc.dim(`[MCP Tx] ${str.substring(0, 100)}...`));
         await this.inner.send(message);
     }
     async close() { await this.inner.close(); }
 }
 
 export async function quickStart(scenario?: string, demoMode: boolean = false) {
-    intro(pc.bgBlue(pc.white(" Simple CLI - Quick Start Wizard ")));
+    const isInteractive = !demoMode && process.argv.indexOf("--non-interactive") === -1;
 
-    if (!scenario) {
+    if (isInteractive) {
+        intro(pc.bgBlue(pc.white(" Simple CLI - Quick Start Wizard ")));
+    }
+
+    // Determine scenarios to run
+    let selectedScenarios: string[] = [];
+    if (scenario) {
+        selectedScenarios = scenario === "all" ? ["aider", "crewai", "v0dev"] : [scenario];
+    } else if (isInteractive) {
         const selected = await select({
             message: "Choose a demo scenario:",
             options: [
-                { value: "bug-fix", label: "Fix a Bug (Aider)", hint: "Automated debugging & patching" },
-                { value: "research", label: "Research Topic (CrewAI)", hint: "Multi-agent deep dive" },
-                { value: "ui", label: "Generate UI (v0.dev)", hint: "Text-to-Interface generation" },
-                { value: "tour", label: "System Tour", hint: "Learn about the architecture" },
+                { value: "aider", label: "Coding Agent (Aider)", hint: "Fix bugs automatically" },
+                { value: "crewai", label: "Research Team (CrewAI)", hint: "Multi-agent deep dive" },
+                { value: "v0dev", label: "UI Generation (v0.dev)", hint: "Text-to-Interface" },
+                { value: "all", label: "Run All Demos", hint: "Full tour" },
             ],
         });
 
@@ -51,160 +69,106 @@ export async function quickStart(scenario?: string, demoMode: boolean = false) {
             cancel("Operation cancelled.");
             return;
         }
-        scenario = selected as string;
+        selectedScenarios = selected === "all" ? ["aider", "crewai", "v0dev"] : [selected as string];
+    } else {
+        // Default to all in non-interactive mode if not specified
+        selectedScenarios = ["aider", "crewai", "v0dev"];
     }
 
-    if (scenario === "tour") {
-        await showTour();
-        return;
-    }
-
-    await runScenario(scenario, demoMode);
-
-    // After scenario, ask if they want to generate config
-    if (!process.env.JULES_TEST_MODE) {
-        const shouldGen = await confirm({
-            message: "Do you want to generate an mcp.json snippet for these tools?",
-        });
-        if (shouldGen && !isCancel(shouldGen)) {
-            generateMcpConfig();
-        }
-    }
-
-    outro("Demo completed! You can run 'simple quick-start' again to try other scenarios.");
-}
-
-async function showTour() {
-    note(
-        `Simple CLI is a Meta-Orchestrator that integrates various AI frameworks as 'Subordinate Agents'.
-
-        It uses the Model Context Protocol (MCP) to standardize communication.
-
-        Integrations:
-        - **Jules**: The core orchestrator.
-        - **Aider**: Best-in-class coding agent. (Avg integration time: 1 day)
-        - **CrewAI**: Multi-agent research teams. (Avg integration time: 3 days)
-        - **v0.dev**: React/Vue UI generation. (Avg integration time: 1 day)
-
-        The 'Brain' (.agent/brain/) allows all these agents to share memory.`,
-        "System Tour"
-    );
-}
-
-async function runScenario(scenario: string, demoMode: boolean) {
     const spinner = ora();
     const tempDir = await mkdtemp(join(tmpdir(), "simple-cli-demo-"));
-    const logs: string[] = [];
-
-    // Helper to log MCP traffic
-    const logTraffic = (msg: string) => {
-        logs.push(msg);
-    };
+    let client: Client | null = null;
 
     try {
-        spinner.start(`Setting up environment for ${scenario}...`);
+        if (isInteractive) spinner.start("Starting Tutorial MCP Server...");
 
-        // Setup initial files
-        if (scenario === "bug-fix") {
-            await writeFile(join(tempDir, "bug.py"), `def add(a, b):\n    return a - b  # Bug here\n`);
-        }
+        // Resolve server script path dynamically
+        const __filename = fileURLToPath(import.meta.url);
+        const __dirname = dirname(__filename);
+        const isTs = __filename.endsWith(".ts");
 
-        spinner.text = "Starting MCP Server...";
+        // Adjusted path resolution:
+        // In src: src/commands/quick-start.ts -> src/quick-start/tutorial-server.ts
+        // In dist: dist/commands/quick-start.js -> dist/quick-start/tutorial-server.js
+        const serverScript = join(__dirname, "..", "quick-start", isTs ? "tutorial-server.ts" : "tutorial-server.js");
 
-        // Determine server command
-        // For Quick Start, we default to the mock server to ensure it works out-of-the-box
-        // unless explicit environment variables are detected AND --real is passed (omitted for now)
-        // or we just use mock always for consistent demo experience as per requirement "demonstrate capabilities".
+        const command = isTs ? "npx" : "node";
+        const args = isTs ? ["tsx", serverScript] : [serverScript];
 
-        const serverScript = join(process.cwd(), "scripts", "quick-start-demo", "mock_server.ts");
         const transport = new StdioClientTransport({
-            command: "npx",
-            args: ["tsx", serverScript],
+            command,
+            args,
+            env: {
+                ...process.env,
+                MOCK_EMBEDDINGS: "true",
+                JULES_COMPANY: "quick_start_demo",
+            }
         });
 
-        const loggingTransport = new LoggingTransport(transport, logTraffic);
-        const client = new Client({ name: "simple-cli-demo", version: "1.0.0" }, { capabilities: {} });
+        const loggingTransport = new LoggingTransport(transport, (msg) => {
+            // console.log(msg); // Uncomment for debug
+        });
 
+        client = new Client({ name: "simple-cli-quick-start", version: "1.0.0" }, { capabilities: {} });
         await client.connect(loggingTransport);
-        spinner.succeed("Connected to MCP Server.");
 
-        console.log(pc.yellow("\n--- Raw MCP Communication Log ---"));
+        if (isInteractive) spinner.succeed("Connected to Tutorial Server.");
 
-        // Execute Tool
-        let result: any;
-        if (scenario === "bug-fix") {
-            spinner.start("Requesting Aider to fix the bug...");
-            result = await client.callTool({
-                name: "aider_chat",
-                arguments: {
-                    message: "Fix the bug in bug.py",
-                    files: [join(tempDir, "bug.py")]
-                }
-            });
-            spinner.succeed("Aider finished execution.");
-        } else if (scenario === "research") {
-            spinner.start("Starting CrewAI research team...");
-            result = await client.callTool({
-                name: "start_crew",
-                arguments: {
-                    task: "Research the future of AI agents in 2025"
-                }
-            });
-            spinner.succeed("CrewAI finished research.");
-        } else if (scenario === "ui") {
-            spinner.start("Generating UI with v0.dev...");
-            result = await client.callTool({
-                name: "v0dev_generate_component",
-                arguments: {
-                    prompt: "A login form with email and password fields, using Tailwind CSS."
-                }
-            });
-            spinner.succeed("v0.dev generated component.");
+        // Run scenarios
+        for (const s of selectedScenarios) {
+            console.log(pc.bold(`\n--- Running Scenario: ${s} ---`));
+            if (s === "aider") await runAiderDemo(client, tempDir);
+            else if (s === "crewai") await runCrewAIDemo(client);
+            else if (s === "v0dev") await runV0DevDemo(client);
         }
 
-        // Display Logs (filtered)
-        logs.forEach(l => console.log(l));
-
-        console.log(pc.yellow("--- End Log ---\n"));
-
-        // Display Result
-        if (result && result.content) {
-            note(result.content[0].text, "Agent Output");
+        // Important: Close client/transport to release DB locks before accessing Brain directly
+        if (client) {
+            await client.close();
+            client = null;
         }
 
-        await client.close();
+        // Wait a bit for process cleanup and lock release
+        await new Promise(r => setTimeout(r, 1000));
+
+        // Show Brain & Context
+        console.log(pc.bold("\n--- Inspecting Shared Memory ---"));
+        await showBrainMemories("quick_start_demo");
+        await showSharedContext("quick_start_demo");
+
+        if (isInteractive) {
+            outro("Demo completed! You've seen how Simple CLI integrates disparate agents into a unified workforce.");
+        }
 
     } catch (e: any) {
-        spinner.fail(`Scenario failed: ${e.message}`);
+        if (isInteractive) spinner.fail(`Demo failed: ${e.message}`);
         console.error(e);
     } finally {
-        // Cleanup
+        if (client) await client.close();
+
+        // Cleanup temp dir
         await rm(tempDir, { recursive: true, force: true });
+
+        // Cleanup Brain
+        if (isInteractive) {
+            const shouldClean = await confirm({
+                message: "Clean up tutorial data (.agent/brain/quick_start_demo)?",
+                initialValue: true
+            });
+            if (shouldClean && !isCancel(shouldClean)) {
+               await cleanupBrain();
+               console.log(pc.dim("Cleanup complete."));
+            }
+        } else {
+            // Always clean up in non-interactive/test mode
+            await cleanupBrain();
+        }
     }
 }
 
-function generateMcpConfig() {
-    const config = {
-        mcpServers: {
-            aider: {
-                command: "npx",
-                args: ["tsx", "src/mcp_servers/aider-server.ts"],
-                env: { "DEEPSEEK_API_KEY": "your-key-here" }
-            },
-            crewai: {
-                command: "npx",
-                args: ["tsx", "src/mcp_servers/crewai/index.ts"],
-                env: { "OPENAI_API_KEY": "your-key-here" }
-            },
-            v0dev: {
-                command: "npx",
-                args: ["tsx", "src/mcp_servers/v0dev/index.ts"],
-                env: { "V0DEV_API_KEY": "your-key-here" }
-            }
-        }
-    };
-
-    console.log(pc.green("\nHere is a snippet for your mcp.json:"));
-    console.log(JSON.stringify(config, null, 2));
-    console.log(pc.dim("\nCopy this into your project's mcp.json to enable these tools permanently."));
+async function cleanupBrain() {
+    const brainDir = join(process.cwd(), ".agent", "brain", "quick_start_demo");
+    const contextDir = join(process.cwd(), ".agent", "companies", "quick_start_demo");
+    await rm(brainDir, { recursive: true, force: true });
+    await rm(contextDir, { recursive: true, force: true });
 }
