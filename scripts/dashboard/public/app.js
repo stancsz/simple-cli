@@ -1,112 +1,127 @@
 async function fetchMetrics() {
     try {
-        const response = await fetch('/api/company_metrics');
-        if (!response.ok) throw new Error('Failed to fetch data');
-        const data = await response.json();
-        updateDashboard(data);
-    } catch (error) {
-        console.error('Error:', error);
-        document.getElementById('status').innerText = 'Error: ' + error.message;
-        document.getElementById('status').className = 'stat error';
+        const response = await fetch('/api/dashboard/metrics');
+        return await response.json();
+    } catch (e) {
+        console.error("Failed to fetch metrics", e);
+        return null;
     }
 }
 
-function updateDashboard(data) {
-    const companies = Object.keys(data);
-    let totalCost = 0;
-    let totalTasks = 0;
+async function fetchSummary() {
+    try {
+        const response = await fetch('/api/dashboard/summary');
+        const data = await response.json();
+        return data.summary;
+    } catch (e) {
+        console.error("Failed to fetch summary", e);
+        return "Failed to load summary.";
+    }
+}
 
-    const tableBody = document.querySelector('#metrics-table tbody');
-    tableBody.innerHTML = '';
+async function fetchAlerts() {
+    try {
+        const response = await fetch('/api/dashboard/alerts');
+        const data = await response.json();
+        return data.alerts || [];
+    } catch (e) {
+        return [];
+    }
+}
 
-    const tokenData = [];
-    const successData = [];
-    const companyLabels = [];
+function renderTable(metrics) {
+    const tbody = document.querySelector('#metrics-table tbody');
+    tbody.innerHTML = '';
 
-    companies.forEach(company => {
-        const metrics = data[company];
-        if (metrics.error) return;
-
-        totalCost += metrics.estimated_cost_usd || 0;
-        totalTasks += metrics.task_count || 0;
-
-        companyLabels.push(company);
-        tokenData.push(metrics.total_tokens || 0);
-        successData.push(metrics.success_rate || 0);
-
-        const row = document.createElement('tr');
-        row.innerHTML = `
+    for (const [company, data] of Object.entries(metrics)) {
+        if (data.error) continue;
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
             <td>${company}</td>
-            <td>${metrics.task_count}</td>
-            <td>${(metrics.total_tokens || 0).toLocaleString()}</td>
-            <td>${(metrics.avg_duration_ms || 0).toLocaleString()}</td>
-            <td>${metrics.success_rate}%</td>
-            <td>$${(metrics.estimated_cost_usd || 0).toFixed(4)}</td>
+            <td>${data.task_count}</td>
+            <td>${data.success_rate}%</td>
+            <td>${data.avg_duration_ms}</td>
+            <td>$${data.estimated_cost_usd}</td>
         `;
-        tableBody.appendChild(row);
-    });
-
-    document.getElementById('total-cost').innerText = `$${totalCost.toFixed(2)}`;
-    document.getElementById('total-tasks').innerText = totalTasks.toLocaleString();
-    document.getElementById('active-companies').innerText = companies.length;
-    document.getElementById('status').innerText = 'Operational';
-    document.getElementById('status').className = 'stat';
-    document.getElementById('last-updated').innerText = 'Last updated: ' + new Date().toLocaleTimeString();
-
-    renderCharts(companyLabels, tokenData, successData);
+        tbody.appendChild(tr);
+    }
 }
 
-let tokensChartInstance = null;
-let successChartInstance = null;
+function renderCharts(metrics) {
+    const companies = Object.keys(metrics).filter(c => !metrics[c].error);
 
-function renderCharts(labels, tokenData, successData) {
-    const ctxTokens = document.getElementById('tokensChart').getContext('2d');
-    const ctxSuccess = document.getElementById('successChart').getContext('2d');
-
-    if (tokensChartInstance) tokensChartInstance.destroy();
-    if (successChartInstance) successChartInstance.destroy();
-
-    tokensChartInstance = new Chart(ctxTokens, {
+    // Tasks Chart
+    new Chart(document.getElementById('tasksChart'), {
         type: 'bar',
         data: {
-            labels: labels,
+            labels: companies,
             datasets: [{
-                label: 'Total Tokens',
-                data: tokenData,
-                backgroundColor: 'rgba(54, 162, 235, 0.6)',
-                borderColor: 'rgba(54, 162, 235, 1)',
-                borderWidth: 1
-            }]
-        },
-        options: {
-            responsive: true,
-            scales: {
-                y: { beginAtZero: true }
-            }
-        }
-    });
-
-    successChartInstance = new Chart(ctxSuccess, {
-        type: 'bar',
-        data: {
-            labels: labels,
-            datasets: [{
+                label: 'Tasks Completed',
+                data: companies.map(c => metrics[c].task_count),
+                backgroundColor: '#007bff'
+            }, {
                 label: 'Success Rate (%)',
-                data: successData,
-                backgroundColor: 'rgba(75, 192, 192, 0.6)',
-                borderColor: 'rgba(75, 192, 192, 1)',
-                borderWidth: 1
+                data: companies.map(c => metrics[c].success_rate),
+                backgroundColor: '#28a745',
+                type: 'line'
             }]
-        },
-        options: {
-            responsive: true,
-            scales: {
-                y: { beginAtZero: true, max: 100 }
-            }
+        }
+    });
+
+    // Costs Chart
+    new Chart(document.getElementById('costsChart'), {
+        type: 'doughnut',
+        data: {
+            labels: companies,
+            datasets: [{
+                data: companies.map(c => metrics[c].estimated_cost_usd),
+                backgroundColor: [
+                    '#FF6384',
+                    '#36A2EB',
+                    '#FFCE56',
+                    '#4BC0C0',
+                    '#9966FF'
+                ]
+            }]
         }
     });
 }
 
-// Initial fetch and poll every 30 seconds
-fetchMetrics();
-setInterval(fetchMetrics, 30000);
+function renderAlerts(alerts) {
+    const panel = document.getElementById('alerts-panel');
+    const list = document.getElementById('alerts-list');
+    list.innerHTML = '';
+
+    if (alerts.length > 0) {
+        panel.classList.remove('hidden');
+        alerts.forEach(alert => {
+            const li = document.createElement('li');
+            li.textContent = alert;
+            list.appendChild(li);
+        });
+    } else {
+        panel.classList.add('hidden');
+    }
+}
+
+async function init() {
+    const metrics = await fetchMetrics();
+    if (metrics) {
+        renderTable(metrics);
+        renderCharts(metrics);
+    }
+
+    // Load alerts
+    const alerts = await fetchAlerts();
+    renderAlerts(alerts);
+
+    // Load summary last as it takes time
+    const summaryText = await fetchSummary();
+    const summaryEl = document.getElementById('summary-text');
+    summaryEl.textContent = summaryText;
+    summaryEl.classList.remove('loading');
+
+    document.getElementById('status-indicator').textContent = "● Connected";
+}
+
+init();

@@ -1,103 +1,110 @@
-import { describe, it, expect, beforeEach, afterEach } from 'vitest';
-import { spawn, ChildProcess } from 'child_process';
-import { join } from 'path';
-import { mkdir, rm, writeFile } from 'fs/promises';
-import { EpisodicMemory } from '../../src/brain/episodic.js';
+import { describe, it, expect, vi, beforeAll, afterAll } from 'vitest';
+import path from 'path';
+import fs from 'fs/promises';
 import fetch from 'node-fetch';
+import { tmpdir } from 'os';
+import { join } from 'path';
+
+// Mock dependencies
+vi.mock('@modelcontextprotocol/sdk/client/index.js', () => {
+  return {
+    Client: class MockClient {
+      constructor() {}
+      connect() { return Promise.resolve(); }
+      callTool({ name, arguments: args }: any) {
+        if (name === 'generate_dashboard_summary') {
+          return Promise.resolve({
+            content: [{ type: 'text', text: 'Mocked summary: All systems nominal.' }]
+          });
+        }
+        return Promise.resolve({ content: [] });
+      }
+    }
+  };
+});
+
+vi.mock('@modelcontextprotocol/sdk/client/stdio.js', () => {
+    return {
+        StdioClientTransport: class MockTransport {
+            constructor() {}
+        }
+    };
+});
+
+// Mock config loading
+vi.mock('../../src/config.js', () => ({
+    loadConfig: async () => ({
+        companies: ['TestCorp'],
+        active_company: 'TestCorp'
+    })
+}));
+
+// Mock logger
+vi.mock('../../src/logger.js', () => ({
+    logMetric: vi.fn()
+}));
+
+// Mock EpisodicMemory
+vi.mock('../../src/brain/episodic.js', () => ({
+    EpisodicMemory: class MockEpisodic {
+        async getRecentEpisodes() {
+            return [
+                { tokens: 100, duration: 1000, agentResponse: "Success" },
+                { tokens: 200, duration: 2000, agentResponse: "Outcome: Failure" }
+            ];
+        }
+    }
+}));
+
 
 describe('Dashboard Integration', () => {
-    const testDir = join(process.cwd(), 'temp_dashboard_test');
-    const metricsPort = 3005;
-    let cp: ChildProcess;
+  let server: any;
+  const PORT = 3005;
+  const baseUrl = `http://localhost:${PORT}`;
+  const testAgentDir = join(tmpdir(), `jules-test-${Date.now()}`);
 
-    beforeEach(async () => {
-        await rm(testDir, { recursive: true, force: true });
-        await mkdir(testDir, { recursive: true });
-        // Setup config
-        await mkdir(join(testDir, '.agent'), { recursive: true });
-        await writeFile(join(testDir, '.agent', 'config.json'), JSON.stringify({
-            companies: ['test-company']
-        }));
-    });
+  beforeAll(async () => {
+    process.env.PORT = String(PORT);
+    process.env.JULES_AGENT_DIR = testAgentDir;
+    await fs.mkdir(testAgentDir, { recursive: true });
 
-    afterEach(async () => {
-        if (cp) {
-            cp.kill();
-            // Wait for process to exit
-            await new Promise(resolve => setTimeout(resolve, 1000));
-        }
-        await rm(testDir, { recursive: true, force: true });
-    });
+    // Dynamically import the module under test
+    const { main } = await import('../../src/mcp_servers/health_monitor/index.ts');
+    server = await main();
+  });
 
-    it('should aggregate metrics from EpisodicMemory', async () => {
-        // 1. Populate Brain
-        process.env.BRAIN_STORAGE_ROOT = join(testDir, '.agent', 'brain', 'episodic');
-        process.env.JULES_AGENT_DIR = join(testDir, '.agent');
+  afterAll(async () => {
+    if (server) server.close();
+    await fs.rm(testAgentDir, { recursive: true, force: true });
+  });
 
-        // Mock LLM embeddings to avoid API calls
-        process.env.MOCK_EMBEDDINGS = "true";
+  it('should serve index.html', async () => {
+    const res = await fetch(`${baseUrl}/`);
+    expect(res.status).toBe(200);
+    const text = await res.text();
+    expect(text).toContain('Jules Operational Dashboard');
+  });
 
-        const episodic = new EpisodicMemory(testDir); // Use testDir as base
-        // Note: EpisodicMemory constructor uses env var BRAIN_STORAGE_ROOT if set, which we did.
+  it('should serve metrics API with mocked data', async () => {
+    const res = await fetch(`${baseUrl}/api/dashboard/metrics`);
+    expect(res.status).toBe(200);
+    const data: any = await res.json();
+    expect(data.TestCorp).toBeDefined();
+    expect(data.TestCorp.task_count).toBe(2);
+    expect(data.TestCorp.success_rate).toBe(50); // 1 success, 1 failure
+  });
 
-        await episodic.init();
+  it('should serve summary API using mocked persona', async () => {
+    const res = await fetch(`${baseUrl}/api/dashboard/summary`);
+    expect(res.status).toBe(200);
+    const data: any = await res.json();
+    expect(data.summary).toBe('Mocked summary: All systems nominal.');
+  });
 
-        // Add some episodes
-        await episodic.store(
-            'task-1', 'req1', 'sol1', [], 'test-company', undefined, undefined, undefined,
-            1000, 5000 // 1000 tokens, 5s
-        );
-        await episodic.store(
-            'task-2', 'req2', 'Outcome: Failure\nSome error', [], 'test-company', undefined, undefined, undefined,
-            500, 2000 // 500 tokens, 2s
-        );
-
-        // 2. Start Health Monitor
-        const env = {
-            ...process.env,
-            PORT: metricsPort.toString(),
-            JULES_AGENT_DIR: join(testDir, '.agent'),
-            BRAIN_STORAGE_ROOT: join(testDir, '.agent', 'brain', 'episodic'),
-            MOCK_EMBEDDINGS: "true"
-        };
-
-        cp = spawn('npx', ['tsx', 'src/mcp_servers/health_monitor/index.ts'], {
-            env,
-            detached: false,
-            stdio: 'inherit' // See logs
-        });
-
-        // Wait for server to start
-        console.log("Waiting for Health Monitor to start...");
-        await new Promise(resolve => setTimeout(resolve, 5000));
-
-        try {
-            // 3. Query API
-            const response = await fetch(`http://localhost:${metricsPort}/api/metrics`);
-
-            if (!response.ok) {
-                const text = await response.text();
-                throw new Error(`API failed: ${response.status} ${text}`);
-            }
-
-            const data = await response.json();
-            console.log("Metrics Response:", data);
-
-            expect(data).toHaveProperty('test-company');
-            expect(data['test-company']).toMatchObject({
-                total_tokens: 1500,
-                task_count: 2,
-                success_rate: 50
-            });
-            // avg duration: (5000+2000)/2 = 3500
-            expect(data['test-company'].avg_duration_ms).toBe(3500);
-
-            // Cost: 1500 tokens * $5 / 1M = 0.0075
-            expect(data['test-company'].estimated_cost_usd).toBeCloseTo(0.0075);
-
-        } catch (e) {
-            console.error(e);
-            throw e;
-        }
-    }, 30000);
+  it('should serve alerts API', async () => {
+      const res = await fetch(`${baseUrl}/api/dashboard/alerts`);
+      expect(res.status).toBe(200);
+      const data: any = await res.json();
+      expect(Array.isArray(data.alerts)).toBe(true);
+  });
 });

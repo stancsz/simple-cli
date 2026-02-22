@@ -3,6 +3,8 @@ import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js"
 import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/streamableHttp.js";
 import express from "express";
 import { z } from "zod";
+import { Client } from "@modelcontextprotocol/sdk/client/index.js";
+import { StdioClientTransport } from "@modelcontextprotocol/sdk/client/stdio.js";
 import { logMetric } from "../../logger.js";
 import { readFile, writeFile, readdir, mkdir } from "fs/promises";
 import { join, dirname } from "path";
@@ -136,20 +138,16 @@ server.tool(
   }
 );
 
-server.tool(
-  "check_alerts",
-  "Check current metrics against configured alert rules.",
-  {},
-  async () => {
+async function getAlerts() {
     if (!existsSync(ALERT_RULES_FILE)) {
-         return { content: [{ type: "text", text: "No alert rules configured." }] };
+         return [];
     }
 
     let rules: any[] = [];
     try {
         rules = JSON.parse(await readFile(ALERT_RULES_FILE, 'utf-8'));
     } catch {
-        return { content: [{ type: "text", text: "Failed to parse alert rules." }] };
+        return [];
     }
 
     // Get last hour metrics for checking
@@ -184,14 +182,20 @@ server.tool(
         if (triggered) {
             const msg = `ALERT: ${rule.metric} is ${avgValue.toFixed(2)} (${rule.operator} ${rule.threshold})`;
             alerts.push(msg);
-            console.error(msg);
         }
     }
+    return alerts;
+}
 
+server.tool(
+  "check_alerts",
+  "Check current metrics against configured alert rules.",
+  {},
+  async () => {
+    const alerts = await getAlerts();
     if (alerts.length > 0) {
         return { content: [{ type: "text", text: alerts.join("\n") }] };
     }
-
     return { content: [{ type: "text", text: "No alerts triggered." }] };
   }
 );
@@ -252,11 +256,63 @@ server.tool(
   }
 );
 
-async function main() {
+// Helper to connect to Operational Persona
+async function connectToOperationalPersona(): Promise<Client | null> {
+    const srcPath = join(process.cwd(), "src", "mcp_servers", "operational_persona", "index.ts");
+    const distPath = join(process.cwd(), "dist", "mcp_servers", "operational_persona", "index.js");
+
+    let command = "node";
+    let args = [distPath];
+
+    if (existsSync(srcPath) && !existsSync(distPath)) {
+        command = "npx";
+        args = ["tsx", srcPath];
+    } else if (!existsSync(distPath)) {
+        console.warn("Could not find Operational Persona server script.");
+        return null;
+    }
+
+    const env: Record<string, string> = {};
+    for (const key in process.env) {
+        const val = process.env[key];
+        if (val !== undefined && key !== 'PORT') {
+            env[key] = val;
+        }
+    }
+    env.MCP_DISABLE_DEPENDENCIES = 'true';
+
+    const transport = new StdioClientTransport({
+        command,
+        args,
+        env
+    });
+
+    const client = new Client(
+        { name: "health-monitor-client", version: "1.0.0" },
+        { capabilities: {} }
+    );
+
+    try {
+        await client.connect(transport);
+        return client;
+    } catch (e) {
+        console.error("Failed to connect to Operational Persona:", e);
+        return null;
+    }
+}
+
+export async function main() {
   if (process.env.PORT) {
     const app = express();
     const transport = new StreamableHTTPServerTransport();
     await server.connect(transport);
+
+    // Connect to Operational Persona Client
+    const personaClient = await connectToOperationalPersona();
+
+    // Serve Dashboard Static Files
+    const dashboardPublic = join(process.cwd(), 'scripts', 'dashboard', 'public');
+    app.use(express.static(dashboardPublic));
 
     app.all("/sse", async (req, res) => {
       await transport.handleRequest(req, res);
@@ -270,6 +326,25 @@ async function main() {
       res.sendStatus(200);
     });
 
+    app.get("/api/dashboard/metrics", async (req, res) => {
+        try {
+            const data = await aggregateCompanyMetrics();
+            res.json(data);
+        } catch (e) {
+            res.status(500).json({ error: (e as Error).message });
+        }
+    });
+
+    app.get("/api/dashboard/alerts", async (req, res) => {
+        try {
+            const alerts = await getAlerts();
+            res.json({ alerts });
+        } catch (e) {
+            res.status(500).json({ error: (e as Error).message });
+        }
+    });
+
+    // Alias for backward compatibility
     app.get("/api/metrics", async (req, res) => {
         try {
             const data = await aggregateCompanyMetrics();
@@ -279,17 +354,55 @@ async function main() {
         }
     });
 
-    const port = process.env.PORT;
-    app.listen(port, () => {
-      console.error(`Health Monitor MCP Server running on http://localhost:${port}/sse`);
+    app.get("/api/dashboard/summary", async (req, res) => {
+        if (!personaClient) {
+            return res.status(503).json({ error: "Operational Persona service unavailable" });
+        }
+        try {
+            const metrics = await aggregateCompanyMetrics();
+            const alerts = await getAlerts();
+
+            const activity = {
+                summary: "See dashboard for details.",
+                alerts: alerts
+            };
+
+            const result: any = await personaClient.callTool({
+                name: "generate_dashboard_summary",
+                arguments: {
+                    metrics: JSON.stringify(metrics),
+                    activity: JSON.stringify(activity)
+                }
+            });
+
+            if (result.content && result.content[0] && result.content[0].text) {
+                res.json({ summary: result.content[0].text });
+            } else {
+                res.status(500).json({ error: "Failed to generate summary" });
+            }
+        } catch (e) {
+            console.error("Summary generation failed:", e);
+            res.status(500).json({ error: (e as Error).message });
+        }
     });
+
+    const port = process.env.PORT;
+    const httpServer = app.listen(port, () => {
+      console.error(`Health Monitor MCP Server running on http://localhost:${port}/sse`);
+      console.error(`Dashboard available at http://localhost:${port}/`);
+    });
+    return httpServer;
   } else {
     const transport = new StdioServerTransport();
     await server.connect(transport);
+    return null;
   }
 }
 
-main().catch((error) => {
-  console.error("Server error:", error);
-  process.exit(1);
-});
+import { fileURLToPath } from 'url';
+if (process.argv[1] === fileURLToPath(import.meta.url)) {
+    main().catch((error) => {
+      console.error("Server error:", error);
+      process.exit(1);
+    });
+}
