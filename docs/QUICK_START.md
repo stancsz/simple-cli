@@ -1,86 +1,59 @@
-# Interactive Quick Start: The Integration Wizard
+# ⚡ Simple CLI: Quick Start Tutorial
 
-The `simple quick-start` command is the fastest way to understand how Simple CLI integrates with other AI frameworks using the Model Context Protocol (MCP).
+This interactive tutorial demonstrates the core power of Simple CLI: **Rapid AI Framework Integration** and **Shared Memory**.
 
-## Overview
+You will see how different specialized agents (Aider, CrewAI, v0.dev) can work together as a unified workforce, sharing knowledge through the **Brain**.
 
-This interactive wizard allows you to:
-1.  **Experience 3 Real-World Scenarios**: See how the agent delegates tasks to specialized frameworks (Aider, CrewAI, v0.dev).
-2.  **Inspect the Wiring**: View the raw JSON-RPC messages exchanged between the orchestrator and the tools.
-3.  **Get Configured**: Generate a personalized `mcp.json` snippet to enable these integrations in your own projects.
+## 🚀 Running the Tutorial
 
-## Usage
-
-Simply run:
+Run the following command in your terminal:
 
 ```bash
 simple quick-start
 ```
 
-You will be presented with a menu:
+## 🎮 What You Will See
 
-```text
-? Choose a demo scenario:
-> Fix a Bug (Aider)
-  Research Topic (CrewAI)
-  Generate UI (v0.dev)
-  System Tour
+The tutorial guides you through three key scenarios:
+
+### 1. The Coding Agent (Aider)
+**Scenario:** A bug is introduced into a Python file (`bug.py`).
+**Action:** The agent uses **Aider** (via MCP) to analyze the code, find the bug, and fix it automatically.
+**Key Takeaway:** The fix is stored in the **Shared Brain**. Future agents will know "Aider fixed the discount calculation bug".
+
+### 2. The Research Team (CrewAI)
+**Scenario:** You need deep research on "AI Agent Architecture in 2025".
+**Action:** The agent spins up a **CrewAI** team (Researcher + Analyst) to gather and synthesize information.
+**Key Takeaway:** The research findings are stored in the Brain. If you ask for this info later, the agent recalls it instantly instead of researching again (saving tokens and time).
+
+### 3. The UI Designer (v0.dev)
+**Scenario:** You need a "Futuristic Dashboard" React component.
+**Action:** The agent uses **v0.dev** to generate the UI code based on your description.
+**Key Takeaway:** The design artifacts are linked in the Brain.
+
+## 🧠 The "Shared Brain" Demo
+
+At the end of the tutorial, you will see a **Memory Inspection**.
+This shows exactly what was stored in `.agent/brain/`.
+
+Example Output:
+```
+[10:45:22] Task: aider-1739023
+  Query: "Fix the discount calculation bug..."
+  Result: "I found the issue... Applying fix..."
+  ✔ Code fixes by Aider are now known to the QA agent.
 ```
 
-### The Scenarios
+## 🔌 How It Works Under the Hood
 
-#### 1. Fix a Bug (Aider)
-Simulates a coding task where a file has a bug.
--   **Role**: Coding Specialist
--   **Action**: The agent detects a Python syntax error or logical bug and uses Aider to patch it.
--   **Highlight**: Shows how `aider_chat` tool is called with file context.
+1.  **Ingest:** We wrapped Aider, CrewAI, and v0.dev in **MCP Servers** (`src/mcp_servers/`).
+2.  **Connect:** The `simple quick-start` command spawns these servers on demand.
+3.  **Share:** All servers are configured to write to the same **Episodic Memory** (LanceDB).
 
-#### 2. Research Topic (CrewAI)
-Simulates a deep-dive research request.
--   **Role**: Research Team
--   **Action**: Spawns a multi-agent crew (Researcher + Writer) to investigate a topic.
--   **Highlight**: Shows the `start_crew` tool execution and the synthesis of multiple agent outputs.
+## 🛠 Next Steps
 
-#### 3. Generate UI (v0.dev)
-Simulates a frontend design task.
--   **Role**: UI/UX Designer
--   **Action**: Generates a React/Vue component from a text description.
--   **Highlight**: Shows the `v0dev_generate_component` tool returning a preview URL and code.
+Now that you've seen the potential, try:
+1.  **Onboarding your own company:** `simple onboard-company MyStartup`
+2.  **Running a real task:** `simple "Refactor src/utils.ts"`
 
-## "Under the Hood" Mode
-
-During execution, the wizard displays the raw MCP communication:
-
-```json
-[MCP Tx] {"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"aider_chat","arguments":{"message":"Fix the bug..."}}}
-[MCP Rx] {"jsonrpc":"2.0","id":1,"result":{"content":[{"type":"text","text":"..."}]}}
-```
-
-This transparency confirms that Simple CLI is not "faking it"—it is acting as a true orchestrator, delegating work to specialized sub-agents via a standardized protocol.
-
-## Demonstration vs. Real Execution
-
-By default, the Quick Start wizard uses a **Simulated MCP Server**. This ensures that the demo works instantly on any machine, even if you don't have:
--   `aider` installed
--   Python/CrewAI environments set up
--   API keys configured
-
-However, the protocol logic is identical. When you are ready for the real thing, simply install the respective tools and add them to your `mcp.json`.
-
-## Generating Configuration
-
-At the end of the wizard, you can choose to generate an `mcp.json` snippet.
-
-```json
-{
-  "mcpServers": {
-    "aider": {
-      "command": "npx",
-      "args": ["tsx", "src/mcp_servers/aider-server.ts"],
-      "env": { "DEEPSEEK_API_KEY": "..." }
-    }
-  }
-}
-```
-
-Copy this into your project root to permanently enable these superpowers.
+[Back to Getting Started](GETTING_STARTED.md)
