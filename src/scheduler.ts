@@ -119,7 +119,7 @@ export class Scheduler extends EventEmitter {
           name: taskName,
           trigger: "cron",
           schedule: "0 9 * * *", // Daily at 9 AM
-          prompt: "Run the Morning Standup review using the 'run_morning_standup' tool.",
+          prompt: "Run the Morning Standup review using the 'generate_daily_standup' tool with post=true.",
           yoloMode: true
       });
       try {
