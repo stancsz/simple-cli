@@ -9,16 +9,35 @@ services:
     depends_on:
       - redis
       - postgres
+      - operational_persona
     environment:
       - NODE_ENV=production
       - MODEL=deepseek:deepseek-reasoner
       - REDIS_URL=redis://redis:6379
       - POSTGRES_URL=postgresql://postgres:postgres@postgres:5432/postgres
+      - SLACK_WEBHOOK_URL=${SLACK_WEBHOOK_URL}
     healthcheck:
       test: [ "CMD", "nc", "-z", "localhost", "3002" ]
       interval: 30s
       timeout: 10s
       retries: 3
+    restart: unless-stopped
+
+  operational_persona:
+    build: .
+    entrypoint: ["node", "dist/mcp_servers/operational_persona/index.js"]
+    volumes:
+      - ./.agent:/app/.agent
+      - ./persona.json:/app/persona.json
+    ports:
+      - "3005:3005"
+    environment:
+      - NODE_ENV=production
+      - PORT=3005
+      - JULES_AGENT_DIR=/app/.agent
+      - SLACK_WEBHOOK_URL=${SLACK_WEBHOOK_URL}
+      - REDIS_URL=redis://redis:6379
+      - POSTGRES_URL=postgresql://postgres:postgres@postgres:5432/postgres
     restart: unless-stopped
 
   redis:

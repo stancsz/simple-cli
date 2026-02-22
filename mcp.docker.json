@@ -71,6 +71,9 @@
     "dreaming": {
       "command": "node",
       "args": ["/app/dist/mcp_servers/dreaming/index.js"]
+    },
+    "operational_persona": {
+      "url": "http://operational_persona:3005/sse"
     }
   },
   "scheduledTasks": [
@@ -99,6 +102,19 @@
         "arguments": {}
       },
       "description": "Periodically checks system health metrics against configured thresholds."
+    },
+    {
+      "id": "morning-standup",
+      "name": "Morning Standup",
+      "trigger": "cron",
+      "schedule": "0 9 * * *",
+      "action": "mcp.call_tool",
+      "args": {
+        "server": "operational_persona",
+        "tool": "generate_daily_standup",
+        "arguments": { "post": true }
+      },
+      "description": "Daily standup report generation and posting."
     }
   ],
   "agents": {
