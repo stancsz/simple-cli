@@ -133,3 +133,18 @@ We include a comprehensive integration test suite that simulates the K8s environ
 ```bash
 npm run test tests/integration/k8s_production_validation.test.ts
 ```
+
+### Real-World Validation (Kind)
+
+To validate the deployment on a real Kubernetes cluster (using Kind), use our validation pipeline:
+
+```bash
+# Installs Kind, builds image, deploys chart, and runs in-pod validation
+npx tsx scripts/validate-k8s-deployment.ts
+```
+
+This pipeline verifies:
+-   **Startup**: Pods and sidecars start correctly.
+-   **Multi-Tenancy**: Company context loading works inside the cluster.
+-   **Persistence**: Data survives pod restarts (PVC verification).
+-   **Connectivity**: Agent can communicate with Brain and Health Monitor.

@@ -41,21 +41,37 @@ We include a comprehensive integration test suite to validate the K8s topology w
 
 ### Running Validation Tests
 
+#### 1. Simulated Environment (Fast)
 The tests simulate the K8s environment by:
 1.  Creating temporary directories to mimic PVCs.
 2.  Spawning `Brain` and `HealthMonitor` processes on ports 3002/3004.
 3.  Running Agent logic against these simulated services.
 
-To run the validation suite:
+To run the simulated validation suite:
 
 ```bash
 npm run test tests/integration/k8s_production_validation.test.ts
 ```
 
+#### 2. Real Kubernetes Environment (Kind)
+For true production readiness, we validate the actual Helm chart deployment using [Kind](https://kind.sigs.k8s.io/).
+
+To run the full validation pipeline:
+```bash
+npx tsx scripts/validate-k8s-deployment.ts
+```
+
+This pipeline automates:
+1.  **Environment Setup**: Creates a Kind cluster, builds the Docker image, and loads it.
+2.  **Deployment**: Deploys the Helm chart with test values (low resources).
+3.  **In-Pod Validation**: Injects and runs a validation script (`scripts/k8s-init-showcase.js`) inside the running pod.
+4.  **Persistence Check**: Restarts the pod and verifies that company context and brain memories persist.
+5.  **Sidecar Verification**: Confirms the Health Monitor sidecar is reachable and reporting metrics.
+
 ### What is Validated?
 
 1.  **Multi-Tenancy Isolation:** Verifies that data stored for `company-a` is not accessible by `company-b`.
-2.  **Persistence:** Verifies that data survives a "Pod Restart" (process kill/start).
+2.  **Persistence:** Verifies that data survives a "Pod Restart" (process kill/start) via real PVCs.
 3.  **Sidecar Communication:** Verifies the Agent can log metrics to the shared volume and the Health Monitor sidecar can read/serve them.
 4.  **4-Pillar Integration:** Validates SOP execution logging and HR Proposal creation flow in the distributed environment.
 

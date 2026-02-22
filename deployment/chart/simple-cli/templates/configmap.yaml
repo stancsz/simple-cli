@@ -20,6 +20,14 @@ data:
         "git": {
           "command": "node",
           "args": ["/app/node_modules/@modelcontextprotocol/server-git/dist/index.js"]
+        },
+        "company": {
+          "command": "node",
+          "args": ["/app/dist/mcp_servers/company/index.js"]
+        },
+        "sop_engine": {
+          "command": "node",
+          "args": ["/app/dist/mcp_servers/sop_engine/index.js"]
         }
       }
     }
