@@ -152,7 +152,7 @@ To transition from a "Wrapper" to a true "Universal AI Integration Platform," th
 - **Mechanism:**
     - **Health Monitor MCP**: Tracks metrics (latency, tokens) and manages alerts.
     - **Operational Persona Bridge**: Integrates Health Monitor and Brain to provide natural language updates in Sarah_DevOps' voice.
-    - **Dashboard**: Lightweight web UI for visualizing metrics.
+    - **Dashboard**: Lightweight web UI for visualizing metrics. Now supports multi-tenant views and cost analytics.
     - **Alerting**: Configurable thresholds for critical metrics and Slack integration for daily standups.
 
 ### Phase 11: Production Showcase (✅ Implemented)

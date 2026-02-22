@@ -47,6 +47,9 @@ export class SOPExecutor {
   }
 
   async execute(sop: SOP, input: string): Promise<string> {
+    const startTime = Date.now();
+    let totalTokens = 0;
+
     // Initialize MCP to discover servers
     await this.mcp.init();
 
@@ -88,6 +91,7 @@ export class SOPExecutor {
       }
     ];
 
+    try {
     for (const step of sop.steps) {
       console.error(`[SOP] Executing Step ${step.number}: ${step.name}`);
       let stepComplete = false;
@@ -137,6 +141,10 @@ Do not ask the user for input unless absolutely necessary.
 
         try {
             const response = await this.llm.generate(systemPrompt, fullHistory);
+
+            if (response.usage && response.usage.totalTokens) {
+                totalTokens += response.usage.totalTokens;
+            }
 
             const { tool, args, thought, message } = response;
 
@@ -217,11 +225,35 @@ Do not ask the user for input unless absolutely necessary.
           throw new Error(msg);
       }
     }
+    } catch (error) {
+        // Log failure to Brain
+        try {
+            const duration = Date.now() - startTime;
+            const tools = await this.mcp.getTools();
+            const logExp = tools.find(t => t.name === 'log_experience');
+            if (logExp) {
+                await logExp.execute({
+                    taskId: `sop-${Date.now()}`,
+                    task_type: 'sop_execution',
+                    agent_used: 'sop_engine',
+                    outcome: 'failure',
+                    summary: `Failed: ${(error as Error).message}`,
+                    artifacts: JSON.stringify([]),
+                    tokens: totalTokens,
+                    duration: duration
+                });
+            }
+        } catch (e) {
+            console.error(`[SOP] Failed to log failure experience: ${(e as Error).message}`);
+        }
+        throw error;
+    }
 
     const finalSummary = `SOP '${sop.title}' executed successfully.\n\nSummary:\n${context.join('\n')}`;
 
     // Log final experience to Brain
     try {
+        const duration = Date.now() - startTime;
         const tools = await this.mcp.getTools();
         const logExp = tools.find(t => t.name === 'log_experience');
         if (logExp) {
@@ -231,7 +263,9 @@ Do not ask the user for input unless absolutely necessary.
                 agent_used: 'sop_engine',
                 outcome: 'success',
                 summary: finalSummary,
-                artifacts: JSON.stringify([]) // TODO: Track artifacts?
+                artifacts: JSON.stringify([]), // TODO: Track artifacts?
+                tokens: totalTokens,
+                duration: duration
             });
         }
     } catch (e) {

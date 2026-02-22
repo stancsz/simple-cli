@@ -48,6 +48,10 @@ spec:
       targetPort: {{ .Values.agent.service.port }}
       protocol: TCP
       name: http
+    - port: {{ .Values.healthMonitor.port }}
+      targetPort: {{ .Values.healthMonitor.port }}
+      protocol: TCP
+      name: health-monitor
   selector:
     app: {{ .Release.Name }}-agent
 

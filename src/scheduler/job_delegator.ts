@@ -80,7 +80,9 @@ export class JobDelegator {
                 outcome: status,
                 summary: errorMessage || "Task completed successfully",
                 company: task.company,
-                artifacts: JSON.stringify([]) // We don't track artifacts here easily
+                artifacts: JSON.stringify([]), // We don't track artifacts here easily
+                tokens: 0,
+                duration: Date.now() - startTime
               }
             });
             console.log("[JobDelegator] Logged experience to Brain.");

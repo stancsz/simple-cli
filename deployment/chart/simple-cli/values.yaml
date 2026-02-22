@@ -64,6 +64,20 @@ healthMonitor:
       cpu: 100m
       memory: 256Mi
 
+dashboard:
+  enabled: true
+  replicas: 1
+  port: 3003
+  resources:
+    limits:
+      cpu: 500m
+      memory: 256Mi
+    requests:
+      cpu: 100m
+      memory: 128Mi
+  env:
+    LOG_LEVEL: info
+
 # Optional Redis
 redis:
   enabled: false

@@ -30,7 +30,31 @@ export class StatusGenerator {
         console.error("Failed to parse health report:", e);
       }
 
-      // 2. Check Alerts
+      // 2. Get Company Metrics (Brain-based)
+      let companyMetricsText = "";
+      try {
+          const metricsResult: any = await this.healthClient.callTool({
+              name: "get_company_metrics",
+              arguments: {}
+          });
+          if (metricsResult?.content?.[0]?.text) {
+              const metrics = JSON.parse(metricsResult.content[0].text);
+              const companies = Object.keys(metrics);
+              if (companies.length > 0) {
+                 let totalCost = 0;
+                 let totalTasks = 0;
+                 for (const c of companies) {
+                     if (metrics[c].estimated_cost_usd) totalCost += metrics[c].estimated_cost_usd;
+                     if (metrics[c].task_count) totalTasks += metrics[c].task_count;
+                 }
+                 companyMetricsText = `Active Companies: ${companies.length}. Total Cost: $${totalCost.toFixed(2)}. Tasks: ${totalTasks}.`;
+              }
+          }
+      } catch (e) {
+          console.warn("Failed to fetch company metrics:", e);
+      }
+
+      // 3. Check Alerts
       const alertsResult: any = await this.healthClient.callTool({
         name: "check_alerts",
         arguments: {}
@@ -38,7 +62,7 @@ export class StatusGenerator {
       const alertText = alertsResult?.content?.[0]?.text || "No alerts triggered.";
       const hasCritical = alertText.includes("ALERT:");
 
-      // 3. Format Status
+      // 4. Format Status
       const systemState = hasCritical ? "⚠️ Systems degraded" : "🟢 Systems nominal";
 
       // Calculate average latency across all agents if available
@@ -60,7 +84,7 @@ export class StatusGenerator {
       const avgLatency = latencyCount > 0 ? (totalLatency / latencyCount).toFixed(2) : "N/A";
       const tokenStr = tokenUsage > 1000 ? `${(tokenUsage / 1000).toFixed(1)}k` : tokenUsage.toString();
 
-      return `${systemState}. Average response time: ${avgLatency}ms. Token usage: ${tokenStr} today. ${hasCritical ? `Alerts: ${alertText}` : "No critical alerts."}`;
+      return `${systemState}. Average response time: ${avgLatency}ms. Token usage: ${tokenStr} today. ${companyMetricsText} ${hasCritical ? `Alerts: ${alertText}` : "No critical alerts."}`;
 
     } catch (error: any) {
       console.error("Error generating system status:", error);

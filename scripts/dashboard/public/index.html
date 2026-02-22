@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Operational Dashboard</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        body { font-family: sans-serif; margin: 20px; background: #f4f4f9; }
+        .container { max-width: 1200px; margin: 0 auto; }
+        .card { background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); margin-bottom: 20px; }
+        h1, h2 { color: #333; }
+        .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px; }
+        .stat { font-size: 2em; font-weight: bold; color: #007bff; }
+        .stat-label { color: #666; }
+        table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+        th, td { text-align: left; padding: 8px; border-bottom: 1px solid #ddd; }
+        th { background-color: #f8f9fa; }
+        .error { color: red; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Operational Metrics Dashboard</h1>
+
+        <div class="card">
+            <h2>System Status</h2>
+            <div id="status" class="stat">Loading...</div>
+            <div id="last-updated" class="stat-label"></div>
+        </div>
+
+        <div class="grid">
+            <div class="card">
+                <h2>Total Costs (Est.)</h2>
+                <div id="total-cost" class="stat">$0.00</div>
+            </div>
+            <div class="card">
+                <h2>Total Tasks</h2>
+                <div id="total-tasks" class="stat">0</div>
+            </div>
+             <div class="card">
+                <h2>Active Companies</h2>
+                <div id="active-companies" class="stat">0</div>
+            </div>
+        </div>
+
+        <div class="grid">
+            <div class="card">
+                <h2>Token Usage per Company</h2>
+                <canvas id="tokensChart"></canvas>
+            </div>
+            <div class="card">
+                <h2>Task Success Rate per Company</h2>
+                <canvas id="successChart"></canvas>
+            </div>
+        </div>
+
+        <div class="card">
+            <h2>Detailed Metrics</h2>
+            <table id="metrics-table">
+                <thead>
+                    <tr>
+                        <th>Company</th>
+                        <th>Tasks</th>
+                        <th>Tokens</th>
+                        <th>Avg Duration (ms)</th>
+                        <th>Success Rate</th>
+                        <th>Est. Cost</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <!-- Rows will be populated here -->
+                </tbody>
+            </table>
+        </div>
+    </div>
+    <script src="app.js"></script>
+</body>
+</html>

@@ -1,0 +1,42 @@
+{{- if .Values.dashboard.enabled }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Release.Name }}-dashboard
+  labels:
+    app: {{ .Release.Name }}-dashboard
+    chart: {{ .Chart.Name }}-{{ .Chart.Version | replace "+" "_" }}
+    release: {{ .Release.Name }}
+    heritage: {{ .Release.Service }}
+spec:
+  replicas: {{ .Values.dashboard.replicas }}
+  selector:
+    matchLabels:
+      app: {{ .Release.Name }}-dashboard
+  template:
+    metadata:
+      labels:
+        app: {{ .Release.Name }}-dashboard
+    spec:
+      containers:
+        - name: dashboard
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          command: ["node", "scripts/dashboard/server.js"]
+          env:
+            - name: PORT
+              value: "{{ .Values.dashboard.port }}"
+            - name: HEALTH_MONITOR_URL
+              value: "http://{{ .Release.Name }}-agent:{{ .Values.healthMonitor.port }}"
+            {{- if .Values.dashboard.env }}
+            {{- range $key, $value := .Values.dashboard.env }}
+            - name: {{ $key }}
+              value: {{ $value | quote }}
+            {{- end }}
+            {{- end }}
+          ports:
+            - containerPort: {{ .Values.dashboard.port }}
+              name: http
+          resources:
+            {{- toYaml .Values.dashboard.resources | nindent 12 }}
+{{- end }}
