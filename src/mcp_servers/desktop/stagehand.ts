@@ -22,12 +22,13 @@ export class StagehandServer {
       console.error("Initializing Stagehand...");
       this.stagehand = new Stagehand({
         env: (process.env.STAGEHAND_ENV as any) || "LOCAL",
-        verbose: process.env.STAGEHAND_VERBOSE ? parseInt(process.env.STAGEHAND_VERBOSE) : 1,
-        debugDom: true,
-        headless: process.env.HEADLESS === "true",
+        verbose: (process.env.STAGEHAND_VERBOSE ? parseInt(process.env.STAGEHAND_VERBOSE) : 1) as 0 | 1 | 2,
+        localBrowserLaunchOptions: {
+          headless: process.env.HEADLESS === "true",
+        },
       });
       await this.stagehand.init();
-      this.page = this.stagehand.page;
+      this.page = (this.stagehand as any).page;
 
       if (process.env.VIEWPORT_WIDTH && process.env.VIEWPORT_HEIGHT) {
         await this.page.setViewportSize({
