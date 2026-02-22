@@ -1,5 +1,7 @@
 <div align="center">
   <img src="docs/assets/logo.jpeg" alt="Simple CLI Logo" width="200"/>
+  <br>
+  <h3><a href="https://stan-chen.github.io/simple-cli/">🌐 Documentation Website</a></h3>
 </div>
 
 # 🚀 Simple-CLI: The Universal AI Framework Integrator
