@@ -95,7 +95,7 @@ To transition from a "Wrapper" to a true "Universal AI Integration Platform," th
     - **Validation:** ✅ Company Context production-tested with multi-tenant isolation
     - **Production Validation:** (✅ Completed) Validated concurrency, persistence, and performance under 12-tenant simulated load via `tests/integration/brain_production.test.ts`.
     - **Production Hardening:** (✅ Implemented) Robust concurrency control via `LanceConnector` (file-based locking & connection pooling) and `SemanticGraph` (file-locking & async-mutex) ensuring data integrity under high multi-tenant load.
-    - **Automated Onboarding:** (✅ Implemented) `simple init-company` command automates directory creation and context initialization.
+    - **Automated Onboarding:** (✅ Implemented) `simple onboard-company` command triggers a full 6-Pillar onboarding SOP, ensuring Brain, Scheduler, and HR Loop are active.
     - **Enhanced Management:** (✅ Implemented) Full CLI support for `init-company`, `list`, `switch`, and `archive` via `simple company` command.
 
 ### Phase 7: The Hive Mind (Multi-Agent Swarms) (✅ Implemented & Validated)

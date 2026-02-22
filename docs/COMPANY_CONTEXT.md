@@ -25,13 +25,27 @@ Data is stored in `.agent/companies/{company_id}/`:
 
 ### 1. Quick Start: Adding a New Company
 
-The easiest way to onboard a new company is using the `init-company` command:
+The recommended way to onboard a new company is using the `onboard-company` command, which automates the setup of the entire 6-Pillar environment:
+
+```bash
+simple onboard-company acme-corp
+```
+
+This command runs an automated SOP that:
+1.  Initializes the company context (directories, config).
+2.  Seeds the Brain (episodic memory).
+3.  Creates sample SOPs.
+4.  Schedules Ghost Mode agents (Job Delegator, Reviewer).
+5.  Enables the HR Loop.
+6.  Validates the setup and generates a report.
+
+Alternatively, you can use the basic initialization command:
 
 ```bash
 simple init-company acme-corp
 ```
 
-This interactive command will:
+This interactive command will only:
 1.  Create the directory structure in `.agent/companies/acme-corp/`.
 2.  Prompt you for basic details (Brand Voice, Goals, Tech Stack).
 3.  Generate a `company_context.json` file.
