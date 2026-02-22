@@ -1,0 +1,8 @@
+{
+  "entryPoints": ["src"],
+  "out": "docs/website/api",
+  "plugin": ["typedoc-plugin-markdown"],
+  "readme": "none",
+  "entryPointStrategy": "expand",
+  "cleanOutputDir": true
+}

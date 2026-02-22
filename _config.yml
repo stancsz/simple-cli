@@ -1,0 +1,12 @@
+title: Simple CLI - Universal AI Integration Platform
+description: Your Autonomous AI Workforce, Deployed in Minutes. Ingest any AI framework (Jules, Aider, CrewAI) and deploy it as a specialized agent.
+theme: minima
+source: docs/website
+plugins:
+  - jekyll-feed
+  - jekyll-seo-tag
+header_pages:
+  - index.md
+  - frameworks.md
+  - architecture.md
+  - api/index.html

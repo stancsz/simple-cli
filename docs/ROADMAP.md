@@ -184,9 +184,11 @@ To transition from a "Wrapper" to a true "Universal AI Integration Platform," th
 - **Concept:** Lower the barrier to entry and foster a community of contributors.
 - **Status:** Completed.
 - **Achievements:**
+    - **User-Friendly Website:** (✅ Implemented) Hosted on GitHub Pages: [https://stan-chen.github.io/simple-cli/](https://stan-chen.github.io/simple-cli/)
     - **Interactive Quick Start:** (✅ Implemented) `simple quick-start` wizard demonstrates integrations with Aider, CrewAI, and v0.dev.
     - **Getting Started Tutorial:** (✅ Completed) Comprehensive guide (`docs/GETTING_STARTED.md`) and dedicated Quick Start tutorial (`docs/QUICK_START.md`).
     - **Documentation Improvements:** (✅ Implemented) Updated README and Roadmaps to reflect the "Integration First" philosophy.
+    - **Contribution Guidelines:** (✅ Implemented) `docs/CONTRIBUTING.md` created.
 
 ---
 

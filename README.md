@@ -3,6 +3,9 @@
 </div>
 
 # 🚀 Simple-CLI: The Universal AI Framework Integrator
+
+**[🌐 Visit the Official Website & Documentation](https://stan-chen.github.io/simple-cli/)**
+
 **The only orchestrator that learns any AI framework and turns it into a subordinate agent.**
 
 Simple-CLI is a **Meta-Orchestrator** with a unique superpower: **rapid framework ingestion**. Point it at any AI framework (Jules, Claude, Aider, CrewAI, Kimi, Devin), and it will digest, wrap, and deploy it as a specialized sub-agent—complete with token-efficient long-term memory and autonomous execution capabilities.

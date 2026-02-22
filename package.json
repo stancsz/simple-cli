@@ -22,7 +22,8 @@
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
     "lint": "eslint src/ tests/",
-    "format": "prettier --write src/ tests/"
+    "format": "prettier --write src/ tests/",
+    "build:docs": "typedoc --out docs/website/api src"
   },
   "keywords": [
     "cli",
@@ -103,6 +104,8 @@
     "oclif": "^4.0.0",
     "ts-node": "^10.9.2",
     "tsx": "^4.19.2",
+    "typedoc": "^0.28.17",
+    "typedoc-plugin-markdown": "^4.10.0",
     "typescript": "^5.7.2",
     "vitest": "^2.1.8"
   },
