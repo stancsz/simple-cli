@@ -63,6 +63,24 @@ vi.mock('child_process', () => ({
     exec: vi.fn()
 }));
 
+// 6. Mock underlying libraries to avoid file locks
+vi.mock('proper-lockfile', () => ({
+    lock: vi.fn().mockResolvedValue(() => Promise.resolve())
+}));
+
+vi.mock('@lancedb/lancedb', () => ({
+    connect: vi.fn().mockResolvedValue({
+        tableNames: vi.fn().mockResolvedValue([]),
+        openTable: vi.fn().mockResolvedValue({
+            search: () => ({ limit: () => ({ toArray: () => [] }) }),
+            add: vi.fn().mockResolvedValue(undefined),
+            count: vi.fn().mockResolvedValue(0)
+        }),
+        createTable: vi.fn().mockResolvedValue({
+            add: vi.fn().mockResolvedValue(undefined)
+        })
+    })
+}));
 
 describe('Ghost Mode Full Integration', () => {
     let tempDir: string;
@@ -137,7 +155,8 @@ describe('Ghost Mode Full Integration', () => {
                 // Schedule these on Jan 1st at midnight. Since we start at Jan 1st 8 AM, they won't trigger until next year.
                 { id: "morning-standup", name: "Morning Standup", trigger: "cron", schedule: "0 0 1 1 *", prompt: "skip", yoloMode: true },
                 { id: "hr-review", name: "Daily HR Review", trigger: "cron", schedule: "0 0 1 1 *", prompt: "skip", yoloMode: true },
-                { id: "weekly-hr-review", name: "Weekly HR Review", trigger: "cron", schedule: "0 0 1 1 *", prompt: "skip", yoloMode: true }
+                { id: "weekly-hr-review", name: "Weekly HR Review", trigger: "cron", schedule: "0 0 1 1 *", prompt: "skip", yoloMode: true },
+                { id: "dreaming-simulation", name: "Nightly Dreaming Simulation", trigger: "cron", schedule: "0 0 1 1 *", prompt: "skip", yoloMode: true }
             ]
         };
         await writeFile(join(tempDir, 'scheduler.json'), JSON.stringify(schedule));
