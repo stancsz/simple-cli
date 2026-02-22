@@ -40,6 +40,10 @@ describe('Operational Persona Integration', () => {
             })
         }]
       });
+      // Mock get_company_metrics response
+      mockHealthClient.callTool.mockResolvedValueOnce({
+        content: [{ type: "text", text: "{}" }]
+      });
       // Mock check_alerts response
       mockHealthClient.callTool.mockResolvedValueOnce({
         content: [{ type: "text", text: "No alerts triggered." }]
@@ -55,6 +59,10 @@ describe('Operational Persona Integration', () => {
     it('should report critical alerts', async () => {
         const generator = new StatusGenerator(mockBrainClient, mockHealthClient);
 
+        mockHealthClient.callTool.mockResolvedValueOnce({
+            content: [{ type: "text", text: "{}" }]
+        });
+        // Mock get_company_metrics response
         mockHealthClient.callTool.mockResolvedValueOnce({
             content: [{ type: "text", text: "{}" }]
         });
@@ -107,6 +115,10 @@ describe('Operational Persona Integration', () => {
           // Mock status responses
           mockHealthClient.callTool.mockResolvedValueOnce({
               content: [{ type: "text", text: JSON.stringify({'llm:latency': { sum: 100, count: 2, avg: 50, min: 40, max: 60 }}) }]
+          });
+          // Mock get_company_metrics response
+          mockHealthClient.callTool.mockResolvedValueOnce({
+              content: [{ type: "text", text: "{}" }]
           });
           mockHealthClient.callTool.mockResolvedValueOnce({
               content: [{ type: "text", text: "No alerts triggered." }]

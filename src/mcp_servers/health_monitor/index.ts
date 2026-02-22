@@ -7,6 +7,8 @@ import { logMetric } from "../../logger.js";
 import { readFile, writeFile, readdir, mkdir } from "fs/promises";
 import { join, dirname } from "path";
 import { existsSync } from "fs";
+import { EpisodicMemory } from "../../brain/episodic.js";
+import { loadConfig } from "../../config.js";
 
 const AGENT_DIR = process.env.JULES_AGENT_DIR || join(process.cwd(), '.agent');
 const METRICS_DIR = join(AGENT_DIR, 'metrics');
@@ -16,6 +18,8 @@ const server = new McpServer({
   name: "health_monitor",
   version: "1.0.0"
 });
+
+const episodic = new EpisodicMemory();
 
 // Helper to get files for a range of dates
 async function getMetricFiles(days: number): Promise<string[]> {
@@ -192,6 +196,62 @@ server.tool(
   }
 );
 
+async function aggregateCompanyMetrics() {
+    // AGENT_DIR is .../.agent
+    // We want the parent of .agent to be the cwd for loadConfig
+    const config = await loadConfig(dirname(AGENT_DIR));
+    const companies = config.companies || [];
+    const metrics: Record<string, any> = {};
+
+    for (const company of companies) {
+        try {
+            const episodes = await episodic.getRecentEpisodes(company, 100);
+
+            let totalTokens = 0;
+            let totalDuration = 0;
+            let successCount = 0;
+            let failCount = 0;
+
+            for (const ep of episodes) {
+                totalTokens += ep.tokens || 0;
+                totalDuration += ep.duration || 0;
+
+                const isFailure = (ep.agentResponse || "").toLowerCase().includes("outcome: failure") ||
+                                  (ep.agentResponse || "").toLowerCase().includes("outcome: failed");
+                if (isFailure) failCount++;
+                else successCount++;
+            }
+
+            const count = episodes.length;
+            const avgDuration = count > 0 ? totalDuration / count : 0;
+            const successRate = count > 0 ? (successCount / count) * 100 : 0;
+            const estimatedCost = (totalTokens / 1_000_000) * 5.00; // $5 per 1M tokens assumption
+
+            metrics[company] = {
+                total_tokens: totalTokens,
+                avg_duration_ms: Math.round(avgDuration),
+                success_rate: Math.round(successRate),
+                task_count: count,
+                estimated_cost_usd: parseFloat(estimatedCost.toFixed(4))
+            };
+        } catch (e) {
+            console.error(`Failed to get metrics for ${company}:`, e);
+            metrics[company] = { error: (e as Error).message };
+        }
+    }
+    return metrics;
+}
+
+server.tool(
+  "get_company_metrics",
+  "Aggregate metrics per company from the Brain.",
+  {},
+  async () => {
+      const data = await aggregateCompanyMetrics();
+      return { content: [{ type: "text", text: JSON.stringify(data, null, 2) }] };
+  }
+);
+
 async function main() {
   if (process.env.PORT) {
     const app = express();
@@ -208,6 +268,15 @@ async function main() {
 
     app.get("/health", (req, res) => {
       res.sendStatus(200);
+    });
+
+    app.get("/api/metrics", async (req, res) => {
+        try {
+            const data = await aggregateCompanyMetrics();
+            res.json(data);
+        } catch (e) {
+            res.status(500).json({ error: (e as Error).message });
+        }
     });
 
     const port = process.env.PORT;

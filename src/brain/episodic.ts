@@ -15,6 +15,8 @@ export interface PastEpisode {
   vector: number[];
   simulation_attempts?: string[];
   resolved_via_dreaming?: boolean;
+  tokens?: number;
+  duration?: number;
   _distance?: number;
 }
 
@@ -68,7 +70,9 @@ export class EpisodicMemory {
       company?: string,
       simulation_attempts?: string[],
       resolved_via_dreaming?: boolean,
-      id?: string
+      id?: string,
+      tokens?: number,
+      duration?: number
   ): Promise<void> {
     // Embed the interaction (request + solution)
     const textToEmbed = `Task: ${taskId}\nRequest: ${request}\nSolution: ${solution}`;
@@ -87,7 +91,9 @@ export class EpisodicMemory {
       artifacts: artifacts.length > 0 ? artifacts : ["none"],
       vector: embedding,
       simulation_attempts,
-      resolved_via_dreaming
+      resolved_via_dreaming,
+      tokens: tokens || 0,
+      duration: duration || 0
     };
 
     let tableName = this.defaultTableName;
@@ -153,5 +159,21 @@ export class EpisodicMemory {
       .toArray();
 
     return results as unknown as PastEpisode[];
+  }
+
+  async getRecentEpisodes(company?: string, limit: number = 100): Promise<PastEpisode[]> {
+    const table = await this.getTable(company);
+    if (!table) return [];
+
+    // Retrieve recent episodes
+    // Note: LanceDB query() without search() does full table scan unless filtered
+    // We fetch all (or reasonable amount) and sort by timestamp in memory as LanceDB
+    // doesn't support 'order by' in all versions or it might be slower without index.
+    const results = await table.query()
+        .limit(limit)
+        .toArray();
+
+    return (results as unknown as PastEpisode[])
+        .sort((a, b) => b.timestamp - a.timestamp);
   }
 }

@@ -1,22 +1,23 @@
-import http from 'http';
-import fs from 'fs';
-import path from 'path';
-import url from 'url';
+import express from 'express';
 import { fileURLToPath } from 'url';
+import { dirname, join } from 'path';
+import fetch from 'node-fetch';
+import fs from 'fs';
 
 const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
+const __dirname = dirname(__filename);
 
-const PORT = 3003;
-const AGENT_DIR = path.join(process.cwd(), '.agent');
-const METRICS_DIR = path.join(AGENT_DIR, 'metrics');
+const app = express();
+const PORT = process.env.PORT || 3003;
+const HEALTH_MONITOR_URL = process.env.HEALTH_MONITOR_URL || 'http://localhost:3004';
+const AGENT_DIR = process.env.JULES_AGENT_DIR || join(process.cwd(), '.agent');
+const METRICS_DIR = join(AGENT_DIR, 'metrics');
 
-// Helper to get files for a range of days
 function getMetricFiles(days) {
   if (!fs.existsSync(METRICS_DIR)) return [];
   const files = fs.readdirSync(METRICS_DIR);
   const sorted = files.filter(f => /^\d{4}-\d{2}-\d{2}\.ndjson$/.test(f)).sort();
-  return sorted.slice(-days).map(f => path.join(METRICS_DIR, f));
+  return sorted.slice(-days).map(f => join(METRICS_DIR, f));
 }
 
 function readNdjson(filepath) {
@@ -30,26 +31,25 @@ function readNdjson(filepath) {
   }
 }
 
-const server = http.createServer((req, res) => {
-  const parsedUrl = url.parse(req.url, true);
+app.use(express.static(join(__dirname, 'public')));
 
-  // Serve static index.html
-  if (parsedUrl.pathname === '/' || parsedUrl.pathname === '/index.html') {
-    fs.readFile(path.join(__dirname, 'index.html'), (err, data) => {
-      if (err) {
-        res.writeHead(500);
-        res.end('Error loading index.html');
-        return;
-      }
-      res.writeHead(200, { 'Content-Type': 'text/html' });
-      res.end(data);
-    });
-    return;
-  }
+app.get('/api/company_metrics', async (req, res) => {
+    try {
+        const response = await fetch(`${HEALTH_MONITOR_URL}/api/metrics`);
+        if (!response.ok) {
+            throw new Error(`Health Monitor responded with ${response.status}: ${response.statusText}`);
+        }
+        const data = await response.json();
+        res.json(data);
+    } catch (error) {
+        console.error('Failed to fetch metrics:', error);
+        res.status(500).json({ error: error.message });
+    }
+});
 
-  // API Endpoint
-  if (parsedUrl.pathname === '/api/metrics') {
-    const timeframe = parsedUrl.query.timeframe || 'last_hour';
+// Legacy Endpoint for raw metrics (backward compatibility)
+app.get('/api/metrics', (req, res) => {
+    const timeframe = req.query.timeframe || 'last_hour';
     let days = 1;
     if (timeframe === 'last_week') days = 7;
 
@@ -69,18 +69,11 @@ const server = http.createServer((req, res) => {
       allMetrics = allMetrics.filter(m => (now - new Date(m.timestamp).getTime()) < oneDay);
     }
 
-    // Sort by timestamp
     allMetrics.sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
-
-    res.writeHead(200, { 'Content-Type': 'application/json' });
-    res.end(JSON.stringify(allMetrics));
-    return;
-  }
-
-  res.writeHead(404);
-  res.end('Not Found');
+    res.json(allMetrics);
 });
 
-server.listen(PORT, () => {
-  console.log(`Dashboard server running at http://localhost:${PORT}`);
+app.listen(PORT, () => {
+    console.log(`Dashboard server running on port ${PORT}`);
+    console.log(`Health Monitor URL: ${HEALTH_MONITOR_URL}`);
 });

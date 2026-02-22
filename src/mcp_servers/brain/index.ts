@@ -46,8 +46,10 @@ export class BrainServer {
         simulation_attempts: z.string().optional().describe("JSON string array of simulation attempts."),
         resolved_via_dreaming: z.boolean().optional().describe("Whether this episode was resolved via dreaming."),
         id: z.string().optional().describe("The unique ID of the episode (optional, for updates/overrides)."),
+        tokens: z.number().optional().describe("Total tokens used for this task."),
+        duration: z.number().optional().describe("Duration of the task in milliseconds."),
       },
-      async ({ taskId, request, solution, artifacts, company, simulation_attempts, resolved_via_dreaming, id }) => {
+      async ({ taskId, request, solution, artifacts, company, simulation_attempts, resolved_via_dreaming, id, tokens, duration }) => {
         let artifactList: string[] = [];
         if (artifacts) {
           try {
@@ -66,7 +68,7 @@ export class BrainServer {
                 simAttempts = undefined;
             }
         }
-        await this.episodic.store(taskId, request, solution, artifactList, company, simAttempts, resolved_via_dreaming, id);
+        await this.episodic.store(taskId, request, solution, artifactList, company, simAttempts, resolved_via_dreaming, id, tokens, duration);
         return {
           content: [{ type: "text", text: "Memory stored successfully." }],
         };
@@ -262,8 +264,10 @@ export class BrainServer {
         summary: z.string().describe("A brief summary of what happened."),
         artifacts: z.string().optional().describe("JSON string array of modified file paths."),
         company: z.string().optional().describe("The company/client identifier for namespacing."),
+        tokens: z.number().optional().describe("Total tokens used for this task."),
+        duration: z.number().optional().describe("Duration of the task in milliseconds."),
       },
-      async ({ taskId, task_type, agent_used, outcome, summary, artifacts, company }) => {
+      async ({ taskId, task_type, agent_used, outcome, summary, artifacts, company, tokens, duration }) => {
         let artifactList: string[] = [];
         if (artifacts) {
           try {
@@ -279,7 +283,7 @@ export class BrainServer {
         const request = `Task Type: ${task_type}\nAgent: ${agent_used}`;
         const solution = `Outcome: ${outcome}\nSummary: ${summary}`;
 
-        await this.episodic.store(taskId, request, solution, artifactList, company);
+        await this.episodic.store(taskId, request, solution, artifactList, company, undefined, undefined, undefined, tokens, duration);
         return {
           content: [{ type: "text", text: "Experience logged successfully." }],
         };
