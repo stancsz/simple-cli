@@ -186,6 +186,7 @@ To transition from a "Wrapper" to a true "Universal AI Integration Platform," th
 - **Achievements:**
     - **Interactive Quick Start:** (✅ Implemented) `simple quick-start` wizard demonstrates integrations with Aider, CrewAI, and v0.dev.
     - **Getting Started Tutorial:** (✅ Completed) Comprehensive guide (`docs/GETTING_STARTED.md`) and dedicated Quick Start tutorial (`docs/QUICK_START.md`).
+    - **Contribution Guidelines:** (✅ Completed) Created `docs/CONTRIBUTING.md` to establish clear standards for code, PRs, and testing.
     - **Documentation Improvements:** (✅ Implemented) Updated README and Roadmaps to reflect the "Integration First" philosophy.
 
 ---
