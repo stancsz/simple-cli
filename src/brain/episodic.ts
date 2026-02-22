@@ -103,19 +103,20 @@ export class EpisodicMemory {
 
         if (!table) {
           try {
-            table = await this.connector.createTable(tableName, [data]);
+            // Cast to any because lancedb types might not match strict TS interface
+            table = await this.connector.createTable(tableName, [data as any]);
           } catch (e) {
             // Handle race condition where table was created by another process/request
             // Although withLock should prevent this for the same company table
             table = await this.connector.getTable(tableName);
             if (table) {
-              await table.add([data]);
+              await table.add([data as any]);
             } else {
               throw e;
             }
           }
         } else {
-          await table.add([data]);
+          await table.add([data as any]);
         }
     });
   }

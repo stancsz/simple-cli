@@ -115,7 +115,7 @@ export class SwarmServer {
     return {
       content: [
         {
-          type: "text",
+          type: "text" as const,
           text: finalResult,
         },
       ],

@@ -48,7 +48,7 @@ export class DreamingServer {
                 }
 
                 if (agents.length > 0) {
-                     return { content: [{ type: "text", text: "System is not idle. Dreaming session aborted." }] };
+            return { content: [{ type: "text" as const, text: "System is not idle. Dreaming session aborted." }] };
                 }
             }
         }
@@ -59,7 +59,7 @@ export class DreamingServer {
     // 2. Query Failures
     const brain = this.mcp.getClient("brain");
     if (!brain) {
-        return { content: [{ type: "text", text: "Brain server not available." }] };
+        return { content: [{ type: "text" as const, text: "Brain server not available." }] };
     }
 
     let failures: any[] = [];
@@ -81,18 +81,18 @@ export class DreamingServer {
             }
         }
     } catch (e) {
-        return { content: [{ type: "text", text: `Failed to query brain: ${(e as Error).message}` }] };
+        return { content: [{ type: "text" as const, text: `Failed to query brain: ${(e as Error).message}` }] };
     }
 
     if (!Array.isArray(failures) || failures.length === 0) {
-        return { content: [{ type: "text", text: "No failure episodes found to simulate." }] };
+        return { content: [{ type: "text" as const, text: "No failure episodes found to simulate." }] };
     }
 
     // 3. Simulate
     const results: string[] = [];
     const swarm = this.mcp.getClient("swarm-server");
     if (!swarm) {
-         return { content: [{ type: "text", text: "Swarm server not available." }] };
+         return { content: [{ type: "text" as const, text: "Swarm server not available." }] };
     }
 
     for (const fail of failures) {
@@ -179,7 +179,7 @@ export class DreamingServer {
     }
 
     return {
-        content: [{ type: "text", text: `Dreaming session complete.\n${results.join("\n")}` }]
+        content: [{ type: "text" as const, text: `Dreaming session complete.\n${results.join("\n")}` }]
     };
   }
 
