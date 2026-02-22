@@ -60,6 +60,66 @@ export class SwarmServer {
         return await this.listAgents();
       }
     );
+
+    this.server.tool(
+      "run_simulation",
+      "Run a task simulation synchronously using a specialized agent.",
+      {
+        role: z.string().describe("The specialized role for the agent."),
+        task: z.string().describe("The task to simulate."),
+        company_id: z.string().optional().describe("The company context ID."),
+      },
+      async ({ role, task, company_id }) => {
+        return await this.runSimulation(role, task, company_id);
+      }
+    );
+  }
+
+  async runSimulation(role: string, task: string, companyId?: string) {
+    const agentId = `${role.toLowerCase().replace(/\s+/g, "-")}-sim-${Date.now()}`;
+    const llm = createLLM();
+    const mcp = new MCP();
+    const registry = new Registry();
+    const engine = new Engine(llm, registry, mcp);
+
+    const baseSkill = builtinSkills.code;
+    const systemPrompt = `You are a ${role} (Agent ID: ${agentId}) running a simulation. Your goal is to complete the assigned task efficiently.`;
+
+    const skill = {
+      ...baseSkill,
+      name: role,
+      systemPrompt: systemPrompt,
+    };
+
+    const context = new Context(process.cwd(), skill as any);
+
+    // We do NOT add to workers map because this is a transient simulation.
+    // However, if we want to support sub-agent spawning inside simulation, we might need to.
+    // For now, let's keep it isolated.
+
+    let finalResult = "Simulation failed or produced no output.";
+    try {
+        // Pass the task as the initial prompt to start execution immediately
+        await engine.run(context, `[Simulation Start] Task: ${task}`, { interactive: false, company: companyId });
+
+        // Extract result from history
+        const lastMessage = context.history.filter(m => m.role === "assistant").pop();
+        if (lastMessage) {
+            finalResult = lastMessage.content;
+        }
+    } catch (e) {
+        finalResult = `Simulation error: ${(e as Error).message}`;
+        console.error(`[Swarm] Simulation error for ${agentId}:`, e);
+    }
+
+    return {
+      content: [
+        {
+          type: "text" as const,
+          text: finalResult,
+        },
+      ],
+    };
   }
 
   async spawnSubAgent(role: string, task: string, parentId: string, companyId?: string) {

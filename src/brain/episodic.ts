@@ -13,6 +13,8 @@ export interface PastEpisode {
   agentResponse: string;
   artifacts: string[];
   vector: number[];
+  simulation_attempts?: string[];
+  resolved_via_dreaming?: boolean;
   _distance?: number;
 }
 
@@ -58,7 +60,16 @@ export class EpisodicMemory {
      return await this.llm.embed(text);
   }
 
-  async store(taskId: string, request: string, solution: string, artifacts: string[] = [], company?: string): Promise<void> {
+  async store(
+      taskId: string,
+      request: string,
+      solution: string,
+      artifacts: string[] = [],
+      company?: string,
+      simulation_attempts?: string[],
+      resolved_via_dreaming?: boolean,
+      id?: string
+  ): Promise<void> {
     // Embed the interaction (request + solution)
     const textToEmbed = `Task: ${taskId}\nRequest: ${request}\nSolution: ${solution}`;
     const embedding = await this.getEmbedding(textToEmbed);
@@ -67,14 +78,16 @@ export class EpisodicMemory {
         throw new Error("Failed to generate embedding for memory.");
     }
 
-    const data = {
-      id: randomUUID(),
+    const data: PastEpisode = {
+      id: id || randomUUID(),
       taskId,
       timestamp: Date.now(),
       userPrompt: request,
       agentResponse: solution,
       artifacts: artifacts.length > 0 ? artifacts : ["none"],
       vector: embedding,
+      simulation_attempts,
+      resolved_via_dreaming
     };
 
     let tableName = this.defaultTableName;
@@ -90,19 +103,40 @@ export class EpisodicMemory {
 
         if (!table) {
           try {
-            table = await this.connector.createTable(tableName, [data]);
+            // Cast to any because lancedb types might not match strict TS interface
+            table = await this.connector.createTable(tableName, [data as any]);
           } catch (e) {
             // Handle race condition where table was created by another process/request
             // Although withLock should prevent this for the same company table
             table = await this.connector.getTable(tableName);
             if (table) {
-              await table.add([data]);
+              await table.add([data as any]);
             } else {
               throw e;
             }
           }
         } else {
-          await table.add([data]);
+          await table.add([data as any]);
+        }
+    });
+  }
+
+  async delete(id: string, company?: string): Promise<void> {
+    let tableName = this.defaultTableName;
+    if (company) {
+        if (/^[a-zA-Z0-9_-]+$/.test(company)) {
+            tableName = `episodic_memories_${company}`;
+        }
+    }
+
+    await this.connector.withLock(company, async () => {
+        const table = await this.connector.getTable(tableName);
+        if (table) {
+            try {
+                await table.delete(`id = '${id}'`);
+            } catch (e) {
+                console.warn(`Failed to delete episode ${id}:`, e);
+            }
         }
     });
   }

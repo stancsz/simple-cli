@@ -263,12 +263,15 @@ To move towards AGI-like behavior, the system must not just *learn* but *rewrite
 *   **Goal**: If the agent realizes its `learnings.json` lookup is inefficient, it can write a new vector-based adapter and hot-swap it.
 
 ### 7.2 "Dreaming" (Offline Simulation)
-*   **Concept**: When idle (no user tasks), the Orchestrator enters a simulation state.
-*   **Activity**:
-    1.  Replays past failures from `logs/`.
-    2.  Spins up Delegate Agents to retry those failures with new strategies.
-    3.  If a new strategy works, it updates `learnings.json`.
-*   **Benefit**: The agent improves while the user sleeps.
+*   **Concept**: When idle (no user tasks), the Orchestrator enters a simulation state to resolve past failures.
+*   **Mechanism**:
+    1.  **Trigger**: Scheduled cron task (default: 2 AM) invokes `dreaming` MCP server.
+    2.  **Recall**: Queries the Brain's episodic memory for recent episodes marked with `Outcome: failure`.
+    3.  **Simulation**: For each failure, spawns a specialized sub-agent (via Swarm protocol) to retry the task with a prompt emphasizing "new strategy".
+    4.  **Resolution**:
+        - If successful: The old failure episode is removed/archived, and a new episode is stored with the solution, tagged `resolved_via_dreaming: true`.
+        - If failed again: The attempt is logged in the `simulation_attempts` field of the episode for future reference.
+*   **Benefit**: The agent autonomously improves its success rate by leveraging downtime to solve previously insurmountable problems ("learning while sleeping").
 
 ---
 
