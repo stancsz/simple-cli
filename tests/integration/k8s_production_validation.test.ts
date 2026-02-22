@@ -19,6 +19,21 @@ async function waitForPort(port: number, timeout = 10000) {
   throw new Error(`Timeout waiting for port ${port}`);
 }
 
+async function waitForPortClosed(port: number, timeout = 10000) {
+  const start = Date.now();
+  while (Date.now() - start < timeout) {
+    try {
+      await fetch(`http://localhost:${port}/health`);
+      // If it responds, it's still open
+    } catch {
+      // If it fails to connect, it's closed
+      return;
+    }
+    await new Promise((r) => setTimeout(r, 500));
+  }
+  throw new Error(`Timeout waiting for port ${port} to close`);
+}
+
 async function parseSSEResponse(res: Response) {
     const text = await res.text();
     if (!res.ok) throw new Error(`HTTP Error ${res.status}: ${text}`);
@@ -65,7 +80,7 @@ describe("Kubernetes Production Validation (Simulated)", () => {
 
     // 2. Start Brain Server (Simulating Brain Pod)
     console.log("Starting Brain Server...");
-    brainProcess = spawn("npx", ["tsx", "src/mcp_servers/brain/index.ts"], {
+    brainProcess = spawn("./node_modules/.bin/tsx", ["src/mcp_servers/brain/index.ts"], {
       cwd: process.cwd(),
       env: {
         ...process.env,
@@ -82,7 +97,7 @@ describe("Kubernetes Production Validation (Simulated)", () => {
 
     // 3. Start Health Monitor (Simulating Sidecar)
     console.log("Starting Health Monitor...");
-    healthMonitorProcess = spawn("npx", ["tsx", "src/mcp_servers/health_monitor/index.ts"], {
+    healthMonitorProcess = spawn("./node_modules/.bin/tsx", ["src/mcp_servers/health_monitor/index.ts"], {
       cwd: process.cwd(),
       env: {
         ...process.env,
@@ -213,11 +228,11 @@ describe("Kubernetes Production Validation (Simulated)", () => {
   it("should validate Persistence (Restart Brain)", async () => {
     // Kill Brain
     brainProcess.kill();
-    await new Promise(r => setTimeout(r, 8000));
+    await waitForPortClosed(BRAIN_PORT);
 
     // Restart Brain
     console.log("Restarting Brain Server...");
-    brainProcess = spawn("npx", ["tsx", "src/mcp_servers/brain/index.ts"], {
+    brainProcess = spawn("./node_modules/.bin/tsx", ["src/mcp_servers/brain/index.ts"], {
         cwd: process.cwd(),
         env: {
           ...process.env,
