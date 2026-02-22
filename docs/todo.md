@@ -143,8 +143,9 @@
 - [x] **Production Validation**: Implemented multi-tenant, 4-pillar integration test (`tests/integration/production_validation.test.ts`) for CI/CD pipeline.
 
 ### 11. Phase 10.5: Operational Excellence (✅ Implemented)
-- [x] **Health Monitor MCP**: Created `src/mcp_servers/health_monitor/` to track metrics.
-- [x] **Dashboard**: Created `scripts/dashboard/` for real-time visualization.
+- [x] **Health Monitor MCP**: Created `src/mcp_servers/health_monitor/` to track metrics and serve the dashboard.
+- [x] **Dashboard UI**: Enhanced `scripts/dashboard/` with a multi-tenant, visual web UI and natural language summaries.
+- [x] **CLI Command**: Added `simple dashboard` to launch the operational view.
 - [x] **Integration**: Metrics collection added to core engine and LLM.
 - [x] **Alerting**: Configurable threshold alerts via `alert_rules.json`.
 

@@ -121,6 +121,16 @@ async function main() {
     return;
   }
 
+  if (remainingArgs[0] === "dashboard") {
+      try {
+          const { dashboardCommand } = await import("./commands/dashboard.js");
+          await dashboardCommand();
+      } catch (e: any) {
+          console.error("Failed to start dashboard:", e);
+      }
+      return;
+  }
+
   if (remainingArgs[0] === "daemon") {
     try {
       const { daemon } = await import("./daemon/daemon_cli.js");

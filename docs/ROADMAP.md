@@ -150,9 +150,9 @@ To transition from a "Wrapper" to a true "Universal AI Integration Platform," th
 - **Concept:** Real-time visibility into agent performance and costs through an "Operational Persona".
 - **Status:** Fully implemented (`src/mcp_servers/health_monitor/`, `src/mcp_servers/operational_persona/` & `scripts/dashboard/`).
 - **Mechanism:**
-    - **Health Monitor MCP**: Tracks metrics (latency, tokens) and manages alerts.
+    - **Health Monitor MCP**: Tracks metrics (latency, tokens) and manages alerts. Now serves the Dashboard UI directly.
     - **Operational Persona Bridge**: Integrates Health Monitor and Brain to provide natural language updates in Sarah_DevOps' voice.
-    - **Dashboard**: Lightweight web UI for visualizing metrics. Now supports multi-tenant views and cost analytics.
+    - **Dashboard**: Full-featured web UI (SPA) for visualizing multi-tenant metrics, costs, and alerts. Accessible via `simple dashboard`.
     - **Alerting**: Configurable thresholds for critical metrics and Slack integration for daily standups.
     - **Stress Validation**: (✅ Completed) Long-running 7-day stress simulation (`tests/stress/long_running_stress.test.ts`) validates resilience, error recovery, and memory stability under chaos conditions.
 

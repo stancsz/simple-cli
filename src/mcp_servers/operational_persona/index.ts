@@ -9,6 +9,7 @@ import { join } from "path";
 import { existsSync } from "fs";
 import { StatusGenerator } from "./status_generator.js";
 import { PersonaFormatter } from "./persona_formatter.js";
+import { createLLM } from "../../llm.js";
 
 const server = new McpServer({
   name: "operational_persona",
@@ -117,6 +118,40 @@ server.tool(
   }
 );
 
+server.tool(
+  "generate_dashboard_summary",
+  "Generate a concise, natural language summary for the dashboard based on provided metrics.",
+  {
+    metrics: z.string().describe("JSON string of aggregated metrics"),
+    activity: z.string().optional().describe("Recent activity summary or JSON"),
+  },
+  async ({ metrics, activity }) => {
+    try {
+        const llm = createLLM();
+        const prompt = `
+Analyze the following system metrics and generate a concise, natural language status update for the operational dashboard.
+Focus on the overall health, key performance indicators (latency, errors, costs), and any notable activity.
+Do not just list numbers; tell a story about how the system is performing.
+
+Metrics:
+${metrics}
+
+Activity:
+${activity || "No specific recent activity reported."}
+
+Keep it under 3-4 sentences.
+`;
+        // The LLM response will be automatically transformed by the PersonaEngine inside LLM class
+        // because createLLM initializes LLM with PersonaEngine.
+        // We pass a dummy user message because some providers require non-empty messages.
+        const response = await llm.generate(prompt, [{ role: 'user', content: 'Generate status report.' }]);
+        return { content: [{ type: "text", text: response.message || "" }] };
+    } catch (e: any) {
+        return { content: [{ type: "text", text: `Error generating summary: ${e.message}` }], isError: true };
+    }
+  }
+);
+
 async function main() {
   console.log("Starting Operational Persona MCP Server...");
 
@@ -124,15 +159,19 @@ async function main() {
   personaFormatter = new PersonaFormatter();
   await personaFormatter.init();
 
-  // Connect to dependencies
-  try {
-      const brainClient = await connectToSubServer("brain");
-      const healthClient = await connectToSubServer("health_monitor");
-      statusGenerator = new StatusGenerator(brainClient, healthClient);
-      console.log("Connected to Brain and Health Monitor.");
-  } catch (e) {
-      console.error("Failed to connect to dependencies:", e);
-      process.exit(1);
+  // Connect to dependencies (unless disabled to prevent circular dependency)
+  if (process.env.MCP_DISABLE_DEPENDENCIES === 'true') {
+      console.log("Skipping connection to dependencies (MCP_DISABLE_DEPENDENCIES=true).");
+  } else {
+      try {
+          const brainClient = await connectToSubServer("brain");
+          const healthClient = await connectToSubServer("health_monitor");
+          statusGenerator = new StatusGenerator(brainClient, healthClient);
+          console.log("Connected to Brain and Health Monitor.");
+      } catch (e) {
+          console.error("Failed to connect to dependencies:", e);
+          process.exit(1);
+      }
   }
 
   if (process.env.PORT) {
