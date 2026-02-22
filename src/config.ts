@@ -1,4 +1,4 @@
-import { readFile } from "fs/promises";
+import { readFile, writeFile } from "fs/promises";
 import { existsSync } from "fs";
 import { join } from "path";
 
@@ -7,6 +7,8 @@ export interface Config {
   yoloMode?: boolean;
   autoDecisionTimeout?: number;
   companies?: string[];
+  active_company?: string;
+  archived_companies?: string[];
 }
 
 export async function loadConfig(cwd: string = process.cwd()): Promise<Config> {
@@ -27,4 +29,9 @@ export async function loadConfig(cwd: string = process.cwd()): Promise<Config> {
   }
 
   return config;
+}
+
+export async function saveConfig(config: Config, cwd: string = process.cwd()): Promise<void> {
+  const configPath = join(cwd, ".agent", "config.json");
+  await writeFile(configPath, JSON.stringify(config, null, 2));
 }

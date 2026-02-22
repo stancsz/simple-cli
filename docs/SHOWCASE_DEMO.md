@@ -143,6 +143,18 @@ After running the demo, check `.agent/ghost_logs/`:
 
 ---
 
+## 🏢 Managing Multiple Companies
+
+The enhanced Company Context system allows you to manage multiple client environments seamlessly using the CLI:
+
+1.  **Initialize**: `simple init-company <name>` (Creates context, SOPs, and Brain)
+2.  **Switch**: `simple company switch <name>` (Sets active context)
+3.  **List**: `simple company list` (View active and archived companies)
+4.  **Archive**: `simple company archive <name>` (Deactivate and move to storage)
+5.  **Status**: `simple company status` (Check current context)
+
+---
+
 ## 🔗 Next Steps
 
 -   **[View the Roadmap](ROADMAP.md)**: See what's coming next (Phase 12: K8s Deployment).
