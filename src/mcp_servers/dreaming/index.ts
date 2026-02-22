@@ -46,7 +46,7 @@ export class DreamingServer {
       const brainClient = this.mcp.getClient("brain");
       if (!brainClient) {
         return {
-          content: [{ type: "text", text: "Error: Brain MCP server not available." }],
+          content: [{ type: "text" as const, text: "Error: Brain MCP server not available." }],
           isError: true,
         };
       }
@@ -65,7 +65,7 @@ export class DreamingServer {
       const failuresText = queryResult.content[0].text;
       if (failuresText.includes("No relevant memories found")) {
         return {
-          content: [{ type: "text", text: "No past failures found to dream about." }],
+          content: [{ type: "text" as const, text: "No past failures found to dream about." }],
         };
       }
 
@@ -73,7 +73,7 @@ export class DreamingServer {
       const failures = this.parseFailures(failuresText);
       if (failures.length === 0) {
         return {
-          content: [{ type: "text", text: "Could not parse any failures from brain query." }],
+          content: [{ type: "text" as const, text: "Could not parse any failures from brain query." }],
         };
       }
 
@@ -81,7 +81,7 @@ export class DreamingServer {
       const swarmClient = this.mcp.getClient("swarm");
       if (!swarmClient) {
         return {
-          content: [{ type: "text", text: "Error: Swarm MCP server not available." }],
+          content: [{ type: "text" as const, text: "Error: Swarm MCP server not available." }],
           isError: true,
         };
       }
@@ -143,7 +143,7 @@ export class DreamingServer {
       return {
         content: [
           {
-            type: "text",
+            type: "text" as const,
             text: `Dreaming Session Complete.\nProcessed: ${failures.length}\nSuccess: ${successCount}\nResults:\n${results.join("\n")}`,
           },
         ],
@@ -151,7 +151,7 @@ export class DreamingServer {
 
     } catch (e: any) {
       return {
-        content: [{ type: "text", text: `Error during dreaming session: ${e.message}` }],
+        content: [{ type: "text" as const, text: `Error during dreaming session: ${e.message}` }],
         isError: true,
       };
     }

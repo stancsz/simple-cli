@@ -118,7 +118,7 @@ export class SwarmServer {
     } catch (e) {
         console.error(`[Swarm] Simulation ${agentId} failed: ${(e as Error).message}`);
         return {
-             content: [{ type: "text", text: JSON.stringify({ status: "error", result: (e as Error).message }) }]
+             content: [{ type: "text" as const, text: JSON.stringify({ status: "error", result: (e as Error).message }) }]
         };
     }
 
@@ -145,7 +145,7 @@ export class SwarmServer {
     return {
       content: [
         {
-          type: "text",
+          type: "text" as const,
           text: JSON.stringify({
               status: isSuccess ? "success" : "failure",
               result: resultText,
