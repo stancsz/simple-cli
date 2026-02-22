@@ -44,7 +44,7 @@ You can run this entire simulation on your local machine in minutes.
 -   OpenAI API Key (or compatible LLM key)
 
 ### Quickstart: The Simulation (Recommended)
-This runs a "Time Lapse" of the 24-hour cycle immediately.
+This runs a self-contained "Time Lapse" of the 24-hour cycle immediately.
 
 1.  **Clone the Repository**:
     ```bash
@@ -65,6 +65,19 @@ This runs a "Time Lapse" of the 24-hour cycle immediately.
     -   Executing `showcase_sop.md`...
     -   Triggering Morning Standup...
     -   Performing Daily HR Review...
+
+### CLI Installation (Interactive Mode)
+To install "Showcase Corp" into your main CLI environment and interact with it manually:
+
+1.  **Run the Setup Script**:
+    ```bash
+    npx tsx scripts/setup-showcase.ts
+    ```
+
+2.  **Switch Context**:
+    ```bash
+    simple company switch showcase-corp
+    ```
 
 ### Production Deployment: Docker (Ghost Mode)
 To deploy the agent as a background service that runs 24/7:

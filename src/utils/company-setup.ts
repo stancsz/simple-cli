@@ -21,7 +21,8 @@ async function copyDir(src: string, dest: string) {
 
 export async function setupCompany(name: string, context?: any): Promise<void> {
     const cwd = process.cwd();
-    const companyDir = join(cwd, ".agent", "companies", name);
+    const agentDir = process.env.JULES_AGENT_DIR || join(cwd, ".agent");
+    const companyDir = join(agentDir, "companies", name);
     const dirs = [
         join(companyDir, "brain"),
         join(companyDir, "sops"),
@@ -106,7 +107,7 @@ export async function setupCompany(name: string, context?: any): Promise<void> {
 
     // Update global config
     console.log("Updating global config...");
-    const configPath = join(cwd, ".agent", "config.json");
+    const configPath = join(agentDir, "config.json");
     let config: any = {};
     if (existsSync(configPath)) {
         try {
@@ -116,8 +117,8 @@ export async function setupCompany(name: string, context?: any): Promise<void> {
         }
     } else {
         // Ensure .agent dir exists
-        if (!existsSync(join(cwd, ".agent"))) {
-             await mkdir(join(cwd, ".agent"), { recursive: true });
+        if (!existsSync(agentDir)) {
+             await mkdir(agentDir, { recursive: true });
         }
     }
 

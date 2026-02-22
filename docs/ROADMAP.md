@@ -161,6 +161,7 @@ To transition from a "Wrapper" to a true "Universal AI Integration Platform," th
 - **Status:** ✅ **Live Demo Available!** See [docs/SHOWCASE_DEMO.md](SHOWCASE_DEMO.md).
 - **Mechanism:**
     - **Simulation Script**: `demos/simple-cli-showcase/run_demo.ts` orchestrates the 4 pillars.
+    - **One-Command Setup**: `scripts/setup-showcase.ts` automates environment configuration for CLI/Docker.
     - **SOP-as-Code**: Defines the end-to-end workflow (Project Init -> Deploy).
     - **Ghost Mode**: Simulates 24-hour autonomy (Morning Standups, HR Reviews).
     - **Validation**: Validated via `tests/integration/showcase_simulation.test.ts`.
