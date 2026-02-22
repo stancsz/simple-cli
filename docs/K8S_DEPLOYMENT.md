@@ -37,14 +37,20 @@ Multi-tenancy is achieved via Namespace isolation and the `company` parameter.
 
 ## Validation & Testing
 
-We include a comprehensive integration test suite to validate the K8s topology without requiring a running cluster.
+We include a dual-mode integration test suite that validates the deployment logic. The test automatically detects if a `kind` cluster is available and switches modes accordingly.
 
-### Running Validation Tests
+### 1. Real Kubernetes Validation (Recommended for CI)
+If `kind` and `kubectl` are installed, the test will:
+1.  Create a Kind cluster (if not exists).
+2.  Build and load Docker images.
+3.  Install the Helm chart.
+4.  Verify Pod status and PVC binding.
 
-The tests simulate the K8s environment by:
+### 2. Simulated Environment (Fallback for Dev)
+If `kind` is not available, the test falls back to a high-fidelity simulation:
 1.  Creating temporary directories to mimic PVCs.
 2.  Spawning `Brain` and `HealthMonitor` processes on ports 3002/3004.
-3.  Running Agent logic against these simulated services.
+3.  Running Agent logic against these simulated services to verify multi-tenancy and persistence.
 
 To run the validation suite:
 

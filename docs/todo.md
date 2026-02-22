@@ -158,5 +158,5 @@
 - [x] **Helm Chart**: Created `deployment/chart/simple-cli` with StatefulSets and Sidecars.
 - [x] **Multi-Tenancy**: Validated namespace isolation and `company` injection.
 - [x] **Persistence**: Validated PVC logic and Brain/Agent storage.
-- [x] **Validation**: Implemented simulated K8s integration tests `tests/integration/k8s_production_validation.test.ts`.
+- [x] **Validation**: Implemented dual-mode (Kind/Simulated) integration tests `tests/integration/k8s_production_validation.test.ts`.
 - [x] **Documentation**: Added `docs/K8S_DEPLOYMENT.md`.
