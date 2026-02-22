@@ -272,8 +272,14 @@ async function connectToOperationalPersona(): Promise<Client | null> {
         return null;
     }
 
-    const env = { ...process.env, MCP_DISABLE_DEPENDENCIES: 'true' };
-    delete env.PORT; // Prevent Operational Persona from trying to bind to the same port
+    const env: Record<string, string> = {};
+    for (const key in process.env) {
+        const val = process.env[key];
+        if (val !== undefined && key !== 'PORT') {
+            env[key] = val;
+        }
+    }
+    env.MCP_DISABLE_DEPENDENCIES = 'true';
 
     const transport = new StdioClientTransport({
         command,
