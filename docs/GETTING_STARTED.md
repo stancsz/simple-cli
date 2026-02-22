@@ -2,6 +2,25 @@
 
 Welcome to **Simple CLI**, the Universal AI Integration Platform. This guide will walk you through installing the tool, setting up your first "Company Context" (Digital Agency), and running your first autonomous tasks.
 
+## ⚡ 0. First Steps (5 Minutes)
+
+Before diving into configuration, take the **Interactive Tour** to see what Simple CLI can do.
+
+Run the Quick Start Wizard:
+
+```bash
+simple quick-start
+```
+
+This wizard will:
+-   Showcase integrations with specialized agents (Aider, CrewAI, v0.dev).
+-   Demonstrate how the orchestrator delegates tasks.
+-   Display raw MCP (Model Context Protocol) communication logs.
+
+[Read the Quick Start Guide](QUICK_START.md) for more details.
+
+---
+
 ## 📦 1. Installation
 
 ### Prerequisites

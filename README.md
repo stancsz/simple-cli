@@ -8,7 +8,23 @@
 Simple-CLI is a **Meta-Orchestrator** with a unique superpower: **rapid framework ingestion**. Point it at any AI framework (Jules, Claude, Aider, CrewAI, Kimi, Devin), and it will digest, wrap, and deploy it as a specialized sub-agent—complete with token-efficient long-term memory and autonomous execution capabilities.
 
 ## 📚 Getting Started
-New to Simple CLI? Start here to set up your digital agency in minutes.
+
+### ⚡ First 5 Minutes: The Interactive Tour
+Want to see the magic before you configure anything? Run the Quick Start wizard:
+
+```bash
+simple quick-start
+```
+
+This interactive demo will:
+-   Show you how the orchestrator delegates tasks to **Aider**, **CrewAI**, and **v0.dev**.
+-   Let you peek under the hood at the raw **MCP communication**.
+-   Generate a personalized configuration for your project.
+
+**[👉 Read the Quick Start Guide](docs/QUICK_START.md)**
+
+### Full Setup
+Ready to build your digital agency?
 **[👉 Read the Comprehensive Getting Started Guide](docs/GETTING_STARTED.md)**
 
 ## 🎯 Core Strength
