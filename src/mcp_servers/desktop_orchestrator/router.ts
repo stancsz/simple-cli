@@ -47,6 +47,11 @@ export class DesktopRouter {
     else if (descLower.includes("use openai")) { selectedDriverName = "openai"; routingMethod = "override"; }
     else if (descLower.includes("use skyvern")) { selectedDriverName = "skyvern"; routingMethod = "override"; }
 
+    // 1.5 Check for capability keywords (Heuristics)
+    else if (descLower.includes("computer") || descLower.includes("os level") || descLower.includes("app")) { selectedDriverName = "anthropic"; routingMethod = "heuristic"; }
+    else if (descLower.includes("research") || descLower.includes("browse") || descLower.includes("plan")) { selectedDriverName = "openai"; routingMethod = "heuristic"; }
+    else if (descLower.includes("vision") || descLower.includes("form") || descLower.includes("unknown structure")) { selectedDriverName = "skyvern"; routingMethod = "heuristic"; }
+
     // 2. If short/simple, use preferred
     else if (taskDescription.length < 20 && !descLower.includes("complex")) {
         selectedDriverName = this.preferredBackend;
@@ -60,8 +65,8 @@ export class DesktopRouter {
                 `You are a router for a desktop automation system.
                  Available backends:
                  - stagehand: Fast, local browser automation (default). Good for known selectors, simple flows, or when speed is key.
-                 - anthropic: Uses Anthropic's Computer Use API. Good for visual tasks, desktop apps (non-browser), or when no selectors are known.
-                 - openai: Uses OpenAI Operator. Good for general browsing.
+                 - anthropic: Uses Anthropic's Computer Use API. Good for OS-level control, non-browser apps, or when the task requires interacting with the desktop GUI directly.
+                 - openai: Uses OpenAI Operator. Good for high-autonomy research, browsing, and complex planning tasks where the agent needs to explore and synthesize information.
                  - skyvern: Vision-based automation. Good for "fill form", "navigate complex site" where structure is unknown, or tasks requiring resilience to layout changes.
 
                  Task: "${taskDescription}"

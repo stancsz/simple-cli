@@ -171,7 +171,7 @@
 - [x] **Getting Started Tutorial**: Create a comprehensive guide for new users (`docs/GETTING_STARTED.md`).
 - [x] **Contribution Guidelines**: Establish clear guidelines for contributors.
 
-### 15. Phase 14: Visual & Desktop Agency (✅ Enhanced: Polyglot Orchestrator)
+### 15. Phase 14: Visual & Desktop Agency (✅ Completed: Polyglot Orchestrator)
 - [x] **Core Architecture**:
     - [x] Implemented `DesktopOrchestrator` server.
     - [x] Created `DesktopDriver` interface for polyglot support.
@@ -181,7 +181,8 @@
 - [x] **Drivers**:
     - [x] **Stagehand**: Ported existing functionality.
     - [x] **Skyvern**: Implemented fully functional driver with Playwright + Vision API.
-    - [x] **Polyglot Stubs**: Created skeleton drivers for Anthropic, OpenAI.
+    - [x] **Anthropic**: Implemented Computer Use driver.
+    - [x] **OpenAI**: Implemented Operator driver.
 - [x] **Validation**:
     - [x] Integration tests for routing and driver selection.
 

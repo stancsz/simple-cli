@@ -192,7 +192,7 @@ To transition from a "Wrapper" to a true "Universal AI Integration Platform," th
     - **Contribution Guidelines:** (✅ Completed) Created `docs/CONTRIBUTING.md` to establish clear standards for code, PRs, and testing.
     - **Documentation Improvements:** (✅ Implemented) Updated README and Roadmaps to reflect the "Integration First" philosophy.
 
-### Phase 14: Visual & Desktop Agency (✅ Enhanced: Polyglot Orchestrator)
+### Phase 14: Visual & Desktop Agency (✅ Completed: Polyglot Orchestrator)
 **Goal:** Enable the agent to interact with web interfaces and desktop applications visually using any backend.
 - **Concept:** A unified "Desktop Orchestrator" that intelligently routes tasks to Stagehand, Anthropic, OpenAI, or Skyvern.
 - **Status:** Polyglot Orchestrator implemented (`src/mcp_servers/desktop_orchestrator/`).
@@ -200,7 +200,9 @@ To transition from a "Wrapper" to a true "Universal AI Integration Platform," th
     - **Smart Router:** Uses LLM to classify tasks and select the best backend (e.g., "Fill form" -> Skyvern, "Click button" -> Stagehand).
     - **Polyglot Drivers:** Adapter pattern supporting multiple backends.
         - **Stagehand:** (✅ Active) Fast, local automation.
-        - **Anthropic/OpenAI/Skyvern:** (✅ Skeleton) Ready for API integration.
+        - **Anthropic:** (✅ Active) Computer Use API for OS-level control.
+        - **OpenAI:** (✅ Active) Operator for research and planning.
+        - **Skyvern:** (✅ Active) Vision-based automation.
     - **Unified Interface:** Standardized `navigate`, `click`, `type`, `screenshot` tools.
     - **Validation:** Integration tests verify routing logic and driver selection.
     - **Documentation:** See `docs/DESKTOP_ORCHESTRATION.md`.
