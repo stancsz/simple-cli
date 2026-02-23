@@ -350,7 +350,13 @@ export async function main() {
 
     // Serve Dashboard Static Files
     const dashboardPublic = join(process.cwd(), 'scripts', 'dashboard', 'dist');
-    app.use(express.static(dashboardPublic));
+    if (existsSync(dashboardPublic)) {
+        app.use(express.static(dashboardPublic));
+    } else {
+        // Fallback for dev/test environments where build hasn't run
+        console.warn("Dashboard dist not found, serving source for testing...");
+        app.use(express.static(join(process.cwd(), 'scripts', 'dashboard')));
+    }
 
     app.all("/sse", async (req, res) => {
       await transport.handleRequest(req, res);

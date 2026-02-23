@@ -31,7 +31,13 @@ function readNdjson(filepath) {
   }
 }
 
-app.use(express.static(join(__dirname, 'dist')));
+const distPath = join(__dirname, 'dist');
+if (fs.existsSync(distPath)) {
+    app.use(express.static(distPath));
+} else {
+    // Fallback for testing/dev
+    app.use(express.static(__dirname));
+}
 
 // Proxy dashboard API calls to Health Monitor
 app.use('/api/dashboard', async (req, res) => {
