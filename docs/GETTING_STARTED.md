@@ -149,6 +149,10 @@ Simple CLI can "absorb" other AI tools.
 
 Now, `simple` can use `aider` as a subordinate agent!
 
+### Power User Path
+Want to build your own integration?
+[**Take the Rapid Framework Integration Tutorial**](TUTORIAL_INTEGRATE_NEW_FRAMEWORK.md) to learn how to add "Roo Code" in 15 minutes.
+
 ---
 
 ## 🎭 6. Configuring Persona & Interfaces

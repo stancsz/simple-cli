@@ -29,3 +29,4 @@ Our agents aren't just chatbots. They are autonomous workers capable of complex 
 *   [Getting Started](./GETTING_STARTED.md)
 *   [Company Context](./COMPANY_CONTEXT.md)
 *   [Developer Roadmap](./ROADMAP.md)
+*   [Rapid Integration Tutorial](./TUTORIAL_INTEGRATE_NEW_FRAMEWORK.md)
