@@ -1,42 +1,98 @@
 import { DesktopDriver } from "../types.js";
+import { logMetric } from "../../../logger.js";
 
 export class SkyvernDriver implements DesktopDriver {
   name = "skyvern";
 
   async init() {
-    console.log("Initializing Skyvern Driver...");
+    const start = Date.now();
+    try {
+      console.log("Initializing Skyvern Driver...");
+      await logMetric('desktop_orchestrator', 'driver_initialization', Date.now() - start, { driver: 'skyvern', status: 'success' });
+    } catch (e) {
+      await logMetric('desktop_orchestrator', 'driver_initialization', Date.now() - start, { driver: 'skyvern', status: 'failure', error: (e as Error).message });
+      throw e;
+    }
   }
 
   async navigate(url: string) {
-    console.log(`[Skyvern] Navigating to ${url}`);
-    return `[Skyvern] Navigated to ${url}`;
+    const start = Date.now();
+    try {
+      console.log(`[Skyvern] Navigating to ${url}`);
+      await logMetric('desktop_orchestrator', 'execution_latency', Date.now() - start, { driver: 'skyvern', action: 'navigate', status: 'success' });
+      return `[Skyvern] Navigated to ${url}`;
+    } catch (e) {
+      await logMetric('desktop_orchestrator', 'execution_latency', Date.now() - start, { driver: 'skyvern', action: 'navigate', status: 'failure', error: (e as Error).message });
+      throw e;
+    }
   }
 
   async click(selector: string) {
-    console.log(`[Skyvern] Clicking ${selector}`);
-    return `[Skyvern] Clicked ${selector}`;
+    const start = Date.now();
+    try {
+      console.log(`[Skyvern] Clicking ${selector}`);
+      await logMetric('desktop_orchestrator', 'execution_latency', Date.now() - start, { driver: 'skyvern', action: 'click', status: 'success' });
+      return `[Skyvern] Clicked ${selector}`;
+    } catch (e) {
+      await logMetric('desktop_orchestrator', 'execution_latency', Date.now() - start, { driver: 'skyvern', action: 'click', status: 'failure', error: (e as Error).message });
+      throw e;
+    }
   }
 
   async type(selector: string, text: string) {
-    console.log(`[Skyvern] Typing "${text}" into ${selector}`);
-    return `[Skyvern] Typed text`;
+    const start = Date.now();
+    try {
+      console.log(`[Skyvern] Typing "${text}" into ${selector}`);
+      await logMetric('desktop_orchestrator', 'execution_latency', Date.now() - start, { driver: 'skyvern', action: 'type', status: 'success' });
+      return `[Skyvern] Typed text`;
+    } catch (e) {
+      await logMetric('desktop_orchestrator', 'execution_latency', Date.now() - start, { driver: 'skyvern', action: 'type', status: 'failure', error: (e as Error).message });
+      throw e;
+    }
   }
 
   async screenshot() {
-    console.log(`[Skyvern] Taking screenshot`);
-    return "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==";
+    const start = Date.now();
+    try {
+      console.log(`[Skyvern] Taking screenshot`);
+      await logMetric('desktop_orchestrator', 'execution_latency', Date.now() - start, { driver: 'skyvern', action: 'screenshot', status: 'success' });
+      return "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==";
+    } catch (e) {
+      await logMetric('desktop_orchestrator', 'execution_latency', Date.now() - start, { driver: 'skyvern', action: 'screenshot', status: 'failure', error: (e as Error).message });
+      throw e;
+    }
   }
 
   async extract_text() {
-    return "[Skyvern] Extracted text";
+    const start = Date.now();
+    try {
+      await logMetric('desktop_orchestrator', 'execution_latency', Date.now() - start, { driver: 'skyvern', action: 'extract_text', status: 'success' });
+      return "[Skyvern] Extracted text";
+    } catch (e) {
+      await logMetric('desktop_orchestrator', 'execution_latency', Date.now() - start, { driver: 'skyvern', action: 'extract_text', status: 'failure', error: (e as Error).message });
+      throw e;
+    }
   }
 
   async execute_complex_flow(goal: string) {
-    console.log(`[Skyvern] Executing complex flow: ${goal}`);
-    return `[Skyvern] Executed: ${goal}`;
+    const start = Date.now();
+    try {
+      console.log(`[Skyvern] Executing complex flow: ${goal}`);
+      await logMetric('desktop_orchestrator', 'execution_latency', Date.now() - start, { driver: 'skyvern', action: 'execute_complex_flow', status: 'success' });
+      return `[Skyvern] Executed: ${goal}`;
+    } catch (e) {
+      await logMetric('desktop_orchestrator', 'execution_latency', Date.now() - start, { driver: 'skyvern', action: 'execute_complex_flow', status: 'failure', error: (e as Error).message });
+      throw e;
+    }
   }
 
   async shutdown() {
-    console.log("[Skyvern] Shutting down");
+    const start = Date.now();
+    try {
+      console.log("[Skyvern] Shutting down");
+      await logMetric('desktop_orchestrator', 'driver_shutdown', Date.now() - start, { driver: 'skyvern', status: 'success' });
+    } catch (e) {
+      await logMetric('desktop_orchestrator', 'driver_shutdown', Date.now() - start, { driver: 'skyvern', status: 'failure', error: (e as Error).message });
+    }
   }
 }

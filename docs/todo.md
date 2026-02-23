@@ -182,3 +182,17 @@
     - [x] **Polyglot Stubs**: Created skeleton drivers for Anthropic, OpenAI, Skyvern.
 - [x] **Validation**:
     - [x] Integration tests for routing and driver selection.
+
+## Sprint 2: Operational Hardening (✅ Completed)
+
+**Goal:** Ensure platform stability, observability, and resilience.
+
+### Phase 15: Stress Testing
+- [x] **Desktop Orchestrator Instrumentation**:
+    - [x] Added `logMetric` to `StagehandDriver` and other drivers.
+    - [x] Added structured logging to `DesktopRouter`.
+- [x] **Stress Tests**:
+    - [x] Extended `long_running_stress.test.ts` with Desktop Research scenarios.
+    - [x] Created `tests/integration/desktop_orchestrator_stress.test.ts` (100+ concurrent tasks).
+- [x] **Documentation**:
+    - [x] Created `docs/OPERATIONAL_HARDENING.md`.
