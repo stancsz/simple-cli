@@ -1,0 +1,17 @@
+{
+  "desktop_orchestrator": {
+    "preferred_backend": "stagehand",
+    "drivers": {
+      "skyvern": {
+        "api_base": "http://localhost:8000",
+        "api_key": null,
+        "timeout": 30000,
+        "cdp_port": 9222
+      },
+      "stagehand": {
+        "env": "LOCAL",
+        "verbose": 1
+      }
+    }
+  }
+}

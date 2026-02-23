@@ -15,9 +15,9 @@ The server acts as a smart router, dispatching commands to one of the available 
 3.  **OpenAI Operator** (Planned/Skeleton):
     *   **Best for**: General web browsing and research.
     *   **Mechanism**: Uses OpenAI's Operator model.
-4.  **Skyvern** (Planned/Skeleton):
-    *   **Best for**: "Navigation from scratch", unknown website structures, resilient workflows.
-    *   **Mechanism**: Vision-based navigation.
+4.  **Skyvern** (Active):
+    *   **Best for**: "Navigation from scratch", unknown website structures, resilient workflows, form filling.
+    *   **Mechanism**: Uses local Playwright for browser control and Skyvern API for vision-based decisions (requires a running Skyvern instance or API access).
 
 ## Tools
 
@@ -35,11 +35,39 @@ The server exposes the following MCP tools:
 The `task_description` parameter helps the Orchestrator decide which backend to use.
 - "Use Stagehand to click the button" -> Forces Stagehand.
 - "Analyze this chart" -> Might route to Anthropic (if enabled).
-- "Fill out this complex dynamic form" -> Might route to Skyvern.
+- "Fill out this complex dynamic form" -> Routes to Skyvern.
 
 If no description is provided, it defaults to the configured `preferred_backend`.
 
 ## Configuration
+
+Configuration is managed via `src/mcp_servers/desktop_orchestrator/config.json`.
+
+### Skyvern Configuration
+
+To use Skyvern, ensure you have a running Skyvern instance (e.g., via Docker on port 8000) or an API key for Skyvern Cloud.
+
+```json
+{
+  "desktop_orchestrator": {
+    "preferred_backend": "stagehand",
+    "drivers": {
+      "skyvern": {
+        "api_base": "http://localhost:8000",
+        "api_key": null,
+        "timeout": 30000,
+        "cdp_port": 9222
+      }
+    }
+  }
+}
+```
+
+- `api_base`: The URL of the Skyvern API (default: `http://localhost:8000`).
+- `api_key`: Your Skyvern API key (if using Cloud or authenticated instance).
+- `cdp_port`: The remote debugging port for the local browser (default: 9222). Skyvern uses this to inspect the browser state via CDP.
+
+## MCP Server Configuration
 
 In `mcp.json`:
 

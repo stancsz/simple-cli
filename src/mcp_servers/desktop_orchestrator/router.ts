@@ -62,7 +62,7 @@ export class DesktopRouter {
                  - stagehand: Fast, local browser automation (default). Good for known selectors, simple flows, or when speed is key.
                  - anthropic: Uses Anthropic's Computer Use API. Good for visual tasks, desktop apps (non-browser), or when no selectors are known.
                  - openai: Uses OpenAI Operator. Good for general browsing.
-                 - skyvern: Vision-based automation. Good for "fill form", "navigate complex site" where structure is unknown.
+                 - skyvern: Vision-based automation. Good for "fill form", "navigate complex site" where structure is unknown, or tasks requiring resilience to layout changes.
 
                  Task: "${taskDescription}"
 
