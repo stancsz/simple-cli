@@ -31,7 +31,28 @@ function readNdjson(filepath) {
   }
 }
 
-app.use(express.static(join(__dirname, 'public')));
+const distPath = join(__dirname, 'dist');
+if (fs.existsSync(distPath)) {
+    app.use(express.static(distPath));
+} else {
+    // Fallback for testing/dev
+    app.use(express.static(__dirname));
+}
+
+// Proxy dashboard API calls to Health Monitor
+app.use('/api/dashboard', async (req, res) => {
+    try {
+        const url = `${HEALTH_MONITOR_URL}/api/dashboard${req.url}`;
+        const response = await fetch(url);
+        if (!response.ok) {
+            throw new Error(`Health Monitor responded with ${response.status}`);
+        }
+        const data = await response.json();
+        res.json(data);
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
 
 app.get('/api/company_metrics', async (req, res) => {
     try {

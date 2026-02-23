@@ -6,14 +6,15 @@ import { z } from "zod";
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { StdioClientTransport } from "@modelcontextprotocol/sdk/client/stdio.js";
 import { logMetric } from "../../logger.js";
-import { readFile, writeFile, readdir, mkdir } from "fs/promises";
+import { readFile, writeFile, mkdir } from "fs/promises";
 import { join, dirname } from "path";
 import { existsSync } from "fs";
 import { EpisodicMemory } from "../../brain/episodic.js";
 import { loadConfig } from "../../config.js";
+import { getMetricFiles, readNdjson, AGENT_DIR, METRICS_DIR } from "./utils.js";
+import { detectAnomalies, predictMetrics } from "./anomaly_detector.js";
+import { correlateAlerts, Alert } from "./alert_correlator.js";
 
-const AGENT_DIR = process.env.JULES_AGENT_DIR || join(process.cwd(), '.agent');
-const METRICS_DIR = join(AGENT_DIR, 'metrics');
 const ALERT_RULES_FILE = join(process.cwd(), 'scripts', 'dashboard', 'alert_rules.json');
 
 const server = new McpServer({
@@ -22,27 +23,6 @@ const server = new McpServer({
 });
 
 const episodic = new EpisodicMemory();
-
-// Helper to get files for a range of dates
-async function getMetricFiles(days: number): Promise<string[]> {
-  if (!existsSync(METRICS_DIR)) return [];
-  const files = await readdir(METRICS_DIR);
-  // Filter for YYYY-MM-DD.ndjson
-  const sorted = files.filter(f => /^\d{4}-\d{2}-\d{2}\.ndjson$/.test(f)).sort();
-  return sorted.slice(-days).map(f => join(METRICS_DIR, f));
-}
-
-// Helper to read ndjson
-async function readNdjson(filepath: string): Promise<any[]> {
-  try {
-    const content = await readFile(filepath, 'utf-8');
-    return content.trim().split('\n').map(line => {
-        try { return JSON.parse(line); } catch { return null; }
-    }).filter(Boolean);
-  } catch {
-    return [];
-  }
-}
 
 server.tool(
   "track_metric",
@@ -138,7 +118,7 @@ server.tool(
   }
 );
 
-async function getAlerts() {
+async function getAlerts(): Promise<Alert[]> {
     if (!existsSync(ALERT_RULES_FILE)) {
          return [];
     }
@@ -162,7 +142,7 @@ async function getAlerts() {
     const fiveMinutes = 5 * 60 * 1000;
     const recentMetrics = metrics.filter(m => (now - new Date(m.timestamp).getTime()) < fiveMinutes);
 
-    const alerts: string[] = [];
+    const alerts: Alert[] = [];
 
     for (const rule of rules) {
         const relevant = recentMetrics.filter(m =>
@@ -180,8 +160,11 @@ async function getAlerts() {
         if (rule.operator === "<=" && avgValue <= rule.threshold) triggered = true;
 
         if (triggered) {
-            const msg = `ALERT: ${rule.metric} is ${avgValue.toFixed(2)} (${rule.operator} ${rule.threshold})`;
-            alerts.push(msg);
+            alerts.push({
+                metric: rule.metric,
+                message: `${rule.metric} is ${avgValue.toFixed(2)} (${rule.operator} ${rule.threshold})`,
+                timestamp: new Date().toISOString()
+            });
         }
     }
     return alerts;
@@ -194,9 +177,64 @@ server.tool(
   async () => {
     const alerts = await getAlerts();
     if (alerts.length > 0) {
-        return { content: [{ type: "text", text: alerts.join("\n") }] };
+        return { content: [{ type: "text", text: alerts.map(a => `ALERT: ${a.message}`).join("\n") }] };
     }
     return { content: [{ type: "text", text: "No alerts triggered." }] };
+  }
+);
+
+server.tool(
+  "detect_anomalies",
+  "Detect statistical anomalies in metrics.",
+  {
+      agent: z.string().optional(),
+      metric: z.string().optional()
+  },
+  async ({ agent, metric }) => {
+      const files = await getMetricFiles(1);
+      let metrics: any[] = [];
+      for (const file of files) {
+          metrics = metrics.concat(await readNdjson(file));
+      }
+
+      if (agent) metrics = metrics.filter(m => m.agent === agent);
+      if (metric) metrics = metrics.filter(m => m.metric === metric);
+
+      const anomalies = detectAnomalies(metrics);
+      return { content: [{ type: "text", text: JSON.stringify(anomalies, null, 2) }] };
+  }
+);
+
+server.tool(
+  "get_correlated_alerts",
+  "Get correlated alert incidents.",
+  {},
+  async () => {
+      const alerts = await getAlerts();
+      const incidents = correlateAlerts(alerts);
+      return { content: [{ type: "text", text: JSON.stringify(incidents, null, 2) }] };
+  }
+);
+
+server.tool(
+  "predict_metrics",
+  "Predict future metric values.",
+  {
+      metric: z.string(),
+      horizon_minutes: z.number().default(60)
+  },
+  async ({ metric, horizon_minutes }) => {
+       const files = await getMetricFiles(7); // Use last week for prediction context
+       let metrics: any[] = [];
+       for (const file of files) {
+           metrics = metrics.concat(await readNdjson(file));
+       }
+
+       // Filter by metric name or agent:metric
+       metrics = metrics.filter(m => m.metric === metric || `${m.agent}:${m.metric}` === metric);
+
+       const predictions = predictMetrics(metrics, horizon_minutes);
+       return { content: [{ type: "text", text: JSON.stringify(predictions, null, 2) }] };
   }
 );
 
@@ -311,8 +349,14 @@ export async function main() {
     const personaClient = await connectToOperationalPersona();
 
     // Serve Dashboard Static Files
-    const dashboardPublic = join(process.cwd(), 'scripts', 'dashboard', 'public');
-    app.use(express.static(dashboardPublic));
+    const dashboardPublic = join(process.cwd(), 'scripts', 'dashboard', 'dist');
+    if (existsSync(dashboardPublic)) {
+        app.use(express.static(dashboardPublic));
+    } else {
+        // Fallback for dev/test environments where build hasn't run
+        console.warn("Dashboard dist not found, serving source for testing...");
+        app.use(express.static(join(process.cwd(), 'scripts', 'dashboard')));
+    }
 
     app.all("/sse", async (req, res) => {
       await transport.handleRequest(req, res);
@@ -338,7 +382,48 @@ export async function main() {
     app.get("/api/dashboard/alerts", async (req, res) => {
         try {
             const alerts = await getAlerts();
-            res.json({ alerts });
+            res.json({ alerts: alerts.map(a => a.message) }); // Backward compatibility for string array
+        } catch (e) {
+            res.status(500).json({ error: (e as Error).message });
+        }
+    });
+
+    app.get("/api/dashboard/incidents", async (req, res) => {
+        try {
+            const alerts = await getAlerts();
+            const incidents = correlateAlerts(alerts);
+            res.json(incidents);
+        } catch (e) {
+            res.status(500).json({ error: (e as Error).message });
+        }
+    });
+
+    app.get("/api/dashboard/anomalies", async (req, res) => {
+        try {
+             const files = await getMetricFiles(1);
+             let metrics: any[] = [];
+             for (const file of files) {
+                  metrics = metrics.concat(await readNdjson(file));
+             }
+             const anomalies = detectAnomalies(metrics);
+             res.json(anomalies);
+        } catch (e) {
+            res.status(500).json({ error: (e as Error).message });
+        }
+    });
+
+    app.get("/api/dashboard/predictions", async (req, res) => {
+        const metric = req.query.metric as string;
+        if (!metric) return res.status(400).json({ error: "metric query param required" });
+        try {
+             const files = await getMetricFiles(7);
+             let metrics: any[] = [];
+             for (const file of files) {
+                  metrics = metrics.concat(await readNdjson(file));
+             }
+             metrics = metrics.filter(m => m.metric === metric || `${m.agent}:${m.metric}` === metric);
+             const predictions = predictMetrics(metrics, 60);
+             res.json(predictions);
         } catch (e) {
             res.status(500).json({ error: (e as Error).message });
         }
