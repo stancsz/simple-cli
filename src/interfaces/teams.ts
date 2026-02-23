@@ -172,10 +172,25 @@ class TeamsBot extends ActivityHandler {
 
     this.onMessage(async (context, next) => {
       const activity = context.activity;
+      const text = TurnContext.removeRecipientMention(activity);
+      const cleanText = text.trim();
 
-      // 1. Add reaction (👍)
+      // 0. Check Working Hours & Config
+      const tempProvider = createLLM();
+      const persona = tempProvider.personaEngine;
+      await persona.loadConfig();
+
+      if (!persona.isWithinWorkingHours()) {
+          const oooMsg = persona.getOutOfOfficeMessage();
+          await context.sendActivity(oooMsg);
+          return;
+      }
+
+      // 1. Add reaction
       if (activity.id) {
         try {
+          // Teams reactions are limited (like, heart, laugh, surprised, sad, angry)
+          // We default to 'like' (thumbsup) as others don't map well to 'construction'.
           await context.sendActivities([
             {
               type: ActivityTypes.MessageReaction,
@@ -193,9 +208,6 @@ class TeamsBot extends ActivityHandler {
         const fileNames = activity.attachments.map(a => a.name || 'unnamed_file').join(', ');
         await context.sendActivity(`Received attachments: ${fileNames}. (File processing is limited in this version)`);
       }
-
-      const text = TurnContext.removeRecipientMention(activity);
-      const cleanText = text.trim();
 
       let prompt = cleanText;
       const companyMatch = prompt.match(/--company\s+([a-zA-Z0-9_-]+)/);

@@ -129,12 +129,14 @@ export class PersonaEngine {
     // Working Hours Check
     if (!this.isWithinWorkingHours()) {
       // Simulate typing even for offline message
+      const oooMsg = this.getOutOfOfficeMessage();
       if (this.config.response_latency) {
-        await this.simulateTyping("", this.config.response_latency, onTyping);
+        // Use calculateTypingDelay for consistency, even if we pass config manually
+        await this.simulateTyping(oooMsg, this.config.response_latency, onTyping);
       }
       return {
         ...response,
-        message: `I am currently offline. My working hours are ${this.config.working_hours}.`,
+        message: oooMsg,
         thought: "Working hours check failed. Sending offline message.",
       };
     }
@@ -156,19 +158,45 @@ export class PersonaEngine {
     };
   }
 
-  async simulateTyping(response: string, latencyConfig: { min: number, max: number }, onTyping?: () => void): Promise<void> {
+  calculateTypingDelay(responseLength: number): number {
+    const latencyConfig = this.config?.response_latency || { min: 1000, max: 3000 };
     const { min, max } = latencyConfig;
 
     // Calculate proportional delay (approx 30ms per character ~ 2000 chars/min)
-    let delay = response.length * 30;
+    let delay = responseLength * 30;
+
+    // Add jitter (±10%)
+    const jitter = delay * 0.1 * (Math.random() * 2 - 1);
+    delay = Math.floor(delay + jitter);
 
     // Apply constraints
     delay = Math.max(min, delay);
     delay = Math.min(max, delay);
 
-    // Add jitter (±10%)
-    const jitter = delay * 0.1 * (Math.random() * 2 - 1);
-    delay = Math.floor(delay + jitter);
+    return delay;
+  }
+
+  getOutOfOfficeMessage(): string {
+    if (!this.config) return "I am currently offline.";
+    let msg = "I am currently offline.";
+    if (this.config.working_hours) {
+      msg += ` My working hours are ${this.config.working_hours}.`;
+    }
+    return this.formatMessage(msg);
+  }
+
+  getReaction(input: string): string {
+    // Heuristic: Long inputs (>50 chars) get "🏗️", short get "👍"
+    // This acknowledges complexity for longer tasks
+    if (input.length > 50) {
+      return "🏗️";
+    }
+    return "👍";
+  }
+
+  async simulateTyping(response: string, latencyConfig: { min: number, max: number }, onTyping?: () => void): Promise<void> {
+    // Use the centralized calculation
+    const delay = this.calculateTypingDelay(response.length);
 
     if (onTyping && delay > 100) {
       onTyping();

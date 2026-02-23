@@ -40,23 +40,25 @@ The persona is configured via `.agent/config/persona.json`.
 - **response_latency**: Simulated typing delay in milliseconds.
 - **enabled**: Master switch to enable/disable the persona.
 
-## Middleware Architecture
+## Integration Architecture
 
-The Persona Engine uses a **Middleware** pattern (`src/persona/middleware.ts`) that wraps all interface outputs.
+The Persona Engine is integrated directly into the core `LLM` class and individual interface adapters (`src/interfaces/`) to ensure consistent personality application across all channels.
 
-### Transformation Process
+### 1. Voice Consistency (LLM Injection)
+The `LLM` class (`src/llm.ts`) handles the core personality injection:
+-   **System Prompt Injection**: `injectPersonality(systemPrompt)` prepends the persona's role, tone, and constraints to the system prompt before every generation.
+-   **Response Transformation**: `transformResponse(response)` processes the LLM output to inject catchphrases, emojis, and simulate typing latency.
 
-1.  **Working Hours Check**: If the current time is outside `working_hours`, the message is replaced with an "Offline" notice.
-2.  **LLM Tone Rewrite**: For final responses (`context: 'response'`), the raw text is sent to a fast LLM to be rewritten according to the `voice.tone` and `role`. This ensures the semantic meaning is preserved while the style changes.
-    - *Note:* Log updates (`context: 'log'`) skip this step to preserve speed and clarity.
-3.  **Catchphrases & Emojis**: The engine injects greeting, signoff, or filler phrases and emojis based on regex patterns and probability.
-4.  **Typing Simulation**: The engine calculates a delay based on `response_latency` and triggers the interface's "Typing..." indicator (if supported) before sending the message.
+### 2. Interface Behavior (Slack, Teams, Discord)
+Each interface adapter implements specific logic to respect the persona's constraints:
 
-## Integration
+1.  **Working Hours Enforcement**: Before processing any event, the adapter checks `persona.isWithinWorkingHours()`. If outside configured hours (e.g., 09:00-17:00), it immediately replies with an "Offline" message and halts execution.
+2.  **Reaction Logic**: Upon receiving a message, the adapter uses `persona.getReaction(text)` to determine an appropriate emoji (e.g., 👍 for short tasks, 🏗️ for long tasks) and reacts to the user message.
+3.  **Typing Simulation**:
+    -   **Initial Indicator**: The adapter sends a "Typing..." or "Thinking..." signal immediately.
+    -   **Response Latency**: The `LLM` class calculates a typing delay proportional to the response length (`calculateTypingDelay`) and waits before returning the final text, simulating human typing speed.
 
-The middleware is integrated into `BaseInterface` (`src/interfaces/base.ts`), which is extended by all specific adapters:
-- **Slack**: `src/interfaces/slack.ts`
-- **Teams**: `src/interfaces/teams.ts`
-- **Discord**: `src/interfaces/discord.ts`
-
-To use the persona in a new interface, extend `BaseInterface` and use `this.sendResponse(content, context)` instead of sending raw messages directly.
+### Supported Interfaces
+-   **Slack**: (`src/interfaces/slack.ts`) Uses `client.reactions.add` and thread replies.
+-   **Teams**: (`src/interfaces/teams.ts`) Uses `sendActivity` with `ActivityTypes.Typing` and `MessageReaction`.
+-   **Discord**: (`src/interfaces/discord.ts`) Uses `message.react` and `channel.sendTyping`.

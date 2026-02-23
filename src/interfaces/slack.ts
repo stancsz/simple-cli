@@ -158,9 +158,31 @@ app.event("app_mention", async ({ event, say, client }: any) => {
   const ts = event.ts;
 
   try {
+    // 0. Check Working Hours & Config
+    const tempProvider = createLLM();
+    const persona = tempProvider.personaEngine;
+    await persona.loadConfig();
+
+    if (!persona.isWithinWorkingHours()) {
+      const oooMsg = persona.getOutOfOfficeMessage();
+      await client.chat.postMessage({
+        channel: channel,
+        thread_ts: ts,
+        text: oooMsg
+      });
+      return;
+    }
+
     // 1. Add emoji reaction to acknowledge receipt
+    const reactionEmoji = persona.getReaction(text);
+    const emojiMap: Record<string, string> = {
+        "👍": "thumbsup",
+        "🏗️": "building_construction"
+    };
+    const reactionName = emojiMap[reactionEmoji] || "thumbsup";
+
     await client.reactions.add({
-      name: 'thumbsup',
+      name: reactionName,
       channel: channel,
       timestamp: ts
     });
