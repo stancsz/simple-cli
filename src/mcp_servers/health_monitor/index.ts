@@ -11,6 +11,7 @@ import { join, dirname } from "path";
 import { existsSync } from "fs";
 import { EpisodicMemory } from "../../brain/episodic.js";
 import { loadConfig } from "../../config.js";
+import { MetricPillar } from "./types.js";
 
 const AGENT_DIR = process.env.JULES_AGENT_DIR || join(process.cwd(), '.agent');
 const METRICS_DIR = join(AGENT_DIR, 'metrics');
@@ -56,6 +57,23 @@ server.tool(
   async ({ agent, metric, value, tags }) => {
     await logMetric(agent, metric, value, tags || {});
     return { content: [{ type: "text", text: `Metric ${metric} tracked.` }] };
+  }
+);
+
+server.tool(
+  "track_pillar_metric",
+  "Log a specific pillar metric (SOP, Ghost, HR, Context) for a company.",
+  {
+    company: z.string().describe("Company ID"),
+    pillar: z.enum(['sop', 'ghost', 'hr', 'context']).describe("The pillar this metric belongs to"),
+    metric: z.string().describe("Name of the metric (e.g., 'sop_execution_success_rate')"),
+    value: z.number().describe("Numerical value"),
+    tags: z.record(z.string()).optional()
+  },
+  async ({ company, pillar, metric, value, tags }) => {
+    const finalTags = { ...tags, company, pillar };
+    await logMetric('health_monitor', metric, value, finalTags);
+    return { content: [{ type: "text", text: `Pillar metric ${metric} tracked for ${company}.` }] };
   }
 );
 
@@ -200,12 +218,47 @@ server.tool(
   }
 );
 
-async function aggregateCompanyMetrics() {
+export async function getPillarMetrics(days: number) {
+    const files = await getMetricFiles(days);
+    let allMetrics: any[] = [];
+    for (const file of files) {
+      allMetrics = allMetrics.concat(await readNdjson(file));
+    }
+
+    const companyPillars: Record<string, any> = {};
+
+    for (const m of allMetrics) {
+        if (m.agent !== 'health_monitor' || !m.tags?.company || !m.tags?.pillar) continue;
+
+        const company = m.tags.company;
+        const pillar = m.tags.pillar;
+
+        if (!companyPillars[company]) {
+            companyPillars[company] = { sop: {}, ghost: {}, hr: {}, context: {} };
+        }
+
+        if (!companyPillars[company][pillar].metrics) {
+             companyPillars[company][pillar].metrics = {};
+        }
+        // Store latest value
+        companyPillars[company][pillar].metrics[m.metric] = m.value;
+
+        // Calculate Score (Placeholder logic)
+        // Ideally this would be a weighted average of specific metrics
+        companyPillars[company][pillar].score = 95;
+    }
+
+    return companyPillars;
+}
+
+export async function aggregateCompanyMetrics() {
     // AGENT_DIR is .../.agent
     // We want the parent of .agent to be the cwd for loadConfig
     const config = await loadConfig(dirname(AGENT_DIR));
     const companies = config.companies || [];
     const metrics: Record<string, any> = {};
+
+    const pillarData = await getPillarMetrics(7); // Get last 7 days pillar metrics
 
     for (const company of companies) {
         try {
@@ -236,7 +289,13 @@ async function aggregateCompanyMetrics() {
                 avg_duration_ms: Math.round(avgDuration),
                 success_rate: Math.round(successRate),
                 task_count: count,
-                estimated_cost_usd: parseFloat(estimatedCost.toFixed(4))
+                estimated_cost_usd: parseFloat(estimatedCost.toFixed(4)),
+                pillars: pillarData[company] || {
+                     sop: { score: 0, metrics: {} },
+                     ghost: { score: 0, metrics: {} },
+                     hr: { score: 0, metrics: {} },
+                     context: { score: 0, metrics: {} }
+                }
             };
         } catch (e) {
             console.error(`Failed to get metrics for ${company}:`, e);
@@ -253,6 +312,16 @@ server.tool(
   async () => {
       const data = await aggregateCompanyMetrics();
       return { content: [{ type: "text", text: JSON.stringify(data, null, 2) }] };
+  }
+);
+
+server.tool(
+  "get_pillar_metrics",
+  "Get pillar-specific metrics for all companies.",
+  {},
+  async () => {
+    const data = await getPillarMetrics(7);
+    return { content: [{ type: "text", text: JSON.stringify(data, null, 2) }] };
   }
 );
 
@@ -311,8 +380,14 @@ export async function main() {
     const personaClient = await connectToOperationalPersona();
 
     // Serve Dashboard Static Files
+    const dashboardDist = join(process.cwd(), 'scripts', 'dashboard', 'dist');
     const dashboardPublic = join(process.cwd(), 'scripts', 'dashboard', 'public');
-    app.use(express.static(dashboardPublic));
+
+    if (existsSync(dashboardDist)) {
+        app.use(express.static(dashboardDist));
+    } else {
+        app.use(express.static(dashboardPublic));
+    }
 
     app.all("/sse", async (req, res) => {
       await transport.handleRequest(req, res);
