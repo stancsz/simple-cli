@@ -197,6 +197,7 @@ describe("Multi-Company Production Stress Test (12-Tenant Simulation)", () => {
             const companyClient = mcp.getClient("company_context");
             const brainClient = mcp.getClient("brain");
             const sopClient = mcp.getClient("sop_engine");
+            const hrClient = mcp.getClient("hr_loop");
             const healthClient = mcp.getClient("health_monitor");
 
             try {
@@ -220,20 +221,17 @@ describe("Multi-Company Production Stress Test (12-Tenant Simulation)", () => {
                 // Wait for file creation
                 await new Promise(r => setTimeout(r, 100));
 
-                // Mock LLM for SOP (we need to push to queue, but since it's concurrent,
-                // we might have race conditions on the queue.
-                // However, our mockGenerate consumes from queue.
-                // For simplicity in concurrent tests, we can make mockGenerate return a default valid response
-                // if queue is empty, or we can push 2 responses per company.
+                // Active SOP Check: List SOPs to verify engine responsiveness under load
+                await sopClient.callTool({
+                    name: "sop_list",
+                    arguments: {}
+                });
 
-                // Let's rely on the default response in mockGenerate (which returns "Operating nominally" / "none")
-                // But SOP engine needs "complete_step" tool calls to proceed.
-                // So we need to be careful.
-                // Instead of full SOP execution which is complex to mock concurrently,
-                // let's simulate a simpler tool call sequence or use a custom "Direct" tool call.
-
-                // We'll skip complex SOP execution in this specific concurrent block to avoid LLM queue race conditions
-                // and instead verify Brain and Desktop isolation which are more critical for multi-tenancy.
+                // Active HR Check: List pending proposals to verify HR Loop responsiveness under load
+                await hrClient.callTool({
+                    name: "list_pending_proposals",
+                    arguments: {}
+                });
 
                 // B. Desktop Task (Simulated)
                 // Inject Chaos: 20% chance of failure
