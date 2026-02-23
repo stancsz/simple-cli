@@ -39,6 +39,20 @@ The `task_description` parameter helps the Orchestrator decide which backend to 
 
 If no description is provided, it defaults to the configured `preferred_backend`.
 
+## Visual Quality Gate (QA)
+
+The **Visual Quality Gate** is an automated QA layer integrated into the Supervisor. It activates when a task involves visual output (e.g., `take_screenshot` or "design this page").
+
+### How it works:
+1.  **Detection:** The Supervisor detects visual intent or image artifacts in the tool output.
+2.  **Analysis:** It sends the screenshot to the `visual_quality_gate` MCP server.
+3.  **Critique:** A Vision LLM (Claude 3.5 Sonnet / GPT-4o) evaluates the design against modern aesthetic standards (Typography, Color, Layout, Polish).
+4.  **Scoring:** It returns a score (0-100) and a list of critiques.
+5.  **Rejection:** If the score is < 70, the task is rejected, and the agent is instructed to improve the design based on the feedback.
+
+### Company Context
+The Quality Gate respects brand guidelines loaded from `.agent/companies/<company>.json`. It injects the "Brand Voice" into the evaluation prompt to ensure consistency.
+
 ## Configuration
 
 Configuration is managed via `src/mcp_servers/desktop_orchestrator/config.json`.

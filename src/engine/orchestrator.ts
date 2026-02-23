@@ -12,6 +12,7 @@ import { LLM } from "../llm.js";
 import { loadCompanyProfile, CompanyProfile } from "../context/company-profile.js";
 import { ContextManager } from "../context/ContextManager.js";
 import { logMetric } from "../logger.js";
+import { Supervisor } from "../supervisor.js";
 
 export interface Message {
   role: "user" | "assistant" | "system";
@@ -141,6 +142,7 @@ export class Registry {
 export class Engine {
   protected s = spinner();
   protected contextManager: ContextManager;
+  protected supervisor: Supervisor;
 
   constructor(
     protected llm: LLM,
@@ -148,6 +150,7 @@ export class Engine {
     protected mcp: MCP,
   ) {
     this.contextManager = new ContextManager(this.mcp);
+    this.supervisor = new Supervisor(this.llm, this.mcp);
   }
 
   protected async getUserInput(initialValue: string, interactive: boolean): Promise<string | undefined> {
@@ -198,6 +201,10 @@ export class Engine {
       if (servers.find((s) => s.name === "company_context" && s.status === "stopped")) {
         await this.mcp.startServer("company_context");
         this.log("success", "Company Context server started.");
+      }
+      if (servers.find((s) => s.name === "visual_quality_gate" && s.status === "stopped")) {
+        await this.mcp.startServer("visual_quality_gate");
+        this.log("success", "Visual Quality Gate server started.");
       }
     } catch (e) {
       console.error("Failed to start core servers:", e);
@@ -459,25 +466,24 @@ export class Engine {
                 this.s.start(`[Supervisor] Verifying work from ${tName}...`);
                 qaStarted = true;
 
-                let qaPrompt = `Analyze the result of the tool execution: ${JSON.stringify(result)}. Did it satisfy the user's request: "${input || userHistory.pop()?.content}"? If specific files were mentioned (like flask app), check if they exist or look correct based on the tool output.`;
-
-                const qaCheck = await this.llm.generate(
-                  qaPrompt,
-                  [...ctx.history, { role: "user", content: qaPrompt }],
+                const verification = await this.supervisor.verify(
+                  result,
+                  tName,
+                  tArgs,
+                  input || userHistory[userHistory.length - 1]?.content || "",
+                  ctx.history,
                   signal,
+                  companyName
                 );
 
-                if (
-                  qaCheck.message &&
-                  qaCheck.message.toLowerCase().includes("fail")
-                ) {
+                if (!verification.verified) {
                   this.s.stop(`[Supervisor] QA FAILED`);
                   this.log("error",
-                    `[Supervisor] Reason: ${qaCheck.message || qaCheck.thought}`,
+                    `[Supervisor] Reason: ${verification.feedback || verification.thought || "Verification failed"}`,
                   );
                   this.log("error", `[Supervisor] Asking for retry...`);
                   input =
-                    "The previous attempt failed. Please retry or fix the issue.";
+                    `The previous attempt failed. Feedback: ${verification.feedback || "Please retry or fix the issue."}`;
                   allExecuted = false;
                   break; // Stop batch execution on failure
                 } else {

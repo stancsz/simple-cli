@@ -205,6 +205,7 @@ To transition from a "Wrapper" to a true "Universal AI Integration Platform," th
         - **Anthropic/OpenAI/Skyvern:** (✅ Validated) Drivers implemented and integration tested.
     - **Unified Interface:** Standardized `navigate`, `click`, `type`, `screenshot` tools.
     - **Validation:** Integration tests verify routing logic, driver selection, and Skyvern end-to-end flows (`tests/integration/skyvern_validation.test.ts`).
+    -   **Visual Quality Gate:** (✅ Implemented) Automated aesthetic validation for UI/design tasks. Uses Vision LLMs to critique and score designs (0-100) against modern standards.
     - **Documentation:** See `docs/DESKTOP_ORCHESTRATION.md`.
 
 ### Phase 15: Operational Hardening (✅ Completed)
