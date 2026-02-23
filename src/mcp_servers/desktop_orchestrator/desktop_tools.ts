@@ -26,9 +26,9 @@ export const tools = [
         validateSafety(`navigate to ${url}`, human_approval_required);
         const driver = await router.selectDriver(task_description || `navigate to ${url}`);
         const result = await driver.navigate(url);
-        return { content: [{ type: "text", text: result }] };
+        return { content: [{ type: "text" as const, text: result }] };
       } catch (e) {
-        return { content: [{ type: "text", text: `Error: ${(e as Error).message}` }], isError: true };
+        return { content: [{ type: "text" as const, text: `Error: ${(e as Error).message}` }], isError: true };
       }
     },
   },
@@ -45,9 +45,9 @@ export const tools = [
         validateSafety(`click ${selector}`, human_approval_required);
         const driver = await router.selectDriver(task_description || `click ${selector}`);
         const result = await driver.click(selector);
-        return { content: [{ type: "text", text: result }] };
+        return { content: [{ type: "text" as const, text: result }] };
       } catch (e) {
-        return { content: [{ type: "text", text: `Error: ${(e as Error).message}` }], isError: true };
+        return { content: [{ type: "text" as const, text: `Error: ${(e as Error).message}` }], isError: true };
       }
     },
   },
@@ -65,9 +65,9 @@ export const tools = [
         validateSafety(`type into ${selector}`, human_approval_required);
         const driver = await router.selectDriver(task_description || `type into ${selector}`);
         const result = await driver.type(selector, text);
-        return { content: [{ type: "text", text: result }] };
+        return { content: [{ type: "text" as const, text: result }] };
       } catch (e) {
-        return { content: [{ type: "text", text: `Error: ${(e as Error).message}` }], isError: true };
+        return { content: [{ type: "text" as const, text: `Error: ${(e as Error).message}` }], isError: true };
       }
     },
   },
@@ -84,14 +84,14 @@ export const tools = [
         return {
           content: [
             {
-              type: "image",
+              type: "image" as const,
               data: base64Image,
               mimeType: "image/png",
             },
           ],
         };
       } catch (e) {
-        return { content: [{ type: "text", text: `Error: ${(e as Error).message}` }], isError: true };
+        return { content: [{ type: "text" as const, text: `Error: ${(e as Error).message}` }], isError: true };
       }
     },
   },
@@ -105,9 +105,9 @@ export const tools = [
       try {
         const driver = await router.selectDriver(task_description || "extract text");
         const text = await driver.extract_text();
-        return { content: [{ type: "text", text }] };
+        return { content: [{ type: "text" as const, text }] };
       } catch (e) {
-        return { content: [{ type: "text", text: `Error: ${(e as Error).message}` }], isError: true };
+        return { content: [{ type: "text" as const, text: `Error: ${(e as Error).message}` }], isError: true };
       }
     },
   },
@@ -124,9 +124,9 @@ export const tools = [
         validateSafety(`execute flow: ${goal}`, human_approval_required);
         const driver = await router.selectDriver(task_description || goal);
         const result = await driver.execute_complex_flow(goal);
-        return { content: [{ type: "text", text: result }] };
+        return { content: [{ type: "text" as const, text: result }] };
       } catch (e) {
-        return { content: [{ type: "text", text: `Error: ${(e as Error).message}` }], isError: true };
+        return { content: [{ type: "text" as const, text: `Error: ${(e as Error).message}` }], isError: true };
       }
     },
   },
