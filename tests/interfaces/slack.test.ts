@@ -12,6 +12,8 @@ const mocks = vi.hoisted(() => ({
             loadConfig: vi.fn().mockResolvedValue(undefined),
             isWithinWorkingHours: vi.fn().mockReturnValue(true),
             formatMessage: vi.fn((msg) => msg),
+            getOutOfOfficeMessage: vi.fn().mockReturnValue('I am currently offline.'),
+            getReaction: vi.fn().mockReturnValue('👍'),
             getConfig: vi.fn().mockReturnValue({})
         },
         generate: vi.fn()
