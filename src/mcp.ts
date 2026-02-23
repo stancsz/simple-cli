@@ -6,6 +6,7 @@ import { readdir } from "fs/promises";
 import { join } from "path";
 import { log } from "@clack/prompts";
 import { spawn } from "child_process";
+import { parse } from "dotenv";
 import { logMetric } from "./logger.js";
 import { FrameworkIngestionEngine } from "./framework_ingestion/ingest.js";
 
@@ -32,8 +33,25 @@ export class MCP {
   private clients: Map<string, Client> = new Map();
   private discoveredServers: Map<string, DiscoveredServer> = new Map();
   private agents: Record<string, AgentConfig> = {};
+  private secrets: Record<string, string> = {};
 
   async init() {
+    // 0. Load secrets from .env.agent
+    const envPath = join(process.cwd(), ".env.agent");
+    if (existsSync(envPath)) {
+      try {
+        const envConfig = parse(readFileSync(envPath));
+        for (const k in envConfig) {
+          if (envConfig[k]) {
+            this.secrets[k] = envConfig[k];
+          }
+        }
+        log.info("Loaded secrets from .env.agent");
+      } catch (e) {
+        log.warn(`Failed to parse .env.agent: ${e}`);
+      }
+    }
+
     // 1. Load from mcp.json
     const configPath = join(process.cwd(), "mcp.json");
     if (existsSync(configPath)) {
@@ -141,7 +159,7 @@ export class MCP {
             transport = new StdioClientTransport({
               command: config.command,
               args: config.args || [],
-              env: { ...process.env, ...config.env } as any,
+              env: { ...process.env, ...this.secrets, ...config.env } as any,
             });
         } else {
             throw new Error(`Server '${name}' has no command or url configured.`);
@@ -384,7 +402,7 @@ export class MCP {
             execute: async ({ args, input }: { args: string[], input?: string }) => {
                 return new Promise((resolve, reject) => {
                     const finalArgs = [...(agent.args || []), ...(args || [])];
-                    const env = { ...process.env, ...(agent.env || {}) };
+                    const env = { ...process.env, ...this.secrets, ...(agent.env || {}) };
 
                     const proc = spawn(agent.command, finalArgs, {
                         env: env as any,

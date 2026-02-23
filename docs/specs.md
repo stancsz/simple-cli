@@ -327,9 +327,9 @@ To balance safety with autonomy, the system supports configurable permission lev
     *   **Use Case**: Preventing the bot from getting stuck during long running tasks or overnight operations.
     *   **Safety**: Only applies to "Standard" risk actions. "Critical" actions (like `rm -rf /`) should still block indefinitely unless `yoloMode` is true.
 
-### 10.2 Secret Management
-*   **Secrets**: Secrets are passed via environment variables, never command-line arguments.
-*   **Sandboxing**: (Future) Delegated agents should run in a containerized environment (Docker) to prevent system-wide damage.
+### 10.2 Secret Management (✅ Implemented)
+*   **Secrets**: Secrets are passed via environment variables, never command-line arguments. Managed via `SecretManager` MCP.
+*   **Sandboxing**: (✅ Implemented) Delegated agents run in isolated processes with secure environment injection. Containerization supported via Docker.
 
 ---
 

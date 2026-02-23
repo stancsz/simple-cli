@@ -102,3 +102,28 @@ The Health Monitor now includes real-time anomaly detection and predictive analy
 ### Metric Forecasting
 - **Algorithm:** Simple linear regression on recent time-series data.
 - **Capability:** Predicts metric trends (e.g., "Token usage projected to exceed quota in 45 mins") to enable preemptive scaling or throttling.
+
+## Alerting & Secrets
+
+We have fortified the system with secure secret injection and robust alerting mechanisms.
+
+### Secret Management
+- **Protocol:** Secrets are securely managed via the `SecretManager` MCP server and injected into child processes (agents/MCPs) at runtime.
+- **Storage:** Secrets reside in `.env.agent` (gitignored).
+- **Access:** Available via `process.env` in sub-agents, never passed as CLI args.
+
+### Alerting System
+- **Real-Time Alerts:** The Health Monitor evaluates metrics against `scripts/dashboard/alert_rules.json` on every log event.
+- **Channels:**
+    - **Slack:** Real-time notifications via webhook.
+    - **Email:** (Mock/SMTP) notifications for critical alerts.
+- **Working Hours:** Non-critical alerts are suppressed outside working hours (Mon-Fri, 9am-5pm) to reduce noise.
+- **Configuration:** Add rules to `scripts/dashboard/alert_rules.json`:
+  ```json
+  {
+    "metric": "error_rate",
+    "threshold": 0.05,
+    "operator": ">",
+    "contact": "slack"
+  }
+  ```
