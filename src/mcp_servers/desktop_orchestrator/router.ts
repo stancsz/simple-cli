@@ -39,41 +39,59 @@ export class DesktopRouter {
     const start = Date.now();
     let selectedDriverName: string | null = null;
     let routingMethod = "llm";
-
-    // 1. Check for explicit overrides in description
     const descLower = taskDescription.toLowerCase();
+
+    // 0. Identify excluded drivers
+    const excludedDrivers: string[] = [];
+    if (descLower.includes("avoid stagehand") || descLower.includes("exclude stagehand")) excludedDrivers.push("stagehand");
+    if (descLower.includes("avoid anthropic") || descLower.includes("exclude anthropic")) excludedDrivers.push("anthropic");
+    if (descLower.includes("avoid openai") || descLower.includes("exclude openai")) excludedDrivers.push("openai");
+    if (descLower.includes("avoid skyvern") || descLower.includes("exclude skyvern")) excludedDrivers.push("skyvern");
+
+    // 1. Check for explicit overrides in description (Priority over exclusions, unless conflicting? Let's say explicit use wins)
     if (descLower.includes("use stagehand")) { selectedDriverName = "stagehand"; routingMethod = "override"; }
     else if (descLower.includes("use anthropic")) { selectedDriverName = "anthropic"; routingMethod = "override"; }
     else if (descLower.includes("use openai")) { selectedDriverName = "openai"; routingMethod = "override"; }
     else if (descLower.includes("use skyvern")) { selectedDriverName = "skyvern"; routingMethod = "override"; }
 
-    // 2. If short/simple, use preferred
+    // If selected via override but is excluded, we honor the override (user said "use X" explicitly)
+    // But if no override...
+
+    // 2. If short/simple, use preferred (unless excluded)
     else if (taskDescription.length < 20 && !descLower.includes("complex")) {
-        selectedDriverName = this.preferredBackend;
-        routingMethod = "heuristic";
+        if (!excludedDrivers.includes(this.preferredBackend)) {
+            selectedDriverName = this.preferredBackend;
+            routingMethod = "heuristic";
+        }
     }
 
     // 3. Use LLM for smart routing
     if (!selectedDriverName) {
         try {
+            const validDrivers = ["stagehand", "anthropic", "openai", "skyvern"].filter(d => !excludedDrivers.includes(d));
+
+            if (validDrivers.length === 0) {
+                 // All drivers excluded? Fallback to preferred or Stagehand
+                 validDrivers.push("stagehand");
+            }
+
             const response = await this.llm.generate(
                 `You are a router for a desktop automation system.
                  Available backends:
-                 - stagehand: Fast, local browser automation (default). Good for known selectors, simple flows, or when speed is key.
-                 - anthropic: Uses Anthropic's Computer Use API. Good for visual tasks, desktop apps (non-browser), or when no selectors are known.
-                 - openai: Uses OpenAI Operator. Good for general browsing.
-                 - skyvern: Vision-based automation. Good for "fill form", "navigate complex site" where structure is unknown, or tasks requiring resilience to layout changes.
+                 ${validDrivers.includes('stagehand') ? '- stagehand: Fast, local browser automation (default). Good for known selectors, simple flows, or when speed is key.' : ''}
+                 ${validDrivers.includes('anthropic') ? '- anthropic: Uses Anthropic\'s Computer Use API. Good for visual tasks, desktop apps (non-browser), or when no selectors are known.' : ''}
+                 ${validDrivers.includes('openai') ? '- openai: Uses OpenAI Operator. Good for general browsing.' : ''}
+                 ${validDrivers.includes('skyvern') ? '- skyvern: Vision-based automation. Good for "fill form", "navigate complex site" where structure is unknown, or tasks requiring resilience to layout changes.' : ''}
 
                  Task: "${taskDescription}"
+                 ${excludedDrivers.length > 0 ? `Do NOT use: ${excludedDrivers.join(', ')}.` : ''}
 
-                 Return ONLY the name of the backend to use (stagehand, anthropic, openai, or skyvern).
-                 Default to 'stagehand' if unsure.`,
+                 Return ONLY the name of the backend to use (${validDrivers.join(', ')}).
+                 Default to '${validDrivers[0]}' if unsure.`,
                 [{ role: "user", content: "Route this task." }] // Dummy message
             );
 
             const choice = (response.message || "").trim().toLowerCase();
-            // Handle potential extra text in response
-            const validDrivers = ["stagehand", "anthropic", "openai", "skyvern"];
             const found = validDrivers.find(d => choice.includes(d));
 
             if (found && this.drivers.has(found)) {

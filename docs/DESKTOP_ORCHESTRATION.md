@@ -33,22 +33,33 @@ The server exposes the following MCP tools:
 ## Smart Routing
 
 The `task_description` parameter helps the Orchestrator decide which backend to use.
-- "Use Stagehand to click the button" -> Forces Stagehand.
-- "Analyze this chart" -> Might route to Anthropic (if enabled).
-- "Fill out this complex dynamic form" -> Routes to Skyvern.
+- **Explicit Overrides**: "Use Stagehand to click the button" -> Forces Stagehand.
+- **Explicit Exclusions**: "Fill form (avoid Stagehand)" -> Excludes Stagehand, LLM selects best alternative (e.g., Skyvern).
+- **Heuristics**: Short, simple tasks use `preferred_backend` (default: Stagehand).
+- **LLM Routing**: Complex tasks are analyzed by a routing LLM to pick the best driver:
+    - *Stagehand*: Speed, local automation.
+    - *Skyvern*: Resilience, complex forms, unknown layouts.
+    - *Anthropic/OpenAI*: Visual reasoning, OS-level interaction.
 
 If no description is provided, it defaults to the configured `preferred_backend`.
 
 ## Visual Quality Gate (QA)
 
-The **Visual Quality Gate** is an automated QA layer integrated into the Supervisor. It activates when a task involves visual output (e.g., `take_screenshot` or "design this page").
+The **Visual Quality Gate** is an automated QA layer integrated into the Supervisor. It ensures that UI designs meet modern aesthetic standards before being accepted.
 
-### How it works:
-1.  **Detection:** The Supervisor detects visual intent or image artifacts in the tool output.
-2.  **Analysis:** It sends the screenshot to the `visual_quality_gate` MCP server.
-3.  **Critique:** A Vision LLM (Claude 3.5 Sonnet / GPT-4o) evaluates the design against modern aesthetic standards (Typography, Color, Layout, Polish).
-4.  **Scoring:** It returns a score (0-100) and a list of critiques.
-5.  **Rejection:** If the score is < 70, the task is rejected, and the agent is instructed to improve the design based on the feedback.
+### Workflow:
+1.  **Detection:** The Supervisor detects visual intent (e.g., "design a landing page") and checks for image artifacts (screenshots) in tool outputs.
+2.  **Analysis:** The screenshot is sent to the `visual_quality_gate` MCP server (or internal `QualityGate` module).
+3.  **Scoring:** A Vision LLM (Claude 3.5 Sonnet / GPT-4o) evaluates the design (0-100) based on:
+    - **Typography**: Hierarchy, readability.
+    - **Color**: Harmony, contrast, brand consistency.
+    - **Layout**: Spacing, alignment, responsiveness.
+    - **Technical Polish**: Broken images, raw HTML artifacts.
+4.  **Action:**
+    - **Score >= 70**: Pass.
+    - **Score < 70**: **Fail**. The Supervisor rejects the task and provides feedback:
+        > "Visual Quality Gate Failed (Score: 50). Critique: Bad colors. Recommendation: You should retry this task, potentially using a different desktop driver (e.g. 'avoid stagehand' or 'use skyvern')."
+5.  **Self-Correction**: The Agent receives this feedback and retries the task, likely adding "(avoid stagehand)" to the next tool call, prompting the Router to switch backends.
 
 ### Company Context
 The Quality Gate respects brand guidelines loaded from `.agent/companies/<company>.json`. It injects the "Brand Voice" into the evaluation prompt to ensure consistency.
