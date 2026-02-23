@@ -85,3 +85,20 @@ To maintain an accurate reflection of project progress without manual overhead, 
         - Updates `docs/todo.md`: Strikes through completed items.
         - Adds a "Last Updated" footer to the roadmap.
 - **Benefit:** Ensures that the public documentation always reflects the actual state of the codebase, fostering trust and transparency.
+
+## Predictive Operations
+
+The Health Monitor now includes real-time anomaly detection and predictive analytics to shift from reactive to proactive operations.
+
+### Anomaly Detection
+- **Mechanism:** Rolling Z-Score and Interquartile Range (IQR) analysis on key metrics (latency, token usage, error rates).
+- **Thresholds:** Automatically flags values deviating >3 standard deviations from the moving average (last 100 data points).
+- **Visualization:** The new `IntelligenceView` in the Dashboard highlights anomalies with severity levels (Low, Medium, High).
+
+### Alert Correlation
+- **Logic:** Groups related alerts occurring within a 5-minute window into single "Incident" tickets.
+- **Benefit:** Reduces alert fatigue by condensing noisy streams into actionable, context-rich incidents.
+
+### Metric Forecasting
+- **Algorithm:** Simple linear regression on recent time-series data.
+- **Capability:** Predicts metric trends (e.g., "Token usage projected to exceed quota in 45 mins") to enable preemptive scaling or throttling.
