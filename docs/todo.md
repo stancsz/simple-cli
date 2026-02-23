@@ -180,11 +180,12 @@
     - [x] Implemented LLM-based routing logic.
     - [x] Added support for `preferred_backend` configuration.
 - [x] **Drivers**:
-    - [x] **Stagehand**: Ported existing functionality.
+    - [x] **Stagehand**: Enhanced with CSS heuristic and Playwright fallback.
     - [x] **Skyvern**: Implemented fully functional driver with Playwright + Vision API.
-    - [x] **Polyglot Stubs**: Created skeleton drivers for Anthropic, OpenAI.
+    - [x] **Anthropic**: Implemented Computer Use driver with full agent loop.
+    - [x] **OpenAI**: Created skeleton driver.
 - [x] **Validation**:
-    - [x] Integration tests for routing and driver selection.
+    - [x] Integration tests for routing, driver selection, and full driver functionality (`tests/integration/desktop_orchestrator_complete.test.ts`).
 
 ## Sprint 2: Operational Hardening (✅ Completed)
 

@@ -194,17 +194,19 @@ To transition from a "Wrapper" to a true "Universal AI Integration Platform," th
     - **Contribution Guidelines:** (✅ Completed) Created `docs/CONTRIBUTING.md` to establish clear standards for code, PRs, and testing.
     - **Documentation Improvements:** (✅ Implemented) Updated README and Roadmaps to reflect the "Integration First" philosophy.
 
-### Phase 14: Visual & Desktop Agency (✅ Enhanced: Polyglot Orchestrator)
+### Phase 14: Visual & Desktop Agency (✅ Completed: Polyglot Orchestrator)
 **Goal:** Enable the agent to interact with web interfaces and desktop applications visually using any backend.
 - **Concept:** A unified "Desktop Orchestrator" that intelligently routes tasks to Stagehand, Anthropic, OpenAI, or Skyvern.
-- **Status:** Polyglot Orchestrator implemented (`src/mcp_servers/desktop_orchestrator/`). Skyvern driver validated.
+- **Status:** Polyglot Orchestrator implemented (`src/mcp_servers/desktop_orchestrator/`). All major drivers validated.
 - **Mechanism:**
     - **Smart Router:** Uses LLM to classify tasks and select the best backend (e.g., "Fill form" -> Skyvern, "Click button" -> Stagehand).
     - **Polyglot Drivers:** Adapter pattern supporting multiple backends.
-        - **Stagehand:** (✅ Active) Fast, local automation.
-        - **Anthropic/OpenAI/Skyvern:** (✅ Validated) Drivers implemented and integration tested.
+        - **Stagehand:** (✅ Active) Fast, local automation with Playwright fallback.
+        - **Anthropic:** (✅ Active) Computer Use API integration with full agent loop.
+        - **Skyvern:** (✅ Active) Vision-based navigation.
+        - **OpenAI:** (Skeleton) Operator stub.
     - **Unified Interface:** Standardized `navigate`, `click`, `type`, `screenshot` tools.
-    - **Validation:** Integration tests verify routing logic, driver selection, and Skyvern end-to-end flows (`tests/integration/skyvern_validation.test.ts`).
+    - **Validation:** Integration tests verify routing logic, driver selection, and full driver functionality (`tests/integration/desktop_orchestrator_complete.test.ts`).
     - **Documentation:** See `docs/DESKTOP_ORCHESTRATION.md`.
 
 ### Phase 15: Operational Hardening (✅ Completed)

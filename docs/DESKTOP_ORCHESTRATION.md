@@ -8,10 +8,10 @@ The server acts as a smart router, dispatching commands to one of the available 
 
 1.  **Stagehand (Default)**:
     *   **Best for**: Web automation, form filling, known selectors, speed.
-    *   **Mechanism**: Uses Playwright + Stagehand library.
-2.  **Anthropic Computer Use** (Planned/Skeleton):
-    *   **Best for**: Desktop applications, complex visual tasks, when selectors are unknown.
-    *   **Mechanism**: Uses Anthropic's Computer Use API.
+    *   **Mechanism**: Uses **Playwright** directly for CSS selectors (fast/reliable) and **Stagehand** AI for natural language instructions. Includes robust fallback to raw Playwright if Stagehand library fails.
+2.  **Anthropic Computer Use** (Active):
+    *   **Best for**: Complex visual tasks, dynamic interfaces, or when selectors are unknown/unstable.
+    *   **Mechanism**: Uses Anthropic's **Computer Use API** (Claude 3.5 Sonnet) to visually analyze the screen and emit coordinate-based actions (click, type). Implements a multi-turn agent loop.
 3.  **OpenAI Operator** (Planned/Skeleton):
     *   **Best for**: General web browsing and research.
     *   **Mechanism**: Uses OpenAI's Operator model.
@@ -38,6 +38,16 @@ The `task_description` parameter helps the Orchestrator decide which backend to 
 - "Fill out this complex dynamic form" -> Routes to Skyvern.
 
 If no description is provided, it defaults to the configured `preferred_backend`.
+
+## Driver Comparison
+
+| Feature | Stagehand | Anthropic | Skyvern | OpenAI (Planned) |
+| :--- | :--- | :--- | :--- | :--- |
+| **Speed** | ⚡️ Fast (Local) | 🐢 Slower (API) | 🐢 Slower (API) | - |
+| **Reliability** | High (CSS selectors) | High (Vision) | High (Vision) | - |
+| **Cost** | Low/Free (Local LLM) | High (Per Token) | Medium | - |
+| **Best Use Case** | Forms, Static Sites | Complex Apps, Canvas | Unknown Structure | Research |
+| **Mechanism** | Playwright / Stagehand | Computer Use API | Skyvern API | Operator |
 
 ## Configuration
 
