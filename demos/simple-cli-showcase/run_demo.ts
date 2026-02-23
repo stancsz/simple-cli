@@ -126,6 +126,56 @@ async function main() {
         company: "showcase-corp"
     });
 
+    // 5. Framework Integration (Roo Code)
+    console.log("\n--- Pillar 5: Framework Integration (Roo Code) ---");
+    const rooClient = mcp.getClient('roo_code');
+    if (rooClient) {
+        console.log("Delegating task to Roo Code...");
+        try {
+            // Create a dummy file to analyze if it doesn't exist
+            const testFile = join(showcaseDir, 'test_component.ts');
+            if (!existsSync(testFile)) {
+                // Create a larger file to match the mock analysis "Line 10" references
+                const content = `
+// Test Component for Showcase
+export class DataProcessor {
+    private secret = "12345"; // Hardcoded secret (Line 5)
+
+    constructor() {}
+
+    public process(data: any) {
+        // Complex logic (Line 10)
+        if (data) {
+            if (data.x) {
+                if (data.y) {
+                    if (data.z) {
+                        return data.x + data.y + data.z;
+                    }
+                }
+            }
+        }
+        return null;
+    }
+}
+`;
+                writeFileSync(testFile, content.trim());
+            }
+
+            const result = await rooClient.callTool({
+                name: "roo_review_code",
+                arguments: { file_path: testFile }
+            });
+            console.log("Roo Code Analysis Result:\n", result.content[0].text);
+
+            // Clean up
+            // unlinkSync(testFile);
+        } catch (e) {
+            console.error("Failed to execute Roo Code task:", e);
+        }
+    } else {
+        console.warn("⚠️ Roo Code MCP client not found.");
+    }
+
     console.log("\n✅ Showcase Simulation Complete!");
     console.log("Report generated in logs/ and ghost_logs/.");
 
