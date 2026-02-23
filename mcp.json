@@ -50,6 +50,13 @@
         "MCP_DISABLE_DEPENDENCIES": "true",
         "DESKTOP_PREFERRED_BACKEND": "stagehand"
       }
+    },
+    "roo_code": {
+      "command": "npx",
+      "args": [
+        "tsx",
+        "src/mcp_servers/roo_code/index.ts"
+      ]
     }
   }
 }
