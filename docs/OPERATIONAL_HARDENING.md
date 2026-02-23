@@ -34,6 +34,17 @@ This test validates the **Skyvern Driver** integration:
 - **Routing:** Verifies that form-heavy and complex tasks are correctly routed to Skyvern.
 - **Live/Mock:** Supports running against a live Skyvern instance (via `docker-compose.test.yml`) or using mocks for CI speed.
 
+### 4. Multi-Tenant Stress Testing
+**File:** `tests/stress/multi_company_stress.test.ts`
+**Command:** `npm run test:stress`
+
+This test validates the "Universal AI Integration Platform" claim by simulating:
+- **Load:** 12 concurrent "companies" (tenants) performing simultaneous operations.
+- **Operations:** Mixed workload of `init-company` (onboarding), SOP execution, Brain storage/retrieval, and Desktop Orchestration tasks.
+- **Isolation:** Strictly verifies that Company A cannot access Company B's Brain memories or file artifacts.
+- **Chaos:** Randomly injects driver failures (20% rate) to ensure system stability under partial outages.
+- **Validation:** Ensures 100% data isolation and correct metric tracking even under high load.
+
 ## Performance Benchmarks
 
 Based on the latest test runs:
