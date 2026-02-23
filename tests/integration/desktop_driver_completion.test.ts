@@ -157,6 +157,7 @@ describe('Desktop Driver Completion', () => {
                     message: {
                         tool_calls: [{
                             id: 'call_1',
+                            type: 'function', // Added this field
                             function: {
                                 name: 'navigate',
                                 arguments: JSON.stringify({ url: 'https://example.com' })

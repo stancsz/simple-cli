@@ -5,24 +5,29 @@ import { chromium, Browser, Page, BrowserContext } from "playwright";
 
 export class OpenAIOperatorDriver implements DesktopDriver {
   name = "openai";
-  private openai: OpenAI;
+  private openai: OpenAI | null = null;
   private browser: Browser | null = null;
   private context: BrowserContext | null = null;
   private page: Page | null = null;
 
   constructor() {
-    this.openai = new OpenAI({
-      apiKey: process.env.OPENAI_API_KEY,
-    });
+    // Initialization deferred to init() to prevent throwing on missing env vars during router instantiation
   }
 
   async init() {
     const start = Date.now();
     try {
       console.log("Initializing OpenAI Operator Driver...");
-      if (!process.env.OPENAI_API_KEY) {
-          throw new Error("OPENAI_API_KEY is missing");
+
+      if (!this.openai) {
+          if (!process.env.OPENAI_API_KEY) {
+              throw new Error("OPENAI_API_KEY is missing");
+          }
+          this.openai = new OpenAI({
+              apiKey: process.env.OPENAI_API_KEY,
+          });
       }
+
       if (!this.browser) {
           this.browser = await chromium.launch({ headless: true });
           this.context = await this.browser.newContext();
@@ -123,6 +128,8 @@ export class OpenAIOperatorDriver implements DesktopDriver {
     try {
       console.log(`[OpenAI] Executing complex flow: ${goal}`);
       await this.init();
+
+      if (!this.openai) throw new Error("OpenAI client not initialized");
 
       const messages: OpenAI.Chat.Completions.ChatCompletionMessageParam[] = [
           { role: "system", content: "You are an autonomous research agent. Use the browser tools to accomplish the user's goal." },

@@ -5,7 +5,7 @@ import { chromium, Browser, Page, BrowserContext } from "playwright";
 
 export class AnthropicComputerUseDriver implements DesktopDriver {
   name = "anthropic";
-  private client: Anthropic;
+  private client: Anthropic | null = null;
   private messages: Anthropic.Beta.BetaMessageParam[] = [];
   private screenshotBase64: string = "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg=="; // 1x1 px fallback
   private browser: Browser | null = null;
@@ -13,17 +13,21 @@ export class AnthropicComputerUseDriver implements DesktopDriver {
   private page: Page | null = null;
 
   constructor() {
-    this.client = new Anthropic({
-      apiKey: process.env.ANTHROPIC_API_KEY,
-    });
+    // Initialization deferred to init()
   }
 
   async init() {
     const start = Date.now();
     try {
       console.log("Initializing Anthropic Computer Use Driver...");
-      if (!process.env.ANTHROPIC_API_KEY) {
-          throw new Error("ANTHROPIC_API_KEY is missing");
+
+      if (!this.client) {
+          if (!process.env.ANTHROPIC_API_KEY) {
+              throw new Error("ANTHROPIC_API_KEY is missing");
+          }
+          this.client = new Anthropic({
+              apiKey: process.env.ANTHROPIC_API_KEY,
+          });
       }
 
       if (!this.browser) {
@@ -59,6 +63,8 @@ export class AnthropicComputerUseDriver implements DesktopDriver {
       }
 
       for (let i = 0; i < maxSteps; i++) {
+          if (!this.client) throw new Error("Anthropic client not initialized");
+
           const response = await this.client.beta.messages.create({
               model: "claude-3-5-sonnet-20241022",
               max_tokens: 1024,
