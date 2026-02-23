@@ -86,6 +86,23 @@ import { Scheduler } from "../../src/scheduler.js";
 // Operational Persona (We will use StatusGenerator directly to verify it works with our mocks)
 import { StatusGenerator } from "../../src/mcp_servers/operational_persona/status_generator.js";
 
+// Import types only
+import type { DesktopDriver } from "../../src/mcp_servers/desktop_orchestrator/types.js";
+
+// Mock Driver for Stress Test
+class MockStressDriver implements DesktopDriver {
+    name: string;
+    constructor(name: string) { this.name = name; }
+    async init() {}
+    async navigate(url: string) { return `Navigated to ${url}`; }
+    async click() { return ""; }
+    async type() { return ""; }
+    async screenshot() { return ""; }
+    async extract_text() { return ""; }
+    async execute_complex_flow() { return ""; }
+    async shutdown() {}
+}
+
 describe("Long-Running Stress Test (7-Day Simulation)", () => {
     let testRoot: string;
     let scheduler: Scheduler;
@@ -93,6 +110,7 @@ describe("Long-Running Stress Test (7-Day Simulation)", () => {
     // We'll hold references to clients
     let mcp: MockMCP;
     let statusGenerator: StatusGenerator;
+    let desktopRouter: any; // Dynamic import type
 
     beforeAll(() => {
         vi.useFakeTimers();
@@ -124,21 +142,16 @@ describe("Long-Running Stress Test (7-Day Simulation)", () => {
         brainServer = new BrainServer();
 
         // Import Health Monitor dynamically to ensure it picks up the mocked env vars
-        // We need to re-import it or ensure it uses the env var at runtime.
-        // The logger.ts reads env var at top level? No, inside logMetric it calls ensureMetricsDir -> uses constant.
-        // Wait, constants in logger.ts are defined at top level:
-        // const AGENT_DIR = process.env.JULES_AGENT_DIR || join(process.cwd(), '.agent');
-        // So we might need to rely on process.cwd() mock which we did.
-        // But if logger.js was already imported by other tests, the constant is already set.
-        // To be safe, we rely on `vi.resetModules()` if needed, but vitest runs files in isolation usually.
-        // However, since we are in the same process, let's hope it picks up process.cwd().
-
-        // We need to instantiate Health Monitor to register tools
-        // We'll assume the import causes side effects (registration) or we need to instantiate it.
-        // The `index.ts` of health_monitor does `new McpServer` and `server.connect`.
-        // Since we mock McpServer, `new McpServer` registers tools.
-        // We need to import the file.
         await import("../../src/mcp_servers/health_monitor/index.js");
+
+        // Import Desktop Router dynamically
+        const { DesktopRouter } = await import("../../src/mcp_servers/desktop_orchestrator/router.js");
+        desktopRouter = new DesktopRouter();
+        // Overwrite drivers with mocks
+        desktopRouter.registerDriver(new MockStressDriver("stagehand"));
+        desktopRouter.registerDriver(new MockStressDriver("anthropic"));
+        desktopRouter.registerDriver(new MockStressDriver("openai"));
+        desktopRouter.registerDriver(new MockStressDriver("skyvern"));
 
         mcp = new MockMCP();
 
@@ -288,6 +301,31 @@ describe("Long-Running Stress Test (7-Day Simulation)", () => {
             console.log(`[14:00] Workload Burst 2...`);
             await vi.advanceTimersByTimeAsync(1000 * 60 * 60 * 2); // +2h -> 14:00
 
+            // Desktop Research Session (ADDED)
+            if (day % 1 === 0) { // Every day
+                console.log(`   [Desktop] Running automated research...`);
+                // Rotate backends
+                const backends = ["stagehand", "anthropic", "skyvern"];
+                const target = backends[day % 3];
+                try {
+                    // Simulate routing
+                    const driver = await desktopRouter.selectDriver(`use ${target} for research`);
+                    // Simulate execution
+                    await driver.navigate("http://internal.simulation");
+
+                    // Also simulate concurrent load occasionally
+                    if (day === 3 || day === 5) {
+                        console.log("   [Desktop] Spiking concurrency...");
+                        const tasks = Array.from({length: 10}, (_, i) => desktopRouter.selectDriver(`Task ${i}`));
+                        await Promise.all(tasks);
+                    }
+
+                } catch (e) {
+                    console.error("Desktop task failed:", e);
+                    totalErrorsDetected++;
+                }
+            }
+
             // More metrics
             for (let i = 0; i < 10; i++) {
                 const m = generator.generateRandomMetric();
@@ -324,11 +362,18 @@ describe("Long-Running Stress Test (7-Day Simulation)", () => {
         const files = await fs.readdir(metricsDir);
         console.log(`Metric files generated: ${files.length}`);
         expect(files.length).toBeGreaterThan(0);
-        // Expect at least 1 file (since all days might be same date if mocked Date doesn't increment correctly or logMetric uses real date?
-        // Wait, logMetric uses `new Date()`. We used `vi.useFakeTimers()` and `vi.setSystemTime`.
-        // So `new Date()` should increment.
-        // We advanced 24h each loop. So we should have multiple files if logMetric uses YYYY-MM-DD.
-        // Expect roughly 7 files (or fewer if dates overlap due to timezone).
+
+        // Verify Desktop metrics are present in the files
+        let foundDesktopMetric = false;
+        for (const file of files) {
+            const content = await fs.readFile(join(metricsDir, file), 'utf-8');
+            if (content.includes('desktop_orchestrator')) {
+                foundDesktopMetric = true;
+                break;
+            }
+        }
+        console.log(`Desktop metrics found: ${foundDesktopMetric}`);
+        expect(foundDesktopMetric).toBe(true);
 
         // 2. Verify Operational Persona can generate a report at the end
         const finalStatus = await statusGenerator.getSystemStatus();

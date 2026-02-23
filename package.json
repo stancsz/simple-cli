@@ -21,6 +21,7 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
+    "test:stress": "vitest run tests/stress/long_running_stress.test.ts",
     "lint": "eslint src/ tests/",
     "format": "prettier --write src/ tests/"
   },
