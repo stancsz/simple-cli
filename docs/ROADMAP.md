@@ -188,6 +188,7 @@ To transition from a "Wrapper" to a true "Universal AI Integration Platform," th
     - **User-Friendly Website:** (✅ Implemented) Site live at https://stan-chen.github.io/simple-cli/.
     - **Interactive Quick Start:** (✅ Implemented) `simple quick-start` wizard demonstrates integrations with Aider, CrewAI, and v0.dev.
     - **Getting Started Tutorial:** (✅ Completed) Comprehensive guide (`docs/GETTING_STARTED.md`) and dedicated Quick Start tutorial (`docs/QUICK_START.md`).
+    - **Integration Showcase:** (✅ Completed) Added "Rapid Framework Integration Tutorial" (`docs/TUTORIAL_INTEGRATE_NEW_FRAMEWORK.md`) guiding users through the "Roo Code" integration.
     - **Contribution Guidelines:** (✅ Completed) Created `docs/CONTRIBUTING.md` to establish clear standards for code, PRs, and testing.
     - **Documentation Improvements:** (✅ Implemented) Updated README and Roadmaps to reflect the "Integration First" philosophy.
 
