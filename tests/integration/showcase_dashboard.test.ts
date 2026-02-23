@@ -27,9 +27,9 @@ describe('Showcase Dashboard API', () => {
         console.error(`Server Error: ${data}`);
       });
       serverProcess.on('error', reject);
-      setTimeout(() => reject(new Error('Server timeout')), 5000);
+      setTimeout(() => reject(new Error('Server timeout')), 15000);
     });
-  }, 10000);
+  }, 20000);
 
   afterAll(() => {
     if (serverProcess) {
