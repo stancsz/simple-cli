@@ -101,7 +101,7 @@ export class Supervisor {
                         console.log(pc.cyan(`[Supervisor] Visual Quality Score: ${gateResponse.score}/100`));
 
                         if (gateResponse.score < 70) {
-                            const feedback = `Visual Quality Gate Failed (Score: ${gateResponse.score}).\nCritique:\n- ${gateResponse.critique.join("\n- ")}\nReasoning: ${gateResponse.reasoning}`;
+                            const feedback = `Visual Quality Gate Failed (Score: ${gateResponse.score}).\nCritique:\n- ${gateResponse.critique.join("\n- ")}\nReasoning: ${gateResponse.reasoning}\n\nRecommendation: You should retry this task, potentially using a different desktop driver (e.g. 'avoid stagehand' or 'use skyvern') if the current one is not performing well.`;
                             logMetric("supervisor", "quality_gate_fail", 1, { company: company || "unknown" });
                             return { verified: false, feedback };
                         } else {
