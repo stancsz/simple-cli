@@ -6,7 +6,14 @@ const runSpy = vi.spyOn(Engine.prototype, "run").mockResolvedValue(undefined);
 
 // Mock dependencies
 vi.mock("../src/llm.js", () => ({
-  createLLM: () => ({}),
+  createLLM: () => ({
+      personaEngine: {
+          loadConfig: vi.fn().mockResolvedValue(undefined),
+          isWithinWorkingHours: vi.fn().mockReturnValue(true),
+          formatMessage: vi.fn((msg) => msg),
+          getConfig: vi.fn().mockReturnValue({})
+      }
+  }),
 }));
 vi.mock("../src/mcp.js", () => ({
   MCP: class {

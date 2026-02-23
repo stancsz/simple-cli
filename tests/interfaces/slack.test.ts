@@ -7,7 +7,15 @@ const mocks = vi.hoisted(() => ({
     McpInit: vi.fn(),
     McpGetTools: vi.fn().mockResolvedValue([]),
     GetActiveSkill: vi.fn().mockResolvedValue({ systemPrompt: 'test' }),
-    CreateLLM: vi.fn(),
+    CreateLLM: vi.fn().mockReturnValue({
+        personaEngine: {
+            loadConfig: vi.fn().mockResolvedValue(undefined),
+            isWithinWorkingHours: vi.fn().mockReturnValue(true),
+            formatMessage: vi.fn((msg) => msg),
+            getConfig: vi.fn().mockReturnValue({})
+        },
+        generate: vi.fn()
+    }),
     AppEvent: vi.fn(),
     AppAction: vi.fn(),
     AppStart: vi.fn().mockResolvedValue(undefined)
