@@ -43,7 +43,7 @@ export class SkyvernDriver implements DesktopDriver {
 
       // Launch browser with remote debugging port enabled to allow Skyvern to connect via CDP
       this.browser = await chromium.launch({
-        headless: false, // Default to visible for local debugging, consistent with Stagehand
+        headless: process.env.HEADLESS !== "false", // Default to headless, consistent with other drivers
         args: [`--remote-debugging-port=${port}`],
       });
 

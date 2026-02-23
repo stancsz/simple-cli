@@ -192,17 +192,19 @@ To transition from a "Wrapper" to a true "Universal AI Integration Platform," th
     - **Contribution Guidelines:** (✅ Completed) Created `docs/CONTRIBUTING.md` to establish clear standards for code, PRs, and testing.
     - **Documentation Improvements:** (✅ Implemented) Updated README and Roadmaps to reflect the "Integration First" philosophy.
 
-### Phase 14: Visual & Desktop Agency (✅ Enhanced: Polyglot Orchestrator)
+### Phase 14: Visual & Desktop Agency (✅ Completed: Polyglot Orchestrator)
 **Goal:** Enable the agent to interact with web interfaces and desktop applications visually using any backend.
 - **Concept:** A unified "Desktop Orchestrator" that intelligently routes tasks to Stagehand, Anthropic, OpenAI, or Skyvern.
-- **Status:** Polyglot Orchestrator implemented (`src/mcp_servers/desktop_orchestrator/`). Skyvern driver validated.
+- **Status:** Polyglot Orchestrator fully implemented. All drivers (Stagehand, Skyvern, Anthropic, OpenAI) operational.
 - **Mechanism:**
     - **Smart Router:** Uses LLM to classify tasks and select the best backend (e.g., "Fill form" -> Skyvern, "Click button" -> Stagehand).
     - **Polyglot Drivers:** Adapter pattern supporting multiple backends.
         - **Stagehand:** (✅ Active) Fast, local automation.
-        - **Anthropic/OpenAI/Skyvern:** (✅ Validated) Drivers implemented and integration tested.
+        - **Skyvern:** (✅ Active) Vision-based navigation.
+        - **Anthropic (Computer Use):** (✅ Implemented) Full beta API integration with `AnthropicComputerUseDriver`.
+        - **OpenAI (Operator):** (✅ Implemented) Agentic loop integration with `OpenAIOperatorDriver`.
     - **Unified Interface:** Standardized `navigate`, `click`, `type`, `screenshot` tools.
-    - **Validation:** Integration tests verify routing logic, driver selection, and Skyvern end-to-end flows (`tests/integration/skyvern_validation.test.ts`).
+    - **Validation:** Comprehensive integration tests (`tests/integration/desktop_drivers.test.ts`) verify routing logic and all drivers including Skyvern end-to-end flows.
     - **Documentation:** See `docs/DESKTOP_ORCHESTRATION.md`.
 
 ### Phase 15: Operational Hardening (✅ Completed)

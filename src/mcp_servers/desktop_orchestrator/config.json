@@ -11,6 +11,18 @@
       "stagehand": {
         "env": "LOCAL",
         "verbose": 1
+      },
+      "anthropic": {
+        "api_key": null,
+        "model": "claude-3-5-sonnet-20241022",
+        "display_width": 1024,
+        "display_height": 768
+      },
+      "openai": {
+        "api_key": null,
+        "model": "gpt-4o",
+        "display_width": 1024,
+        "display_height": 768
       }
     }
   }
