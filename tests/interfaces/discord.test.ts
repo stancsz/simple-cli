@@ -71,7 +71,16 @@ vi.mock('../../src/engine/orchestrator.js', async () => {
 
 // Mock other dependencies to avoid side effects
 vi.mock('../../src/llm.js', () => ({
-    createLLM: () => ({})
+    createLLM: () => ({
+        personaEngine: {
+            loadConfig: vi.fn().mockResolvedValue(undefined),
+            isWithinWorkingHours: vi.fn().mockReturnValue(true),
+            getOutOfOfficeMessage: vi.fn().mockReturnValue('I am currently offline.'),
+            getReaction: vi.fn().mockReturnValue('👍'),
+            formatMessage: vi.fn((msg) => msg),
+            getConfig: vi.fn().mockReturnValue({})
+        }
+    })
 }));
 vi.mock('../../src/mcp.js', () => ({
     MCP: class {

@@ -148,9 +148,23 @@ client.on(Events.MessageCreate, async (message: Message) => {
     return;
   }
 
+  const text = message.content.replace(/<@!?[0-9]+>/, "").trim();
+
+  // 0. Check Working Hours & Config
+  const tempProvider = createLLM();
+  const persona = tempProvider.personaEngine;
+  await persona.loadConfig();
+
+  if (!persona.isWithinWorkingHours()) {
+      const oooMsg = persona.getOutOfOfficeMessage();
+      await message.reply(oooMsg);
+      return;
+  }
+
   try {
     // 1. Acknowledge (Reaction)
-    await message.react('👍');
+    const reactionEmoji = persona.getReaction(text);
+    await message.react(reactionEmoji);
 
     // 2. Typing Indicator
     await (message.channel as any).sendTyping();
@@ -162,8 +176,6 @@ client.on(Events.MessageCreate, async (message: Message) => {
     if (!isInitialized) {
       await initializeResources();
     }
-
-    const text = message.content.replace(/<@!?[0-9]+>/, "").trim();
 
     // Create request-specific registry
     const requestRegistry = new Registry();

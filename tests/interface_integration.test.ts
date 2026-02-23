@@ -10,6 +10,8 @@ vi.mock("../src/llm.js", () => ({
       personaEngine: {
           loadConfig: vi.fn().mockResolvedValue(undefined),
           isWithinWorkingHours: vi.fn().mockReturnValue(true),
+          getOutOfOfficeMessage: vi.fn().mockReturnValue('I am currently offline.'),
+          getReaction: vi.fn().mockReturnValue('👍'),
           formatMessage: vi.fn((msg) => msg),
           getConfig: vi.fn().mockReturnValue({})
       }

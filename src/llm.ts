@@ -84,6 +84,7 @@ export class LLM {
     signal?: AbortSignal,
     onTyping?: () => void,
   ): Promise<LLMResponse> {
+    // Ensure Persona is loaded and applied to System Prompt (Voice Consistency)
     await this.personaEngine.loadConfig();
     const systemWithPersona = this.personaEngine.injectPersonality(system);
 
@@ -164,6 +165,7 @@ export class LLM {
         }
 
         const parsed = this.parse(text, usage as any);
+        // Apply Persona Formatting (Catchphrases, Emojis, Typing Delay)
         return await this.personaEngine.transformResponse(parsed, onTyping);
       } catch (e: any) {
         lastError = e;
