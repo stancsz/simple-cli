@@ -34,6 +34,20 @@ This test validates the **Skyvern Driver** integration:
 - **Routing:** Verifies that form-heavy and complex tasks are correctly routed to Skyvern.
 - **Live/Mock:** Supports running against a live Skyvern instance (via `docker-compose.test.yml`) or using mocks for CI speed.
 
+### 4. Multi-Company Stress Test
+**File:** `tests/stress/multi_company_stress.test.ts`
+
+This comprehensive benchmark validates the multi-tenant architecture by simulating:
+- **Scale:** 5 concurrent companies (`acme-corp`, `beta-tech`, etc.).
+- **Infrastructure:** 5 independent Brain/Health process pairs sharing a common PVC-like storage (`.agent/`).
+- **Workload:**
+    - 3 companies running simulated SOP workflows (Brain Query + Store).
+    - 2 companies running high-frequency desktop/metric logging loops.
+- **Validation:**
+    - **Isolation:** Ensures zero cross-contamination of Brain memories between companies.
+    - **Performance:** Validates system stability under 300+ simulated operations in <15 seconds.
+    - **Concurrency:** Proves LanceDB file locking handles concurrent writes from multiple processes.
+
 ## Performance Benchmarks
 
 Based on the latest test runs:

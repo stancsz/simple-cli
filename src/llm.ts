@@ -142,12 +142,32 @@ export class LLM {
         }
 
         const start = Date.now();
-        const { text, usage } = await generateText({
-          model,
-          system: systemWithPersona,
-          messages: history as any,
-          abortSignal: signal,
-        });
+        let text = "";
+        let usage: any = undefined;
+
+        if (process.env.MOCK_LLM === "true") {
+          text = JSON.stringify({
+            thought: "Mocking LLM response for stress test.",
+            tool: "complete_step",
+            args: { summary: "Step completed successfully (Mocked)." }
+          });
+          usage = {
+            promptTokens: 100,
+            completionTokens: 50,
+            totalTokens: 150
+          };
+          // Simulate latency
+          await new Promise(r => setTimeout(r, 50));
+        } else {
+          const result = await generateText({
+            model,
+            system: systemWithPersona,
+            messages: history as any,
+            abortSignal: signal,
+          });
+          text = result.text;
+          usage = result.usage;
+        }
         const duration = Date.now() - start;
 
         // Log Metrics

@@ -10,11 +10,13 @@ export class SOPExecutor {
   private mcp: MCP;
   private maxRetries = 3;
   private logDir: string;
+  private company?: string;
 
-  constructor(llm: LLM, mcp: MCP) {
+  constructor(llm: LLM, mcp: MCP, company?: string) {
     this.llm = llm;
     this.mcp = mcp;
     this.logDir = join(process.cwd(), '.agent', 'brain');
+    this.company = company;
   }
 
   private async logStep(sopName: string, stepNumber: number, status: 'success' | 'failure', details: string) {
@@ -60,7 +62,11 @@ export class SOPExecutor {
         const tools = await this.mcp.getTools();
         const brainQuery = tools.find(t => t.name === 'brain_query');
         if (brainQuery) {
-            const result = await brainQuery.execute({ query: `SOP execution: ${sop.title} ${input}`, limit: 3 });
+            const result = await brainQuery.execute({
+                query: `SOP execution: ${sop.title} ${input}`,
+                limit: 3,
+                company: this.company
+            });
             // Check if result is string or object with content
             if (typeof result === 'string') {
                 pastContext = result;
@@ -240,7 +246,8 @@ Do not ask the user for input unless absolutely necessary.
                     summary: `Failed: ${(error as Error).message}`,
                     artifacts: JSON.stringify([]),
                     tokens: totalTokens,
-                    duration: duration
+                    duration: duration,
+                    company: this.company
                 });
             }
         } catch (e) {
@@ -265,7 +272,8 @@ Do not ask the user for input unless absolutely necessary.
                 summary: finalSummary,
                 artifacts: JSON.stringify([]), // TODO: Track artifacts?
                 tokens: totalTokens,
-                duration: duration
+                duration: duration,
+                company: this.company
             });
         }
     } catch (e) {
