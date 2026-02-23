@@ -71,3 +71,17 @@ To validate the system yourself:
 ## Future Improvements
 - **Real Browser Stress:** Future tests will integrate headless browser swarms to validate `StagehandDriver` under actual rendering load.
 - **Network Chaos:** Introduce network partitioning simulations to test distributed MCP server resilience.
+
+## Automated Roadmap Hygiene
+
+To maintain an accurate reflection of project progress without manual overhead, we have implemented an automated synchronization system:
+
+- **Component:** `roadmap_sync` MCP Server.
+- **Mechanism:**
+    - **Scheduled:** Runs every Sunday at 2 AM via the Scheduler MCP.
+    - **Trigger:** Scans the last 50 commits for `[x]`, `feat:`, `fix:`, or `completed:` patterns.
+    - **Action:**
+        - Updates `docs/ROADMAP.md`: Marks matching items as completed with a timestamp.
+        - Updates `docs/todo.md`: Strikes through completed items.
+        - Adds a "Last Updated" footer to the roadmap.
+- **Benefit:** Ensures that the public documentation always reflects the actual state of the codebase, fostering trust and transparency.

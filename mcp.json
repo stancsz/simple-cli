@@ -57,6 +57,27 @@
         "tsx",
         "src/mcp_servers/roo_code/index.ts"
       ]
+    },
+    "roadmap_sync": {
+      "command": "npx",
+      "args": [
+        "tsx",
+        "src/mcp_servers/roadmap_sync/index.ts"
+      ]
     }
-  }
+  },
+  "scheduledTasks": [
+    {
+      "id": "roadmap-sync",
+      "name": "Roadmap Sync",
+      "trigger": "cron",
+      "schedule": "0 2 * * 0",
+      "action": "mcp.call_tool",
+      "args": {
+        "server": "roadmap_sync",
+        "tool": "update_roadmap",
+        "arguments": {}
+      }
+    }
+  ]
 }

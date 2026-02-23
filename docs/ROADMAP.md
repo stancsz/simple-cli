@@ -17,6 +17,8 @@
 
 ## Strategic Roadmap
 
+*Note: This roadmap is automatically updated based on git activity by the `roadmap_sync` MCP server. Completed items are marked with `[x]` and a timestamp.*
+
 To transition from a "Wrapper" to a true "Universal AI Integration Platform," the following features are critical:
 
 ### Phase 0: Framework Integration Engine (✅ Core Capability)
