@@ -1,0 +1,50 @@
+version: '3.8'
+
+services:
+  skyvern-db:
+    image: postgres:15-alpine
+    restart: always
+    environment:
+      POSTGRES_DB: skyvern
+      POSTGRES_USER: skyvern
+      POSTGRES_PASSWORD: skyvern_password
+    ports:
+      - "5434:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U skyvern"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  skyvern-redis:
+    image: redis:6-alpine
+    restart: always
+    ports:
+      - "6381:6379"
+
+  skyvern-server:
+    image: skyvern/skyvern:latest
+    restart: always
+    environment:
+      DATABASE_URL: postgresql://skyvern:skyvern_password@skyvern-db:5432/skyvern
+      REDIS_URL: redis://skyvern-redis:6379/0
+      OPENAI_API_KEY: ${OPENAI_API_KEY}
+    ports:
+      - "8000:8000"
+    depends_on:
+      skyvern-db:
+        condition: service_healthy
+      skyvern-redis:
+        condition: service_started
+
+  skyvern-worker:
+    image: skyvern/skyvern:latest
+    restart: always
+    command: celery -A skyvern.worker worker --loglevel=info
+    environment:
+      DATABASE_URL: postgresql://skyvern:skyvern_password@skyvern-db:5432/skyvern
+      REDIS_URL: redis://skyvern-redis:6379/0
+      OPENAI_API_KEY: ${OPENAI_API_KEY}
+    depends_on:
+      skyvern-server:
+        condition: service_started

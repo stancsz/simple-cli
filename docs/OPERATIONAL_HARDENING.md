@@ -26,6 +26,14 @@ This test targets the **Polyglot Desktop Orchestrator** specifically:
 - **Routing:** Verifies LLM-based and heuristic routing logic under load.
 - **Resilience:** Injects random failures (10% rate) and latency (10-50ms) into mock drivers to ensure the router handles exceptions gracefully.
 
+### 3. Skyvern Driver Validation
+**File:** `tests/integration/skyvern_validation.test.ts`
+
+This test validates the **Skyvern Driver** integration:
+- **Scenarios:** Form Submission, Navigation & Screenshot, Structured Data Extraction.
+- **Routing:** Verifies that form-heavy and complex tasks are correctly routed to Skyvern.
+- **Live/Mock:** Supports running against a live Skyvern instance (via `docker-compose.test.yml`) or using mocks for CI speed.
+
 ## Performance Benchmarks
 
 Based on the latest test runs:
