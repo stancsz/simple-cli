@@ -151,6 +151,40 @@ Now, `simple` can use `aider` as a subordinate agent!
 
 ---
 
+## 🎭 6. Configuring Persona & Interfaces
+
+Your digital agent can mimic human behavior (typing, working hours) across Slack, Teams, and Discord.
+
+### Configuration
+Edit `.agent/config/persona.json` (or `.agent/companies/<name>/config/persona.json`):
+
+```json
+{
+  "name": "Sarah_DevOps",
+  "role": "Senior DevOps Engineer",
+  "voice": {
+    "tone": "Professional but friendly"
+  },
+  "emoji_usage": true,
+  "working_hours": "09:00-17:00",
+  "response_latency": {
+    "min": 500,
+    "max": 2000
+  },
+  "catchphrases": {
+    "greeting": ["Hey team!", "Hi all,"],
+    "signoff": ["Best,", "Cheers!"]
+  }
+}
+```
+
+### Interface Behavior
+- **Working Hours**: If you message the agent outside `working_hours`, it will reply with an "Out of Office" message and will not execute tasks.
+- **Typing Indicators**: The agent simulates typing latency (`response_latency`) and displays "Typing..." indicators in Slack/Teams/Discord while thinking.
+- **Styling**: Responses are automatically styled with the configured tone, emojis, and catchphrases.
+
+---
+
 ## 🎥 Next Steps
 
 - **Try the Showcase**: Run `npm run demo` to see a full 24-hour simulation in 2 minutes. [Read more](SHOWCASE_DEMO.md).

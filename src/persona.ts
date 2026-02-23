@@ -87,24 +87,8 @@ export class PersonaEngine {
     return `${personalityPrompt}\n\n${systemPrompt}`;
   }
 
-  async transformResponse(response: LLMResponse, onTyping?: () => void): Promise<LLMResponse> {
-    if (!this.config || !this.config.enabled) return response;
-
-    // Working Hours Check
-    if (this.config.working_hours && !this.isWithinWorkingHours(this.config.working_hours)) {
-      // Simulate typing even for offline message
-      if (this.config.response_latency) {
-        await this.simulateTyping("", this.config.response_latency, onTyping);
-      }
-      return {
-        ...response,
-        message: `I am currently offline. My working hours are ${this.config.working_hours}.`,
-        thought: "Working hours check failed. Sending offline message.",
-      };
-    }
-
-    let message = response.message || "";
-    let thought = response.thought;
+  formatMessage(message: string): string {
+    if (!this.config || !this.config.enabled) return message;
 
     // Inject Greeting
     if (this.config.catchphrases?.greeting?.length > 0) {
@@ -135,6 +119,30 @@ export class PersonaEngine {
         message = `${message}\n\n${signoff}`;
       }
     }
+
+    return message;
+  }
+
+  async transformResponse(response: LLMResponse, onTyping?: () => void): Promise<LLMResponse> {
+    if (!this.config || !this.config.enabled) return response;
+
+    // Working Hours Check
+    if (!this.isWithinWorkingHours()) {
+      // Simulate typing even for offline message
+      if (this.config.response_latency) {
+        await this.simulateTyping("", this.config.response_latency, onTyping);
+      }
+      return {
+        ...response,
+        message: `I am currently offline. My working hours are ${this.config.working_hours}.`,
+        thought: "Working hours check failed. Sending offline message.",
+      };
+    }
+
+    let message = response.message || "";
+    let thought = response.thought;
+
+    message = this.formatMessage(message);
 
     // Simulate Latency
     if (this.config.response_latency) {
@@ -171,9 +179,10 @@ export class PersonaEngine {
     }
   }
 
-  isWithinWorkingHours(workingHours: string): boolean {
-    if (!workingHours) return true;
-    const match = workingHours.match(/^(\d{2}):(\d{2})-(\d{2}):(\d{2})$/);
+  isWithinWorkingHours(workingHours?: string): boolean {
+    const hours = workingHours || this.config?.working_hours;
+    if (!hours) return true;
+    const match = hours.match(/^(\d{2}):(\d{2})-(\d{2}):(\d{2})$/);
     if (!match) return true;
 
     const [_, startH, startM, endH, endM] = match.map(Number);

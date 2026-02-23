@@ -21,7 +21,7 @@ import { existsSync, readFileSync } from "fs";
 import { SOPEngineServer } from "../mcp_servers/sop_engine/index.js";
 
 // Custom Engine to capture output and stream to Teams
-class TeamsEngine extends Engine {
+export class TeamsEngine extends Engine {
   private turnContext: TurnContext;
 
   constructor(
@@ -35,10 +35,31 @@ class TeamsEngine extends Engine {
 
     // Override spinner to stream updates to Teams
     this.s = {
-      start: (msg: string) => this.log('info', `[Start] ${msg}`),
+      start: (msg: string) => {
+        this.log('info', `[Start] ${msg}`);
+        if (msg === "Typing...") {
+            this.turnContext.sendActivity({ type: ActivityTypes.Typing }).catch(() => {});
+        }
+      },
       stop: (msg: string) => this.log('success', `[Done] ${msg}`),
       message: (msg: string) => this.log('info', `[Update] ${msg}`),
     } as any;
+  }
+
+  // Override run to check working hours
+  async run(
+    ctx: Context,
+    initialPrompt?: string,
+    options: { interactive: boolean; company?: string } = { interactive: true },
+  ) {
+      await this.llm.personaEngine.loadConfig();
+      if (!this.llm.personaEngine.isWithinWorkingHours()) {
+          const hours = this.llm.personaEngine.getConfig()?.working_hours || "unknown";
+          const msg = this.llm.personaEngine.formatMessage(`I am currently offline. My working hours are ${hours}.`);
+          await this.turnContext.sendActivity(msg);
+          return;
+      }
+      await super.run(ctx, initialPrompt, options);
   }
 
   // Override log to send updates to Teams conversation
@@ -224,7 +245,11 @@ class TeamsBot extends ActivityHandler {
             await context.sendActivity("Task completed (check logs/artifacts).");
           }
         } else {
-          await context.sendActivity("I couldn't generate a response.");
+            // Check if persona prevented response
+            await provider.personaEngine.loadConfig();
+            if (provider.personaEngine.isWithinWorkingHours()) {
+                 await context.sendActivity("I couldn't generate a response.");
+            }
         }
       } catch (error: any) {
         console.error("Error running engine:", error);
