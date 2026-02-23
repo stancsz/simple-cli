@@ -223,6 +223,8 @@ To transition from a "Wrapper" to a true "Universal AI Integration Platform," th
         - **High-Concurrency:** `tests/integration/desktop_orchestrator_stress.test.ts` validates router performance under 100 concurrent tasks.
     - **Documentation:** (✅ Implemented) Created `docs/OPERATIONAL_HARDENING.md` with performance benchmarks.
     - **Observability:** (✅ Implemented) Metrics aggregation for the Dashboard.
+    - **Secret Management:** (✅ Implemented) Secure injection via `SecretManager` MCP.
+    - **Alerting:** (✅ Implemented) Real-time Slack/Email alerts with working-hours logic.
 
 ---
 

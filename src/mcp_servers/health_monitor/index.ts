@@ -14,8 +14,19 @@ import { loadConfig } from "../../config.js";
 import { getMetricFiles, readNdjson, AGENT_DIR, METRICS_DIR } from "./utils.js";
 import { detectAnomalies, predictMetrics } from "./anomaly_detector.js";
 import { correlateAlerts, Alert } from "./alert_correlator.js";
+import { sendAlert } from "./alerting.js";
 
 const ALERT_RULES_FILE = join(process.cwd(), 'scripts', 'dashboard', 'alert_rules.json');
+
+let activeRules: any[] = [];
+async function loadRules() {
+    if (existsSync(ALERT_RULES_FILE)) {
+        try {
+            activeRules = JSON.parse(await readFile(ALERT_RULES_FILE, 'utf-8'));
+        } catch {}
+    }
+}
+loadRules();
 
 const server = new McpServer({
   name: "health_monitor",
@@ -35,6 +46,29 @@ server.tool(
   },
   async ({ agent, metric, value, tags }) => {
     await logMetric(agent, metric, value, tags || {});
+
+    // Real-time alert check
+    for (const rule of activeRules) {
+        if (rule.metric === metric || rule.metric === `${agent}:${metric}`) {
+             let triggered = false;
+             if (rule.operator === ">" && value > rule.threshold) triggered = true;
+             if (rule.operator === "<" && value < rule.threshold) triggered = true;
+             if (rule.operator === ">=" && value >= rule.threshold) triggered = true;
+             if (rule.operator === "<=" && value <= rule.threshold) triggered = true;
+             if (rule.operator === "==" && value === rule.threshold) triggered = true;
+
+             if (triggered) {
+                 const alert: Alert = {
+                     metric: rule.metric,
+                     message: `Real-time alert: ${rule.metric} is ${value} (${rule.operator} ${rule.threshold})`,
+                     timestamp: new Date().toISOString()
+                 };
+                 // Fire and forget
+                 sendAlert(alert).catch(e => console.error("Failed to send alert:", e));
+             }
+        }
+    }
+
     return { content: [{ type: "text", text: `Metric ${metric} tracked.` }] };
   }
 );
@@ -113,6 +147,7 @@ server.tool(
 
      rules.push({ metric, threshold, operator, contact, created_at: new Date().toISOString() });
      await writeFile(ALERT_RULES_FILE, JSON.stringify(rules, null, 2));
+     await loadRules(); // Reload rules
 
      return { content: [{ type: "text", text: `Alert rule added for ${metric} ${operator} ${threshold}` }] };
   }
@@ -177,6 +212,10 @@ server.tool(
   async () => {
     const alerts = await getAlerts();
     if (alerts.length > 0) {
+        // Send all triggered alerts
+        for (const alert of alerts) {
+            await sendAlert(alert);
+        }
         return { content: [{ type: "text", text: alerts.map(a => `ALERT: ${a.message}`).join("\n") }] };
     }
     return { content: [{ type: "text", text: "No alerts triggered." }] };
