@@ -87,23 +87,31 @@ async function main() {
     return;
   }
 
-  if (remainingArgs[0] === "quick-start") {
+  if (remainingArgs[0] === "quick-start" || remainingArgs[0] === "quickstart") {
     try {
-      const { quickStart } = await import("./commands/quick-start.js");
-      let scenario;
-      let demoMode = false;
-      const originalArgs = process.argv.slice(2);
-      for (let i = 0; i < originalArgs.length; i++) {
-        if (originalArgs[i] === "--scenario" && i + 1 < originalArgs.length) {
-          scenario = originalArgs[i + 1];
+      // Check for legacy flags to maintain backward compatibility
+      const isLegacy = args.includes("--scenario") || args.includes("--demo-mode");
+
+      if (isLegacy) {
+        const { quickStart } = await import("./commands/quick-start.js");
+        let scenario;
+        let demoMode = false;
+        const originalArgs = process.argv.slice(2);
+        for (let i = 0; i < originalArgs.length; i++) {
+          if (originalArgs[i] === "--scenario" && i + 1 < originalArgs.length) {
+            scenario = originalArgs[i + 1];
+          }
+          if (originalArgs[i] === "--demo-mode") {
+            demoMode = true;
+          }
         }
-        if (originalArgs[i] === "--demo-mode") {
-          demoMode = true;
-        }
+        await quickStart(scenario, demoMode);
+      } else {
+        const { runQuickStart } = await import("./commands/quickstart.js");
+        await runQuickStart();
       }
-      await quickStart(scenario, demoMode);
     } catch (e: any) {
-      console.error("Failed to execute quick-start:", e);
+      console.error("Failed to execute quick-start wizard:", e);
     }
     return;
   }

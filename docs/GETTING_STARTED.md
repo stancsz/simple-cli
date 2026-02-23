@@ -12,10 +12,12 @@ Run the Quick Start Wizard:
 simple quick-start
 ```
 
-This wizard will:
--   Showcase integrations with specialized agents (Aider, CrewAI, v0.dev).
--   Demonstrate how the orchestrator delegates tasks.
--   Display raw MCP (Model Context Protocol) communication logs.
+This interactive wizard will guide you through:
+1.  **Company Context Setup**: Creating a digital agency profile.
+2.  **Framework Integration**: Simulating the "Ingest-Digest-Deploy" cycle for Roo Code.
+3.  **SOP Execution**: Running an autonomous "Build a web app" workflow.
+4.  **Ghost Mode**: Scheduling background agents and viewing a mock standup report.
+5.  **Operational Dashboard**: Launching the real-time metrics view.
 
 [Read the Quick Start Guide](QUICK_START.md) for more details.
 
