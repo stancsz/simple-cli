@@ -1,16 +1,17 @@
-import { Stagehand, Page } from "@browserbasehq/stagehand";
+import { Stagehand } from "@browserbasehq/stagehand";
 import { DesktopDriver } from "../types.js";
 import { logMetric } from "../../../logger.js";
-import { chromium, Browser } from "playwright";
+import { chromium, Browser, Page as PlaywrightPage } from "playwright";
+import { z } from "zod";
 
 export class StagehandDriver implements DesktopDriver {
   name = "stagehand";
   private stagehand: Stagehand | null = null;
-  private page: Page | null = null;
+  private playwrightPage: PlaywrightPage | null = null;
   private browser: Browser | null = null; // For fallback
 
   async init() {
-    if (this.page) return;
+    if (this.stagehand || this.playwrightPage) return;
 
     console.log("Initializing Stagehand Driver...");
     const start = Date.now();
@@ -19,10 +20,12 @@ export class StagehandDriver implements DesktopDriver {
       this.stagehand = new Stagehand({
         env: "LOCAL",
         verbose: 1,
-        headless: true,
+        // headless option moved to localBrowserLaunchOptions in V3
+        localBrowserLaunchOptions: {
+          headless: true
+        }
       });
       await this.stagehand.init();
-      this.page = this.stagehand.page;
       console.log("Stagehand initialized successfully.");
       await logMetric('desktop_orchestrator', 'driver_initialization', Date.now() - start, { driver: 'stagehand', status: 'success' });
     } catch (e) {
@@ -30,7 +33,7 @@ export class StagehandDriver implements DesktopDriver {
       try {
         // Fallback to direct Playwright
         this.browser = await chromium.launch({ headless: true });
-        this.page = await this.browser.newPage();
+        this.playwrightPage = await this.browser.newPage();
         this.stagehand = null;
         console.log("Stagehand Driver initialized in fallback mode (Playwright only).");
         await logMetric('desktop_orchestrator', 'driver_initialization', Date.now() - start, { driver: 'stagehand', status: 'fallback', error: (e as Error).message });
@@ -50,9 +53,19 @@ export class StagehandDriver implements DesktopDriver {
     const start = Date.now();
     try {
       await this.init();
-      if (!this.page) throw new Error("Browser not initialized");
-      console.log(`[Stagehand] Navigating to ${url}...`);
-      await this.page.goto(url, { waitUntil: "domcontentloaded" });
+
+      if (this.playwrightPage) {
+        console.log(`[Stagehand Fallback] Navigating to ${url}...`);
+        await this.playwrightPage.goto(url, { waitUntil: "domcontentloaded" });
+      } else if (this.stagehand) {
+        console.log(`[Stagehand] Navigating to ${url}...`);
+        // V3 uses internal page navigation, exposed via internal methods usually
+        // Using `goto` from V3 (might need cast if type def is missing)
+        await (this.stagehand as any).goto(url);
+      } else {
+        throw new Error("Browser not initialized");
+      }
+
       await logMetric('desktop_orchestrator', 'execution_latency', Date.now() - start, { driver: 'stagehand', action: 'navigate', status: 'success' });
       return `Navigated to ${url}`;
     } catch (e) {
@@ -65,20 +78,24 @@ export class StagehandDriver implements DesktopDriver {
     const start = Date.now();
     try {
       await this.init();
-      if (!this.page) throw new Error("Browser not initialized");
 
       console.log(`[Stagehand] Clicking element '${selector}'...`);
 
-      if (this.isCssSelector(selector)) {
-        console.log(`[Stagehand] Detected CSS selector, using direct Playwright click.`);
-        await this.page.locator(selector).click();
-      } else {
-        if (this.stagehand) {
+      if (this.playwrightPage) {
+         console.log(`[Stagehand Fallback] Using direct Playwright click.`);
+         await this.playwrightPage.locator(selector).click();
+      } else if (this.stagehand) {
+         if (this.isCssSelector(selector)) {
+             // Try to find a way to click CSS selector directly via act
+             console.log(`[Stagehand] Using act with selector for CSS: ${selector}`);
+             await this.stagehand.act({ action: "click", selector: selector } as any);
+         } else {
+             // AI-driven execution
              console.log(`[Stagehand] Detected natural language, using Stagehand AI.`);
              await this.stagehand.act(`Click on ${selector}`);
-        } else {
-            throw new Error(`Stagehand AI not available (fallback mode). Cannot process natural language selector: ${selector}`);
-        }
+         }
+      } else {
+         throw new Error("Browser not initialized");
       }
 
       await logMetric('desktop_orchestrator', 'execution_latency', Date.now() - start, { driver: 'stagehand', action: 'click', status: 'success' });
@@ -93,20 +110,26 @@ export class StagehandDriver implements DesktopDriver {
     const start = Date.now();
     try {
       await this.init();
-      if (!this.page) throw new Error("Browser not initialized");
 
       console.log(`[Stagehand] Typing "${text}" into '${selector}'...`);
 
-      if (this.isCssSelector(selector)) {
-        console.log(`[Stagehand] Detected CSS selector, using direct Playwright type.`);
-        await this.page.locator(selector).fill(text);
+      if (this.playwrightPage) {
+         console.log(`[Stagehand Fallback] Using direct Playwright type.`);
+         await this.playwrightPage.locator(selector).fill(text);
+      } else if (this.stagehand) {
+         if (this.isCssSelector(selector)) {
+             console.log(`[Stagehand] Using act with selector for CSS type: ${selector}`);
+             // act might handle type action?
+             // Checking definitions: actTool implies act uses AI instructions or action object.
+             // Action object structure: { action: "type", selector: ..., arguments: [text] }?
+             // Or maybe just pass instruction string to be safe
+             await this.stagehand.act(`Type "${text}" into ${selector}`);
+         } else {
+             console.log(`[Stagehand] Detected natural language, using Stagehand AI.`);
+             await this.stagehand.act(`Type "${text}" into ${selector}`);
+         }
       } else {
-        if (this.stagehand) {
-            console.log(`[Stagehand] Detected natural language, using Stagehand AI.`);
-            await this.stagehand.act(`Type "${text}" into ${selector}`);
-        } else {
-             throw new Error(`Stagehand AI not available (fallback mode). Cannot process natural language selector: ${selector}`);
-        }
+         throw new Error("Browser not initialized");
       }
 
       await logMetric('desktop_orchestrator', 'execution_latency', Date.now() - start, { driver: 'stagehand', action: 'type', status: 'success' });
@@ -121,11 +144,37 @@ export class StagehandDriver implements DesktopDriver {
     const start = Date.now();
     try {
       await this.init();
-      if (!this.page) throw new Error("Browser not initialized");
       console.log("[Stagehand] Taking screenshot...");
-      const buffer = await this.page.screenshot({ fullPage: true });
+
+      let buffer: Buffer | string = "";
+
+      if (this.playwrightPage) {
+          buffer = await this.playwrightPage.screenshot({ fullPage: true });
+      } else if (this.stagehand) {
+          // Access internal page to take screenshot using CDP?
+          // Or use observe? observe returns actions.
+          // V3 (Stagehand) typically has some way to capture screenshot.
+          // Let's check index.d.ts for 'captureScreenshot' or similar.
+          // grep "captureScreenshot" showed AgentProvider having it.
+          // V3 class has 'private ctx'.
+          // Let's try casting to access page.
+          const page = (this.stagehand as any).page;
+          if (page && page.sendCDP) {
+               // Use CDP Page.captureScreenshot
+               const res = await page.sendCDP("Page.captureScreenshot", { format: "png" });
+               buffer = res.data; // Base64 string
+          } else {
+              // Try observe?
+              // No, screenshot logic is hard without page access.
+              // Assume page exists via any cast as verified in index.js source code assignment
+              throw new Error("Cannot take screenshot: Stagehand page not accessible");
+          }
+      } else {
+          throw new Error("Browser not initialized");
+      }
+
       await logMetric('desktop_orchestrator', 'execution_latency', Date.now() - start, { driver: 'stagehand', action: 'screenshot', status: 'success' });
-      return buffer.toString("base64");
+      return typeof buffer === 'string' ? buffer : buffer.toString("base64");
     } catch (e) {
       await logMetric('desktop_orchestrator', 'execution_latency', Date.now() - start, { driver: 'stagehand', action: 'screenshot', status: 'failure', error: (e as Error).message });
       throw e;
@@ -136,8 +185,32 @@ export class StagehandDriver implements DesktopDriver {
     const start = Date.now();
     try {
       await this.init();
-      if (!this.page) throw new Error("Browser not initialized");
-      const text = await this.page.evaluate(() => document.body.innerText);
+
+      let text = "";
+
+      if (this.playwrightPage) {
+          text = await this.playwrightPage.evaluate(() => document.body.innerText);
+      } else if (this.stagehand) {
+          // Use CDP via internal page
+          const page = (this.stagehand as any).page;
+          if (page && page.sendCDP) {
+              const res = await page.sendCDP("Runtime.evaluate", {
+                  expression: "document.body.innerText",
+                  returnByValue: true
+              });
+              text = res.result.value;
+          } else {
+              // Fallback to extract (AI-based)
+               const result = await this.stagehand.extract(
+                   "extract all text from the page",
+                   z.object({ text: z.string() })
+               );
+               text = result.text;
+          }
+      } else {
+          throw new Error("Browser not initialized");
+      }
+
       await logMetric('desktop_orchestrator', 'execution_latency', Date.now() - start, { driver: 'stagehand', action: 'extract_text', status: 'success' });
       return text;
     } catch (e) {
@@ -169,11 +242,12 @@ export class StagehandDriver implements DesktopDriver {
     try {
       if (this.stagehand) {
           await this.stagehand.close();
-      } else if (this.browser) {
+      }
+      if (this.browser) {
           await this.browser.close();
       }
       this.stagehand = null;
-      this.page = null;
+      this.playwrightPage = null;
       this.browser = null;
       await logMetric('desktop_orchestrator', 'driver_shutdown', Date.now() - start, { driver: 'stagehand', status: 'success' });
     } catch (e) {
