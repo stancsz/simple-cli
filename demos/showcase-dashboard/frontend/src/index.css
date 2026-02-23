@@ -1,0 +1,84 @@
+body {
+  font-family: system-ui, -apple-system, sans-serif;
+  margin: 0;
+  padding: 0;
+  background: #f0f2f5;
+  color: #333;
+}
+.container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 20px;
+}
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+}
+.card {
+  background: white;
+  border-radius: 8px;
+  padding: 20px;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+  margin-bottom: 20px;
+}
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 20px;
+}
+.log-viewer {
+  background: #1e1e1e;
+  color: #d4d4d4;
+  font-family: monospace;
+  padding: 15px;
+  border-radius: 8px;
+  height: 400px;
+  overflow-y: auto;
+  white-space: pre-wrap;
+  font-size: 0.9em;
+}
+.btn {
+  background: #2563eb;
+  color: white;
+  border: none;
+  padding: 10px 20px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.btn:hover {
+  background: #1d4ed8;
+}
+.btn:disabled {
+  background: #93c5fd;
+  cursor: not-allowed;
+}
+.status-step {
+  padding: 10px;
+  border-left: 4px solid #e5e7eb;
+  margin-bottom: 10px;
+}
+.status-step.active {
+  border-left-color: #2563eb;
+  background: #eff6ff;
+}
+.status-step.completed {
+  border-left-color: #22c55e;
+}
+.metric {
+  text-align: center;
+}
+.metric-value {
+  font-size: 2em;
+  font-weight: bold;
+  color: #2563eb;
+}
+.metric-label {
+  color: #6b7280;
+  font-size: 0.9em;
+}

@@ -160,13 +160,13 @@ To transition from a "Wrapper" to a true "Universal AI Integration Platform," th
 ### Phase 11: Production Showcase (✅ Implemented)
 **Goal:** Demonstrate the full 'Digital Agency' capability in an autonomous simulation.
 - **Concept:** A standalone "Showcase Corp" demo where the agent builds and manages a TODO app from scratch.
-- **Status:** ✅ **Live Demo Available!** See [docs/SHOWCASE_DEMO.md](SHOWCASE_DEMO.md).
+- **Status:** ✅ **Interactive Dashboard Available!** See [docs/SHOWCASE_DEMO.md](SHOWCASE_DEMO.md).
 - **Mechanism:**
-    - **Simulation Script**: `demos/simple-cli-showcase/run_demo.ts` orchestrates the 4 pillars.
-    - **One-Command Setup**: `scripts/setup-showcase.ts` automates environment configuration for CLI/Docker.
+    - **Dashboard UI**: A React/Vite web interface visualizing the agent's thought process and pillar execution in real-time.
+    - **Simulation Script**: `demos/simple-cli-showcase/run_demo.ts` orchestrates the 4 pillars (headless backend).
     - **SOP-as-Code**: Defines the end-to-end workflow (Project Init -> Deploy).
     - **Ghost Mode**: Simulates 24-hour autonomy (Morning Standups, HR Reviews).
-    - **Validation**: Validated via `tests/integration/showcase_simulation.test.ts`.
+    - **Validation**: Validated via `tests/integration/showcase_simulation.test.ts` and `tests/integration/showcase_dashboard_frontend.test.ts`.
 
 ### Phase 12: Production-Grade Kubernetes Deployment (✅ Completed)
 **Goal:** Run the Digital Agency as a scalable, multi-tenant service on Kubernetes.
