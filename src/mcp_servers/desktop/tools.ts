@@ -13,9 +13,9 @@ export const tools = [
     handler: async ({ url }: { url: string }) => {
       try {
         await client.navigate_to(url);
-        return { content: [{ type: "text", text: `Navigated to ${url}` }] };
+        return { content: [{ type: "text" as const, text: `Navigated to ${url}` }] };
       } catch (e) {
-        return { content: [{ type: "text", text: `Error: ${(e as Error).message}` }], isError: true };
+        return { content: [{ type: "text" as const, text: `Error: ${(e as Error).message}` }], isError: true };
       }
     },
   },
@@ -28,9 +28,9 @@ export const tools = [
     handler: async ({ selector }: { selector: string }) => {
       try {
         await client.click_element(selector);
-        return { content: [{ type: "text", text: `Clicked element matching selector: ${selector}` }] };
+        return { content: [{ type: "text" as const, text: `Clicked element matching selector: ${selector}` }] };
       } catch (e) {
-        return { content: [{ type: "text", text: `Error: ${(e as Error).message}` }], isError: true };
+        return { content: [{ type: "text" as const, text: `Error: ${(e as Error).message}` }], isError: true };
       }
     },
   },
@@ -44,9 +44,9 @@ export const tools = [
     handler: async ({ selector, text }: { selector: string; text: string }) => {
       try {
         await client.type_text(selector, text);
-        return { content: [{ type: "text", text: `Typed text into ${selector}` }] };
+        return { content: [{ type: "text" as const, text: `Typed text into ${selector}` }] };
       } catch (e) {
-        return { content: [{ type: "text", text: `Error: ${(e as Error).message}` }], isError: true };
+        return { content: [{ type: "text" as const, text: `Error: ${(e as Error).message}` }], isError: true };
       }
     },
   },
@@ -60,14 +60,14 @@ export const tools = [
         return {
           content: [
             {
-              type: "image",
+              type: "image" as const,
               data: base64Image,
               mimeType: "image/png",
             },
           ],
         };
       } catch (e) {
-        return { content: [{ type: "text", text: `Error: ${(e as Error).message}` }], isError: true };
+        return { content: [{ type: "text" as const, text: `Error: ${(e as Error).message}` }], isError: true };
       }
     },
   },
@@ -78,9 +78,9 @@ export const tools = [
     handler: async () => {
       try {
         const text = await client.extract_page_text();
-        return { content: [{ type: "text", text }] };
+        return { content: [{ type: "text" as const, text }] };
       } catch (e) {
-        return { content: [{ type: "text", text: `Error: ${(e as Error).message}` }], isError: true };
+        return { content: [{ type: "text" as const, text: `Error: ${(e as Error).message}` }], isError: true };
       }
     },
   },

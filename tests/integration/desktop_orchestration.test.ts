@@ -16,15 +16,23 @@ vi.mock('../../src/llm.js', () => ({
 }));
 
 // Mock Stagehand
+const mockPage = {
+  goto: vi.fn(),
+  click: vi.fn(),
+  fill: vi.fn(),
+  screenshot: vi.fn().mockResolvedValue(Buffer.from("fake-image")),
+  evaluate: vi.fn().mockResolvedValue("fake text"),
+  locator: vi.fn().mockReturnValue({
+      click: vi.fn(),
+      fill: vi.fn()
+  })
+};
+
 vi.mock('@browserbasehq/stagehand', () => ({
   Stagehand: class {
     async init() {}
-    page = {
-      goto: vi.fn(),
-      click: vi.fn(),
-      fill: vi.fn(),
-      screenshot: vi.fn().mockResolvedValue(Buffer.from("fake-image")),
-      evaluate: vi.fn().mockResolvedValue("fake text"),
+    context = {
+        activePage: () => mockPage
     };
     async act() {}
     async close() {}

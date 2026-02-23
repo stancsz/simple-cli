@@ -8,11 +8,15 @@ const mockPage = {
   fill: vi.fn(),
   screenshot: vi.fn().mockResolvedValue(Buffer.from("fake-image")),
   evaluate: vi.fn().mockResolvedValue("Page content"),
+  locator: vi.fn().mockReturnValue({
+      click: vi.fn(),
+      fill: vi.fn()
+  })
 };
 
 const mockStagehandInstance = {
   init: vi.fn(),
-  page: mockPage,
+  context: { activePage: () => mockPage },
   close: vi.fn(),
 };
 
@@ -56,7 +60,7 @@ describe("Desktop Orchestration Integration", () => {
 
     await tool.handler({ selector: "#btn" } as any);
 
-    expect(mockPage.click).toHaveBeenCalledWith("#btn");
+    expect(mockPage.locator).toHaveBeenCalledWith("#btn");
   });
 
   it("should type text", async () => {
@@ -66,7 +70,7 @@ describe("Desktop Orchestration Integration", () => {
 
     await tool.handler({ selector: "#input", text: "hello" } as any);
 
-    expect(mockPage.fill).toHaveBeenCalledWith("#input", "hello");
+    expect(mockPage.locator).toHaveBeenCalledWith("#input");
   });
 
   it("should take a screenshot", async () => {

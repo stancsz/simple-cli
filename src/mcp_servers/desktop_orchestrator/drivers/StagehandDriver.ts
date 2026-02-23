@@ -1,5 +1,4 @@
-import { Stagehand } from "@browserbasehq/stagehand";
-import { Page } from "playwright";
+import { Stagehand, Page } from "@browserbasehq/stagehand";
 import { DesktopDriver } from "../types.js";
 
 export class StagehandDriver implements DesktopDriver {
@@ -13,10 +12,9 @@ export class StagehandDriver implements DesktopDriver {
       this.stagehand = new Stagehand({
         env: "LOCAL",
         verbose: 1,
-        debugDom: true,
       });
       await this.stagehand.init();
-      this.page = this.stagehand.page;
+      this.page = this.stagehand.context.activePage() || null;
       console.log("Stagehand initialized.");
     }
   }
@@ -34,7 +32,7 @@ export class StagehandDriver implements DesktopDriver {
     if (!this.page) throw new Error("Browser not initialized");
     console.log(`Clicking element ${selector}...`);
     try {
-        await this.page.click(selector);
+        await this.page.locator(selector).click();
         return `Clicked element ${selector}`;
     } catch (e) {
         throw new Error(`Failed to click ${selector}: ${(e as Error).message}`);
@@ -45,7 +43,7 @@ export class StagehandDriver implements DesktopDriver {
     await this.init();
     if (!this.page) throw new Error("Browser not initialized");
     console.log(`Typing "${text}" into ${selector}...`);
-    await this.page.fill(selector, text);
+    await this.page.locator(selector).fill(text);
     return `Typed text into ${selector}`;
   }
 
@@ -71,7 +69,7 @@ export class StagehandDriver implements DesktopDriver {
       console.log(`Executing complex flow: ${goal}`);
       try {
           // Stagehand's act method
-          await this.stagehand.act({ action: goal });
+          await this.stagehand.act(goal);
           return `Successfully executed action: ${goal}`;
       } catch (e) {
           throw new Error(`Failed to execute flow: ${(e as Error).message}`);

@@ -64,7 +64,7 @@ export class DesktopRouter {
             [{ role: "user", content: "Route this task." }] // Dummy message
         );
 
-        const choice = response.message.trim().toLowerCase();
+        const choice = (response.message || "").trim().toLowerCase();
         // Handle potential extra text in response
         const validDrivers = ["stagehand", "anthropic", "openai", "skyvern"];
         const found = validDrivers.find(d => choice.includes(d));

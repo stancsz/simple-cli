@@ -1,5 +1,4 @@
-import { Stagehand } from "@browserbasehq/stagehand";
-import { Page } from "playwright";
+import { Stagehand, Page } from "@browserbasehq/stagehand";
 
 export class StagehandClient {
   private stagehand: Stagehand | null = null;
@@ -11,10 +10,9 @@ export class StagehandClient {
       this.stagehand = new Stagehand({
         env: "LOCAL",
         verbose: 1,
-        debugDom: true,
       });
       await this.stagehand.init();
-      this.page = this.stagehand.page;
+      this.page = this.stagehand.context.activePage() || null;
       console.log("Stagehand initialized.");
     }
   }
@@ -35,7 +33,7 @@ export class StagehandClient {
     // but the prompt implies CSS/XPath selector.
     // We will use Playwright's click for determinism if it's a selector.
     try {
-        await this.page.click(selector);
+        await this.page.locator(selector).click();
         return `Clicked element ${selector}`;
     } catch (e) {
         // Fallback or better error handling
@@ -47,7 +45,7 @@ export class StagehandClient {
     await this.init();
     if (!this.page) throw new Error("Browser not initialized");
     console.log(`Typing "${text}" into ${selector}...`);
-    await this.page.fill(selector, text);
+    await this.page.locator(selector).fill(text);
     return `Typed text into ${selector}`;
   }
 
