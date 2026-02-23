@@ -194,6 +194,8 @@ export class OpenAIOperatorDriver implements DesktopDriver {
 
           if (msg.tool_calls && msg.tool_calls.length > 0) {
               for (const toolCall of msg.tool_calls) {
+                  if (toolCall.type !== 'function') continue;
+
                   const fnName = toolCall.function.name;
                   const args = JSON.parse(toolCall.function.arguments);
                   let result = "";

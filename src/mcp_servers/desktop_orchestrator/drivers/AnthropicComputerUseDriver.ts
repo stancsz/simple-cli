@@ -65,7 +65,7 @@ export class AnthropicComputerUseDriver implements DesktopDriver {
               messages: this.messages,
               tools: [
                   {
-                      type: "computer-2024-10-22",
+                      type: "computer_20241022",
                       name: "computer",
                       display_height_px: 768,
                       display_width_px: 1024,
