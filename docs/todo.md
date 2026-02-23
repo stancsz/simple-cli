@@ -199,5 +199,6 @@
 - [x] **Stress Tests**:
     - [x] Extended `long_running_stress.test.ts` with Desktop Research scenarios.
     - [x] Created `tests/integration/desktop_orchestrator_stress.test.ts` (100+ concurrent tasks).
+    - [x] Created `tests/stress/multi_company_stress.test.ts` (12-tenant concurrency).
 - [x] **Documentation**:
     - [x] Created `docs/OPERATIONAL_HARDENING.md`.

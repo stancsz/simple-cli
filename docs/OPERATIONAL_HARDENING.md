@@ -34,7 +34,7 @@ This test validates the **Skyvern Driver** integration:
 - **Routing:** Verifies that form-heavy and complex tasks are correctly routed to Skyvern.
 - **Live/Mock:** Supports running against a live Skyvern instance (via `docker-compose.test.yml`) or using mocks for CI speed.
 
-### 4. Multi-Tenant Stress Testing
+### 4. Multi-Tenant Stress Validation
 **File:** `tests/stress/multi_company_stress.test.ts`
 **Command:** `npm run test:stress`
 
@@ -44,7 +44,7 @@ This test validates the "Universal AI Integration Platform" claim by simulating:
 - **Isolation:** Strictly verifies that Company A cannot access Company B's Brain memories or file artifacts.
 - **Chaos:** Randomly injects driver failures (20% rate) to ensure system stability under partial outages.
 - **Validation:** Ensures 100% data isolation and correct metric tracking even under high load.
-- **Result:** ✅ Validated via PR #497. 12 concurrent tenants performing onboarding, Brain storage, SOP execution, and HR Loop proposals with minimal memory overhead (~1.8 MB growth).
+- **Result:** ✅ Validated via PR #497. 12 concurrent tenants performing onboarding, Brain storage, SOP execution, and HR Loop proposals with minimal memory overhead (~0.85 MB growth).
 
 ## Performance Benchmarks
 
@@ -56,7 +56,7 @@ Based on the latest test runs:
 | **Throughput** | Tasks/Sec | ~1900 tasks/sec | Validated with 100 concurrent tasks completing in ~52ms. |
 | **Brain Recall** | Latency | ~20ms | Consistent performance even with growing memory bank. |
 | **Recovery Rate** | Success % | 100% | The HR Loop and self-healing mechanisms successfully addressed all 6 injected major failures during the 7-day sim. |
-| **Multi-Tenant** | Memory Growth | ~1.8 MB | Extremely stable memory usage for 12 concurrent tenants performing full lifecycle ops. |
+| **Multi-Tenant** | Memory Growth | ~0.85 MB | Extremely stable memory usage for 12 concurrent tenants performing full lifecycle ops. |
 
 ## Observability
 
