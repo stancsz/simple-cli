@@ -381,10 +381,13 @@ export async function main() {
 
     // Serve Dashboard Static Files
     const dashboardDist = join(process.cwd(), 'scripts', 'dashboard', 'dist');
+    const dashboardLegacy = join(process.cwd(), 'scripts', 'dashboard', 'public_legacy');
     const dashboardPublic = join(process.cwd(), 'scripts', 'dashboard', 'public');
 
     if (existsSync(dashboardDist)) {
         app.use(express.static(dashboardDist));
+    } else if (existsSync(dashboardLegacy)) {
+        app.use(express.static(dashboardLegacy));
     } else {
         app.use(express.static(dashboardPublic));
     }
