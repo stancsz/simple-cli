@@ -214,17 +214,13 @@
 - [x] **Deployment Playbooks**: Create deployment guides for 3 real-world scenarios (3/3 Completed - Startup MVP, Enterprise Migration, Agency Consulting).
 - [x] **Performance Benchmarking**: Establish a public benchmark suite (✅ Dashboard Integrated).
 
-## Sprint 2: Operational Hardening (✅ Completed)
+## Sprint 6: Autonomous Business Operations (In Progress)
 
-**Goal:** Ensure platform stability, observability, and resilience.
+**Goal:** Transform Simple-CLI into a comprehensive Business OS.
 
-### Phase 15: Stress Testing
-- [x] **Desktop Orchestrator Instrumentation**:
-    - [x] Added `logMetric` to `StagehandDriver` and other drivers.
-    - [x] Added structured logging to `DesktopRouter`.
-- [x] **Stress Tests**:
-    - [x] Extended `long_running_stress.test.ts` with Desktop Research scenarios.
-    - [x] Created `tests/integration/desktop_orchestrator_stress.test.ts` (100+ concurrent tasks).
-    - [x] Created `tests/stress/multi_company_stress.test.ts` (12-tenant concurrency).
-- [x] **Documentation**:
-    - [x] Created `docs/OPERATIONAL_HARDENING.md`.
+### Phase 19: Business MCP Server & Scaling
+- [x] **Business MCP Server**: Scaffold implemented with mock tools (`business_ops`).
+- [ ] **Financial Integration**: Connect to Xero/QuickBooks APIs.
+- [ ] **CRM Integration**: Connect to HubSpot/Salesforce APIs.
+- [ ] **Project Management**: Connect to Linear/Jira APIs.
+- [ ] **Elastic Swarms**: Implement self-replicating agents based on demand.

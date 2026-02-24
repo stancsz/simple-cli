@@ -78,6 +78,13 @@
         "tsx",
         "src/mcp_servers/roadmap_sync/index.ts"
       ]
+    },
+    "business_ops": {
+      "command": "npx",
+      "args": [
+        "tsx",
+        "src/mcp_servers/business_ops/index.ts"
+      ]
     }
   },
   "scheduledTasks": [
