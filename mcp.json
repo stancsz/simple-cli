@@ -85,6 +85,13 @@
         "tsx",
         "src/mcp_servers/business_ops/index.ts"
       ]
+    },
+    "crm": {
+      "command": "npx",
+      "args": [
+        "tsx",
+        "src/mcp_servers/crm/index.ts"
+      ]
     }
   },
   "scheduledTasks": [

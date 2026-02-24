@@ -51,6 +51,7 @@
     "@browserbasehq/stagehand": "^3.0.8",
     "@clack/prompts": "^0.7.0",
     "@google/generative-ai": "^0.24.1",
+    "@hubspot/api-client": "^13.4.0",
     "@lancedb/lancedb": "^0.26.2",
     "@modelcontextprotocol/sdk": "^1.0.0",
     "@oclif/core": "^4.0.0",

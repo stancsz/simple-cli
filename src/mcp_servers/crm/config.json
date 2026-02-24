@@ -1,0 +1,8 @@
+{
+  "env": {
+    "HUBSPOT_ACCESS_TOKEN": {
+      "description": "HubSpot Private App Access Token",
+      "required": true
+    }
+  }
+}
