@@ -88,6 +88,28 @@ export class LLM {
     await this.personaEngine.loadConfig();
     const systemWithPersona = this.personaEngine.injectPersonality(system);
 
+    if (process.env.MOCK_LLM === 'true') {
+        const usage = {
+            promptTokens: 10,
+            completionTokens: 10,
+            totalTokens: 20
+        };
+        // Log Mock Metrics
+        await logMetric('llm', 'llm_latency', 100, { model: 'mock', provider: 'mock' });
+        await logMetric('llm', 'llm_tokens_total', usage.totalTokens, { model: 'mock', provider: 'mock' });
+        await logMetric('llm', 'llm_tokens_prompt', usage.promptTokens, { model: 'mock', provider: 'mock' });
+        await logMetric('llm', 'llm_tokens_completion', usage.completionTokens, { model: 'mock', provider: 'mock' });
+
+        return {
+            thought: "Mock thought",
+            tool: "none",
+            args: {},
+            message: "Mock response from MOCK_LLM mode.",
+            raw: "Mock response",
+            usage
+        };
+    }
+
     let lastError: Error | null = null;
     const lastUserMessage =
       history.filter((m) => m.role === "user").pop()?.content || "";

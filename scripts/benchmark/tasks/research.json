@@ -1,0 +1,12 @@
+{
+  "id": "research",
+  "name": "Research Topic",
+  "description": "Research a topic and save the summary to a file.",
+  "prompt": "Research 'Fastest Land Animals' and save a list of the top 3 to 'animals.txt'.",
+  "files": {},
+  "validation": {
+    "type": "file_exists",
+    "file": "animals.txt"
+  },
+  "expected_tokens": 1500
+}

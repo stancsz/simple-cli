@@ -199,6 +199,15 @@ Ready for production? Check out our real-world deployment playbooks:
 - **[Startup MVP Playbook](deployment/startup_mvp.md)**: From zero to k8s in a weekend.
 - **[Enterprise Migration Playbook](deployment/ENTERPRISE_MIGRATION_PLAYBOOK.md)**: Modernize legacy monoliths with zero downtime.
 
+### Performance Benchmarking
+Curious about how Simple-CLI stacks up against other tools? Run our comprehensive benchmark suite:
+
+```bash
+npx tsx scripts/benchmark/run_benchmark.ts
+```
+
+This generates a performance report comparing Integration Speed, Token Efficiency, and Cost. You can view the results in the Operational Dashboard (`simple dashboard`) under the "Benchmark" tab. [Read more about the methodology](BENCHMARK_SUITE.md).
+
 ---
 
 ## 🎥 Next Steps

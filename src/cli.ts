@@ -238,6 +238,7 @@ async function main() {
 
   await engine.run(ctx, prompt || undefined, { interactive });
   outro("Session finished.");
+  process.exit(0);
 }
 
 main().catch((err) => {

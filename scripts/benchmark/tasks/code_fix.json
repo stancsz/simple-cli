@@ -1,0 +1,15 @@
+{
+  "id": "code_fix",
+  "name": "Code Repair",
+  "description": "Fix a simple syntax error in a Python script.",
+  "prompt": "Fix the syntax error in 'calculator.py'. The add function is missing a colon.",
+  "files": {
+    "calculator.py": "def add(a, b)\n    return a + b\n"
+  },
+  "validation": {
+    "type": "file_content",
+    "file": "calculator.py",
+    "contains": ["def add(a, b):"]
+  },
+  "expected_tokens": 500
+}

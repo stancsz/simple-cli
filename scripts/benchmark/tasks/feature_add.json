@@ -1,0 +1,15 @@
+{
+  "id": "feature_add",
+  "name": "Feature Addition",
+  "description": "Add a new function to an existing JavaScript file.",
+  "prompt": "Add a 'multiply' function to 'math.js' that takes two arguments and returns their product. Export it.",
+  "files": {
+    "math.js": "export function add(a, b) { return a + b; }\n"
+  },
+  "validation": {
+    "type": "file_content",
+    "file": "math.js",
+    "contains": ["export function multiply", "return a * b"]
+  },
+  "expected_tokens": 800
+}

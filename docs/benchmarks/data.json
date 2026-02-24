@@ -1,56 +1,29 @@
 {
-  "timestamp": "2026-02-24T11:54:27.598Z",
+  "timestamp": "2026-02-24T14:26:12.061Z",
   "results": [
     {
-      "task": "integration_speed",
-      "framework": "Simple-CLI",
-      "duration_ms": 87957,
-      "success": false,
-      "details": "Validation failed.",
-      "tokens": 0
+      "task": "code_fix",
+      "tool": "Simple-CLI",
+      "duration_ms": 5,
+      "tokens_total": 0,
+      "cost_est": 0,
+      "success": false
     },
     {
-      "task": "code_editing",
-      "framework": "Direct Usage (Aider-like)",
-      "duration_ms": 154,
-      "tokens": 5100,
-      "cost": 0.051
+      "task": "code_fix",
+      "tool": "Aider (Simulated)",
+      "duration_ms": 6,
+      "tokens_total": 1500,
+      "cost_est": 0.015,
+      "success": true
     },
     {
-      "task": "code_editing",
-      "framework": "Simple-CLI",
-      "duration_ms": 261,
-      "tokens": 522,
-      "cost": 0.005220000000000001
-    },
-    {
-      "task": "research",
-      "framework": "CrewAI (Direct)",
-      "duration_ms": 302,
-      "tokens": 1870,
-      "cost": 0.0187
-    },
-    {
-      "task": "research",
-      "framework": "Simple-CLI",
-      "duration_ms": 301,
-      "tokens": 40,
-      "cost": 0.0004
-    },
-    {
-      "task": "ui_automation",
-      "framework": "Stagehand (Direct)",
-      "duration_ms": 2500,
-      "tokens": 0,
-      "cost": 0,
-      "details": "Simulated due to missing browser"
-    },
-    {
-      "task": "ui_automation",
-      "framework": "Simple-CLI",
-      "duration_ms": 5500,
-      "tokens": 2500,
-      "cost": 0.025
+      "task": "code_fix",
+      "tool": "Cursor (Simulated)",
+      "duration_ms": 4,
+      "tokens_total": 1100,
+      "cost_est": 0.011000000000000001,
+      "success": true
     }
   ]
 }

@@ -256,11 +256,11 @@ To transition from a "Wrapper" to a true "Universal AI Integration Platform," th
         - [Startup MVP](docs/deployment/startup_mvp.md)
         - [Enterprise Migration](docs/deployment/ENTERPRISE_MIGRATION_PLAYBOOK.md)
         - [Agency Consulting](docs/deployment/agency_consulting.md)
-    3. **Performance Benchmarking**: (✅ Completed) Establish a public benchmark suite comparing Simple-CLI's integration speed and cost efficiency against alternatives.
+    3. **Performance Benchmarking**: (✅ Completed) Establish a public benchmark suite comparing Simple-CLI's integration speed and cost efficiency against alternatives. See [docs/BENCHMARK_SUITE.md](docs/BENCHMARK_SUITE.md).
 - **Success Metrics**:
     - 10+ new framework integrations completed and documented.
     - 3 deployment playbooks published in `docs/deployment/` (✅ Completed).
-    - Public benchmark dashboard hosted on GitHub Pages (✅ Completed).
+    - Public benchmark dashboard integrated into Operational Dashboard (✅ Completed).
 
 ---
 

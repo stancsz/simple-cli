@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Simple-CLI Benchmarks</title>
+    <style>
+        body { font-family: system-ui, sans-serif; max-width: 800px; margin: 0 auto; padding: 20px; }
+        h1 { color: #333; }
+        table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+        th, td { padding: 10px; border: 1px solid #ddd; text-align: left; }
+        th { background: #f4f4f4; }
+        .success { color: green; }
+        .failure { color: red; }
+    </style>
+</head>
+<body>
+    <h1>Performance Benchmarks</h1>
+    <p>Validation of Simple-CLI competitive advantage.</p>
+    <div id="results">Loading...</div>
+
+    <script>
+        fetch('../benchmarks/results/latest.json')
+            .then(res => res.json())
+            .then(data => {
+                const html = `
+                    <p>Last Run: ${new Date(data.timestamp).toLocaleString()}</p>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Task</th>
+                                <th>Tool</th>
+                                <th>Duration (ms)</th>
+                                <th>Tokens</th>
+                                <th>Cost ($)</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${data.results.map(r => `
+                                <tr>
+                                    <td>${r.task}</td>
+                                    <td>${r.tool}</td>
+                                    <td>${r.duration_ms.toLocaleString()}</td>
+                                    <td>${r.tokens_total.toLocaleString()}</td>
+                                    <td>${r.cost_est.toFixed(4)}</td>
+                                </tr>
+                            `).join('')}
+                        </tbody>
+                    </table>
+                `;
+                document.getElementById('results').innerHTML = html;
+            })
+            .catch(err => {
+                document.getElementById('results').innerHTML = 'Failed to load results. ensure benchmarks/results/latest.json exists.';
+            });
+    </script>
+</body>
+</html>
