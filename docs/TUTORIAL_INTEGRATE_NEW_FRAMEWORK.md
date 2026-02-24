@@ -155,3 +155,18 @@ Now that you've mastered the basics, try integrating a real tool!
 *   **Idea**: Integrate `docker` CLI to let your agent manage containers.
 
 Submit a PR with your new integration!
+
+## Advanced: Automated Integration (Phase 16)
+
+For rapid prototyping, you can use the **Framework Analyzer MCP Server** to automate the "Ingest" and "Digest" phases.
+
+1.  **Analyze the Tool**:
+    Ask the agent: "Analyze the 'gh' CLI tool."
+    The `framework_analyzer` will run `gh --help` and extract its capabilities.
+
+2.  **Generate Scaffold**:
+    Ask the agent: "Generate an MCP server for 'github' based on the analysis."
+    The analyzer will create `src/mcp_servers/github/` with `index.ts`, `tools.ts`, and `config.json`.
+
+3.  **Deploy**:
+    You simply need to register the new server in `mcp.json` and restart.

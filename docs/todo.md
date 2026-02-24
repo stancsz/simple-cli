@@ -21,6 +21,7 @@
     - [x] `mcp.json` configuration system
     - [x] Dynamic MCP server loading in `engine.ts`
     - [x] Unified tool interface for all frameworks
+    - [x] **Automated Analyzer**: Implemented `framework_analyzer` to semi-automate the Ingest-Digest cycle (Phase 16).
 
 ### Token Efficiency & Memory
 - [x] **Shared Brain Architecture**: `.agent/brain/` for all agents
