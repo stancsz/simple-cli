@@ -5,6 +5,7 @@ import { join } from "path";
 import { existsSync } from "fs";
 import { registerTools } from "./tools.js";
 import { registerXeroTools } from "./xero_tools.js";
+import { registerProjectManagementTools } from "./project_management.js";
 
 // Load secrets from .env.agent
 const envPath = join(process.cwd(), ".env.agent");
@@ -21,6 +22,7 @@ const server = new McpServer({
 // Register Tools
 registerTools(server);
 registerXeroTools(server);
+registerProjectManagementTools(server);
 
 // Start Server
 async function main() {

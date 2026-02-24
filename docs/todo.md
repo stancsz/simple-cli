@@ -222,5 +222,5 @@
 - [x] **Business MCP Server**: Scaffold implemented with mock tools (`business_ops`).
 - [x] **Financial Integration**: Connect to Xero/QuickBooks APIs.
 - [x] **CRM Integration**: Connect to HubSpot/Salesforce APIs.
-- [ ] **Project Management**: Connect to Linear/Jira APIs.
+- [x] **Project Management**: Connect to Linear/Jira APIs.
 - [ ] **Elastic Swarms**: Implement self-replicating agents based on demand.

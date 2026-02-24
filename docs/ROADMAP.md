@@ -28,5 +28,11 @@ The roadmap is structured around the four anatomical layers of the Digital Biosp
 - [ ] Implement the "Disposable Lifecycle" for code modules.
 - [ ] Enable "Homeostatic Repair" (Self-Healing) workflows.
 
+## Phase V: Autonomous Business Operations
+*Current Focus: The Business OS*
+- [x] Integrate Financial Operations (Xero).
+- [x] Integrate CRM (HubSpot).
+- [x] Integrate Project Management (Linear).
+
 ## Legacy Achievements
 See [Legacy Roadmap](ROADMAP_LEGACY.md) for completed milestones of the previous "Simple CLI" era.
