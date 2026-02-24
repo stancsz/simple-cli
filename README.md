@@ -52,6 +52,18 @@ Simple-CLI allows you to "hire" and "equip" specialized digital workers for your
 *   **Hierarchical Delegation (OpenCowork)**: Spawn sub-agents with specific namespaces and toolsets to handle complex, specialized workstreams.
 *   **Autonomous Evolution (ClawJit & ClawBrain)**: Agents that self-initialize their souls based on task intent and maintain persistent memory across sessions.
 
+## 📊 Performance Benchmarks
+
+We prove our claims with data. The [Simple-CLI Performance Dashboard](https://stan-chen.github.io/simple-cli/benchmarks/dashboard/) tracks our speed, efficiency, and cost against direct usage of other frameworks.
+
+| Metric | Simple-CLI | Direct Usage | Benefit |
+| :--- | :--- | :--- | :--- |
+| **Integration Speed** | **< 2 min** | Hours/Days | **98% Faster** (Ingest-Digest-Deploy) |
+| **Context Efficiency** | **~2% of Repo** | 100% of Repo | **98% Token Savings** (Shared Brain) |
+| **Research Cost** | **$0.05** | $0.20+ | **75% Cheaper** (No redundant context) |
+
+**[👉 View the Live Benchmark Dashboard](benchmarks/dashboard/index.html)**
+
 ## 🎥 See it in Action
 
 **Scenario**: You ask Simple-CLI to refactor a legacy module while writing tests for it in parallel.

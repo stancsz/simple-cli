@@ -5,3 +5,4 @@ header_pages:
   - index.md
   - demos/oil_gas.md
   - demos/developer.md
+  - benchmarks/dashboard/index.html
