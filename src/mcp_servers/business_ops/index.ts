@@ -1,6 +1,16 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
+import { config } from "dotenv";
+import { join } from "path";
+import { existsSync } from "fs";
 import { registerTools } from "./tools.js";
+import { registerXeroTools } from "./xero_tools.js";
+
+// Load secrets from .env.agent
+const envPath = join(process.cwd(), ".env.agent");
+if (existsSync(envPath)) {
+  config({ path: envPath });
+}
 
 // Initialize Server
 const server = new McpServer({
@@ -10,6 +20,7 @@ const server = new McpServer({
 
 // Register Tools
 registerTools(server);
+registerXeroTools(server);
 
 // Start Server
 async function main() {
