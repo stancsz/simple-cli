@@ -6,7 +6,7 @@
 
 **Challenges:**
 -   **Context Switching:** Developers lose time switching between client tech stacks (React vs. Vue, AWS vs. Azure).
--   **Consistency:** ensuring all client reports and deployments follow the same high standard.
+-   **Consistency:** Ensuring all client reports and deployments follow the same high standard.
 -   **Data Privacy:** Client A's data must NEVER leak to Client B.
 
 **Solution:** Use Simple-CLI's multi-tenant "Company Context" to isolate environments and the "Smart Router" to optimize costs.
@@ -115,7 +115,7 @@ Create `docs/sops/weekly_report.md`:
 
 Agencies can't monitor screens 24/7. "Ghost Mode" allows the agent to perform background checks and alert the team only when necessary.
 
-**Configure MedSecure's Ghost Mode (Critical Infrastructure):**
+### Use Case 1: Critical Infrastructure (MedSecure)
 Edit `.agent/companies/medsecure-health/config/company_context.json`:
 
 ```json
@@ -134,15 +134,63 @@ Edit `.agent/companies/medsecure-health/config/company_context.json`:
 }
 ```
 
+### Use Case 2: Daily Standups (ShopFast)
+Automate the daily standup preparation for the ShopFast team.
+
+**Edit `.agent/companies/shopfast-inc/config/company_context.json`:**
+```json
+{
+  "ghost_mode": {
+    "tasks": [
+      {
+        "id": "daily-standup-prep",
+        "name": "Daily Standup Notes",
+        "schedule": "0 9 * * 1-5", // 9 AM, Mon-Fri
+        "prompt": "Scan GitHub issues closed yesterday and pending PRs. Draft a bulleted summary for the team standup in Slack #shopfast-daily."
+      }
+    ]
+  }
+}
+```
+
 **Activate:**
 ```bash
 simple daemon start
 ```
-*The agent will now wake up every hour, assume the MedSecure context, check the health, and go back to sleep.*
+*The agent will now run concurrently for both clients, respecting their individual schedules and contexts.*
 
 ---
 
-## 5. The "Smart Router" ROI Calculation
+## 5. Dashboard Setup: Monitoring All Clients
+
+As an agency owner, you need a "Control Tower" to see the health of all client projects at a glance.
+
+**Launch the Operational Dashboard:**
+```bash
+simple dashboard
+```
+
+**What you see:**
+*   **Multi-Tenant View:** The dashboard aggregates metrics (Token Usage, Success Rate, Errors) from all companies defined in `.agent/config.json`.
+*   **Cost Per Client:** Determine exactly how much `ShopFast` vs. `MedSecure` is costing you in API fees.
+*   **Anomalies:** The **Health Monitor** highlights unusual activity (e.g., a spike in error rates for MedSecure) using predictive analytics.
+
+**Alert Configuration:**
+Set up alerts for cost overruns in `scripts/dashboard/alert_rules.json`:
+```json
+[
+  {
+    "metric": "shopfast-inc:total_cost",
+    "operator": ">",
+    "threshold": 50.00,
+    "contact": "finance-slack-webhook"
+  }
+]
+```
+
+---
+
+## 6. The "Smart Router" ROI Calculation
 
 For an agency, margins are everything. The Smart Router optimizes costs by delegating simple tasks to cheaper models and complex tasks to premium ones.
 
@@ -160,9 +208,9 @@ By using the Smart Router instead of defaulting to GPT-4 for everything, PixelFo
 
 ---
 
-## 6. The HR Loop: Continuous Agency Improvement
+## 7. The HR Loop: Continuous Agency Improvement
 
-The HR Loop ensures that lessons learned from one client can (anonymously) improve processes for others.
+The HR Loop ensures that lessons learned from one client can (anonymously) improve processes for others, while maintaining strict data isolation.
 
 **Scenario:**
 The agent notices that deployments for *ShopFast* often fail due to missing environment variables.
@@ -170,7 +218,8 @@ The agent notices that deployments for *ShopFast* often fail due to missing envi
 **HR Action:**
 1.  **Analyze:** The HR agent scans `sop_logs.json` and detects a pattern of failure in the "Deploy" step.
 2.  **Propose:** It suggests adding a "Verify Env Vars" step to the master `deployment_sop.md`.
-3.  **Apply:** Once approved, this improved SOP is available for *MedSecure* and all future clients, raising the agency's overall quality baseline.
+3.  **Apply:** Once approved, you can manually promote this improved SOP to your "Agency Templates" folder, making it available for *MedSecure* and future clients.
+    *   *Note: Client data remains in the client's Brain. Only the generic process improvement is shared.*
 
 ---
 
