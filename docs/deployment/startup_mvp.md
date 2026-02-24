@@ -152,6 +152,24 @@ Launch the Operational Dashboard to monitor agent health and costs.
 simple dashboard
 ```
 
+---
+
+## 8. Financial Operations (Business OS)
+
+Manage your startup's finances directly from the CLI using the **Financial Ops** server.
+
+**Create a Customer & Subscription:**
+```bash
+simple run "Create a Stripe customer for 'Early Adopter' (early@example.com) and subscribe them to the 'Pro Plan' (price_123)."
+```
+
+**Track Run Rate:**
+```bash
+simple run "Check current Stripe balance and list latest invoices."
+```
+
+The agent uses `financial_ops` tools to execute these requests and logs the transactions to the Brain for future reference.
+
 **Access:** Open `http://localhost:3000` in your browser.
 **Metrics:**
 *   **Token Usage:** Cost per feature.
@@ -160,7 +178,7 @@ simple dashboard
 
 ---
 
-## 8. Troubleshooting
+## 9. Troubleshooting
 
 **Issue:** Framework integration fails.
 **Solution:** Ensure the target tool is installed and in your PATH. Check `src/mcp_servers/framework_analyzer/logs/`.

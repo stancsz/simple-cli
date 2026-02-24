@@ -85,6 +85,13 @@
         "tsx",
         "src/mcp_servers/business_ops/index.ts"
       ]
+    },
+    "financial_ops": {
+      "command": "npx",
+      "args": [
+        "tsx",
+        "src/mcp_servers/financial_ops/index.ts"
+      ]
     }
   },
   "scheduledTasks": [

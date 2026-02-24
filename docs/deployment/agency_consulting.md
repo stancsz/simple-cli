@@ -223,6 +223,29 @@ The agent notices that deployments for *ShopFast* often fail due to missing envi
 
 ---
 
+## 8. Financial Integration: Automated Billing
+
+Agencies shouldn't manually bill clients. Use the **Financial Ops** server to automate invoicing.
+
+**Monthly Invoicing SOP:**
+Create `docs/sops/monthly_billing.md`:
+```markdown
+# Monthly Billing SOP
+
+1. **Calculate Billable Hours**
+   - Scan Jira/GitHub for completed tasks.
+   - Summarize by client.
+
+2. **Generate Invoice**
+   - Use `financial_ops` to `create_invoice` in Stripe.
+   - Add line items for "Development" and "Cloud Costs".
+
+3. **Send to Client**
+   - Use `slack` or `gmail` (if integrated) to notify client.
+```
+
+---
+
 ## Conclusion
 
 By adopting Simple-CLI, PixelForge Digital has transformed from a chaotic, reactive agency into a scalable, proactive consultancy.

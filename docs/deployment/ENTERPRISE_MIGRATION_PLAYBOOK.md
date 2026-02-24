@@ -155,6 +155,20 @@ Ensure the new service meets quality standards before full cutover.
 
 ---
 
+## Phase 5: Financial Operations (Cost Tracking)
+
+Use the **Financial Ops** server to track the cost savings of moving from Oracle to PostgreSQL.
+
+1.  **Record Cloud Expenses:**
+    ```bash
+    simple run "Record a cloud expense of $500 for the new GKE cluster."
+    ```
+
+2.  **Compare Against Legacy:**
+    Ask the Brain to recall past Oracle licensing costs (if stored) and compare.
+
+---
+
 ## Conclusion
 
 By following this playbook, you have:
