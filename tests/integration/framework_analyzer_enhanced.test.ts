@@ -5,8 +5,16 @@ import { analyze_framework_source } from '../../src/mcp_servers/framework_analyz
 
 // 1. Mock child_process for CLI execution
 const mockExecFile = vi.fn();
+const mockExec = vi.fn();
 vi.mock('child_process', () => ({
   execFile: (cmd: string, args: string[], callback: any) => mockExecFile(cmd, args, callback),
+  exec: (cmd: string, options: any, callback: any) => {
+    if (typeof options === 'function') {
+      callback = options;
+      options = {};
+    }
+    mockExec(cmd, options, callback);
+  },
 }));
 
 // 2. Mock fs/promises
