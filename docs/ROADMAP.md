@@ -33,6 +33,7 @@ The roadmap is structured around the four anatomical layers of the Digital Biosp
 - [x] Integrate Financial Operations (Xero).
 - [x] Integrate CRM (HubSpot).
 - [x] Integrate Project Management (Linear).
+- [x] Validate Business Integrations (Playbooks & Tests).
 
 ## Legacy Achievements
 See [Legacy Roadmap](ROADMAP_LEGACY.md) for completed milestones of the previous "Simple CLI" era.
