@@ -16,6 +16,7 @@
     "start:teams": "node --loader ts-node/esm src/interfaces/teams.ts",
     "demo": "npx tsx demos/simple-cli-showcase/run_demo.ts",
     "dev": "node --loader ts-node/esm --watch src/cli.ts",
+    "docs:build": "node docs/website/build.js",
     "build": "tsc",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
