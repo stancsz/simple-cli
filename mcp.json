@@ -84,7 +84,14 @@
       "args": [
         "tsx",
         "src/mcp_servers/business_ops/index.ts"
-      ]
+      ],
+      "env": {
+        "XERO_CLIENT_ID": "",
+        "XERO_CLIENT_SECRET": "",
+        "XERO_TENANT_ID": "",
+        "XERO_ACCESS_TOKEN": "",
+        "XERO_REFRESH_TOKEN": ""
+      }
     },
     "crm": {
       "command": "npx",

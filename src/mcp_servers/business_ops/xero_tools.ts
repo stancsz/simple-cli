@@ -2,14 +2,85 @@ import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
 import { XeroClient } from "xero-node";
 
-const getXeroClient = () => {
-  const token = process.env.XERO_ACCESS_TOKEN;
-  if (!token) {
-    throw new Error("XERO_ACCESS_TOKEN environment variable is not set.");
+// Global client instance to maintain token state across calls in memory
+let xeroClientInstance: XeroClient | null = null;
+
+const getXeroClient = async () => {
+  // If we have an instance and the token is valid, return it.
+  if (xeroClientInstance) {
+      const tokenSet = xeroClientInstance.readTokenSet();
+      // @ts-ignore - .expired() exists on TokenSet
+      if (tokenSet && !tokenSet.expired()) {
+          return xeroClientInstance;
+      }
+      // If expired, we will try to refresh below.
   }
-  const xero = new XeroClient();
-  xero.setTokenSet({ access_token: token });
-  return xero;
+
+  const clientId = process.env.XERO_CLIENT_ID;
+  const clientSecret = process.env.XERO_CLIENT_SECRET;
+  const accessToken = process.env.XERO_ACCESS_TOKEN;
+  const refreshToken = process.env.XERO_REFRESH_TOKEN;
+
+  if (!clientId || !clientSecret) {
+      // Fallback to just access token if client/secret not provided (legacy/simple mode)
+      if (!accessToken) {
+         throw new Error("XERO_ACCESS_TOKEN or (XERO_CLIENT_ID and XERO_CLIENT_SECRET) must be set.");
+      }
+      // If we only have access token, we can't refresh.
+      if (!xeroClientInstance) {
+          xeroClientInstance = new XeroClient();
+          xeroClientInstance.setTokenSet({ access_token: accessToken });
+      }
+      return xeroClientInstance;
+  }
+
+  // Full OAuth2 mode
+  if (!xeroClientInstance) {
+      xeroClientInstance = new XeroClient({
+          clientId,
+          clientSecret,
+          grantType: 'authorization_code'
+      });
+  }
+
+  // Initialize token set if needed
+  let currentTokenSet = xeroClientInstance.readTokenSet();
+  if (!currentTokenSet || !currentTokenSet.access_token) {
+      if (accessToken) {
+          // We set the token set. Note: if we don't have expiry info, .expired() might return false or true depending on implementation.
+          // Usually we should have saved the full token set. For now we assume env vars.
+          xeroClientInstance.setTokenSet({
+              access_token: accessToken,
+              refresh_token: refreshToken
+          });
+          currentTokenSet = xeroClientInstance.readTokenSet();
+      }
+  }
+
+  // Check expiration and refresh if needed
+  // @ts-ignore - .expired() exists on TokenSet
+  if ((currentTokenSet.expired() || !currentTokenSet.access_token) && refreshToken) {
+       console.error("Xero token expired or missing, attempting refresh...");
+       try {
+           // If we don't have a valid token set but have a refresh token in env, we might need to manually trigger refresh
+           // But xero-node usually needs a loaded token set to refresh.
+           // If currentTokenSet is empty but we have refreshToken in env, we set it above.
+
+           const validTokenSet = await xeroClientInstance.refreshToken();
+           xeroClientInstance.setTokenSet(validTokenSet);
+
+           // Update process.env so subsequent calls in this session use the new token
+           if (validTokenSet.access_token) process.env.XERO_ACCESS_TOKEN = validTokenSet.access_token;
+           if (validTokenSet.refresh_token) process.env.XERO_REFRESH_TOKEN = validTokenSet.refresh_token;
+
+           console.error("Xero token refreshed successfully.");
+       } catch (e: any) {
+           console.error("Failed to refresh Xero token:", e);
+           throw new Error(`Xero token expired and refresh failed: ${e.message}`);
+       }
+  }
+
+  return xeroClientInstance;
 };
 
 const getTenantId = async (xero: XeroClient) => {
@@ -22,7 +93,7 @@ const getTenantId = async (xero: XeroClient) => {
         const response = await xero.updateTenants();
         // @ts-ignore - xero-node types might return the array directly or in a body property
         const tenants = response.body || response;
-        if (tenants.length > 0) {
+        if (tenants && tenants.length > 0) {
             return tenants[0].tenantId;
         }
     } catch (e) {
@@ -32,10 +103,10 @@ const getTenantId = async (xero: XeroClient) => {
 }
 
 export function registerXeroTools(server: McpServer) {
-  // Tool: List Invoices
+  // Tool: List Invoices (xero_get_invoices)
   server.tool(
-    "list_invoices",
-    "List invoices from Xero.",
+    "xero_get_invoices",
+    "List invoices from Xero with optional filtering.",
     {
       statuses: z.array(z.string()).optional().describe("Filter by status (e.g., AUTHORISED, DRAFT)."),
       page: z.number().optional().default(1).describe("Page number."),
@@ -44,7 +115,7 @@ export function registerXeroTools(server: McpServer) {
     },
     async ({ statuses, page, updatedAfter, where }) => {
       try {
-        const xero = getXeroClient();
+        const xero = await getXeroClient();
         const tenantId = await getTenantId(xero);
 
         const response = await xero.accountingApi.getInvoices(
@@ -80,9 +151,9 @@ export function registerXeroTools(server: McpServer) {
     }
   );
 
-  // Tool: Create Invoice
+  // Tool: Create Invoice (xero_create_invoice)
   server.tool(
-    "create_invoice",
+    "xero_create_invoice",
     "Create a new invoice in Xero.",
     {
       contactId: z.string().describe("The Contact ID."),
@@ -98,7 +169,7 @@ export function registerXeroTools(server: McpServer) {
     },
     async ({ contactId, lineItems, date, dueDate, status }) => {
         try {
-            const xero = getXeroClient();
+            const xero = await getXeroClient();
             const tenantId = await getTenantId(xero);
 
             const invoice = {
@@ -137,6 +208,47 @@ export function registerXeroTools(server: McpServer) {
     }
   );
 
+  // Tool: Get Contacts (xero_get_contacts)
+  server.tool(
+      "xero_get_contacts",
+      "Retrieve contacts from Xero with pagination.",
+      {
+          page: z.number().optional().default(1).describe("Page number."),
+          where: z.string().optional().describe("Filter by where clause (e.g., 'Name.Contains(\"ABC\")').")
+      },
+      async ({ page, where }) => {
+          try {
+              const xero = await getXeroClient();
+              const tenantId = await getTenantId(xero);
+
+              const response = await xero.accountingApi.getContacts(
+                  tenantId,
+                  undefined, // ifModifiedSince
+                  where,
+                  undefined, // order
+                  undefined, // ids
+                  page,
+                  undefined // includeArchived
+              );
+
+              return {
+                  content: [{
+                      type: "text",
+                      text: JSON.stringify(response.body.contacts, null, 2)
+                  }]
+              };
+          } catch (e: any) {
+              return {
+                  content: [{
+                      type: "text",
+                      text: `Error getting contacts: ${e.message}`
+                  }],
+                  isError: true
+              };
+          }
+      }
+  );
+
   // Tool: Get Balance Sheet
   server.tool(
       "get_balance_sheet",
@@ -146,7 +258,7 @@ export function registerXeroTools(server: McpServer) {
       },
       async ({ date }) => {
           try {
-              const xero = getXeroClient();
+              const xero = await getXeroClient();
               const tenantId = await getTenantId(xero);
 
               const response = await xero.accountingApi.getReportBalanceSheet(
@@ -186,7 +298,7 @@ export function registerXeroTools(server: McpServer) {
       },
       async ({ fromDate, toDate }) => {
           try {
-              const xero = getXeroClient();
+              const xero = await getXeroClient();
               const tenantId = await getTenantId(xero);
 
               const response = await xero.accountingApi.getReportProfitAndLoss(
