@@ -193,6 +193,14 @@ Edit `.agent/config/persona.json` (or `.agent/companies/<name>/config/persona.js
 
 ---
 
+## 📚 7. Advanced Guides
+
+Ready for production? Check out our real-world deployment playbooks:
+- **[Startup MVP Playbook](deployment/startup_mvp.md)**: From zero to k8s in a weekend.
+- **[Enterprise Migration Playbook](deployment/ENTERPRISE_MIGRATION_PLAYBOOK.md)**: Modernize legacy monoliths with zero downtime.
+
+---
+
 ## 🎥 Next Steps
 
 - **Try the Showcase**: Run `npm run demo` to see a full 24-hour simulation in 2 minutes. [Read more](SHOWCASE_DEMO.md).
