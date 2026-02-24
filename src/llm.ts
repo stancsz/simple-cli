@@ -23,6 +23,13 @@ export interface LLMResponse {
 
 export type LLMConfig = { provider: string; model: string; apiKey?: string };
 
+type LLMFactory = (configs: LLMConfig[]) => LLM;
+let llmFactory: LLMFactory = (configs) => new LLM(configs);
+
+export const setLLMFactory = (factory: LLMFactory) => {
+  llmFactory = factory;
+};
+
 export class LLM {
   private configs: LLMConfig[];
   public personaEngine: PersonaEngine;
@@ -338,5 +345,5 @@ export const createLLM = (model?: string) => {
     }
   }
 
-  return new LLM(configs);
+  return llmFactory(configs);
 };

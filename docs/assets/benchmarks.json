@@ -1,0 +1,68 @@
+[
+  {
+    "timestamp": "2026-02-24T13:00:23.212Z",
+    "metrics": {
+      "integration_speed": [
+        {
+          "framework": "Roo Code",
+          "integration_time_ms": 2211,
+          "status": "success",
+          "scaffold_path": "/app/src/mcp_servers/roo_code"
+        },
+        {
+          "framework": "SWE-agent",
+          "integration_time_ms": 2208,
+          "status": "success",
+          "scaffold_path": "/app/src/mcp_servers/swe_agent"
+        },
+        {
+          "framework": "Aider",
+          "integration_time_ms": 2172,
+          "status": "success",
+          "scaffold_path": "/app/src/mcp_servers/aider"
+        }
+      ],
+      "token_efficiency": {
+        "scenario": "Multi-turn Conversation with Context",
+        "traditional_tokens": 8370,
+        "brain_tokens": 265,
+        "savings_tokens": 8105,
+        "savings_percent": "96.8%",
+        "cost_reduction_factor": "31.6x"
+      }
+    }
+  },
+  {
+    "timestamp": "2026-02-24T13:03:10.501Z",
+    "metrics": {
+      "integration_speed": [
+        {
+          "framework": "Roo Code",
+          "integration_time_ms": 2493,
+          "status": "success",
+          "scaffold_path": "/app/src/mcp_servers/roo_code_bench"
+        },
+        {
+          "framework": "SWE-agent",
+          "integration_time_ms": 2321,
+          "status": "success",
+          "scaffold_path": "/app/src/mcp_servers/swe_agent_bench"
+        },
+        {
+          "framework": "Aider",
+          "integration_time_ms": 2302,
+          "status": "success",
+          "scaffold_path": "/app/src/mcp_servers/aider_bench"
+        }
+      ],
+      "token_efficiency": {
+        "scenario": "Multi-turn Conversation with Context",
+        "traditional_tokens": 8370,
+        "brain_tokens": 265,
+        "savings_tokens": 8105,
+        "savings_percent": "96.8%",
+        "cost_reduction_factor": "31.6x"
+      }
+    }
+  }
+]
