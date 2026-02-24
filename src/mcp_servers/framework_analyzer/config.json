@@ -1,0 +1,5 @@
+{
+  "name": "framework-analyzer",
+  "version": "1.0.0",
+  "description": "Analyzes CLIs and generates MCP server scaffolds."
+}

@@ -58,6 +58,13 @@
         "src/mcp_servers/roo_code/index.ts"
       ]
     },
+    "framework_analyzer": {
+      "command": "npx",
+      "args": [
+        "tsx",
+        "src/mcp_servers/framework_analyzer/index.ts"
+      ]
+    },
     "roadmap_sync": {
       "command": "npx",
       "args": [
