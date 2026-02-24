@@ -1,7 +1,7 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { z } from "zod";
-import { analyze_cli_tool, generate_mcp_scaffold, analyze_framework_source } from "./tools.js";
+import { analyze_cli_tool, generate_mcp_scaffold, analyze_framework_source, integrate_framework } from "./tools.js";
 
 // Initialize Server
 const server = new McpServer({
@@ -45,6 +45,20 @@ server.tool(
   },
   async ({ framework_name, analysis_result }) => {
     return await generate_mcp_scaffold(framework_name, analysis_result);
+  }
+);
+
+// Define Tool: Integrate Framework
+server.tool(
+  "integrate_framework",
+  "Autonomous pipeline to analyze, scaffold, test, and register a new MCP server for a framework.",
+  {
+    framework_name: z.string().describe("The name of the framework (e.g., 'docker-mcp')."),
+    source_type: z.enum(['cli', 'sdk', 'gui']).describe("The type of source to analyze: 'cli' for command line tools, 'sdk' for libraries/APIs, 'gui' for desktop applications."),
+    source_path: z.string().describe("The path to the source. For 'cli', use the command name. For 'sdk', use a file path or URL to documentation/spec. For 'gui', use the application name or path."),
+  },
+  async ({ framework_name, source_type, source_path }) => {
+    return await integrate_framework(framework_name, source_type, source_path);
   }
 );
 

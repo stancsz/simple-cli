@@ -1,10 +1,12 @@
 import { createLLM } from "../../llm.js";
-import { execFile } from "child_process";
+import { execFile, exec } from "child_process";
 import { promisify } from "util";
 import { join, basename } from "path";
 import { writeFile, mkdir, readFile } from "fs/promises";
+import { testTemplate } from "./templates/test_template.js";
 
 const execFileAsync = promisify(execFile);
+const execAsync = promisify(exec);
 
 export async function analyze_cli_tool(target_command: string, help_text?: string): Promise<any> {
     let commandOutput = help_text;
@@ -286,4 +288,68 @@ Guidelines for index.ts:
     } catch (error: any) {
         return { error: "Scaffold generation failed.", details: error.message };
     }
+}
+
+export async function integrate_framework(framework_name: string, source_type: 'cli' | 'sdk' | 'gui', source_path: string): Promise<any> {
+    // 1. Analyze
+    const analysis = await analyze_framework_source(source_type, source_path);
+    if (analysis.error) return analysis;
+
+    // 2. Generate Scaffold
+    const scaffoldResult = await generate_mcp_scaffold(framework_name, analysis);
+    if (scaffoldResult.error) return scaffoldResult;
+
+    const serverDir = join(process.cwd(), "src", "mcp_servers", basename(framework_name));
+    const testFilePath = join(serverDir, "basic.test.ts");
+    const serverEntry = join(serverDir, "index.ts"); // generate_mcp_scaffold produces index.ts
+
+    // 3. Generate Test File
+    const testContent = testTemplate.replace("{{SERVER_PATH}}", serverEntry);
+    await writeFile(testFilePath, testContent);
+
+    // 4. Run Test
+    try {
+        // Use npx tsx to run the test file
+        // Ensure we are in the root directory context
+        await execAsync(`npx tsx "${testFilePath}"`, {
+            timeout: 30000, // 30s timeout
+            env: { ...process.env, PATH: process.env.PATH }
+        });
+
+    } catch (error: any) {
+         return {
+             error: "Validation failed.",
+             details: error.message,
+             stdout: error.stdout,
+             stderr: error.stderr
+         };
+    }
+
+    // 5. Update mcp.staging.json
+    const stagingPath = join(process.cwd(), "mcp.staging.json");
+    let stagingConfig: any = { mcpServers: {} };
+
+    try {
+        const content = await readFile(stagingPath, "utf-8");
+        stagingConfig = JSON.parse(content);
+    } catch (e) {
+        // File might not exist
+    }
+
+    if (!stagingConfig.mcpServers) stagingConfig.mcpServers = {};
+
+    stagingConfig.mcpServers[framework_name] = {
+        command: "npx",
+        args: ["tsx", `src/mcp_servers/${basename(framework_name)}/index.ts`],
+        env: {}
+    };
+
+    await writeFile(stagingPath, JSON.stringify(stagingConfig, null, 2));
+
+    return {
+        success: true,
+        message: `Framework '${framework_name}' integrated and validated successfully.`,
+        scaffold_path: serverDir,
+        staging_entry: stagingConfig.mcpServers[framework_name]
+    };
 }
