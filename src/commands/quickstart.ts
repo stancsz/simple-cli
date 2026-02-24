@@ -9,7 +9,7 @@ import { existsSync } from "fs";
 const delay = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
 export async function runQuickStart() {
-    intro(pc.bgBlue(pc.white(" Simple CLI - Interactive Quick Start Wizard ")));
+    intro(pc.bgBlue(pc.white(" Simple Biosphere - Interactive Quick Start Wizard ")));
 
     const s = spinner();
 
@@ -43,7 +43,7 @@ export async function runQuickStart() {
         await setupCompany(companyName as string, {
             brand_voice: "Innovative and agile",
             project_goals: ["Build a modern web app", "Demonstrate AI capabilities"],
-            tech_stack: ["React", "Node.js", "Simple CLI"]
+            tech_stack: ["React", "Node.js", "Simple Biosphere"]
         });
         s.stop(`Company '${companyName}' initialized.`);
     } catch (e: any) {
@@ -136,5 +136,5 @@ export async function runQuickStart() {
         await dashboardCommand();
     }
 
-    outro("Quick Start Wizard completed! You are now ready to use Simple CLI.");
+    outro("Quick Start Wizard completed! You are now ready to use Simple Biosphere.");
 }

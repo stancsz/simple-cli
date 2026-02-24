@@ -27,7 +27,7 @@ describe("Quick Start Wizard Integration", () => {
         const output = runQuickStart("bug-fix");
 
         // Verify Header
-        expect(output).toContain("Simple CLI - Quick Start Wizard");
+        expect(output).toContain("Simple Biosphere - Quick Start Wizard");
 
         // Verify MCP Traffic Logging
         expect(output).toContain("[MCP Tx]");

@@ -8,7 +8,7 @@ import { parseSOP } from "../mcp_servers/sop_engine/sop_parser.js";
 import { existsSync } from "fs";
 
 export async function onboardCompany(companyName?: string) {
-    intro(`Simple CLI - Company Onboarding Automation`);
+    intro(`Simple Biosphere - Company Onboarding Automation`);
 
     let name = companyName;
 

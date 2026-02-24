@@ -6,7 +6,7 @@ import { loadConfig, Config, saveConfig } from "../config.js";
 import pc from "picocolors";
 
 export async function companyCommand(subcommand: string, ...args: string[]) {
-    intro(`Simple CLI - Company Management`);
+    intro(`Simple Biosphere - Company Management`);
     const cwd = process.cwd();
     let config = await loadConfig(cwd);
 

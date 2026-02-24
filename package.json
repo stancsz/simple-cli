@@ -1,7 +1,7 @@
 {
-  "name": "@stan-chen/simple-cli",
+  "name": "@stan-chen/simple-biosphere",
   "version": "0.2.9",
-  "description": "A lean, lightweight coding agent. Packs a punch with token efficiency.",
+  "description": "The Technical Constitution of the Digital Biosphere. A self-correcting system that consumes environmental data to optimize its own existence.",
   "type": "module",
   "main": "dist/cli.js",
   "bin": {

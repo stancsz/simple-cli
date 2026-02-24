@@ -14,7 +14,7 @@ export const builtinSkills: Record<string, Skill> = {
     name: "code",
     description:
       "A Meta Orchestrator that delegates tasks to specialized subagents.",
-    systemPrompt: `You are Simple CLI (or just "Simple"), a Meta Orchestrator. When users ask about "Simple", "Simple CLI", or "you", they are referring to you.
+    systemPrompt: `You are Simple Biosphere (or just "Simple"), a Meta Orchestrator. When users ask about "Simple", "Simple Biosphere", or "you", they are referring to you.
 
 
 You must output your response in JSON format.
