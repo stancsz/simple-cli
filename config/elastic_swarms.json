@@ -1,0 +1,45 @@
+{
+  "rules": [
+    {
+      "trigger": {
+        "source": "linear",
+        "metric": "open_issues",
+        "threshold": 50,
+        "operator": ">="
+      },
+      "action": {
+        "swarm_type": "triage_agent",
+        "type": "scale_up",
+        "count": 2,
+        "task": "Review and categorize open issues."
+      }
+    },
+    {
+      "trigger": {
+        "source": "linear",
+        "metric": "open_issues",
+        "threshold": 10,
+        "operator": "<="
+      },
+      "action": {
+        "swarm_type": "triage_agent",
+        "type": "scale_down",
+        "count": 1
+      }
+    },
+    {
+      "trigger": {
+        "source": "hubspot",
+        "metric": "unread_conversations",
+        "threshold": 5,
+        "operator": ">="
+      },
+      "action": {
+        "swarm_type": "billing_agent",
+        "type": "scale_up",
+        "count": 1,
+        "task": "Address urgent billing inquiries."
+      }
+    }
+  ]
+}

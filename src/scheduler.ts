@@ -32,6 +32,7 @@ export class Scheduler extends EventEmitter {
     await this.ensureHRTask();
     await this.ensureMorningStandupTask();
     await this.ensureWeeklyReviewTask();
+    await this.ensureElasticSwarmTask();
 
     // Resume pending tasks
     if (this.pendingTasks.size > 0) {
@@ -159,6 +160,39 @@ export class Scheduler extends EventEmitter {
           await writeFile(this.scheduleFile, JSON.stringify(config, null, 2));
       } catch (e) {
           console.error("Failed to write scheduler.json with default Weekly HR Review task:", e);
+      }
+    }
+  }
+
+  private async ensureElasticSwarmTask() {
+    let config: ScheduleConfig = { tasks: [] };
+    if (existsSync(this.scheduleFile)) {
+      try {
+        const content = await readFile(this.scheduleFile, 'utf-8');
+        config = JSON.parse(content);
+      } catch (e) {
+        config = { tasks: [] };
+      }
+    }
+
+    const taskId = "elastic-swarm-check";
+    const hasTask = config.tasks?.some((t: any) => t.id === taskId);
+
+    if (!hasTask) {
+      console.log("Adding default Elastic Swarm Check task.");
+      if (!config.tasks) config.tasks = [];
+      config.tasks.push({
+          id: taskId,
+          name: "Elastic Swarm Check",
+          trigger: "cron",
+          schedule: "*/5 * * * *", // Every 5 minutes
+          prompt: "Check swarm scaling rules using 'run_swarm_manager_cycle'.",
+          yoloMode: true
+      });
+      try {
+          await writeFile(this.scheduleFile, JSON.stringify(config, null, 2));
+      } catch (e) {
+          console.error("Failed to write scheduler.json with default Elastic Swarm task:", e);
       }
     }
   }

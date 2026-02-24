@@ -1,0 +1,22 @@
+{
+  "app": {
+    "name": "Triage Agent",
+    "description": "Reviews and categorizes new issues.",
+    "mode": "chat",
+    "icon": "📋",
+    "icon_background": "#FFE5F0"
+  },
+  "model_config": {
+    "provider": "openai",
+    "model": "gpt-4o",
+    "configs": {
+      "prompt_template": "You are a Triage Agent. Review issues and assign labels.",
+      "opening_statement": "I am ready to triage issues.",
+      "suggested_questions": [],
+      "model_parameters": {
+        "temperature": 0.5,
+        "max_tokens": 4096
+      }
+    }
+  }
+}

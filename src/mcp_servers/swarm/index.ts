@@ -41,6 +41,17 @@ export class SwarmServer {
     );
 
     this.server.tool(
+      "terminate_agent",
+      "Terminate an active swarm agent.",
+      {
+        agent_id: z.string().describe("The ID of the agent to terminate."),
+      },
+      async ({ agent_id }) => {
+        return await this.terminateAgent(agent_id);
+      }
+    );
+
+    this.server.tool(
       "negotiate_task",
       "Facilitate bidding/negotiation between multiple agents for task assignment.",
       {
@@ -188,6 +199,26 @@ export class SwarmServer {
         },
       ],
     };
+  }
+
+  async terminateAgent(agentId: string) {
+    if (this.workers.has(agentId)) {
+        const engine = this.workers.get(agentId);
+        if (engine && typeof engine.stop === 'function') {
+            await engine.stop();
+        }
+        this.workers.delete(agentId);
+        this.workerContexts.delete(agentId);
+        this.workerDetails.delete(agentId);
+        return {
+            content: [{ type: "text" as const, text: `Agent ${agentId} terminated successfully.` }]
+        };
+    } else {
+        return {
+            content: [{ type: "text" as const, text: `Agent ${agentId} not found.` }],
+            isError: true
+        };
+    }
   }
 
   async negotiateTask(agentIds: string[], taskDescription: string) {

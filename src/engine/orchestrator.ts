@@ -153,6 +153,20 @@ export class Engine {
     this.supervisor = new Supervisor(this.llm, this.mcp);
   }
 
+  async stop() {
+    // Stop all managed servers to free resources
+    try {
+        const servers = this.mcp.listServers();
+        for (const s of servers) {
+            if (s.status === 'running') {
+                await this.mcp.stopServer(s.name);
+            }
+        }
+    } catch (e) {
+        console.error("Failed to stop engine resources:", e);
+    }
+  }
+
   protected async getUserInput(initialValue: string, interactive: boolean): Promise<string | undefined> {
     if (!interactive || !process.stdout.isTTY) return undefined;
     const res = await text({

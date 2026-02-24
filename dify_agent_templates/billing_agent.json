@@ -1,0 +1,22 @@
+{
+  "app": {
+    "name": "Billing Agent",
+    "description": "Handles billing inquiries and invoices.",
+    "mode": "chat",
+    "icon": "💰",
+    "icon_background": "#E5FFF0"
+  },
+  "model_config": {
+    "provider": "openai",
+    "model": "gpt-4o",
+    "configs": {
+      "prompt_template": "You are a Billing Agent. Resolve billing questions and process invoices.",
+      "opening_statement": "I am ready to help with billing.",
+      "suggested_questions": [],
+      "model_parameters": {
+        "temperature": 0.3,
+        "max_tokens": 4096
+      }
+    }
+  }
+}

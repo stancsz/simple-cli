@@ -3,7 +3,7 @@ import { z } from "zod";
 
 const LINEAR_API_URL = "https://api.linear.app/graphql";
 
-async function fetchLinear(query: string, variables: Record<string, any> = {}) {
+export async function fetchLinear(query: string, variables: Record<string, any> = {}) {
   const apiKey = process.env.LINEAR_API_KEY;
   if (!apiKey) {
     throw new Error("LINEAR_API_KEY environment variable is not set.");
@@ -28,6 +28,30 @@ async function fetchLinear(query: string, variables: Record<string, any> = {}) {
   }
 
   return result.data;
+}
+
+export async function getOpenIssueCount(): Promise<number> {
+  const query = `
+    query Issues($filter: IssueFilter) {
+      issues(filter: $filter) {
+        nodes {
+          id
+        }
+      }
+    }
+  `;
+  // Count issues that are not Done or Canceled.
+  // Using a simplified filter for now: state name != "Done" and != "Canceled"
+  // Linear API supports 'state: { type: { in: ["started", "unstarted"] } }' which is better.
+  const filter = { state: { type: { in: ["started", "unstarted"] } } };
+
+  try {
+    const data = await fetchLinear(query, { filter });
+    return data.issues.nodes.length;
+  } catch (e) {
+    console.error("Error fetching open issue count:", e);
+    return 0;
+  }
 }
 
 export function registerProjectManagementTools(server: McpServer) {
