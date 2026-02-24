@@ -16,7 +16,7 @@ function getStripe(): Stripe {
       throw new Error("STRIPE_SECRET_KEY environment variable is not set. Please add it to .env.agent");
     }
     stripeInstance = new Stripe(key, {
-      apiVersion: '2025-02-24.acacia', // Latest stable API version
+      apiVersion: '2026-01-28.clover' as any, // Cast to any to avoid TS version mismatch if SDK types drift
     });
   }
   return stripeInstance;
