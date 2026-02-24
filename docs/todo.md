@@ -141,7 +141,7 @@
 - [x] **Self-Repair**: Implement `HR Loop` to fix `src/` files based on error logs (`src/mcp_servers/hr/`).
 - [x] **Automated Review**: Integrate HR MCP with Scheduler for weekly automated reviews (Production Daemon Integrated).
 - [x] **Dreaming (Offline Simulation)**: Implemented `src/mcp_servers/dreaming/` and integrated with Scheduler.
-- [x] **Core Update**: Implement secure protocol for updating `engine.ts`.
+- [x] **Core Update**: Implement secure protocol for updating `engine.ts` (Implemented with Dual-Verification Safety Protocol).
 - [x] **Validation**: Verified `analyze_logs` and `propose_change` with real log files via `tests/integration/hr_operational.test.ts`.
 - [x] **Safety Tests**: Core Update safety (Token/YOLO) validated.
 
