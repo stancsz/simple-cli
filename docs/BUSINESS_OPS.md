@@ -21,6 +21,7 @@ To use the Xero integration, you must configure the following environment variab
 ```bash
 XERO_ACCESS_TOKEN=your_xero_access_token
 XERO_TENANT_ID=your_xero_tenant_id # Optional: If not provided, the first connected tenant will be used.
+LINEAR_API_KEY=lin_api_your_key_here
 ```
 
 ## Tools
@@ -58,6 +59,37 @@ Get the Profit and Loss report.
   - `fromDate`: Start date (YYYY-MM-DD).
   - `toDate`: End date (YYYY-MM-DD).
 - **Output:** Profit and Loss report data.
+
+### Project Management Tools (Linear Integration)
+
+#### `linear_list_issues`
+List issues from Linear with optional filtering.
+- **Inputs:**
+  - `first`: Number of issues to return (default: 50).
+  - `teamId`: Filter by Team ID (optional).
+  - `state`: Filter by state name (e.g., 'In Progress') (optional).
+- **Output:** List of issues (ID, Title, State, Team, Assignee).
+
+#### `linear_create_issue`
+Create a new issue in Linear.
+- **Inputs:**
+  - `title`: Issue title.
+  - `teamId`: Team ID to create the issue in.
+  - `description`: Issue description (markdown supported) (optional).
+  - `priority`: Priority (0-4) (optional).
+  - `stateId`: State ID (optional).
+- **Output:** The created issue (ID, Identifier, Title, URL).
+
+#### `linear_update_issue`
+Update an existing issue in Linear.
+- **Inputs:**
+  - `id`: The Issue ID.
+  - `title`: New title (optional).
+  - `description`: New description (optional).
+  - `stateId`: New State ID (optional).
+  - `priority`: New priority (optional).
+  - `assigneeId`: New Assignee User ID (optional).
+- **Output:** The updated issue.
 
 ### CRM & Project Tools (Mock Implementation)
 
