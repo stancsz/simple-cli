@@ -6,8 +6,16 @@ import { analyze_cli_tool, generate_mcp_scaffold } from '../../src/mcp_servers/f
 
 // 1. Mock child_process for CLI execution
 const mockExecFile = vi.fn();
+const mockExec = vi.fn();
 vi.mock('child_process', () => ({
   execFile: (cmd: string, args: string[], callback: any) => mockExecFile(cmd, args, callback),
+  exec: (cmd: string, options: any, callback: any) => {
+    if (typeof options === 'function') {
+      callback = options;
+      options = {};
+    }
+    mockExec(cmd, options, callback);
+  },
 }));
 
 // 2. Mock fs/promises for file operations

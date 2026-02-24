@@ -195,6 +195,16 @@
     - [x] Integration tests for routing and driver selection.
     - [x] **Visual Quality Gate**: Implemented automated aesthetic validation and retry logic.
 
+## Sprint 4: Autonomous Pipeline (In Progress)
+
+**Goal:** Fully automate the framework integration process.
+
+### Phase 17: Autonomous Integration Pipeline
+- [x] **Scaffold & Test**: `framework_analyzer` generates `basic.test.ts`.
+- [x] **Sandboxed Execution**: `framework_analyzer` spawns the server and runs the test.
+- [x] **Auto-Registration**: Validated servers are added to `mcp.staging.json`.
+- [x] **Validation**: `tests/integration/framework_analyzer_autonomous.test.ts` passes.
+
 ## Sprint 2: Operational Hardening (✅ Completed)
 
 **Goal:** Ensure platform stability, observability, and resilience.
