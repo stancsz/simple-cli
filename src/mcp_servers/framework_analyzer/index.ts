@@ -1,7 +1,7 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { z } from "zod";
-import { analyze_cli_tool, generate_mcp_scaffold } from "./tools.js";
+import { analyze_cli_tool, generate_mcp_scaffold, analyze_framework_source } from "./tools.js";
 
 // Initialize Server
 const server = new McpServer({
@@ -22,13 +22,26 @@ server.tool(
   }
 );
 
+// Define Tool: Analyze Framework Source
+server.tool(
+  "analyze_framework_source",
+  "Analyzes a framework source (CLI, SDK/API, or GUI) to determine the best integration strategy.",
+  {
+    source_type: z.enum(['cli', 'sdk', 'gui']).describe("The type of source to analyze: 'cli' for command line tools, 'sdk' for libraries/APIs, 'gui' for desktop applications."),
+    source_path: z.string().describe("The path to the source. For 'cli', use the command name. For 'sdk', use a file path or URL to documentation/spec. For 'gui', use the application name or path."),
+  },
+  async ({ source_type, source_path }) => {
+    return await analyze_framework_source(source_type, source_path);
+  }
+);
+
 // Define Tool: Generate MCP Scaffold
 server.tool(
   "generate_mcp_scaffold",
   "Generates a TypeScript MCP server scaffold based on the analysis result.",
   {
     framework_name: z.string().describe("The name of the framework (e.g., 'docker-mcp')."),
-    analysis_result: z.object({}).passthrough().describe("The analysis result from 'analyze_cli_tool'."),
+    analysis_result: z.object({}).passthrough().describe("The analysis result from 'analyze_cli_tool' or 'analyze_framework_source'."),
   },
   async ({ framework_name, analysis_result }) => {
     return await generate_mcp_scaffold(framework_name, analysis_result);

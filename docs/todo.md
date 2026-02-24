@@ -22,7 +22,8 @@
     - [x] Dynamic MCP server loading in `engine.ts`
     - [x] Unified tool interface for all frameworks
     - [x] **Automated Analyzer**: Implemented `framework_analyzer` to semi-automate the Ingest-Digest cycle (Phase 16).
-    - [x] **Validation**: Verified `framework_analyzer` via `tests/integration/framework_analyzer_validation.test.ts`.
+    - [x] **Enhanced Analyzer**: Added support for SDK/API (Files/URLs) and GUI analysis (Phase 16 complete).
+    - [x] **Validation**: Verified `framework_analyzer` via `tests/integration/framework_analyzer_validation.test.ts` and `tests/integration/framework_analyzer_enhanced.test.ts`.
 
 ### Token Efficiency & Memory
 - [x] **Shared Brain Architecture**: `.agent/brain/` for all agents
