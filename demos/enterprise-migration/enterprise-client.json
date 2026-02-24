@@ -1,0 +1,35 @@
+{
+  "id": "enterprise-client",
+  "name": "FinTech Global Solutions",
+  "industry": "Financial Services",
+  "mission": "Modernize the core banking infrastructure to enable rapid feature delivery and improve scalability.",
+  "tech_stack": {
+    "legacy": {
+      "backend": "Java 8, Spring Boot 1.5",
+      "database": "Oracle 11g",
+      "frontend": "JSP / jQuery",
+      "infrastructure": "On-Premise VMs"
+    },
+    "target": {
+      "backend": "Node.js (TypeScript), NestJS",
+      "database": "PostgreSQL (Cloud SQL)",
+      "frontend": "React",
+      "infrastructure": "Kubernetes (GKE/EKS)",
+      "cicd": "GitLab CI + ArgoCD"
+    }
+  },
+  "brand_voice": {
+    "tone": "Corporate, reliable, secure.",
+    "style": "Formal, detailed, and compliance-focused."
+  },
+  "goals": [
+    "Decompose the 'core-banking-monolith' into domain-driven microservices.",
+    "Achieve zero-downtime migration using the Strangler Fig pattern.",
+    "Reduce infrastructure costs by 40% via cloud-native adoption."
+  ],
+  "constraints": [
+    "All services must pass PCI-DSS compliance checks.",
+    "No direct database access from frontend services.",
+    "Maintain 99.99% availability during the migration window."
+  ]
+}

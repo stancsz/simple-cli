@@ -29,6 +29,11 @@ This interactive demo will:
 Ready to build your digital agency?
 **[👉 Read the Comprehensive Getting Started Guide](docs/GETTING_STARTED.md)**
 
+### Advanced Guides
+Ready for production? Check out our real-world deployment playbooks:
+- **[Startup MVP Playbook](docs/deployment/startup_mvp.md)**: From zero to k8s in a weekend.
+- **[Enterprise Migration Playbook](docs/deployment/ENTERPRISE_MIGRATION_PLAYBOOK.md)**: Modernize legacy monoliths with zero downtime.
+
 ## 🎯 Core Strength
 **Simple-CLI is a Framework-Agnostic Integration Engine.**
 
