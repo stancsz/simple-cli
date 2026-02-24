@@ -36,6 +36,9 @@
 - [x] **Gemini** (Multimodal AI)
 - [x] **Stagehand** (browser automation)
 
+## Sprint 3: Expanding the Framework Ecosystem (Current)
+- [x] **SWE-agent** (Autonomous Software Engineering) - Integrated via Automated Framework Analyzer.
+
 ## Sprint 0.5: Local AI Stack (Dify) (✅ Completed)
 
 **Goal:** Provide a local, privacy-first orchestration layer for rapid prototyping.

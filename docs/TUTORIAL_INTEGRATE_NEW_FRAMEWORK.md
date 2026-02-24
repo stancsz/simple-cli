@@ -170,3 +170,21 @@ For rapid prototyping, you can use the **Framework Analyzer MCP Server** to auto
 
 3.  **Deploy**:
     You simply need to register the new server in `mcp.json` and restart.
+
+## Case Study: SWE-agent Integration
+
+In **Sprint 3**, we demonstrated the power of the **Framework Analyzer** by integrating [SWE-agent](https://github.com/princeton-nlp/SWE-agent).
+
+### Step 1: Ingest
+We used the `framework_analyzer` to parse the `swe-agent` CLI help text. The analyzer identified key arguments like `--issue_url`, `--repo_path`, and `--model_name`.
+
+### Step 2: Digest
+The analyzer generated a scaffold in `src/mcp_servers/swe_agent/`. We then refined the generated code to:
+- Split the tool logic into `tools.ts` for better maintainability.
+- Robustly handle `child_process.spawn` to execute the agent.
+- Map the `problem_description` argument to a temporary file (mimicking `--data_path` behavior) to support local debugging tasks without a GitHub URL.
+
+### Step 3: Deploy
+We registered the server in `mcp.json` and updated the **Smart Router** in `src/skills.ts` to delegate "Issue Reproduction / Debugging" tasks to `swe_agent`.
+
+This entire process, from initial analysis to a fully integrated and tested MCP server, took less than an hour, validating the efficiency of our **Automated Framework Integration** capability.

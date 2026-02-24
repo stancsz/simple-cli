@@ -65,6 +65,13 @@
         "src/mcp_servers/framework_analyzer/index.ts"
       ]
     },
+    "swe_agent": {
+      "command": "npx",
+      "args": [
+        "tsx",
+        "src/mcp_servers/swe_agent/index.ts"
+      ]
+    },
     "roadmap_sync": {
       "command": "npx",
       "args": [
