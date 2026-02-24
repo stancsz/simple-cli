@@ -2,7 +2,7 @@ import { intro, outro, text, confirm, isCancel, cancel } from "@clack/prompts";
 import { setupCompany } from "../utils/company-setup.js";
 
 export async function initCompany(companyName?: string) {
-    intro(`Simple CLI - Company Initialization`);
+    intro(`Simple Biosphere - Company Initialization`);
 
     let name = companyName;
 

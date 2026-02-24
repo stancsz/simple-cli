@@ -9,7 +9,7 @@ import { existsSync, mkdirSync, writeFileSync, readFileSync } from "fs";
 const delay = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
 export async function runOnboard() {
-    intro(pc.bgBlue(pc.white(" Simple CLI - First-Day Experience Wizard ")));
+    intro(pc.bgBlue(pc.white(" Simple Biosphere - First-Day Experience Wizard ")));
 
     const s = spinner();
 
@@ -69,7 +69,7 @@ export async function runOnboard() {
         await setupCompany(companyName as string, {
             brand_voice: brandVoice,
             project_goals: (goals as string).split(",").map(g => g.trim()),
-            tech_stack: ["React", "Node.js", "Simple CLI"]
+            tech_stack: ["React", "Node.js", "Simple Biosphere"]
         });
         s.stop(`Company '${companyName}' initialized.`);
     } catch (e: any) {

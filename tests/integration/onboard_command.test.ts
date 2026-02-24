@@ -72,7 +72,7 @@ describe('Onboard Command Integration', () => {
         expect(setupCompany).toHaveBeenCalledWith('TestCorp', {
             brand_voice: 'Professional',
             project_goals: ['Build things'],
-            tech_stack: expect.arrayContaining(['Simple CLI'])
+            tech_stack: expect.arrayContaining(['Simple Biosphere'])
         });
 
         // 2. Roo Code Integration (Log file)

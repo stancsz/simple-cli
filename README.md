@@ -1,13 +1,15 @@
 <div align="center">
-  <img src="docs/assets/logo.jpeg" alt="Simple CLI Logo" width="200"/>
+  <img src="docs/assets/logo.jpeg" alt="Simple Biosphere Logo" width="200"/>
   <br>
   <h3><a href="https://stan-chen.github.io/simple-cli/">🌐 Documentation Website</a></h3>
 </div>
 
-# 🚀 Simple-CLI: The Universal AI Framework Integrator
-**The only orchestrator that learns any AI framework and turns it into a subordinate agent.**
+# 🚀 Simple Biosphere: The Technical Constitution of the Digital Biosphere
+**A self-correcting system that consumes environmental data to optimize its own existence.**
 
-Simple-CLI is a **Meta-Orchestrator** with a unique superpower: **rapid framework ingestion**. Point it at any AI framework (Jules, Claude, Aider, CrewAI, Kimi, Devin), and it will digest, wrap, and deploy it as a specialized sub-agent—complete with token-efficient long-term memory and autonomous execution capabilities.
+Simple Biosphere is an **Organism**, not just a tool. It is designed to decouple system scale from human cognitive load by architecting the evolutionary constraints within which software builds itself.
+
+**[👉 Read the Mission Statement](MISSION.md)**
 
 ## 📚 Getting Started
 
@@ -35,9 +37,9 @@ Ready for production? Check out our real-world deployment playbooks:
 - **[Enterprise Migration Playbook](docs/deployment/ENTERPRISE_MIGRATION_PLAYBOOK.md)**: Modernize legacy monoliths with zero downtime.
 
 ## 🎯 Core Strength
-**Simple-CLI is a Framework-Agnostic Integration Engine.**
+**Simple Biosphere is a Framework-Agnostic Integration Engine.**
 
-Unlike traditional AI tools that lock you into a single model or framework, Simple-CLI is designed to:
+Unlike traditional AI tools that lock you into a single model or framework, Simple Biosphere is designed to:
 - ✅ **Ingest any AI framework** in hours, not weeks
 - ✅ **Digest and standardize** via MCP (Model Context Protocol) servers
 - ✅ **Deploy as subordinate agents** with shared memory and context
@@ -47,16 +49,16 @@ Unlike traditional AI tools that lock you into a single model or framework, Simp
 **The Vision:** A digital consulting agency that can adopt any new AI capability and make it an integral part of your workforce—fast, cheap, and with perfect memory.
 
 ## 🏢 Digital Employee Framework
-Simple-CLI allows you to "hire" and "equip" specialized digital workers for your projects:
+Simple Biosphere allows you to "hire" and "equip" specialized digital workers for your projects:
 *   **Persona-Driven Work (Skills)**: Define specialized roles like `LeadStrategist`, `SecurityAuditor`, or `UXResearcher` using the Skill system.
 *   **Hierarchical Delegation (OpenCowork)**: Spawn sub-agents with specific namespaces and toolsets to handle complex, specialized workstreams.
 *   **Autonomous Evolution (ClawJit & ClawBrain)**: Agents that self-initialize their souls based on task intent and maintain persistent memory across sessions.
 
 ## 📊 Performance Benchmarks
 
-We prove our claims with data. The [Simple-CLI Performance Dashboard](https://stan-chen.github.io/simple-cli/benchmarks/dashboard/) tracks our speed, efficiency, and cost against direct usage of other frameworks.
+We prove our claims with data. The [Simple Biosphere Performance Dashboard](https://stan-chen.github.io/simple-cli/benchmarks/dashboard/) tracks our speed, efficiency, and cost against direct usage of other frameworks.
 
-| Metric | Simple-CLI | Direct Usage | Benefit |
+| Metric | Simple Biosphere | Direct Usage | Benefit |
 | :--- | :--- | :--- | :--- |
 | **Integration Speed** | **< 2 min** | Hours/Days | **98% Faster** (Ingest-Digest-Deploy) |
 | **Context Efficiency** | **~2% of Repo** | 100% of Repo | **98% Token Savings** (Shared Brain) |
@@ -66,12 +68,12 @@ We prove our claims with data. The [Simple-CLI Performance Dashboard](https://st
 
 ## 🎥 See it in Action
 
-**Scenario**: You ask Simple-CLI to refactor a legacy module while writing tests for it in parallel.
+**Scenario**: You ask Simple Biosphere to refactor a legacy module while writing tests for it in parallel.
 
 ```text
 $ simple "Refactor src/legacy.ts to functional style and write tests for it. Do this in parallel."
 
-╭─ 🤖 Simple-CLI v0.2.8 ───────────────────────────────────────────────────────╮
+╭─ 🤖 Simple Biosphere v0.2.8 ───────────────────────────────────────────────────────╮
 │                                                                              │
 │  > Plan:                                                                     │
 │  1. Delegate refactoring of src/legacy.ts to DeepSeek Claude (Architect)     │
@@ -112,7 +114,7 @@ npm run demo
 
 ## 🔄 The Ingest-Digest-Deploy Cycle
 
-Simple-CLI's secret weapon is its ability to **rapidly integrate any AI framework** using a three-phase process:
+Simple Biosphere's secret weapon is its ability to **rapidly integrate any AI framework** using a three-phase process:
 
 ### 1️⃣ **Ingest** (Learn the Framework)
 - Analyze the framework's API, CLI, or SDK
@@ -141,14 +143,14 @@ Simple-CLI's secret weapon is its ability to **rapidly integrate any AI framewor
 ---
 
 ## ⚡ The Vision: Results, Not Conversations
-Most AI tools trap you in a never-ending chat loop. Simple-CLI is built for **autonomous execution**.
+Most AI tools trap you in a never-ending chat loop. Simple Biosphere is built for **autonomous execution**.
 
 *   **Deployable Results**: Give a high-level goal and walk away. The orchestrator handles the planning, delegation, and verification.
 *   **Specialized Workforce**: Hire `Jules` for GitHub PR surgery, `DeepSeek Claude` for architectural heavy lifting, and `Aider` for rapid-fire edits.
 *   **Ghost Mode**: Your digital co-workers run 24/7. The `Smart Job Delegator` wakes up hourly to check the Roadmap and assign tasks while you sleep.
 *   **Recursive Optimization**: The system performs weekly automated HR reviews to analyze logs and propose self-improvements.
 *   **The Brain**: Hybrid Memory Architecture (Vector + Graph) ensures your agents remember past solutions, user preferences, and project context forever.
-*   **Parallel Productivity**: Run a frontend refactor and a backend test suite simultaneously. Simple-CLI manages the threads so you don't have to.
+*   **Parallel Productivity**: Run a frontend refactor and a backend test suite simultaneously. Simple Biosphere manages the threads so you don't have to.
 
 ---
 
@@ -165,7 +167,7 @@ The core engine runs a "Game Loop" that uses an **Asynchronous Task Manager** to
 Agents are configured in `mcp.json` in the project root. This file defines the available CLI agents and their commands.
 
 ### The "Workers" (Sub-Agents)
-Simple-CLI wraps powerful industry CLIs into a unified interface via **MCP Servers**:
+Simple Biosphere wraps powerful industry CLIs into a unified interface via **MCP Servers**:
 *   **Jules (`jules`)**: An autonomous agent for GitHub PRs and full-stack tasks.
 *   **Claude (`claude`)**: Wraps Anthropic's Claude for architectural reasoning.
 *   **Aider (`aider`)**: Wraps the popular `aider` CLI for rapid code editing.
@@ -177,7 +179,7 @@ Simple-CLI wraps powerful industry CLIs into a unified interface via **MCP Serve
 
 ### 1. Installation
 ```bash
-npm install -g @stan-chen/simple-cli
+npm install -g @stan-chen/simple-biosphere
 ```
 
 ### 2. Configuration
@@ -206,7 +208,7 @@ simple "Delegate the UI fix to Jules and the API tests to Aider in parallel."
 
 ## 🔌 Integrated MCP Servers
 
-Simple-CLI extends its capabilities via the Model Context Protocol (MCP). It includes several built-in MCP servers located in `src/mcp_servers/`:
+Simple Biosphere extends its capabilities via the Model Context Protocol (MCP). It includes several built-in MCP servers located in `src/mcp_servers/`:
 
 *   **Brain (`brain`)**: Provides episodic and semantic memory via Vector DB and Graph.
 *   **SOP (`sop`)**: Manages and executes Standard Operating Procedures.
@@ -222,7 +224,7 @@ Simple-CLI extends its capabilities via the Model Context Protocol (MCP). It inc
 *   **OpenCowork (`opencowork`)**: Enables hierarchical agency by allowing the hiring and delegation of tasks to worker agents.
 
 ## 🧠 The `.agent` Brain
-Simple-CLI persists its memory and configuration in your project:
+Simple Biosphere persists its memory and configuration in your project:
 *   **`.agent/state.json`**: The Psyche (Personality, Trust, Irritation).
 *   **`.agent/brain/`**: The Core Memory (Vector DB + Graph) managed by the Brain MCP server.
 *   **`.agent/learnings.json`**: Long-term memory of what works and what doesn't.

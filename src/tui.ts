@@ -10,5 +10,5 @@ const pkg = JSON.parse(
 );
 
 export function showBanner() {
-  intro(pc.bgBlue(pc.white(` SIMPLE-CLI v${pkg.version} `)));
+  intro(pc.bgBlue(pc.white(` SIMPLE BIOSPHERE v${pkg.version} `)));
 }

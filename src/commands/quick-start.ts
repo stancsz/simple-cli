@@ -49,9 +49,9 @@ export async function quickStart(scenario?: string, demoMode: boolean = false) {
     const isTest = process.env.JULES_TEST_MODE === "true";
 
     if (isInteractive) {
-        intro(pc.bgBlue(pc.white(" Simple CLI - Quick Start Wizard ")));
+        intro(pc.bgBlue(pc.white(" Simple Biosphere - Quick Start Wizard ")));
     } else if (isTest) {
-        console.log("Simple CLI - Quick Start Wizard"); // Match test expectation for header
+        console.log("Simple Biosphere - Quick Start Wizard"); // Match test expectation for header
     }
 
     // Determine scenarios to run
@@ -150,7 +150,7 @@ export async function quickStart(scenario?: string, demoMode: boolean = false) {
         await showSharedContext("quick_start_demo");
 
         if (isInteractive) {
-            outro("Demo completed! You've seen how Simple CLI integrates disparate agents into a unified workforce.");
+            outro("Demo completed! You've seen how Simple Biosphere integrates disparate agents into a unified workforce.");
         }
 
     } catch (e: any) {
