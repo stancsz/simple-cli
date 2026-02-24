@@ -89,6 +89,7 @@
     "sqlite-vec": "^0.1.7-alpha.2",
     "ts-morph": "^22.0.0",
     "turndown": "^7.2.0",
+    "xero-node": "^13.4.0",
     "yaml": "^2.8.2",
     "zod": "^3.25.76"
   },
