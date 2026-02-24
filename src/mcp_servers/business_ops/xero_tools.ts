@@ -20,8 +20,10 @@ const getTenantId = async (xero: XeroClient) => {
     // Fallback: fetch tenants and use the first one
     try {
         const response = await xero.updateTenants();
-        if (response.body.length > 0) {
-            return response.body[0].tenantId;
+        // @ts-ignore - xero-node types might return the array directly or in a body property
+        const tenants = response.body || response;
+        if (tenants.length > 0) {
+            return tenants[0].tenantId;
         }
     } catch (e) {
         console.error("Failed to fetch tenants", e);
@@ -152,11 +154,8 @@ export function registerXeroTools(server: McpServer) {
                   date,
                   undefined, // periods
                   undefined, // timeframe
-                  undefined, // trackingCategoryID1
-                  undefined, // trackingCategoryID2
                   undefined, // trackingOptionID1
                   undefined, // trackingOptionID2
-                  true // standardLayout
               );
 
               return {
@@ -200,7 +199,6 @@ export function registerXeroTools(server: McpServer) {
                   undefined, // trackingCategoryID2
                   undefined, // trackingOptionID1
                   undefined, // trackingOptionID2
-                  true // standardLayout
               );
 
                return {

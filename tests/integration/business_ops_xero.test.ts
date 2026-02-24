@@ -128,10 +128,7 @@ describe('Business Ops Xero Integration', () => {
         undefined,
         undefined,
         undefined,
-        undefined,
-        undefined,
-        undefined,
-        true
+        undefined
     );
     expect(JSON.parse(result.content[0].text)).toEqual(report);
   });
@@ -151,8 +148,7 @@ describe('Business Ops Xero Integration', () => {
         undefined,
         undefined,
         undefined,
-        undefined,
-        true
+        undefined
     );
     expect(JSON.parse(result.content[0].text)).toEqual(report);
   });
@@ -173,7 +169,7 @@ describe('Business Ops Xero Integration', () => {
 
   it('should fetch tenant ID if not provided', async () => {
       delete process.env.XERO_TENANT_ID;
-      mockUpdateTenants.mockResolvedValue({ body: [{ tenantId: 'fetched-tenant-id' }] });
+      mockUpdateTenants.mockResolvedValue([{ tenantId: 'fetched-tenant-id' }]);
       mockGetInvoices.mockResolvedValue({ body: { invoices: [] } });
 
       await server.call('list_invoices', {});
