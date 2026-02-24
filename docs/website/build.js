@@ -43,6 +43,17 @@ if (fs.existsSync(SRC_ASSETS)) {
     console.log('Copied src/assets to dist/assets');
 }
 
+// Copy benchmarks
+const BENCHMARKS_DIR = path.join(DOCS_DIR, 'benchmarks');
+const DIST_BENCHMARKS = path.join(DIST_DIR, 'benchmarks');
+if (fs.existsSync(BENCHMARKS_DIR)) {
+    if (!fs.existsSync(DIST_BENCHMARKS)) {
+        fs.mkdirSync(DIST_BENCHMARKS, { recursive: true });
+    }
+    fs.cpSync(BENCHMARKS_DIR, DIST_BENCHMARKS, { recursive: true });
+    console.log('Copied docs/benchmarks to dist/benchmarks');
+}
+
 console.log('Copied static files');
 
 // Read layout
