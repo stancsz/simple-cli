@@ -2,7 +2,7 @@ import { createLLM } from "../../llm.js";
 import { execFile } from "child_process";
 import { promisify } from "util";
 import { join, basename } from "path";
-import { writeFile, mkdir } from "fs/promises";
+import { writeFile, mkdir, readFile } from "fs/promises";
 
 const execFileAsync = promisify(execFile);
 
@@ -98,6 +98,110 @@ Analyze the provided help text and map commands/flags to potential MCP tools.
             details: error.message
         };
     }
+}
+
+export async function analyze_framework_source(source_type: 'cli' | 'sdk' | 'gui', source_path: string): Promise<any> {
+    if (source_type === 'cli') {
+        // For CLI, source_path is treated as the command name
+        return analyze_cli_tool(source_path);
+    }
+
+    if (source_type === 'gui') {
+        return {
+            tool: "analysis_result",
+            args: {
+                description: `GUI Framework Analysis for '${source_path}'`,
+                recommendation: "This framework appears to be a GUI-based application. Standard CLI/SDK integration is not applicable.",
+                suggested_strategy: "Use the Desktop Orchestrator with the 'Stagehand' or 'Anthropic Computer Use' driver to interact with this application visually.",
+                next_steps: [
+                    "1. Ensure 'desktop_orchestrator' is running.",
+                    "2. Use 'desktop_orchestrator.navigate' to open the application URL or interface.",
+                    "3. Use 'desktop_orchestrator.click' and 'desktop_orchestrator.type' to simulate user interactions."
+                ]
+            }
+        };
+    }
+
+    if (source_type === 'sdk') {
+        let content = '';
+        try {
+            if (source_path.startsWith('http://') || source_path.startsWith('https://')) {
+                const res = await fetch(source_path);
+                if (!res.ok) throw new Error(`Failed to fetch URL: ${res.statusText}`);
+                content = await res.text();
+            } else {
+                content = await readFile(source_path, 'utf-8');
+            }
+        } catch (error: any) {
+            return { error: `Failed to read source path '${source_path}'.`, details: error.message };
+        }
+
+        const llm = createLLM();
+        const systemPrompt = `You are an expert SDK analyzer for the Model Context Protocol (MCP).
+Your goal is to analyze an SDK definition (OpenAPI spec, TypeScript definition, or Python docstrings) and extract structured information to build an MCP server.
+
+You MUST respond with a valid JSON object in the following format (and NOTHING else):
+{
+  "tool": "analysis_result",
+  "args": {
+    "description": "A brief description of the SDK",
+    "usage_patterns": ["example 1", "example 2"],
+    "tools": [
+      {
+        "name": "function_name",
+        "description": "What this function does",
+        "args": [
+            { "name": "arg_name", "type": "string", "description": "arg description" }
+        ]
+      }
+    ]
+  }
+}
+
+Analyze the provided SDK definition and map functions/endpoints to potential MCP tools.
+- Ensure tool names are snake_case.
+- Infer appropriate types for arguments.
+`;
+
+        const userPrompt = `Analyze the following SDK definition:\n\n${content.substring(0, 30000)}`; // Truncate to avoid context limit issues
+
+        try {
+            const response = await llm.generate(systemPrompt, [{ role: "user", content: userPrompt }]);
+
+            // Check if the LLM returned a tool call structure
+            if (response.tool === "analysis_result" && response.args) {
+                return response.args;
+            }
+            if (response.tools && response.tools.length > 0) {
+                const found = response.tools.find(t => t.tool === "analysis_result");
+                if (found) return found.args;
+            }
+            // Fallback: Check raw output for JSON
+            try {
+                const match = response.raw.match(/\{[\s\S]*\}/);
+                if (match) {
+                    const parsed = JSON.parse(match[0]);
+                    if (parsed.tool === "analysis_result" && parsed.args) return parsed.args;
+                    if (parsed.description && parsed.tools) return parsed; // Direct object
+                }
+            } catch (e) {
+                // Ignore parse error
+            }
+
+            return {
+                error: "Failed to parse LLM analysis.",
+                raw: response.raw
+            };
+
+        } catch (error: any) {
+            return {
+                error: "LLM generation failed.",
+                details: error.message
+            };
+        }
+    }
+
+    return { error: `Unsupported source_type: '${source_type}'.` };
 }
 
 export async function generate_mcp_scaffold(framework_name: string, analysis_result: any): Promise<any> {

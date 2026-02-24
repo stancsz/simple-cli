@@ -228,14 +228,23 @@ To transition from a "Wrapper" to a true "Universal AI Integration Platform," th
     - **Secret Management:** (✅ Implemented) Secure injection via `SecretManager` MCP.
     - **Alerting:** (✅ Implemented) Real-time Slack/Email alerts with working-hours logic.
 
-### Phase 16: Automated Framework Integration (Automated Analyzer)
+### Phase 16: Automated Framework Integration (Automated Analyzer) (✅ Completed & Enhanced)
 **Goal:** Reduce framework integration time from days to hours by semi-autonomously generating MCP server scaffolds.
-**Status**: ✅ Framework Analyzer MCP server implemented (2025-01-15) and **Production Validated** (2025-01-20).
+**Status**: ✅ Framework Analyzer MCP server implemented (2025-01-15) and **Production Validated** (2025-01-20). Enhanced with SDK/GUI support (2025-02-24).
 - **Mechanism:**
-    - **Automated Analysis:** `framework_analyzer` MCP server parses CLI help text using LLMs to understand tool capabilities.
+    - **Automated Analysis:** `framework_analyzer` MCP server parses CLI help text, SDK definitions (OpenAPI/TypeScript), and analyzes GUI applications.
     - **Scaffold Generation:** Automatically generates TypeScript MCP server code (`index.ts`, `tools.ts`, `config.json`) based on the analysis.
+    - **Polyglot Source Support:** Now supports `analyze_framework_source` for CLI, SDK (Files/URLs), and GUI sources.
     - **Benefit:** Drastically reduces the manual boilerplate work required to integrate new tools, adhering to the "Ingest-Digest-Deploy" philosophy.
-    - **Validation:** ✅ Validated via `tests/integration/framework_analyzer_validation.test.ts`, confirming accurate CLI parsing and scaffold generation.
+    - **Validation:** ✅ Validated via `tests/integration/framework_analyzer_validation.test.ts` and `tests/integration/framework_analyzer_enhanced.test.ts`.
+
+### Phase 17: Autonomous Integration Pipeline (Planned)
+**Goal:** Reduce the 'Ingest-Digest-Deploy' cycle from hours to minutes by fully automating the pipeline.
+- **Concept:** The Framework Analyzer should not only generate scaffolds but also run basic integration tests and auto-register the new server in a staging `mcp.json`.
+- **Planned Mechanism:**
+    - **Auto-Test Generation:** Analyzer generates a basic test suite for the new MCP server.
+    - **Sandboxed Execution:** Spawns the new server in a sandbox to verify functionality.
+    - **Auto-Registration:** Updates `mcp.json` automatically upon successful validation.
 
 ---
 

@@ -156,20 +156,37 @@ Now that you've mastered the basics, try integrating a real tool!
 
 Submit a PR with your new integration!
 
-## Advanced: Automated Integration (Phase 16)
+## Advanced: Automated Integration (Phase 16 & 17)
 
 For rapid prototyping, you can use the **Framework Analyzer MCP Server** to automate the "Ingest" and "Digest" phases.
 
-1.  **Analyze the Tool**:
-    Ask the agent: "Analyze the 'gh' CLI tool."
-    The `framework_analyzer` will run `gh --help` and extract its capabilities.
+### 1. Analyze the Framework
+The analyzer now supports CLIs, SDKs (Files/URLs), and GUIs.
 
-2.  **Generate Scaffold**:
-    Ask the agent: "Generate an MCP server for 'github' based on the analysis."
-    The analyzer will create `src/mcp_servers/github/` with `index.ts`, `tools.ts`, and `config.json`.
+*   **CLI Tools**:
+    > "Analyze the 'gh' CLI tool."
+    The analyzer runs `gh --help` and extracts capabilities.
 
-3.  **Deploy**:
-    You simply need to register the new server in `mcp.json` and restart.
+*   **SDKs / APIs**:
+    > "Analyze the Stripe SDK at 'https://api.stripe.com/v1/spec'."
+    The analyzer fetches the OpenAPI spec and extracts endpoints as tools.
+
+*   **GUI Applications**:
+    > "Analyze the 'Cursor' GUI application."
+    The analyzer recommends a Desktop Orchestrator strategy (Stagehand/Anthropic drivers).
+
+### 2. Generate Scaffold
+Once analyzed, generate the server code:
+
+> "Generate an MCP server for 'stripe-mcp' based on the analysis."
+
+The analyzer will create `src/mcp_servers/stripe-mcp/` with:
+*   `index.ts`: Full server implementation.
+*   `tools.ts`: Zod schemas and function wrappers.
+*   `config.json`: Ready for `mcp.json`.
+
+### 3. Deploy
+Register the new server in `mcp.json` and restart.
 
 ## Case Study: SWE-agent Integration
 
