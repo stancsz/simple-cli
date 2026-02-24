@@ -87,6 +87,16 @@ async function main() {
     return;
   }
 
+  if (remainingArgs[0] === "onboard") {
+    try {
+      const { runOnboard } = await import("./commands/onboard.js");
+      await runOnboard();
+    } catch (e: any) {
+      console.error("Failed to execute onboard wizard:", e);
+    }
+    return;
+  }
+
   if (remainingArgs[0] === "quick-start" || remainingArgs[0] === "quickstart") {
     try {
       // Check for legacy flags to maintain backward compatibility

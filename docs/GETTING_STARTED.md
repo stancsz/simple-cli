@@ -6,18 +6,20 @@ Welcome to **Simple CLI**, the Universal AI Integration Platform. This guide wil
 
 Before diving into configuration, take the **Interactive Tour** to see what Simple CLI can do.
 
-Run the Quick Start Wizard:
+Run the Onboarding Wizard:
 
 ```bash
-simple quick-start
+simple onboard
 ```
 
-This interactive wizard will guide you through:
-1.  **Company Context Setup**: Creating a digital agency profile.
-2.  **Framework Integration**: Simulating the "Ingest-Digest-Deploy" cycle for Roo Code.
-3.  **SOP Execution**: Running an autonomous "Build a web app" workflow.
-4.  **Ghost Mode**: Scheduling background agents and viewing a mock standup report.
-5.  **Operational Dashboard**: Launching the real-time metrics view.
+This comprehensive, interactive wizard (First-Day Experience) will guide you through:
+1.  **Environment Check**: Auto-detects dependencies and keys.
+2.  **Company Context Setup**: Defines your Digital Agency's brand voice and goals.
+3.  **Framework Integration**: Demonstrates the "Ingest-Digest-Deploy" cycle (e.g., Roo Code).
+4.  **SOP Execution**: Creates and runs a real Standard Operating Procedure (`initialize_project.sop`).
+5.  **Ghost Mode**: Activates the Job Delegator and schedules background tasks.
+6.  **HR Loop**: Demonstrates the system's self-improvement capability.
+7.  **Operational Dashboard**: Launches the real-time metrics view.
 
 [Read the Quick Start Guide](QUICK_START.md) for more details.
 
