@@ -34,30 +34,28 @@ interface BenchmarkResult {
 }
 
 async function runCommand(command: string, args: string[], cwd: string, timeout: number = 60000): Promise<void> {
-    return new Promise((resolve, reject) => {
-        const env = {
-            ...process.env,
-            CI: 'true',
-            // Ensure child process writes metrics to the main .agent directory so collector can find them
-            JULES_AGENT_DIR: process.env.JULES_AGENT_DIR || join(process.cwd(), '.agent'),
-            // Ensure child process finds mcp.json in the root
-            MCP_CONFIG_PATH: resolve(process.cwd(), 'mcp.json'),
-            // Ensure child process finds mcp.staging.json in the root
-            MCP_STAGING_CONFIG_PATH: resolve(process.cwd(), 'mcp.staging.json')
-        };
-        const proc = spawn(command, args, { cwd, stdio: 'inherit', env });
+    const { execSync } = await import('child_process');
+    const env = {
+        ...process.env,
+        CI: 'true',
+        // Ensure child process writes metrics to the main .agent directory so collector can find them
+        JULES_AGENT_DIR: process.env.JULES_AGENT_DIR || join(process.cwd(), '.agent'),
+        // Ensure child process finds mcp.json in the root
+        MCP_CONFIG_PATH: resolve(process.cwd(), 'mcp.json'),
+        // Ensure child process finds mcp.staging.json in the root
+        MCP_STAGING_CONFIG_PATH: resolve(process.cwd(), 'mcp.staging.json')
+    };
 
-        const timer = setTimeout(() => {
-            proc.kill();
-            reject(new Error('Timeout'));
-        }, timeout);
-
-        proc.on('close', (code) => {
-            clearTimeout(timer);
-            if (code === 0) resolve();
-            else reject(new Error(`Process exited with code ${code}`));
+    try {
+        execSync(`${command} ${args.join(' ')}`, {
+            cwd,
+            stdio: 'inherit',
+            env,
+            timeout
         });
-    });
+    } catch (e: any) {
+        throw new Error(`Process failed: ${e.message}`);
+    }
 }
 
 async function setupTask(task: Task, workDir: string) {
@@ -134,7 +132,7 @@ async function runBenchmark() {
 
             // Pass workDir, prompt, and non-interactive flag
             // Note: src/cli.ts treats directory args as CWD change
-            await runCommand('npx', ['tsx', cliPath, workDir, task.prompt, '--non-interactive'], process.cwd(), 120000);
+            await runCommand('node', ['--loader', 'ts-node/esm', cliPath, workDir, task.prompt, '--non-interactive'], process.cwd(), 120000);
 
             // Wait for file system flush
             await new Promise(r => setTimeout(r, 1000));

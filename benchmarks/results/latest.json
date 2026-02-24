@@ -1,28 +1,28 @@
 {
-  "timestamp": "2026-02-24T14:26:12.061Z",
+  "timestamp": "2026-02-24T14:48:52.692Z",
   "results": [
     {
       "task": "code_fix",
       "tool": "Simple-CLI",
-      "duration_ms": 5,
-      "tokens_total": 0,
-      "cost_est": 0,
+      "duration_ms": 8490,
+      "tokens_total": 20,
+      "cost_est": 0.00018,
       "success": false
     },
     {
       "task": "code_fix",
       "tool": "Aider (Simulated)",
-      "duration_ms": 6,
-      "tokens_total": 1500,
-      "cost_est": 0.015,
+      "duration_ms": 10188,
+      "tokens_total": 30,
+      "cost_est": 0.00027,
       "success": true
     },
     {
       "task": "code_fix",
       "tool": "Cursor (Simulated)",
-      "duration_ms": 4,
-      "tokens_total": 1100,
-      "cost_est": 0.011000000000000001,
+      "duration_ms": 6792,
+      "tokens_total": 22,
+      "cost_est": 0.00019800000000000002,
       "success": true
     }
   ]
