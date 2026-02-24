@@ -29,7 +29,7 @@ To transition from a "Wrapper" to a true "Universal AI Integration Platform," th
     3. **Deploy:** Register in `mcp.json` for automatic orchestrator discovery
 - **Recent Update (Digest Phase):** Completed cleanup by removing legacy `delegate_cli` and migrating all agent configurations to `mcp.json`.
 - **Proven Track Record:**
-    - Jules (2 days), Aider (1 day), CrewAI (3 days), Kimi (1 day), Devin (2 days), Picoclaw (1 day), Cursor (1 day), v0.dev (1 day), Windsurf (1 day), Bolt.new (1 day), Gemini (1 day), Roo Code (< 1 hour)
+    - Jules (2 days), Aider (1 day), CrewAI (3 days), Kimi (1 day), Devin (2 days), Picoclaw (1 day), Cursor (1 day), v0.dev (1 day), Windsurf (1 day), Bolt.new (1 day), Gemini (1 day), Roo Code (< 1 hour), SWE-agent (1-2 days)
     - Average integration time: **1-3 days** per framework
 - **Token Efficiency:** Shared `.agent/brain/` memory reduces token costs by up to 70%
 - **Benefit:** Framework-agnostic architecture means Simple CLI never becomes obsolete—it evolves with the AI landscape.

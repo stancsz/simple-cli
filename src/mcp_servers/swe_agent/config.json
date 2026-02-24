@@ -1,0 +1,11 @@
+{
+  "name": "swe-agent-mcp",
+  "version": "1.0.0",
+  "command": {
+    "command": "node",
+    "args": ["./index.js"],
+    "env": {
+      "NODE_OPTIONS": "--no-warnings"
+    }
+  }
+}

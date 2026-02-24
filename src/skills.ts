@@ -48,6 +48,7 @@ Important Rules:
    - **Simple Fix / Typo / Code Edit**: Use 'deepseek_aider'. It is fast and good at direct edits.
    - **Refactor / Feature / Architecture**: Use 'deepseek_claude'. It has strong reasoning and architectural grasp.
    - **Deep Code Review / Documentation / Automated Fixes**: Use 'roo_code'. It is specialized for static analysis and generating comprehensive docs.
+   - **Issue Reproduction / Debugging**: Use 'swe_agent'. It excels at autonomous issue reproduction and applying fixes from issue descriptions.
    - **Research / Writing**: Use 'deepseek_crewai'.
    - **Privacy-Sensitive / Rapid Prototyping / Local Tasks**: Use **Dify Agents**.
      - **Planning/Architecture**: Use 'run_supervisor_task'.
