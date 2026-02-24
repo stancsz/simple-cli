@@ -137,16 +137,25 @@ describe('Ghost Mode Full Integration', () => {
                 // Schedule these on Jan 1st at midnight. Since we start at Jan 1st 8 AM, they won't trigger until next year.
                 { id: "morning-standup", name: "Morning Standup", trigger: "cron", schedule: "0 0 1 1 *", prompt: "skip", yoloMode: true },
                 { id: "hr-review", name: "Daily HR Review", trigger: "cron", schedule: "0 0 1 1 *", prompt: "skip", yoloMode: true },
-                { id: "weekly-hr-review", name: "Weekly HR Review", trigger: "cron", schedule: "0 0 1 1 *", prompt: "skip", yoloMode: true }
+                { id: "weekly-hr-review", name: "Weekly HR Review", trigger: "cron", schedule: "0 0 1 1 *", prompt: "skip", yoloMode: true },
+                { id: "elastic-swarm-check", name: "Elastic Swarm Check", trigger: "cron", schedule: "0 0 1 1 *", prompt: "skip", yoloMode: true }
             ]
         };
         await writeFile(join(tempDir, 'scheduler.json'), JSON.stringify(schedule));
     });
 
     afterEach(async () => {
+        vi.useRealTimers(); // Ensure real time for cleanup delays
         await scheduler.stop();
+        // Allow time for processes/locks to release
+        await new Promise(resolve => setTimeout(resolve, 500));
         // clean up temp dir
-        await rm(tempDir, { recursive: true, force: true });
+        try {
+            await rm(tempDir, { recursive: true, force: true });
+        } catch (e) {
+            // Ignore cleanup errors on CI to prevent flakes (e.g. ENOTEMPTY due to locks)
+            console.warn("Failed to cleanup tempDir:", e);
+        }
         vi.restoreAllMocks();
     });
 

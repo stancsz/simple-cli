@@ -189,7 +189,8 @@ describe("Four Pillars Integration Test (Definitive)", () => {
                 // Disable defaults by scheduling them in the past (midnight today)
                 { id: "morning-standup", name: "Morning Standup", trigger: "cron", schedule: "0 0 1 1 *", prompt: "skip", yoloMode: true },
                 { id: "hr-review", name: "Daily HR Review", trigger: "cron", schedule: "0 0 1 1 *", prompt: "skip", yoloMode: true },
-                { id: "weekly-hr-review", name: "Weekly HR Review", trigger: "cron", schedule: "0 0 1 1 *", prompt: "skip", yoloMode: true }
+                { id: "weekly-hr-review", name: "Weekly HR Review", trigger: "cron", schedule: "0 0 1 1 *", prompt: "skip", yoloMode: true },
+                { id: "elastic-swarm-check", name: "Elastic Swarm Check", trigger: "cron", schedule: "0 0 1 1 *", prompt: "skip", yoloMode: true }
             ]
         };
         await writeFile(join(testRoot, 'scheduler.json'), JSON.stringify(schedule));
