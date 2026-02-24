@@ -32,9 +32,20 @@ test('Community Guidelines Documentation Validation', () => {
 
     // 3. Verify ROADMAP.md update
     const roadmapContent = readFileSync(roadmapPath, 'utf-8');
-    expect(roadmapContent).toContain('Contribution Guidelines');
-    expect(roadmapContent).toContain('docs/CONTRIBUTING.md');
-    expect(roadmapContent).toContain('(✅ Completed)');
+    // Updated to verify new biological roadmap structure
+    expect(roadmapContent).toContain('Technical Constitution');
+    expect(roadmapContent).toContain('Phase I: The Metabolism');
+    expect(roadmapContent).toContain('Phase II: The Immune System');
+    expect(roadmapContent).toContain('Phase III: The Genome');
+    expect(roadmapContent).toContain('Phase IV: The Proteome');
+
+    // Also check legacy roadmap for historical context if needed
+    const legacyRoadmapPath = join(docsDir, 'ROADMAP_LEGACY.md');
+    if (existsSync(legacyRoadmapPath)) {
+        const legacyContent = readFileSync(legacyRoadmapPath, 'utf-8');
+        expect(legacyContent).toContain('Contribution Guidelines');
+        expect(legacyContent).toContain('docs/CONTRIBUTING.md');
+    }
 
     // 4. Verify todo.md update
     const todoContent = readFileSync(todoPath, 'utf-8');

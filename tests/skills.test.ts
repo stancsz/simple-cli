@@ -40,10 +40,10 @@ describe("skills", () => {
       expect(builtinSkills.code.name).toBe("code");
     });
 
-    it('should include "Simple CLI" identity in default system prompt', () => {
-      expect(builtinSkills.code.systemPrompt).toContain("Simple CLI");
+    it('should include "Simple Biosphere" identity in default system prompt', () => {
+      expect(builtinSkills.code.systemPrompt).toContain("Simple Biosphere");
       expect(builtinSkills.code.systemPrompt).toContain(
-        'When users ask about "Simple", "Simple CLI", or "you", they are referring to you.',
+        'When users ask about "Simple", "Simple Biosphere", or "you", they are referring to you.',
       );
     });
   });
