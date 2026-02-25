@@ -121,7 +121,7 @@ export async function scale_agents_for_project(projectId: string, metrics?: Work
     if (swarmClient) {
         try {
             const listResult = await swarmClient.callTool({ name: "list_agents", arguments: {} });
-            const agents = JSON.parse((listResult.content[0] as any).text);
+            const agents = JSON.parse(((listResult as any).content[0] as any).text);
             agents.forEach((a: any) => runningAgentIds.add(a.id));
         } catch (e) {
             logs.push("Could not list Swarm agents.");
@@ -199,7 +199,7 @@ export async function scale_agents_for_project(projectId: string, metrics?: Work
                      });
 
                      // Parse Agent ID from spawn result
-                     const spawnData = JSON.parse((spawnResult.content[0] as any).text);
+                     const spawnData = JSON.parse(((spawnResult as any).content[0] as any).text);
                      const newAgentId = spawnData.agent_id;
 
                      if (newAgentId) {
