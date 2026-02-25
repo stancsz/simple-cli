@@ -215,6 +215,36 @@ export async function syncDealToHubSpot(props: DealProperties): Promise<{ id: st
     }
 }
 
+/**
+ * Logs a note to a contact in HubSpot.
+ */
+export async function logNoteToHubSpot(contactId: string, noteBody: string): Promise<string> {
+    const hubspot = getHubSpotClient();
+    try {
+        // @ts-ignore
+        const createResult = await hubspot.crm.objects.notes.basicApi.create({
+            properties: {
+                hs_note_body: noteBody,
+                hs_timestamp: Date.now().toString()
+            },
+            associations: [
+                {
+                    to: { id: contactId },
+                    types: [
+                        {
+                            associationCategory: "HUBSPOT_DEFINED" as any,
+                            associationTypeId: 202 // Note to Contact
+                        }
+                    ]
+                }
+            ]
+        });
+        return createResult.id;
+    } catch (e: any) {
+        throw new Error(`HubSpot Log Note Failed: ${e.message}`);
+    }
+}
+
 export function registerCrmTools(server: McpServer) {
     // Tool: Sync Company
     server.tool(
