@@ -271,6 +271,59 @@ export function registerTools(server: McpServer) {
     }
   );
 
+  // Tool: Create Company
+  server.tool(
+    "create_company",
+    "Create a new company in HubSpot.",
+    {
+      name: z.string().describe("Company name."),
+      domain: z.string().optional().describe("Company domain (e.g., example.com)."),
+      city: z.string().optional().describe("City."),
+      state: z.string().optional().describe("State."),
+      phone: z.string().optional().describe("Phone number."),
+      description: z.string().optional().describe("Description."),
+      industry: z.string().optional().describe("Industry.")
+    },
+    async ({ name, domain, city, state, phone, description, industry }) => {
+      const hubspotClient = getHubSpotClient();
+
+      const properties: any = {
+        name,
+        domain,
+        city,
+        state,
+        phone,
+        description,
+        industry
+      };
+
+      // Filter out undefined properties
+      Object.keys(properties).forEach(key => properties[key] === undefined && delete properties[key]);
+
+      try {
+        const apiResponse = await hubspotClient.crm.companies.basicApi.create({
+          properties,
+          associations: []
+        });
+
+        return {
+          content: [{
+            type: "text",
+            text: JSON.stringify(apiResponse, null, 2)
+          }]
+        };
+      } catch (e: any) {
+        return {
+          content: [{
+            type: "text",
+            text: `Error creating company: ${e.message}`
+          }],
+          isError: true
+        };
+      }
+    }
+  );
+
   // Tool: Search Companies
   server.tool(
     "search_companies",

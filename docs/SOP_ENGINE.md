@@ -65,6 +65,14 @@ Creates a new SOP file with the provided content.
     *   Logs the step outcome to `.agent/brain/sop_logs.json`.
 3.  **Completion**: Calls `log_experience` to store the full execution summary in the Brain.
 
+## Business Playbooks
+
+The SOP Engine powers the autonomous business operations of the Digital Biosphere. Pre-defined playbooks for common business workflows are stored in `docs/business_playbooks/`.
+
+### Available Playbooks
+- **Client Onboarding** (`client_onboarding.md`): Automates CRM entry, Xero contact creation, invoicing, and project setup.
+- **Monthly Billing** (`monthly_billing.md`): Manages recurring billing cycles and CRM updates.
+
 ## Best Practices
 
 *   **Be Explicit**: Write clear instructions in each step.
