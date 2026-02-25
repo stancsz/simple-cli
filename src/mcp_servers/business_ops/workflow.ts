@@ -84,13 +84,15 @@ export function registerWorkflowTools(server: McpServer) {
                     const firstname = nameParts[0];
                     const lastname = nameParts.length > 1 ? nameParts.slice(1).join(' ') : undefined;
 
+                    const contactProps: any = {
+                        email: contactEmail,
+                        firstname,
+                        company: clientName
+                    };
+                    if (lastname) contactProps.lastname = lastname;
+
                     const contactResp = await hubspot.crm.contacts.basicApi.create({
-                        properties: {
-                            email: contactEmail,
-                            firstname,
-                            lastname,
-                            company: clientName
-                        },
+                        properties: contactProps,
                         associations: []
                     });
                     contactId = contactResp.id;
@@ -173,10 +175,10 @@ export function registerWorkflowTools(server: McpServer) {
                         // Create Draft Invoice
                         const invoiceResp = await xero.accountingApi.createInvoices(tenantId, {
                             invoices: [{
-                                type: "ACCREC",
+                                type: "ACCREC" as any,
                                 contact: { contactID: xeroContactId },
                                 date: new Date().toISOString().split('T')[0],
-                                status: "DRAFT",
+                                status: "DRAFT" as any,
                                 lineItems: [{
                                     description: desc,
                                     quantity: 1,
