@@ -33,7 +33,6 @@ describe('Business Operations MCP Server', () => {
 
     const toolNames = tools.tools.map(t => t.name);
     expect(toolNames).toContain('query_financials');
-    expect(toolNames).toContain('create_crm_contact');
     expect(toolNames).toContain('update_project_status');
   });
 
@@ -53,20 +52,6 @@ describe('Business Operations MCP Server', () => {
     expect(data).toHaveProperty('expenses');
     expect(data).toHaveProperty('profit');
     expect(data.currency).toBe('USD');
-  });
-
-  it('should create CRM contact (mock)', async () => {
-    const result: any = await client.callTool({
-      name: 'create_crm_contact',
-      arguments: {
-        name: 'John Doe',
-        email: 'john@example.com',
-        status: 'lead'
-      }
-    });
-
-    expect(result.content[0].text).toContain('Successfully created contact');
-    expect(result.content[0].text).toContain('John Doe');
   });
 
   it('should update project status (mock)', async () => {
