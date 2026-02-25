@@ -1,7 +1,13 @@
 import { z } from "zod";
 import { DesktopRouter } from "./router.js";
+import { DriverValidator } from "./validation.js";
+import { DesktopIntegration, VerificationRequest } from "./integration.js";
+import { QualityGate } from "./quality_gate.js";
 
 const router = new DesktopRouter();
+const validator = new DriverValidator();
+const integration = new DesktopIntegration();
+const qualityGate = new QualityGate();
 
 const validateSafety = (action: string, humanApprovalRequired?: boolean) => {
     if (humanApprovalRequired) {
@@ -125,6 +131,87 @@ export const tools = [
         const driver = await router.selectDriver(task_description || goal);
         const result = await driver.execute_complex_flow(goal);
         return { content: [{ type: "text" as const, text: result }] };
+      } catch (e) {
+        return { content: [{ type: "text" as const, text: `Error: ${(e as Error).message}` }], isError: true };
+      }
+    },
+  },
+  {
+    name: "validate_desktop_driver",
+    description: "Run a validation suite on a specific desktop driver.",
+    parameters: z.object({
+      driver_name: z.string().describe("The name of the driver to validate (e.g., 'stagehand', 'skyvern')."),
+    }),
+    handler: async ({ driver_name }: { driver_name: string }) => {
+      try {
+        const driver = router.getDriver(driver_name);
+        if (!driver) {
+          throw new Error(`Driver '${driver_name}' not found.`);
+        }
+        const result = await validator.validate(driver, { skipShutdown: true });
+        return { content: [{ type: "text" as const, text: JSON.stringify(result, null, 2) }] };
+      } catch (e) {
+        return { content: [{ type: "text" as const, text: `Error: ${(e as Error).message}` }], isError: true };
+      }
+    },
+  },
+  {
+    name: "validate_all_desktop_drivers",
+    description: "Run validation suite on all available desktop drivers.",
+    parameters: z.object({}),
+    handler: async () => {
+      try {
+        const driverNames = router.getAvailableDrivers();
+        const results = [];
+        for (const name of driverNames) {
+          const driver = router.getDriver(name);
+          if (driver) {
+            results.push(await validator.validate(driver, { skipShutdown: true }));
+          }
+        }
+        return { content: [{ type: "text" as const, text: JSON.stringify(results, null, 2) }] };
+      } catch (e) {
+        return { content: [{ type: "text" as const, text: `Error: ${(e as Error).message}` }], isError: true };
+      }
+    },
+  },
+  {
+    name: "verify_desktop_action",
+    description: "Verify that a desktop action had the intended effect.",
+    parameters: z.object({
+      type: z.enum(['url_contains', 'text_present', 'element_visible']).describe("The type of verification to perform."),
+      value: z.string().describe("The value to verify (URL part, text content, or selector)."),
+      task_description: z.string().optional().describe("Description of the task to help route to the correct driver (should match previous action)."),
+    }),
+    handler: async ({ type, value, task_description }: { type: 'url_contains' | 'text_present' | 'element_visible'; value: string; task_description?: string }) => {
+      try {
+        const driver = await router.selectDriver(task_description || "verification");
+        const result = await integration.verify_action({ type, value, driver });
+        return {
+          content: [{ type: "text" as const, text: JSON.stringify(result, null, 2) }],
+          isError: !result.success
+        };
+      } catch (e) {
+        return { content: [{ type: "text" as const, text: `Error: ${(e as Error).message}` }], isError: true };
+      }
+    },
+  },
+  {
+    name: "assess_page_quality",
+    description: "Assess the visual quality of the current page using AI critique.",
+    parameters: z.object({
+      task_description: z.string().optional().describe("Description of the page purpose to contextually assess quality."),
+    }),
+    handler: async ({ task_description }: { task_description?: string }) => {
+      try {
+        const driver = await router.selectDriver(task_description || "screenshot for quality assessment");
+        const screenshot = await driver.screenshot();
+        const html = await driver.extract_text(); // Passing text content as context proxy or grab HTML if possible. Driver only has extract_text.
+        // Ideally we want HTML for tech checks, but extract_text gives body text.
+        // Let's assume we pass text as context if HTML not available, or just screenshot.
+
+        const result = await qualityGate.assess(screenshot, task_description, html);
+        return { content: [{ type: "text" as const, text: JSON.stringify(result, null, 2) }] };
       } catch (e) {
         return { content: [{ type: "text" as const, text: `Error: ${(e as Error).message}` }], isError: true };
       }
