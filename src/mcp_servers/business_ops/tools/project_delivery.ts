@@ -89,8 +89,8 @@ async function generateReportLogic(project_id: string, period_start: string, per
     try {
         const memory = new EpisodicMemory();
         await memory.init();
-        const memories = await memory.retrieve(`project ${project.name} delivery update`, 5);
-        keyEvents = memories.map(m => `- ${m}`);
+        const memories = await memory.recall(`project ${project.name} delivery update`, 5);
+        keyEvents = memories.map(m => `- ${m.userPrompt}: ${m.agentResponse}`);
     } catch (e) {
         keyEvents.push("- (Brain memory retrieval unavailable)");
     }
@@ -334,7 +334,7 @@ export function registerProjectDeliveryTools(server: McpServer) {
 
                         // Create Task
                         await client.createIssue({
-                            teamId: issue.teamId,
+                            teamId: team.id,
                             title: `Escalation: ${issue.title}`,
                             description: `Blocking issue detected: ${issue.url}\n\nPlease resolve immediately.`,
                             priority: 1 // Urgent

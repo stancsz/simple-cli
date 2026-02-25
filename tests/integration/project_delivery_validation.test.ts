@@ -20,7 +20,7 @@ describe("Project Delivery Validation", () => {
 
         // Mock Brain
         mockStore = vi.fn().mockResolvedValue({ id: "mem_1" });
-        mockRetrieve = vi.fn().mockResolvedValue([]);
+        mockRetrieve = vi.fn().mockResolvedValue([]); // We'll reuse this mock variable name but map it to recall
         mockInit = vi.fn().mockResolvedValue(undefined);
 
         vi.doMock("../../src/brain/episodic.js", () => {
@@ -28,7 +28,7 @@ describe("Project Delivery Validation", () => {
                 EpisodicMemory: class {
                     init = mockInit;
                     store = mockStore;
-                    retrieve = mockRetrieve;
+                    recall = mockRetrieve;
                 }
             };
         });
@@ -131,7 +131,9 @@ describe("Project Delivery Validation", () => {
             }
         ];
         mockIssues.mockResolvedValue({ nodes: mockIssueNodes });
-        mockRetrieve.mockResolvedValue(["Key Event 1"]);
+        mockRetrieve.mockResolvedValue([
+            { userPrompt: "Update Milestone 1", agentResponse: "Completed" }
+        ]);
 
         const result = await generateReportTool({
             project_id: "proj_1",
