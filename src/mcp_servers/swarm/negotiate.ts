@@ -1,10 +1,14 @@
 import { createLLM } from "../../llm.js";
+import { MCP } from "../../mcp.js";
+import { DelegateRouter } from "./delegate_router.js";
 
 export class Negotiator {
   private llm: ReturnType<typeof createLLM>;
+  private delegateRouter: DelegateRouter;
 
-  constructor() {
+  constructor(mcp: MCP) {
     this.llm = createLLM();
+    this.delegateRouter = new DelegateRouter(mcp);
   }
 
   /**
@@ -17,6 +21,21 @@ export class Negotiator {
       existingAgents: { id: string; role: string }[] = [],
       simulationMode: boolean = false
   ): Promise<{ winnerId?: string; role: string; rationale: string; strategy?: string; candidates?: any[] }> {
+
+    // Check for existing patterns in Brain (Swarm Pattern Recall)
+    if (simulationMode || existingAgents.length === 0) {
+        const pattern = await this.delegateRouter.querySwarmPatterns(taskDescription);
+        if (pattern) {
+            // console.log(`[Swarm] Recalled negotiation pattern for task: "${taskDescription.substring(0, 50)}..."`);
+            return {
+                winnerId: "pattern-recall",
+                role: pattern.role,
+                rationale: `Pattern Match (${Math.round((pattern.confidence || 0) * 100)}% confidence): ${pattern.rationale}`,
+                strategy: pattern.strategy,
+                candidates: pattern.candidates || []
+            };
+        }
+    }
 
     if (simulationMode) {
         return this.negotiateSimulation(taskDescription);

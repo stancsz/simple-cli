@@ -24,7 +24,7 @@ export class SwarmServer {
     });
     this.mcp = new MCP();
     this.llm = createLLM();
-    this.negotiator = new Negotiator();
+    this.negotiator = new Negotiator(this.mcp);
     this.setupTools();
   }
 
