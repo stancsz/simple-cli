@@ -121,19 +121,12 @@ export const applyCoreUpdateTool = {
 
       // 3. Apply Patch
       const newContent = applyPatch(content, diff);
-      if (!newContent && newContent !== "") {
-          // applyPatch returns string on success, or false (boolean) on failure.
-          // Wait, check return type of applyPatch. It returns string or boolean false.
-          // If newContent is empty string, it's valid.
-           return { content: [{ type: "text" as const, text: `Error: Failed to apply patch. It might be stale or malformed.` }], isError: true };
-      }
-
       if (newContent === false) {
            return { content: [{ type: "text" as const, text: `Error: Failed to apply patch. It might be stale or malformed.` }], isError: true };
       }
 
       // 4. Write File
-      await writeFile(fullPath, newContent as string);
+      await writeFile(fullPath, newContent);
 
       // 5. Log to Memory
       const memory = new EpisodicMemory();
