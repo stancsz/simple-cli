@@ -192,6 +192,7 @@ export class Scheduler extends EventEmitter {
             tool: "monitor_workload",
             arguments: {}
           },
+          prompt: "Internal Task",
           yoloMode: true
       } as TaskDefinition);
       try {
