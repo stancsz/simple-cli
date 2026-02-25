@@ -83,7 +83,9 @@ The roadmap is structured around the four anatomical layers of the Digital Biosp
 - [x] **Client Onboarding Workflow**: Automate full client intake and project setup (PR #538).
     - ✅ Implemented `client_onboarding_workflow` tool in `business_ops` MCP.
     - ✅ Orchestrates Company Context, CRM (HubSpot), Project (Linear), and Finance (Xero).
-- [ ] **Automated Billing**: Implement invoice generation and payment tracking.
+- [x] **Automated Billing**: Implement invoice generation and payment tracking (PR #539).
+    - ✅ Implemented `automated_billing_workflow` and core billing tools in `business_ops`.
+    - ✅ Supports invoice creation, sending, and payment recording with Xero integration.
 - [ ] **CRM Synchronization**: Ensure real-time updates between operations and CRM.
 - [ ] **Project Management**: Auto-create and update Linear tasks based on agency activity.
 - [ ] **Validation**: Verify end-to-end agency workflows via integration tests.

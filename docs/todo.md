@@ -234,3 +234,15 @@
 - [x] **Health Monitor**: Track metrics for long-term reliability.
 - [x] **Dashboard**: Visualize validation status.
 - [x] **Self-Healing Loop**: Validated via `tests/integration/showcase_simulation.test.ts`.
+
+## Sprint 7: Autonomous Agency Operations (In Progress)
+
+**Goal:** End-to-End Business Automation.
+
+### Phase 21: Agency Operations
+- [x] **Client Onboarding Workflow**: Automate full client intake and project setup (PR #538).
+- [x] **Automated Billing**: Implement invoice generation and payment tracking (PR #539).
+    - [x] Core Billing Tools (`create_invoice`, `send_invoice`, `record_payment`).
+    - [x] Automated Workflow (`automated_billing_workflow`).
+    - [x] Integration Tests (Xero Sandbox).
+    - [x] Playbook Documentation (`docs/business_playbooks/automated_billing.md`).
