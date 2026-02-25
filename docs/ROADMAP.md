@@ -35,5 +35,9 @@ The roadmap is structured around the four anatomical layers of the Digital Biosp
 - [x] Integrate Project Management (Linear).
 - [x] Validate Business Integrations (Playbooks & Tests).
 
+## Phase 8: Recursive Evolution
+*Current Focus: Self-Improvement*
+- [x] **Core Update**: Implement secure protocol for updating `engine.ts` (Implemented with Dual-Verification Safety Protocol).
+
 ## Legacy Achievements
 See [Legacy Roadmap](ROADMAP_LEGACY.md) for completed milestones of the previous "Simple CLI" era.

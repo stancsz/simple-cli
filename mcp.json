@@ -99,6 +99,13 @@
         "tsx",
         "src/mcp_servers/crm/index.ts"
       ]
+    },
+    "core_update": {
+      "command": "npx",
+      "args": [
+        "tsx",
+        "src/mcp_servers/core_update/index.ts"
+      ]
     }
   },
   "scheduledTasks": [
