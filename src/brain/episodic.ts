@@ -13,12 +13,14 @@ export interface PastEpisode {
   agentResponse: string;
   artifacts: string[];
   vector: number[];
-  simulation_attempts?: string[];
-  resolved_via_dreaming?: boolean;
-  dreaming_outcomes?: string; // JSON string containing negotiation data, swarm composition, and solution patterns
+  simulation_attempts?: string[] | null;
+  resolved_via_dreaming?: boolean | null;
+  dreaming_outcomes?: string | null; // JSON string containing negotiation data, swarm composition, and solution patterns
   tokens?: number;
   duration?: number;
   _distance?: number;
+  type?: string | null;
+  related_episode_id?: string | null;
 }
 
 export class EpisodicMemory {
@@ -102,7 +104,9 @@ export class EpisodicMemory {
       dreaming_outcomes?: string,
       id?: string,
       tokens?: number,
-      duration?: number
+      duration?: number,
+      type?: string,
+      related_episode_id?: string
   ): Promise<void> {
     const textToEmbed = `Task: ${taskId}\nRequest: ${request}\nSolution: ${solution}`;
     const embedding = await this.getEmbedding(textToEmbed);
@@ -119,11 +123,13 @@ export class EpisodicMemory {
       agentResponse: solution,
       artifacts: artifacts.length > 0 ? artifacts : ["none"],
       vector: embedding,
-      simulation_attempts,
-      resolved_via_dreaming,
-      dreaming_outcomes,
+      simulation_attempts: (simulation_attempts && simulation_attempts.length > 0) ? simulation_attempts : ["none"],
+      resolved_via_dreaming: resolved_via_dreaming ?? false,
+      dreaming_outcomes: dreaming_outcomes ?? "",
       tokens: tokens || 0,
-      duration: duration || 0
+      duration: duration || 0,
+      type: type || "task",
+      related_episode_id: related_episode_id || ""
     };
 
     const connector = await this.getConnector(company);
@@ -165,14 +171,21 @@ export class EpisodicMemory {
     });
   }
 
-  async recall(query: string, limit: number = 3, company?: string): Promise<PastEpisode[]> {
+  async recall(query: string, limit: number = 3, company?: string, type?: string): Promise<PastEpisode[]> {
     const table = await this.getTable(company);
     if (!table) return [];
 
     const embedding = await this.getEmbedding(query);
     if (!embedding) return [];
 
-    const results = await table.search(embedding)
+    let search = table.search(embedding);
+    if (type) {
+        // Sanitize type to prevent SQL injection in where clause
+        const safeType = type.replace(/'/g, "''");
+        search = search.where(`type = '${safeType}'`);
+    }
+
+    const results = await search
       .limit(limit)
       .toArray();
 

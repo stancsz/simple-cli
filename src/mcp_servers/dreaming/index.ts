@@ -181,6 +181,27 @@ export class DreamingServer {
                         // artifacts: fail.artifacts // Preserve artifacts?
                     }
                 });
+
+                // Store negotiation pattern
+                if (negotiationData && Object.keys(negotiationData).length > 0) {
+                     try {
+                         await brain.callTool({
+                            name: "brain_store",
+                            arguments: {
+                                taskId: `pattern-${fail.taskId}`,
+                                request: `Swarm Negotiation for task: ${fail.userPrompt}`,
+                                solution: `Swarm recommended role: ${role}. Strategy: ${strategy}. Outcome: Success.`,
+                                company: companyId,
+                                type: "swarm_negotiation_pattern",
+                                related_episode_id: fail.id,
+                                dreaming_outcomes: JSON.stringify(negotiationData)
+                            }
+                        });
+                     } catch (e) {
+                         console.warn("Failed to store negotiation pattern:", e);
+                     }
+                }
+
                 results.push(`Fixed failure ${fail.taskId} using role ${role}`);
             } else {
                  // Log attempt in existing episode (update)

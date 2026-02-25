@@ -56,6 +56,7 @@ The roadmap is structured around the four anatomical layers of the Digital Biosp
     - Leverages Hive Mind during simulation to negotiate task routing.
     - Spawns specialized sub-agent swarms for optimal problem-solving.
     - Stores collaborative solution patterns in Brain.
+    - ✅ Enhanced Dreaming now stores swarm negotiation patterns in Brain for future recall, enabling meta-learning of collaboration strategies.
 
 ## Legacy Achievements
 See [Legacy Roadmap](ROADMAP_LEGACY.md) for completed milestones of the previous "Simple CLI" era.
