@@ -34,6 +34,7 @@ The roadmap is structured around the four anatomical layers of the Digital Biosp
 - [x] Integrate CRM (HubSpot).
 - [x] Integrate Project Management (Linear).
 - [x] Validate Business Integrations (Playbooks & Tests).
+- [x] Elastic Swarms (Auto-scaling based on demand).
 
 ## Phase 8: Recursive Evolution
 *Current Focus: Self-Improvement*
