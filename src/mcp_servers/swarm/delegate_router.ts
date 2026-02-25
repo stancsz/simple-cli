@@ -48,7 +48,7 @@ export class DelegateRouter {
           limit: 1,
           format: "json"
         }
-      });
+      }) as any;
 
       if (!result.content || result.content.length === 0) return null;
 
