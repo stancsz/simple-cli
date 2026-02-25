@@ -251,3 +251,10 @@
     - [x] Integrate with `client_onboarding_workflow`.
     - [x] Integration Tests (HubSpot Mock).
     - [x] Playbook Documentation (`docs/business_playbooks/crm_synchronization.md`).
+- [x] **Project Management**:
+    - [x] Implement Linear MCP Tools (`create_project`, `create_issue`, `sync_deal`).
+    - [x] Integrate with `client_onboarding_workflow`.
+    - [x] Integration Tests (Linear SDK Mock).
+    - [x] Playbook Documentation (`docs/business_playbooks/project_management_automation.md`).
+- [x] **End-to-End Validation**:
+    - [x] Full Lifecycle Test (`tests/integration/agency_workflow_validation.test.ts`).
