@@ -98,18 +98,52 @@ export class DreamingServer {
     for (const fail of failures) {
         if (fail.resolved_via_dreaming) continue; // Skip already resolved
 
+        // Negotiate Agent Role via Swarm Intelligence
+        let role = "Senior Developer";
+        let strategy = "Standard fix.";
+        let negotiationData = {};
+
+        try {
+            const negRes: any = await swarm.callTool({
+                name: "negotiate_task",
+                arguments: {
+                    task_description: `Fix failure: ${fail.userPrompt}\nFailure Output: ${fail.agentResponse}`,
+                    simulation_mode: true,
+                    agent_ids: []
+                }
+            });
+
+            if (negRes && negRes.content && negRes.content[0]) {
+                 try {
+                     const negJson = JSON.parse(negRes.content[0].text);
+                     if (negJson.winning_bid && negJson.winning_bid.role) {
+                         role = negJson.winning_bid.role;
+                         strategy = negJson.strategy || strategy;
+                         negotiationData = negJson;
+                     }
+                 } catch (e) {
+                     console.warn("Failed to parse negotiation result", e);
+                 }
+            }
+        } catch (e) {
+            console.warn("Negotiation failed, falling back to default role:", e);
+        }
+
         const taskPrompt = `This is a simulation to fix a past failure.
         Original Task ID: ${fail.taskId}
         Original Request: ${fail.userPrompt}
         Previous Output (Failure): ${fail.agentResponse}
 
-        Your Goal: specificially address the failure reason and complete the task successfully.`;
+        Adopt Role: ${role}
+        Strategy: ${strategy}
+
+        Your Goal: specifically address the failure reason and complete the task successfully.`;
 
         try {
             const simRes: any = await swarm.callTool({
                 name: "run_simulation",
                 arguments: {
-                    role: "Senior Developer",
+                    role: role,
                     task: taskPrompt,
                     company_id: companyId
                 }
@@ -142,14 +176,15 @@ export class DreamingServer {
                         company: companyId,
                         simulation_attempts: JSON.stringify(attempts),
                         resolved_via_dreaming: true,
+                        dreaming_outcomes: JSON.stringify(negotiationData),
                         // artifacts: fail.artifacts // Preserve artifacts?
                     }
                 });
-                results.push(`Fixed failure ${fail.taskId}`);
+                results.push(`Fixed failure ${fail.taskId} using role ${role}`);
             } else {
                  // Log attempt in existing episode (update)
                  const attempts = fail.simulation_attempts ? [...fail.simulation_attempts] : [];
-                 attempts.push(`[${new Date().toISOString()}] Failed: ${simOutput.substring(0, 100)}...`);
+                 attempts.push(`[${new Date().toISOString()}] Failed with role ${role}: ${simOutput.substring(0, 100)}...`);
 
                  // Delete old to avoid duplication (since store appends)
                  await brain.callTool({
@@ -167,10 +202,11 @@ export class DreamingServer {
                         solution: fail.agentResponse, // Keep original failure response
                         company: companyId,
                         simulation_attempts: JSON.stringify(attempts),
-                        resolved_via_dreaming: false
+                        resolved_via_dreaming: false,
+                        dreaming_outcomes: JSON.stringify(negotiationData)
                     }
                  });
-                 results.push(`Attempted ${fail.taskId} but failed again.`);
+                 results.push(`Attempted ${fail.taskId} with role ${role} but failed again.`);
             }
 
         } catch (e) {

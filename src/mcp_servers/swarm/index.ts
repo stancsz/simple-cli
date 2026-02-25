@@ -6,6 +6,7 @@ import { MCP } from "../../mcp.js";
 import { createLLM } from "../../llm.js";
 import { builtinSkills } from "../../skills.js";
 import { fileURLToPath } from "url";
+import { Negotiator } from "./negotiate.js";
 
 export class SwarmServer {
   private server: McpServer;
@@ -14,6 +15,7 @@ export class SwarmServer {
   public workerDetails: Map<string, { role: string; parentId?: string }> = new Map();
   private mcp: MCP;
   private llm: ReturnType<typeof createLLM>;
+  private negotiator: Negotiator;
 
   constructor() {
     this.server = new McpServer({
@@ -22,6 +24,7 @@ export class SwarmServer {
     });
     this.mcp = new MCP();
     this.llm = createLLM();
+    this.negotiator = new Negotiator();
     this.setupTools();
   }
 
@@ -44,11 +47,12 @@ export class SwarmServer {
       "negotiate_task",
       "Facilitate bidding/negotiation between multiple agents for task assignment.",
       {
-        agent_ids: z.array(z.string()).describe("List of agent IDs to invite for negotiation."),
+        agent_ids: z.array(z.string()).optional().describe("List of agent IDs to invite for negotiation. If empty, uses swarm intelligence."),
         task_description: z.string().describe("The task to be assigned."),
+        simulation_mode: z.boolean().optional().describe("If true, optimizes for offline simulation (dreaming)."),
       },
-      async ({ agent_ids, task_description }) => {
-        return await this.negotiateTask(agent_ids, task_description);
+      async ({ agent_ids, task_description, simulation_mode }) => {
+        return await this.negotiateTask(agent_ids || [], task_description, simulation_mode || false);
       }
     );
 
@@ -201,7 +205,22 @@ export class SwarmServer {
     };
   }
 
-  async negotiateTask(agentIds: string[], taskDescription: string) {
+  async negotiateTask(agentIds: string[], taskDescription: string, simulationMode: boolean = false) {
+    if (simulationMode || agentIds.length === 0) {
+        const result = await this.negotiator.negotiate(taskDescription, [], true);
+        return {
+            content: [{ type: "text" as const, text: JSON.stringify({
+                winner_id: "simulation-agent",
+                winning_bid: {
+                    agentId: "simulation-agent",
+                    role: result.role,
+                    rationale: result.rationale
+                },
+                strategy: result.strategy
+            }, null, 2) }]
+        };
+    }
+
     const bids: Array<{ agentId: string; cost: number; quality: number; rationale: string }> = [];
 
     for (const agentId of agentIds) {
