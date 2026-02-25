@@ -81,7 +81,8 @@ export async function healShowcase(deps: HealDeps) {
     let decision: any;
     try {
         // Parse JSON from response
-        const match = response.message.match(/\{[\s\S]*\}/);
+        const content = response.message || response.raw || "";
+        const match = content.match(/\{[\s\S]*\}/);
         if (match) {
             decision = JSON.parse(match[0]);
         } else {
