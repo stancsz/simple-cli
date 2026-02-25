@@ -147,12 +147,11 @@ The system is rigorously tested. Below is an excerpt from our validation suite (
 ```text
 PASS tests/integration/showcase_simulation.test.ts
   Showcase Simulation Integration Test
-    ✓ should execute the full Showcase scenario: Context, SOP, Ghost Mode, HR Loop (450ms)
+    ✓ should execute the full Showcase scenario: Context, SOP, Ghost Mode, HR Loop
+    ✓ should activate self-healing loop on failure
 
 Test Suites: 1 passed, 1 total
-Tests:       1 passed, 1 total
-Snapshots:   0 total
-Time:        1.234s
+Tests:       2 passed, 2 total
 ```
 
 ### 3. Generated Logs (Example)
@@ -194,8 +193,17 @@ The enhanced Company Context system allows you to manage multiple client environ
 
 ---
 
+## ✅ Validation Run (Latest)
+
+**Date**: 2024-05-22
+**Status**: PASSED
+
+The Phase 20 Showcase was validated via the robust integration test suite `tests/integration/showcase_simulation.test.ts`. This validation covered:
+1.  **Full Lifecycle Simulation**: Successful execution of Company Context loading, SOP execution, Ghost Mode tasks, and HR Loop.
+2.  **Self-Healing Loop**: Verification that the `ShowcaseHealer` correctly detects failures and triggers retry mechanisms via the SOP Engine.
+
 ## 🔗 Next Steps
 
--   **[View the Roadmap](ROADMAP.md)**: See what's coming next (Phase 12: K8s Deployment).
+-   **[View the Roadmap](ROADMAP.md)**: Phase 20 is now Completed.
 -   **[Read the Specs](specs.md)**: Deep dive into the technical architecture.
 -   **[Try it Yourself](#quickstart-the-simulation-recommended)**: Run `npm run demo` now!
