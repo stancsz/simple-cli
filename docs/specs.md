@@ -276,6 +276,7 @@ To move towards AGI-like behavior, the system must not just *learn* but *rewrite
     5.  **Resolution**:
         - If successful: The old failure episode is removed/archived, and a new episode is stored with the solution, tagged `resolved_via_dreaming: true` and including `dreaming_outcomes` (negotiation data).
         - **Swarm Pattern Storage**: A distinct memory entry of type `swarm_negotiation_pattern` is created, capturing the successful role/strategy pair and linking it to the failure context. This enables the Brain to recall optimal collaboration patterns for similar future problems.
+        - **Swarm Pattern Recall**: When negotiating new tasks (in simulation or Hive Mind mode), the Swarm Orchestrator first queries the Brain for `swarm_negotiation_pattern` entries matching the task description. If a high-confidence pattern is found, the system skips the deliberation phase and instantly applies the proven role and strategy.
         - If failed again: The attempt and negotiation result are logged in the `simulation_attempts` field for future reference.
 *   **Benefit**: The agent autonomously improves its success rate by leveraging downtime and specialized sub-agents to solve previously insurmountable problems ("learning while sleeping").
 
