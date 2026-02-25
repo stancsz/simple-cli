@@ -86,7 +86,9 @@ The roadmap is structured around the four anatomical layers of the Digital Biosp
 - [x] **Automated Billing**: Implement invoice generation and payment tracking (PR #539).
     - ✅ Implemented `automated_billing_workflow` and core billing tools in `business_ops`.
     - ✅ Supports invoice creation, sending, and payment recording with Xero integration.
-- [ ] **CRM Synchronization**: Ensure real-time updates between operations and CRM.
+- [x] **CRM Synchronization**: Ensure real-time updates between operations and CRM.
+    - ✅ Implemented idempotent `sync_contact_to_crm`, `sync_company_to_crm`, and `sync_deal_to_crm` tools in `business_ops`.
+    - ✅ Integrated robust sync logic into `client_onboarding_workflow`.
 - [ ] **Project Management**: Auto-create and update Linear tasks based on agency activity.
 - [ ] **Validation**: Verify end-to-end agency workflows via integration tests.
 
