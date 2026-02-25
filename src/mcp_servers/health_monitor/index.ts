@@ -368,6 +368,23 @@ server.tool(
   }
 );
 
+server.tool(
+  "get_latest_showcase_run",
+  "Get the most recent showcase run data.",
+  {},
+  async () => {
+      try {
+          const runs = await getShowcaseRuns(1);
+          if (runs.length === 0) {
+              return { content: [{ type: "text", text: "No showcase runs found." }] };
+          }
+          return { content: [{ type: "text", text: JSON.stringify(runs[0], null, 2) }] };
+      } catch (e: any) {
+          return { content: [{ type: "text", text: `Error fetching showcase run: ${e.message}` }], isError: true };
+      }
+  }
+);
+
 // Helper to connect to Operational Persona
 async function connectToOperationalPersona(): Promise<Client | null> {
     const srcPath = join(process.cwd(), "src", "mcp_servers", "operational_persona", "index.ts");

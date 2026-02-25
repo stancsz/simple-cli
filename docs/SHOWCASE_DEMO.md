@@ -42,6 +42,12 @@ The system heals itself using specialized swarm agents.
     - **Step 4**: The agent simulates a fix in a sandbox environment.
 - **Result**: The failure is resolved, and the solution is stored in the Brain (`resolved_via_dreaming: true`) for future use, preventing the same bug from recurring.
 
+### 6. **Self-Healing Loop (Autonomous Maintenance)**
+When things go wrong, the system fixes itself.
+- **Scenario**: The nightly showcase run fails due to a network timeout.
+- **Action**: The **Showcase Healer** detects the failure, diagnoses it as transient using LLM reasoning, and autonomously triggers a retry via the SOP Engine.
+- **Result**: The system recovers without human intervention, and the healing action is logged for auditability.
+
 ---
 
 ## 🚀 Deployment Instructions

@@ -106,6 +106,13 @@
         "tsx",
         "src/mcp_servers/core_update/index.ts"
       ]
+    },
+    "showcase_healer": {
+      "command": "npx",
+      "args": [
+        "tsx",
+        "src/mcp_servers/showcase_healer/index.ts"
+      ]
     }
   },
   "scheduledTasks": [
