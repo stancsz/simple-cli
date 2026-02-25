@@ -15,6 +15,7 @@ export interface PastEpisode {
   vector: number[];
   simulation_attempts?: string[];
   resolved_via_dreaming?: boolean;
+  dreaming_outcomes?: string;
   tokens?: number;
   duration?: number;
   _distance?: number;
@@ -98,6 +99,7 @@ export class EpisodicMemory {
       company?: string,
       simulation_attempts?: string[],
       resolved_via_dreaming?: boolean,
+      dreaming_outcomes?: string,
       id?: string,
       tokens?: number,
       duration?: number
@@ -119,6 +121,7 @@ export class EpisodicMemory {
       vector: embedding,
       simulation_attempts,
       resolved_via_dreaming,
+      dreaming_outcomes,
       tokens: tokens || 0,
       duration: duration || 0
     };

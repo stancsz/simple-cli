@@ -32,6 +32,16 @@ The agency gets smarter every day.
 -   **Action**: The **HR Manager** (HR Loop MCP) analyzes the day's execution logs for errors or inefficiencies.
 -   **Result**: It proposes concrete improvements (e.g., "Update `sop_execute` retry logic") and stores them as proposals in `.agent/hr/proposals/`.
 
+### 5. **Intelligent Nightly Maintenance (Swarm Dreaming)**
+The system heals itself using specialized swarm agents.
+- **Scenario**: It's 2:00 AM.
+- **Action**: The `dreaming` server activates.
+    - **Step 1**: It queries the Brain for recent task failures (e.g., "React hydration error on signup page").
+    - **Step 2**: It negotiates with the **Swarm Intelligence** to find the best expert.
+    - **Step 3**: The Swarm spawns a temporary "Frontend Specialist" sub-agent.
+    - **Step 4**: The agent simulates a fix in a sandbox environment.
+- **Result**: The failure is resolved, and the solution is stored in the Brain (`resolved_via_dreaming: true`) for future use, preventing the same bug from recurring.
+
 ---
 
 ## 🚀 Deployment Instructions
