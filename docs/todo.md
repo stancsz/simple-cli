@@ -258,3 +258,15 @@
     - [x] Playbook Documentation (`docs/business_playbooks/project_management_automation.md`).
 - [x] **End-to-End Validation**:
     - [x] Full Lifecycle Test (`tests/integration/agency_workflow_validation.test.ts`).
+
+## Sprint 8: Autonomous Client Lifecycle (New)
+
+**Goal:** Automate the entire client lifecycle from discovery to offboarding.
+
+### Phase 22: Lead Generation & Scaling
+- [x] **Lead Generation**:
+    - [x] Create `src/mcp_servers/business_ops/tools/lead_generation.ts`.
+    - [x] Implement `discover_leads`, `qualify_lead`, `initiate_outreach`.
+    - [x] Integrate with HubSpot (Notes/Contacts) and Brain (Episodic Memory).
+    - [x] Create SOP (`sops/lead_generation_workflow.md`).
+    - [x] Validation: `tests/integration/lead_generation_validation.test.ts`.
