@@ -13,6 +13,9 @@ vi.mock('../../src/llm.js', () => ({
   createLLM: () => ({
     generate: mockGenerate,
   }),
+  LLM: class {
+    generate = mockGenerate;
+  }
 }));
 
 // Mock Stagehand
