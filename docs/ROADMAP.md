@@ -58,5 +58,12 @@ The roadmap is structured around the four anatomical layers of the Digital Biosp
     - Stores collaborative solution patterns in Brain.
     - ✅ Enhanced Dreaming now stores swarm negotiation patterns in Brain for future recall, enabling meta-learning of collaboration strategies.
 
+## Phase 20: Continuous Real-World Validation
+*Current Focus: Automated Production Showcase*
+- [x] **Scheduled Runner**: GitHub Actions workflow to run the 24-hour simulation daily.
+- [x] **Health Monitor Extension**: MCP module to record and serve showcase metrics.
+- [x] **Dashboard Integration**: UI panel to visualize showcase history and status.
+- [x] **Documentation**: Updated guides for automated validation.
+
 ## Legacy Achievements
 See [Legacy Roadmap](ROADMAP_LEGACY.md) for completed milestones of the previous "Simple CLI" era.

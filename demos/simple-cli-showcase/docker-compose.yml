@@ -8,12 +8,14 @@ services:
       context: ../../
       dockerfile: Dockerfile
     volumes:
-      - .:/app/showcase
+      - .:/app/demos/simple-cli-showcase
       - ./.agent:/app/.agent
+      - ../../src:/app/src
+      - ../../scripts:/app/scripts
     environment:
       - OPENAI_API_KEY=${OPENAI_API_KEY}
-      - JULES_AGENT_DIR=/app/showcase/.agent
-      - COMPANY_CONTEXT_FILE=/app/showcase/company_context.json
+      - JULES_AGENT_DIR=/app/demos/simple-cli-showcase/.agent
+      - COMPANY_CONTEXT_FILE=/app/demos/simple-cli-showcase/company_context.json
     command: ["npm", "start", "--", "--daemon"]
     restart: unless-stopped
 

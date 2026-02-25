@@ -15,6 +15,8 @@ import { getMetricFiles, readNdjson, AGENT_DIR, METRICS_DIR } from "./utils.js";
 import { detectAnomalies, predictMetrics } from "./anomaly_detector.js";
 import { correlateAlerts, Alert } from "./alert_correlator.js";
 import { sendAlert } from "./alerting.js";
+import { saveShowcaseRun, getShowcaseRuns, ShowcaseRun } from "./showcase_reporter.js";
+import { randomUUID } from "crypto";
 
 const ALERT_RULES_FILE = join(process.cwd(), 'scripts', 'dashboard', 'alert_rules.json');
 
@@ -333,6 +335,39 @@ server.tool(
   }
 );
 
+server.tool(
+  "record_showcase_run",
+  "Record the results of an automated showcase simulation.",
+  {
+      success: z.boolean().describe("Whether the showcase passed successfully."),
+      total_duration_ms: z.number().describe("Total duration in milliseconds."),
+      steps: z.string().describe("JSON string array of ShowcaseStep objects."),
+      artifact_count: z.number().describe("Number of artifacts generated."),
+      error: z.string().optional().describe("Error message if failed.")
+  },
+  async ({ success, total_duration_ms, steps, artifact_count, error }) => {
+      let parsedSteps: any[] = [];
+      try {
+          parsedSteps = JSON.parse(steps);
+      } catch {
+          parsedSteps = [];
+      }
+
+      const run: ShowcaseRun = {
+          id: randomUUID(),
+          timestamp: new Date().toISOString(),
+          success,
+          total_duration_ms,
+          steps: parsedSteps,
+          artifact_count,
+          error
+      };
+
+      await saveShowcaseRun(run);
+      return { content: [{ type: "text", text: `Showcase run recorded: ${run.id}` }] };
+  }
+);
+
 // Helper to connect to Operational Persona
 async function connectToOperationalPersona(): Promise<Client | null> {
     const srcPath = join(process.cwd(), "src", "mcp_servers", "operational_persona", "index.ts");
@@ -463,6 +498,15 @@ export async function main() {
              metrics = metrics.filter(m => m.metric === metric || `${m.agent}:${m.metric}` === metric);
              const predictions = predictMetrics(metrics, 60);
              res.json(predictions);
+        } catch (e) {
+            res.status(500).json({ error: (e as Error).message });
+        }
+    });
+
+    app.get("/api/dashboard/showcase-runs", async (req, res) => {
+        try {
+            const runs = await getShowcaseRuns();
+            res.json(runs);
         } catch (e) {
             res.status(500).json({ error: (e as Error).message });
         }
