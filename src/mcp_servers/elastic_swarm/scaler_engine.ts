@@ -102,13 +102,13 @@ export class ScalerEngine {
 
     async spawnAgent(templateName: string, task: string): Promise<string | null> {
         // Load template
-        const templatePath = join(process.cwd(), ".agent", "templates", `${templateName}.json`);
+        const templatePath = join(process.cwd(), "src", "mcp_servers", "elastic_swarm", "templates", `${templateName}.json`);
         let template: any;
         try {
             const content = await readFile(templatePath, "utf-8");
             template = JSON.parse(content);
         } catch (e) {
-            console.error(`Failed to load template ${templateName}:`, e);
+            console.error(`Failed to load template ${templateName} from ${templatePath}:`, e);
             return null;
         }
 
