@@ -310,12 +310,18 @@ async function aggregateCompanyMetrics() {
             const successRate = count > 0 ? (successCount / count) * 100 : 0;
             const estimatedCost = (totalTokens / 1_000_000) * 5.00; // $5 per 1M tokens assumption
 
+            // Derived Business Metrics
+            const slaCompliance = successRate >= 95 ? 100 : successRate;
+            const clientSatisfaction = successRate >= 90 ? 5 : (successRate >= 80 ? 4 : 3); // 5-star scale
+
             metrics[company] = {
                 total_tokens: totalTokens,
                 avg_duration_ms: Math.round(avgDuration),
                 success_rate: Math.round(successRate),
                 task_count: count,
-                estimated_cost_usd: parseFloat(estimatedCost.toFixed(4))
+                estimated_cost_usd: parseFloat(estimatedCost.toFixed(4)),
+                sla_compliance: slaCompliance,
+                client_satisfaction: clientSatisfaction
             };
         } catch (e) {
             console.error(`Failed to get metrics for ${company}:`, e);

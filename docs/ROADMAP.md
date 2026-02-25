@@ -68,5 +68,14 @@ The roadmap is structured around the four anatomical layers of the Digital Biosp
     - ✅ Phase 20 extended with autonomous healing capabilities.
     - ✅ VALIDATED: Full showcase and self-healing loop verified via `tests/integration/showcase_simulation.test.ts`.
 
+## Phase 21: Autonomous Agency Operations
+*Current Focus: Production-Ready Multi-Tenant Service*
+- [ ] **Agency Operations MCP**: Centralized management for client workflows, reporting, and escalation.
+- [ ] **Multi-Tenant Scheduler**: Enhanced daemon with company context injection and isolation.
+- [ ] **Production Mode**: 24/7 operation with retry logic, exponential backoff, and robust error handling.
+- [ ] **Business Health Monitor**: Tracking of high-level business metrics (SLA compliance, client satisfaction).
+- [ ] **Automated Reporting**: Generation of periodic client reports.
+- [ ] **Escalation Protocol**: Automated alerting for stuck workflows.
+
 ## Legacy Achievements
 See [Legacy Roadmap](ROADMAP_LEGACY.md) for completed milestones of the previous "Simple CLI" era.

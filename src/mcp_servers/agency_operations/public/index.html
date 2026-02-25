@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Agency Operations Dashboard</title>
+    <style>
+        body { font-family: sans-serif; padding: 20px; }
+        table { width: 100%; border-collapse: collapse; }
+        th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+        th { background-color: #f2f2f2; }
+        .active { color: green; }
+        .escalated { color: red; font-weight: bold; }
+        .paused { color: orange; }
+        .completed { color: blue; }
+    </style>
+</head>
+<body>
+    <h1>Client Workflows</h1>
+    <table>
+        <thead>
+            <tr>
+                <th>ID</th>
+                <th>Client</th>
+                <th>Type</th>
+                <th>Status</th>
+                <th>Schedule</th>
+                <th>Next Run</th>
+                <th>Last Event</th>
+            </tr>
+        </thead>
+        <tbody id="workflow-table">
+            <!-- Rows injected here -->
+        </tbody>
+    </table>
+    <script>
+        async function load() {
+            try {
+                const res = await fetch('/api/workflows');
+                const workflows = await res.json();
+                const tbody = document.getElementById('workflow-table');
+                tbody.innerHTML = '';
+                workflows.forEach(wf => {
+                    const lastEvent = wf.history && wf.history.length > 0
+                        ? wf.history[wf.history.length - 1].message
+                        : '-';
+                    const tr = document.createElement('tr');
+                    tr.innerHTML = `
+                        <td>${wf.id}</td>
+                        <td>${wf.client}</td>
+                        <td>${wf.type}</td>
+                        <td class="${wf.status}">${wf.status.toUpperCase()}</td>
+                        <td>${wf.schedule || '-'}</td>
+                        <td>${wf.next_run || '-'}</td>
+                        <td>${lastEvent}</td>
+                    `;
+                    tbody.appendChild(tr);
+                });
+            } catch (e) {
+                console.error("Failed to load workflows:", e);
+            }
+        }
+        load();
+        setInterval(load, 5000);
+    </script>
+</body>
+</html>

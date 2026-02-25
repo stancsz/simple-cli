@@ -207,3 +207,40 @@ The Phase 20 Showcase was validated via the robust integration test suite `tests
 -   **[View the Roadmap](ROADMAP.md)**: Phase 20 is now Completed.
 -   **[Read the Specs](specs.md)**: Deep dive into the technical architecture.
 -   **[Try it Yourself](#quickstart-the-simulation-recommended)**: Run `npm run demo` now!
+
+---
+
+## 🏭 Transitioning to Production (Phase 21)
+
+Simple Biosphere is now ready for continuous, multi-tenant agency operations.
+
+### 1. Enable Production Mode
+Set the environment variable `PRODUCTION_MODE=true` to enable:
+- **Exponential Backoff**: Automatic retries for failed tasks.
+- **Strict Isolation**: Company context enforcement per task.
+- **Enhanced Logging**: Detailed structured logs for auditing.
+
+```bash
+export PRODUCTION_MODE=true
+npm run daemon
+```
+
+### 2. Manage Workflows via Agency Operations
+Use the `AgencyOperations` MCP server to manage client workflows.
+
+- **Register Workflow**:
+  ```bash
+  # Example via MCP Client
+  use_tool register_workflow client="acme-corp" type="monthly_report" schedule="0 9 1 * *"
+  ```
+- **View Dashboard**: Access `http://localhost:3000/dashboard/agency.html` (after starting the server).
+
+### 3. Monitor Business Health
+The Health Monitor now tracks business KPIs:
+- **SLA Compliance**: Percentage of workflows completing on time.
+- **Client Satisfaction**: AI-derived score based on task success rates.
+
+### 4. Handling Escalations
+If a workflow fails repeatedly, it enters `escalated` state.
+- **Check Status**: `use_tool list_workflows`
+- **Resolve**: Fix the underlying issue, then `use_tool update_workflow_status id="..." status="active"`.

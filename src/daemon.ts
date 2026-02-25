@@ -93,7 +93,7 @@ export async function loadSchedule(): Promise<ScheduleConfig> {
   return { tasks };
 }
 
-async function runTask(task: TaskDefinition) {
+async function runTask(task: TaskDefinition, retryCount = 0) {
   await log(`Triggering task: ${task.name} (${task.id})`);
 
   const env: NodeJS.ProcessEnv = {
@@ -103,6 +103,10 @@ async function runTask(task: TaskDefinition) {
 
   if (task.company) {
     env.JULES_COMPANY = task.company;
+  }
+
+  if (process.env.PRODUCTION_MODE === 'true') {
+      env.PRODUCTION_MODE = 'true';
   }
 
   // Point to the new executor in src/scheduler/
@@ -133,6 +137,19 @@ async function runTask(task: TaskDefinition) {
   child.on('close', (code) => {
     activeChildren.delete(child);
     log(`Task ${task.name} exited with code ${code}`);
+
+    if (code !== 0 && process.env.PRODUCTION_MODE === 'true') {
+         const maxRetries = 3;
+         if (retryCount < maxRetries) {
+             const delay = Math.pow(2, retryCount) * 1000;
+             log(`[Production] Task ${task.name} failed. Retrying in ${delay}ms (Attempt ${retryCount + 1}/${maxRetries})...`);
+             setTimeout(() => {
+                 runTask(task, retryCount + 1);
+             }, delay);
+         } else {
+             log(`[Production] Task ${task.name} failed after ${maxRetries} retries. Escalating failure.`);
+         }
+    }
   });
 
   child.on('error', (err) => {
@@ -194,6 +211,9 @@ async function applySchedule() {
 
 async function main() {
   await log("Daemon starting...");
+  if (process.env.PRODUCTION_MODE === 'true') {
+      await log("PRODUCTION MODE: ENABLED (Retries Active)");
+  }
   await log(`CWD: ${CWD}`);
 
   await applySchedule();

@@ -1,0 +1,54 @@
+version: '3.8'
+
+services:
+  agency-operations:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: simple-biosphere:production
+    container_name: agency-daemon
+    environment:
+      - NODE_ENV=production
+      - PRODUCTION_MODE=true
+      - JULES_COMPANY=
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
+      - LINEAR_API_KEY=${LINEAR_API_KEY}
+      - HUBSPOT_ACCESS_TOKEN=${HUBSPOT_ACCESS_TOKEN}
+      - XERO_CLIENT_ID=${XERO_CLIENT_ID}
+      - XERO_CLIENT_SECRET=${XERO_CLIENT_SECRET}
+    volumes:
+      - .agent:/app/.agent
+      - ./sops:/app/sops
+    restart: always
+    command: ["npm", "run", "daemon"]
+
+  health-monitor:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: simple-biosphere:production
+    container_name: agency-health-monitor
+    environment:
+      - PORT=3000
+    volumes:
+      - .agent:/app/.agent
+    ports:
+      - "3000:3000"
+    restart: always
+    command: ["npx", "tsx", "src/mcp_servers/health_monitor/index.ts"]
+
+  agency-api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: simple-biosphere:production
+    container_name: agency-operations-api
+    environment:
+      - PORT=3001
+    volumes:
+      - .agent:/app/.agent
+    ports:
+      - "3001:3001"
+    restart: always
+    command: ["npx", "tsx", "src/mcp_servers/agency_operations/index.ts"]

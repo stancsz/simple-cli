@@ -9,6 +9,7 @@ import { existsSync } from "fs";
 import { readFile, mkdir, writeFile } from "fs/promises";
 import pc from "picocolors";
 import { getActiveSkill } from "../skills.js";
+import { loadCompanyProfile } from "../context/company-profile.js";
 
 // Simple logger replacement for clack
 const logger = {
@@ -29,6 +30,7 @@ export class Executor {
         timeout?: number;
         taskId?: string;
         taskName?: string;
+        company?: string;
     } = { yoloMode: true }
   ) {}
 
@@ -41,7 +43,7 @@ export class Executor {
     // Auto-start core servers
     try {
       const servers = this.mcp.listServers();
-      const coreServers = ["brain", "context_server", "aider", "claude"];
+      const coreServers = ["brain", "context_server", "aider", "claude", "company_context"];
       for (const name of coreServers) {
          if (servers.find((s) => s.name === name && s.status === "stopped")) {
             await this.mcp.startServer(name);
@@ -74,6 +76,29 @@ export class Executor {
           // we assume the agent has finished its turn.
           logger.info("Agent finished.");
           break;
+        }
+
+        // NEW: Inject RAG Context
+        if (this.options.company && input) {
+            try {
+              const client = this.mcp.getClient("company_context");
+              if (client) {
+                const result: any = await client.callTool({
+                  name: "query_company_context",
+                  arguments: { query: input, company_id: this.options.company }
+                });
+
+                if (result && result.content && result.content[0] && result.content[0].text) {
+                  const contextText = result.content[0].text;
+                  if (!contextText.includes("No context found") && !contextText.includes("No relevant documents")) {
+                    input = `[Company Context RAG]\n${contextText}\n\n[User Request]\n${input}`;
+                    logger.info(logger.dim(`[RAG] Injected company context.`));
+                  }
+                }
+              }
+            } catch (e: any) {
+               // ignore
+            }
         }
 
         ctx.history.push({ role: "user", content: input });
@@ -324,8 +349,6 @@ export async function executeTask(taskDef: TaskDefinition) {
 
     const registry = new Registry();
 
-    // await registry.loadProjectTools(cwd);
-
     const mcp = new MCP();
     const provider = createLLM();
 
@@ -333,7 +356,8 @@ export async function executeTask(taskDef: TaskDefinition) {
         yoloMode: taskDef.yoloMode ?? true,
         timeout: taskDef.autoDecisionTimeout,
         taskId: taskDef.id,
-        taskName: taskDef.name
+        taskName: taskDef.name,
+        company: taskDef.company // Pass company
     });
 
     const skill = await getActiveSkill(cwd);
@@ -348,6 +372,27 @@ export async function executeTask(taskDef: TaskDefinition) {
         } catch (e) {
             console.error(`Failed to load soul for agent ${taskDef.name}:`, e);
         }
+    }
+
+    // NEW: Load Static Company Context
+    if (taskDef.company) {
+      try {
+        const { CompanyLoader } = await import("../context/company_loader.js");
+        const loader = new CompanyLoader();
+        await loader.load(taskDef.company);
+        const profile = await loadCompanyProfile(taskDef.company);
+
+        if (profile) {
+            let profileContext = `\n\n## Company Context: ${profile.name}\n`;
+            if (profile.brandVoice) profileContext += `Brand Voice: ${profile.brandVoice}\n`;
+            if (profile.internalDocs?.length) profileContext += `Docs: ${profile.internalDocs.join(", ")}\n`;
+            if (profile.sops?.length) profileContext += `Recommended SOPs: ${profile.sops.join(", ")}\n`;
+            skill.systemPrompt += profileContext;
+            console.log(`[Executor] Loaded company profile for ${taskDef.company}`);
+        }
+      } catch (e: any) {
+        console.error(`[Executor] Failed to load company profile: ${e.message}`);
+      }
     }
 
     const ctx = new Context(cwd, skill);
