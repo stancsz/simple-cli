@@ -5,7 +5,7 @@ import { XeroClient } from "xero-node";
 // Global client instance to maintain token state across calls in memory
 let xeroClientInstance: XeroClient | null = null;
 
-const getXeroClient = async () => {
+export const getXeroClient = async () => {
   // If we have an instance and the token is valid, return it.
   if (xeroClientInstance) {
       const tokenSet = xeroClientInstance.readTokenSet();
@@ -83,7 +83,7 @@ const getXeroClient = async () => {
   return xeroClientInstance;
 };
 
-const getTenantId = async (xero: XeroClient) => {
+export const getTenantId = async (xero: XeroClient) => {
     // If tenant ID is provided in env, use it. Otherwise fetch connected tenants.
     if (process.env.XERO_TENANT_ID) {
         return process.env.XERO_TENANT_ID;

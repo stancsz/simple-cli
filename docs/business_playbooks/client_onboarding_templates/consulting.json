@@ -1,0 +1,24 @@
+{
+  "serviceType": "consulting",
+  "projectTemplate": {
+    "title": "Strategic Consulting Engagement",
+    "phases": [
+      {
+        "name": "Assessment",
+        "tasks": ["Current State Analysis", "Data Collection", "Stakeholder Workshops"]
+      },
+      {
+        "name": "Strategy Formulation",
+        "tasks": ["Gap Analysis", "Strategic Roadmap", "Recommendations"]
+      },
+      {
+        "name": "Implementation Planning",
+        "tasks": ["Action Plan", "Resource Allocation", "Risk Management"]
+      }
+    ]
+  },
+  "financial": {
+    "depositPercentage": 100,
+    "billingCycle": "upfront"
+  }
+}

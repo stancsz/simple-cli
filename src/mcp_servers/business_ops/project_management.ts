@@ -3,7 +3,7 @@ import { z } from "zod";
 
 const LINEAR_API_URL = "https://api.linear.app/graphql";
 
-async function fetchLinear(query: string, variables: Record<string, any> = {}) {
+export async function fetchLinear(query: string, variables: Record<string, any> = {}) {
   const apiKey = process.env.LINEAR_API_KEY;
   if (!apiKey) {
     throw new Error("LINEAR_API_KEY environment variable is not set.");
