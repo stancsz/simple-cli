@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { loadSchedule } from '../../src/daemon.js';
+import { loadMcpTasks } from '../../src/daemon.js';
 import { executeTask } from '../../src/scheduler/executor.js';
 import { TaskDefinition } from '../../src/interfaces/daemon.js';
 
@@ -44,8 +44,8 @@ describe('Scheduler HR Integration', () => {
     });
 
     it('should load the Weekly HR Review task by default', async () => {
-        const config = await loadSchedule();
-        const hrTask = config.tasks.find(t => t.id === 'weekly_hr_review');
+        const tasks = await loadMcpTasks();
+        const hrTask = tasks.find(t => t.id === 'weekly_hr_review');
         expect(hrTask).toBeDefined();
         expect(hrTask?.name).toBe('Weekly HR Review');
         expect(hrTask?.action).toBe('mcp.call_tool');

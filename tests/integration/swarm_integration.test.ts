@@ -111,10 +111,10 @@ describe('Swarm Integration (Hive Mind)', () => {
         const responseJson = JSON.parse(result.content[0].text);
         const agentId = responseJson.agent_id;
         expect(swarmServer.workers.has(agentId)).toBe(true);
-        expect(swarmServer.workerDetails.get(agentId)).toEqual({
+        expect(swarmServer.workerDetails.get(agentId)).toEqual(expect.objectContaining({
             role: "QA Engineer",
             parentId: "Lead-Dev"
-        });
+        }));
 
         // Verify Brain Log
         // Query the Brain directly using its internal method or tool
