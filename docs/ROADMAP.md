@@ -97,13 +97,15 @@ The roadmap is structured around the four anatomical layers of the Digital Biosp
     - ✅ Linear integration implemented and validated via end-to-end workflow test.
 
 ## Phase 22: Autonomous Client Lifecycle
-*Status: Proposed*
+*Status: In Progress*
 *Current Focus: Full Lifecycle Automation & Scaling*
 - [x] **Lead Generation**: Automate outreach and lead qualification.
     - ✅ Implemented core discovery, qualification, and outreach tools integrated with HubSpot and Brain.
 - [ ] **Self-Scaling Swarms**: Dynamic agent allocation per client demand.
 - [ ] **Project Delivery**: Automated milestone tracking and client reporting.
-- [ ] **Offboarding**: Secure project handover and archival.
+- [x] **Offboarding**: Secure project handover and archival.
+    - ✅ Implemented `offboarding_workflow` orchestrating CRM updates, data archival, and handover doc generation.
+    - ✅ Validated via `tests/integration/offboarding_validation.test.ts`.
 
 ## Legacy Achievements
 See [Legacy Roadmap](ROADMAP_LEGACY.md) for completed milestones of the previous "Simple CLI" era.
