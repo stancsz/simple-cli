@@ -270,3 +270,8 @@
     - [x] Integrate with HubSpot (Notes/Contacts) and Brain (Episodic Memory).
     - [x] Create SOP (`sops/lead_generation_workflow.md`).
     - [x] Validation: `tests/integration/lead_generation_validation.test.ts`.
+- [ ] **Self-Scaling Swarms**:
+    - [x] Implement `project-workload-monitor` and core scaling logic in `business_ops`.
+    - [x] Configurable scaling rules via `.agent/scaling_rules.json`.
+    - [x] Brain/Swarm reconciliation for idempotent scaling.
+    - [x] Create SOP (`sops/self_scaling_swarms_workflow.md`).

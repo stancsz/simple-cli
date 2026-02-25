@@ -102,6 +102,9 @@ The roadmap is structured around the four anatomical layers of the Digital Biosp
 - [x] **Lead Generation**: Automate outreach and lead qualification.
     - ✅ Implemented core discovery, qualification, and outreach tools integrated with HubSpot and Brain.
 - [ ] **Self-Scaling Swarms**: Dynamic agent allocation per client demand.
+    - ✅ Implemented `project-workload-monitor` and core scaling logic in `business_ops`.
+    - ✅ Configurable scaling rules via `.agent/scaling_rules.json`.
+    - ✅ Brain/Swarm reconciliation for idempotent scaling.
 - [ ] **Project Delivery**: Automated milestone tracking and client reporting.
 - [ ] **Offboarding**: Secure project handover and archival.
 

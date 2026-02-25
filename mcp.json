@@ -127,6 +127,18 @@
         "tool": "update_roadmap",
         "arguments": {}
       }
+    },
+    {
+      "id": "project-workload-monitor",
+      "name": "Project Workload Monitor",
+      "trigger": "cron",
+      "schedule": "0 * * * *",
+      "action": "mcp.call_tool",
+      "args": {
+        "server": "business_ops",
+        "tool": "monitor_projects",
+        "arguments": {}
+      }
     }
   ]
 }
