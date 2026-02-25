@@ -78,7 +78,7 @@ The roadmap is structured around the four anatomical layers of the Digital Biosp
     - ✅ VALIDATED: Full showcase and self-healing loop verified via `tests/integration/showcase_simulation.test.ts`.
 
 ## Phase 21: Autonomous Agency Operations
-*Status: In Progress*
+*Status: Completed*
 *Current Focus: End-to-End Business Automation*
 - [x] **Client Onboarding Workflow**: Automate full client intake and project setup (PR #538).
     - ✅ Implemented `client_onboarding_workflow` tool in `business_ops` MCP.
@@ -89,8 +89,12 @@ The roadmap is structured around the four anatomical layers of the Digital Biosp
 - [x] **CRM Synchronization**: Ensure real-time updates between operations and CRM.
     - ✅ Implemented idempotent `sync_contact_to_crm`, `sync_company_to_crm`, and `sync_deal_to_crm` tools in `business_ops`.
     - ✅ Integrated robust sync logic into `client_onboarding_workflow`.
-- [ ] **Project Management**: Auto-create and update Linear tasks based on agency activity.
-- [ ] **Validation**: Verify end-to-end agency workflows via integration tests.
+- [x] **Project Management**: Auto-create and update Linear tasks based on agency activity.
+    - ✅ Implemented `create_linear_project`, `create_linear_issue`, and `sync_deal_to_linear` tools.
+    - ✅ Integrated into `client_onboarding_workflow` for seamless project setup.
+- [x] **Validation**: Verify end-to-end agency workflows via integration tests.
+    - ✅ Validated full lifecycle (Onboarding -> CRM -> Linear -> Xero) via `tests/integration/agency_workflow_validation.test.ts`.
+    - ✅ Linear integration implemented and validated via end-to-end workflow test.
 
 ## Phase 22: Autonomous Client Lifecycle
 *Status: Proposed*

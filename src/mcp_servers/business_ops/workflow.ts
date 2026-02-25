@@ -1,12 +1,12 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
-import { fetchLinear } from "./project_management.js";
 import { getXeroClient, getTenantId } from "./xero_tools.js";
 import { exec } from "child_process";
 import { promisify } from "util";
 import { writeFile, mkdir, readFile } from "fs/promises";
 import { join } from "path";
-import { syncCompanyToHubSpot, syncContactToHubSpot } from "./crm.js";
+import { syncCompanyToHubSpot, syncContactToHubSpot, syncDealToHubSpot } from "./crm.js";
+import { syncDeal } from "./linear_service.js";
 
 const execAsync = promisify(exec);
 
@@ -56,6 +56,8 @@ export function registerWorkflowTools(server: McpServer) {
                 // 2. CRM Creation (HubSpot)
                 let companyId: string | undefined;
                 let contactId: string | undefined;
+                let dealId: string | undefined;
+
                 try {
                     // Sync Company
                     const companyProps: any = { name: clientName };
@@ -81,6 +83,17 @@ export function registerWorkflowTools(server: McpServer) {
                     contactId = contactResult.id;
                     logs.push(`${contactResult.action === 'created' ? 'Created' : 'Updated'} HubSpot Contact: ${contactId}`);
 
+                    // Sync Deal
+                    const dealProps: any = {
+                        dealname: `${clientName} - ${serviceType}`,
+                        amount: projectValue.toString(),
+                        pipeline: "default",
+                        dealstage: "appointmentscheduled"
+                    };
+                    const dealResult = await syncDealToHubSpot(dealProps);
+                    dealId = dealResult.id;
+                    logs.push(`${dealResult.action === 'created' ? 'Created' : 'Updated'} HubSpot Deal: ${dealId}`);
+
                 } catch (e: any) {
                     errors.push(`CRM Error: ${e.message}`);
                     throw e;
@@ -88,43 +101,19 @@ export function registerWorkflowTools(server: McpServer) {
 
                 // 3. Project Setup (Linear)
                 try {
-                    const teamId = process.env.LINEAR_TEAM_ID;
-                    if (!teamId) {
-                        logs.push("Skipping Linear setup: LINEAR_TEAM_ID not set.");
+                    if (dealId) {
+                        const syncResult = await syncDeal(
+                            dealId,
+                            clientName, // Using Client Name as Deal Name proxy for Project Name
+                            projectValue,
+                            "appointmentscheduled"
+                        );
+
+                        syncResult.logs.forEach(log => logs.push(log));
+                        logs.push(`Linear Project Synced: ${syncResult.project.url}`);
                     } else {
-                        const title = `Onboard Client: ${clientName}`;
-                        let description = `Service Type: ${serviceType}\nContact: ${contactName} <${contactEmail}>\nProject Value: $${projectValue}\n\n**Phases & Tasks:**\n`;
-
-                        if (template && template.projectTemplate && template.projectTemplate.phases) {
-                             description += `**Template: ${template.projectTemplate.title}**\n`;
-                             template.projectTemplate.phases.forEach((phase: any) => {
-                                description += `\n### ${phase.name}\n`;
-                                phase.tasks.forEach((task: string) => {
-                                    description += `- [ ] ${task}\n`;
-                                });
-                            });
-                        } else {
-                            description += `- [ ] Initial Meeting\n- [ ] Contract Signed\n- [ ] Access Grant`;
-                        }
-
-                        const issueData = await fetchLinear(`
-                            mutation IssueCreate($input: IssueCreateInput!) {
-                                issueCreate(input: $input) {
-                                    success
-                                    issue {
-                                        id
-                                        title
-                                        url
-                                    }
-                                }
-                            }
-                        `, { input: { title, teamId, description } });
-
-                        if (issueData.issueCreate.success) {
-                             logs.push(`Created Linear Issue: ${issueData.issueCreate.issue.url}`);
-                        }
+                        logs.push("Skipping Linear setup: No Deal ID available.");
                     }
-
                 } catch (e: any) {
                     errors.push(`Linear Error: ${e.message}`);
                 }

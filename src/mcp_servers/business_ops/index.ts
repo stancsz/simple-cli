@@ -10,6 +10,7 @@ import { registerWorkflowTools } from "./workflow.js";
 import { registerBillingTools } from "./tools/automated_billing.js";
 import { registerBillingWorkflow } from "./workflows/automated_billing_workflow.js";
 import { registerCrmTools } from "./crm.js";
+import { registerLinearIntegrationTools } from "./tools/linear_integration.js";
 
 // Load secrets from .env.agent
 const envPath = join(process.cwd(), ".env.agent");
@@ -31,6 +32,7 @@ registerWorkflowTools(server);
 registerBillingTools(server);
 registerBillingWorkflow(server);
 registerCrmTools(server);
+registerLinearIntegrationTools(server);
 
 // Start Server
 async function main() {
