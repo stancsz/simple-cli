@@ -1,5 +1,7 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
+import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/streamableHttp.js";
+import express from "express";
 import { z } from "zod";
 import { Engine, Context, Registry } from "../../engine/orchestrator.js";
 import { MCP } from "../../mcp.js";
@@ -11,7 +13,7 @@ export class SwarmServer {
   private server: McpServer;
   public workers: Map<string, Engine> = new Map();
   public workerContexts: Map<string, Context> = new Map();
-  public workerDetails: Map<string, { role: string; parentId?: string }> = new Map();
+  public workerDetails: Map<string, { role: string; parentId?: string; lastActive?: number }> = new Map();
   private mcp: MCP;
   private llm: ReturnType<typeof createLLM>;
 
@@ -41,6 +43,17 @@ export class SwarmServer {
     );
 
     this.server.tool(
+      "terminate_agent",
+      "Terminate an agent instance.",
+      {
+        agent_id: z.string().describe("The ID of the agent to terminate."),
+      },
+      async ({ agent_id }) => {
+        return await this.terminateAgent(agent_id);
+      }
+    );
+
+    this.server.tool(
       "negotiate_task",
       "Facilitate bidding/negotiation between multiple agents for task assignment.",
       {
@@ -58,6 +71,15 @@ export class SwarmServer {
       {},
       async () => {
         return await this.listAgents();
+      }
+    );
+
+    this.server.tool(
+      "get_agent_metrics",
+      "Get aggregated metrics of active agents.",
+      {},
+      async () => {
+        return await this.getAgentMetrics();
       }
     );
 
@@ -93,16 +115,9 @@ export class SwarmServer {
 
     const context = new Context(process.cwd(), skill as any);
 
-    // We do NOT add to workers map because this is a transient simulation.
-    // However, if we want to support sub-agent spawning inside simulation, we might need to.
-    // For now, let's keep it isolated.
-
     let finalResult = "Simulation failed or produced no output.";
     try {
-        // Pass the task as the initial prompt to start execution immediately
         await engine.run(context, `[Simulation Start] Task: ${task}`, { interactive: false, company: companyId });
-
-        // Extract result from history
         const lastMessage = context.history.filter(m => m.role === "assistant").pop();
         if (lastMessage) {
             finalResult = lastMessage.content;
@@ -125,16 +140,14 @@ export class SwarmServer {
   async spawnSubAgent(role: string, task: string, parentId: string, companyId?: string) {
     const agentId = `${role.toLowerCase().replace(/\s+/g, "-")}-${Date.now()}`;
 
-    // Initialize Engine for the new agent
     const llm = createLLM();
-    const mcp = new MCP(); // New MCP connection for the sub-agent
+    const mcp = new MCP();
     const registry = new Registry();
     const engine = new Engine(llm, registry, mcp);
 
     this.workers.set(agentId, engine);
 
-    // Setup Context
-    const baseSkill = builtinSkills.code; // Default base skill
+    const baseSkill = builtinSkills.code;
     const systemPrompt = `You are a ${role} (Agent ID: ${agentId}). Your goal is to complete the assigned task efficiently. Report back to your parent agent (${parentId}) when done.`;
 
     const skill = {
@@ -145,9 +158,8 @@ export class SwarmServer {
 
     const context = new Context(process.cwd(), skill as any);
     this.workerContexts.set(agentId, context);
-    this.workerDetails.set(agentId, { role, parentId });
+    this.workerDetails.set(agentId, { role, parentId, lastActive: Date.now() });
 
-    // Log to Brain (using SwarmServer's MCP instance)
     try {
         await this.mcp.init();
         const brainClient = this.mcp.getClient("brain");
@@ -168,14 +180,10 @@ export class SwarmServer {
         console.error(`[Swarm] Failed to log to Brain: ${(e as Error).message}`);
     }
 
-    // Execute initial task if provided?
-    // The tool description says "delegated task".
-    // Usually spawning implies starting the work.
-    // However, for testing, we might just want to spawn it.
-    // Let's run it briefly to initialize or acknowledge.
-
     try {
         await engine.run(context, `[System Init] You have been spawned. Task: ${task}. Acknowledge and start.`, { interactive: false, company: companyId });
+        const details = this.workerDetails.get(agentId);
+        if (details) details.lastActive = Date.now();
     } catch (e) {
         console.error(`[Swarm] Agent ${agentId} failed to start: ${(e as Error).message}`);
     }
@@ -190,6 +198,45 @@ export class SwarmServer {
     };
   }
 
+  async terminateAgent(agentId: string) {
+      if (!this.workers.has(agentId)) {
+          return { content: [{ type: "text" as const, text: `Agent ${agentId} not found.` }] };
+      }
+      this.workers.delete(agentId);
+      this.workerContexts.delete(agentId);
+      this.workerDetails.delete(agentId);
+
+      return { content: [{ type: "text" as const, text: `Agent ${agentId} terminated.` }] };
+  }
+
+  async getAgentMetrics() {
+      const agents = Array.from(this.workerDetails.entries()).map(([id, details]) => ({
+          id,
+          ...details,
+          idleSeconds: (Date.now() - (details.lastActive || 0)) / 1000
+      }));
+
+      const metrics = {
+          total_agents: agents.length,
+          active_agents: agents.length,
+          agents: agents
+      };
+
+      return {
+          content: [{ type: "text" as const, text: JSON.stringify(metrics, null, 2) }]
+      };
+  }
+
+  async listAgents() {
+      const agents = Array.from(this.workerDetails.entries()).map(([id, details]) => ({
+          id,
+          ...details
+      }));
+      return {
+          content: [{ type: "text" as const, text: JSON.stringify(agents, null, 2) }]
+      };
+  }
+
   async negotiateTask(agentIds: string[], taskDescription: string) {
     const bids: Array<{ agentId: string; cost: number; quality: number; rationale: string }> = [];
 
@@ -202,7 +249,6 @@ export class SwarmServer {
             continue;
         }
 
-        // Ask for a bid
         const bidPrompt = `[Negotiation] New Task Available: "${taskDescription}".
         Please provide a bid in the following JSON format:
         {
@@ -212,18 +258,18 @@ export class SwarmServer {
         }
         Base your bid on your role and capabilities.`;
 
-        // We need to capture the response. engine.run doesn't return the text directly in all versions,
-        // but it modifies context.history.
         const initialHistoryLength = context.history.length;
 
         try {
             await engine.run(context, bidPrompt, { interactive: false });
 
+            const details = this.workerDetails.get(agentId);
+            if (details) details.lastActive = Date.now();
+
             const newMessages = context.history.slice(initialHistoryLength);
             const lastMessage = newMessages.filter(m => m.role === "assistant").pop();
 
             if (lastMessage) {
-                // Parse JSON from response
                 const content = lastMessage.content;
                 const jsonMatch = content.match(/\{[\s\S]*\}/);
                 if (jsonMatch) {
@@ -251,8 +297,6 @@ export class SwarmServer {
         };
     }
 
-    // Select Winner (Simple Heuristic: Score = Quality - Cost/2)
-    // Higher score wins.
     bids.sort((a, b) => {
         const scoreA = a.quality - (a.cost / 2);
         const scoreB = b.quality - (b.cost / 2);
@@ -261,7 +305,6 @@ export class SwarmServer {
 
     const winner = bids[0];
 
-    // Log negotiation to Brain
     try {
         await this.mcp.init();
         const brainClient = this.mcp.getClient("brain");
@@ -295,20 +338,33 @@ export class SwarmServer {
     };
   }
 
-  async listAgents() {
-      const agents = Array.from(this.workerDetails.entries()).map(([id, details]) => ({
-          id,
-          ...details
-      }));
-      return {
-          content: [{ type: "text" as const, text: JSON.stringify(agents, null, 2) }]
-      };
-  }
-
   async run() {
-    const transport = new StdioServerTransport();
-    await this.server.connect(transport);
-    console.error("Swarm MCP Server running on stdio");
+    if (process.env.PORT) {
+        const port = parseInt(process.env.PORT, 10);
+        const app = express();
+        const transport = new StreamableHTTPServerTransport();
+        await this.server.connect(transport);
+
+        app.all("/sse", async (req, res) => {
+          await transport.handleRequest(req, res);
+        });
+
+        app.post("/messages", async (req, res) => {
+          await transport.handleRequest(req, res);
+        });
+
+        app.get("/health", (req, res) => {
+          res.sendStatus(200);
+        });
+
+        app.listen(port, () => {
+          console.error(`Swarm MCP Server running on http://localhost:${port}/sse`);
+        });
+    } else {
+        const transport = new StdioServerTransport();
+        await this.server.connect(transport);
+        console.error("Swarm MCP Server running on stdio");
+    }
   }
 }
 

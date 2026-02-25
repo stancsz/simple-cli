@@ -83,6 +83,68 @@ spec:
           resources:
             {{- toYaml .Values.healthMonitor.resources | nindent 12 }}
 
+        # Sidecar: Swarm
+        - name: swarm
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          command: ["node", "dist/mcp_servers/swarm/index.js"]
+          env:
+            - name: PORT
+              value: "{{ .Values.swarm.port }}"
+            - name: COMPANY
+              value: "{{ .Values.company }}"
+          ports:
+            - containerPort: {{ .Values.swarm.port }}
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: {{ .Values.swarm.port }}
+            initialDelaySeconds: 15
+            periodSeconds: 20
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: {{ .Values.swarm.port }}
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          volumeMounts:
+            - name: agent-storage
+              mountPath: /app/.agent
+          resources:
+            {{- toYaml .Values.swarm.resources | nindent 12 }}
+
+        # Sidecar: Elastic Swarm
+        - name: elastic-swarm
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          command: ["node", "dist/mcp_servers/elastic_swarm/index.js"]
+          env:
+            - name: PORT
+              value: "{{ .Values.elasticSwarm.port }}"
+            - name: SWARM_URL
+              value: "http://localhost:{{ .Values.swarm.port }}/sse"
+            - name: COMPANY
+              value: "{{ .Values.company }}"
+          ports:
+            - containerPort: {{ .Values.elasticSwarm.port }}
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: {{ .Values.elasticSwarm.port }}
+            initialDelaySeconds: 15
+            periodSeconds: 20
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: {{ .Values.elasticSwarm.port }}
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          volumeMounts:
+            - name: agent-storage
+              mountPath: /app/.agent
+          resources:
+            {{- toYaml .Values.elasticSwarm.resources | nindent 12 }}
+
       volumes:
         - name: mcp-config
           configMap:

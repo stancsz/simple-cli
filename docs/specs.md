@@ -262,7 +262,7 @@ To move towards AGI-like behavior, the system must not just *learn* but *rewrite
 *   **Safety**: Updates to the Core Logic require a **Dual-Verification** (Supervisor + Human Approval).
 *   **Goal**: If the agent realizes its `learnings.json` lookup is inefficient, it can write a new vector-based adapter and hot-swap it.
 
-### 7.2 "Dreaming" (Offline Simulation)
+### 7.2 "Dreaming" (Offline Simulation) & Elastic Swarms
 *   **Concept**: When idle (no user tasks), the Orchestrator enters a simulation state to resolve past failures.
 *   **Mechanism**:
     1.  **Trigger**: Scheduled cron task (default: 2 AM) invokes `dreaming` MCP server.
@@ -272,6 +272,15 @@ To move towards AGI-like behavior, the system must not just *learn* but *rewrite
         - If successful: The old failure episode is removed/archived, and a new episode is stored with the solution, tagged `resolved_via_dreaming: true`.
         - If failed again: The attempt is logged in the `simulation_attempts` field of the episode for future reference.
 *   **Benefit**: The agent autonomously improves its success rate by leveraging downtime to solve previously insurmountable problems ("learning while sleeping").
+
+### 7.3 Elastic Swarms (Self-Replicating Scale)
+*   **Concept**: The agent system autonomously scales its computational capacity based on real-time demand, mimicking biological swarms.
+*   **Mechanism**:
+    1.  **Monitoring**: The `elastic_swarm` daemon (MCP server) monitors the `JobDelegator` queue length and active agent metrics.
+    2.  **Scaling Up**: If `pending_tasks > 5`, the system spawns new sub-agents (via `swarm.spawn_subagent`) to parallelize execution.
+    3.  **Scaling Down**: Agents that remain idle for >300s are automatically terminated (via `swarm.terminate_agent`) to conserve resources.
+    4.  **Infrastructure Scaling**: Integrated with Kubernetes HPA to scale the underlying pods based on queue length custom metrics.
+*   **Benefit**: Enables the "Business OS" to handle burst workloads (e.g., end-of-month reporting, viral marketing campaigns) without human intervention.
 
 ---
 

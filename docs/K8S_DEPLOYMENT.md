@@ -64,3 +64,24 @@ npm run test tests/integration/k8s_production_validation.test.ts
 *   **Liveness/Readiness Probes:** Configured for all containers to ensure traffic is only sent to healthy pods.
 *   **Resource Limits:** CPU/Memory requests and limits are defined in `values.yaml`.
 *   **Persistence:** `ReadWriteMany` access mode is recommended for scaling, though `ReadWriteOnce` works for single replicas.
+
+## Elastic Swarms & Autoscaling
+
+To support high-concurrency workloads, the Agent StatefulSet now includes two additional sidecars:
+
+*   **Containers:**
+    *   `swarm`: Runs the Swarm MCP server (Port 3005). Manages agent lifecycle and negotiation.
+    *   `elastic-swarm`: Runs the Elastic Swarm Daemon (Port 3006). Monitors queue length and scales agents.
+
+### Horizontal Pod Autoscaler (HPA)
+
+The deployment is configured with a HorizontalPodAutoscaler (`hpa.yaml`) to automatically scale the number of Agent replicas based on demand.
+
+*   **Metrics:**
+    *   CPU Utilization (Default: 80%)
+    *   Memory Utilization (Default: 80%)
+    *   Custom Metric: `queue_length` (Target: 5 pending tasks per replica). *Requires Prometheus Adapter.*
+
+*   **Scaling Policy:**
+    *   Min Replicas: 1
+    *   Max Replicas: 5 (Configurable via `values.yaml`)

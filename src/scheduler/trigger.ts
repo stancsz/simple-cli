@@ -23,13 +23,12 @@ export async function handleTaskTrigger(task: TaskDefinition): Promise<{ exitCod
     env.JULES_COMPANY = task.company;
   }
 
-  // Use run_task in src/daemon/ directory
-  // We need to go up one level from src/scheduler to src/daemon
-  const runTaskScript = join(__dirname, '..', 'daemon', `run_task${ext}`);
+  // Use executor in src/scheduler/ directory
+  const executorScript = join(__dirname, `executor${ext}`);
 
   const args = isTs
-       ? ['--loader', 'ts-node/esm', runTaskScript]
-       : [runTaskScript];
+       ? ['--loader', 'ts-node/esm', executorScript]
+       : [executorScript];
 
   return new Promise((resolve, reject) => {
     const child = spawn('node', args, {

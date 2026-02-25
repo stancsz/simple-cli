@@ -13,6 +13,12 @@ data:
         "health_monitor": {
           "url": "http://localhost:{{ .Values.healthMonitor.port }}/sse"
         },
+        "swarm": {
+          "url": "http://localhost:{{ .Values.swarm.port }}/sse"
+        },
+        "elastic_swarm": {
+          "url": "http://localhost:{{ .Values.elasticSwarm.port }}/sse"
+        },
         "filesystem": {
           "command": "node",
           "args": ["/app/node_modules/@modelcontextprotocol/server-filesystem/dist/index.js", "/app"]

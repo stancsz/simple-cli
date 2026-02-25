@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file.
 
+## [Unreleased]
+### Added
+- **Elastic Swarms**: Implemented auto-scaling agent system (`src/mcp_servers/elastic_swarm/`).
+- **Kubernetes HPA**: Added HorizontalPodAutoscaler configuration for agent replicas based on queue length.
+- **Swarm Improvements**: Added `terminate_agent` and `get_agent_metrics` tools to `swarm` MCP server.
+- **Daemon Refactor**: Refactored `daemon.ts` to use `Scheduler` class and persist state for monitoring.
+
 ## [1.0.0] - 2025-01-26
 
 ### Validated

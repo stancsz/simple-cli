@@ -114,3 +114,8 @@ Updates the status of a task or ticket in the project management system.
 3.  **Phase 3:** Implement secure OAuth flow and secret management for production credentials.
     - **Status:** Xero integration implemented using `XERO_ACCESS_TOKEN`.
 4.  **Phase 4:** Enable autonomous "Business Logic" loops via the Brain and Scheduler (e.g., monthly financial reporting).
+5.  **Phase 19 (Elastic Swarms):** Implement self-replicating agents that scale based on real-time demand.
+    - **Monitoring:** The `elastic_swarm` MCP server continuously monitors task queues and active agent metrics.
+    - **Auto-Scaling:** Automatically spawns new sub-agents (via `swarm` server) when pending tasks exceed thresholds (e.g., > 5 tasks).
+    - **Resource Optimization:** Terminates idle agents (e.g., > 300s inactivity) to reduce costs.
+    - **Infrastructure Integration:** Leverages Kubernetes Horizontal Pod Autoscaler (HPA) to scale the underlying compute resources based on queue length metrics.

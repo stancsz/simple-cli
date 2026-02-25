@@ -19,12 +19,18 @@ export class Scheduler extends EventEmitter {
   private stateFile: string;
   private delegator: JobDelegator;
   private pendingTasks: Map<string, TaskDefinition> = new Map();
+  private mcpTasks: TaskDefinition[] = [];
 
   constructor(private agentDir: string) {
     super();
     this.scheduleFile = join(agentDir, 'scheduler.json');
     this.stateFile = join(agentDir, 'scheduler_state.json');
     this.delegator = new JobDelegator(agentDir);
+  }
+
+  public async setMcpTasks(tasks: TaskDefinition[]) {
+    this.mcpTasks = tasks;
+    await this.applySchedule();
   }
 
   async start() {
@@ -246,7 +252,26 @@ export class Scheduler extends EventEmitter {
     this.taskFileWatchers = [];
 
     const config = await this.loadSchedule();
-    const tasks = config.tasks || [];
+    const schedulerTasks = config.tasks || [];
+
+    // Merge tasks: mcpTasks take precedence, but we also include schedulerTasks
+    // Use map to unique by ID
+    const taskMap = new Map<string, TaskDefinition>();
+
+    // Add default tasks first (if any logic needed, but ensureHRTask etc handle defaults in file)
+    // Actually ensureHRTask modifies scheduler.json, so they are in schedulerTasks.
+
+    // Add scheduler.json tasks
+    for (const t of schedulerTasks) {
+        taskMap.set(t.id, t);
+    }
+
+    // Add mcp.json tasks (override)
+    for (const t of this.mcpTasks) {
+        taskMap.set(t.id, t);
+    }
+
+    const tasks = Array.from(taskMap.values());
 
     console.log(`Loaded ${tasks.length} tasks.`);
 
