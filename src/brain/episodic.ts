@@ -15,7 +15,7 @@ export interface PastEpisode {
   vector: number[];
   simulation_attempts?: string[];
   resolved_via_dreaming?: boolean;
-  dreaming_outcomes?: string;
+  dreaming_outcomes?: string; // JSON string containing negotiation data, swarm composition, and solution patterns
   tokens?: number;
   duration?: number;
   _distance?: number;

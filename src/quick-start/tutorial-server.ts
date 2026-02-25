@@ -36,6 +36,7 @@ export class TutorialServer {
               this.company,
               undefined, // simulation_attempts
               false,     // resolved_via_dreaming
+              undefined, // dreaming_outcomes
               undefined, // id
               Math.floor(Math.random() * 1000) + 100, // Random tokens
               Math.floor(Math.random() * 5000) + 1000 // Random duration

@@ -120,6 +120,7 @@ export class DreamingServer {
                          role = negJson.winning_bid.role;
                          strategy = negJson.strategy || strategy;
                          negotiationData = negJson;
+                         console.error(`[Dreaming] Swarm Intelligence negotiated role: ${role}`);
                      }
                  } catch (e) {
                      console.warn("Failed to parse negotiation result", e);

@@ -216,7 +216,8 @@ export class SwarmServer {
                     role: result.role,
                     rationale: result.rationale
                 },
-                strategy: result.strategy
+                strategy: result.strategy,
+                candidates: result.candidates || []
             }, null, 2) }]
         };
     }

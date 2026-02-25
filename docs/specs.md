@@ -270,7 +270,8 @@ To move towards AGI-like behavior, the system must not just *learn* but *rewrite
     3.  **Negotiation (Swarm Intelligence)**:
         - The system analyzes the failure context.
         - Calls `swarm.negotiate_task` in `simulation_mode`.
-        - Determines the optimal agent role (e.g., "React Performance Specialist", "Database Tuning Expert") and strategy.
+        - **Hive Mind Deliberation**: The Swarm simulates a collaborative negotiation, generating multiple candidate agent roles and strategies (e.g., "React Performance Specialist" vs "System Architect").
+        - Selects the optimal candidate based on a scoring heuristic.
     4.  **Simulation**: Spawns a specialized sub-agent (or swarm via `opencowork`) with the negotiated role to retry the task using the new strategy.
     5.  **Resolution**:
         - If successful: The old failure episode is removed/archived, and a new episode is stored with the solution, tagged `resolved_via_dreaming: true` and including `dreaming_outcomes` (negotiation data).
