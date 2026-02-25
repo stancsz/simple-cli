@@ -62,6 +62,17 @@ export class SwarmServer {
     );
 
     this.server.tool(
+      "terminate_agent",
+      "Terminate an active swarm agent.",
+      {
+        agent_id: z.string().describe("The ID of the agent to terminate."),
+      },
+      async ({ agent_id }) => {
+        return await this.terminateAgent(agent_id);
+      }
+    );
+
+    this.server.tool(
       "run_simulation",
       "Run a task simulation synchronously using a specialized agent.",
       {
@@ -303,6 +314,42 @@ export class SwarmServer {
       return {
           content: [{ type: "text" as const, text: JSON.stringify(agents, null, 2) }]
       };
+  }
+
+  async terminateAgent(agentId: string) {
+    if (!this.workers.has(agentId)) {
+        return {
+            content: [{ type: "text" as const, text: `Agent ${agentId} not found.` }]
+        };
+    }
+
+    this.workers.delete(agentId);
+    this.workerContexts.delete(agentId);
+    this.workerDetails.delete(agentId);
+
+    // Log to Brain
+    try {
+        await this.mcp.init();
+        const brainClient = this.mcp.getClient("brain");
+        if (brainClient) {
+            await brainClient.callTool({
+                name: "log_experience",
+                arguments: {
+                    taskId: `terminate-${agentId}`,
+                    task_type: "terminate_agent",
+                    agent_used: "swarm-orchestrator",
+                    outcome: "success",
+                    summary: `Terminated agent ${agentId}`
+                }
+            });
+        }
+    } catch (e) {
+        // Ignore
+    }
+
+    return {
+        content: [{ type: "text" as const, text: `Agent ${agentId} terminated successfully.` }]
+    };
   }
 
   async run() {

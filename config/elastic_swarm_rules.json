@@ -1,0 +1,20 @@
+[
+  {
+    "metric": "xero.invoices.pending",
+    "threshold": 10,
+    "action": "spawn",
+    "agent_template": "billing_agent",
+    "count": 2,
+    "cooldown_threshold": 5,
+    "cooldown_action": "terminate"
+  },
+  {
+    "metric": "linear.issues.bugs",
+    "threshold": 5,
+    "action": "spawn",
+    "agent_template": "support_agent",
+    "count": 1,
+    "cooldown_threshold": 2,
+    "cooldown_action": "terminate"
+  }
+]

@@ -114,3 +114,31 @@ Updates the status of a task or ticket in the project management system.
 3.  **Phase 3:** Implement secure OAuth flow and secret management for production credentials.
     - **Status:** Xero integration implemented using `XERO_ACCESS_TOKEN`.
 4.  **Phase 4:** Enable autonomous "Business Logic" loops via the Brain and Scheduler (e.g., monthly financial reporting).
+
+## Elastic Scaling Architecture
+
+The Business OS includes an "Elastic Swarm" capability (`src/mcp_servers/elastic_swarm/`) that automatically scales workforce based on demand.
+
+### Components
+1.  **Demand Monitor**: Polls business metrics (e.g., pending invoices in Xero, bugs in Linear).
+2.  **Scaler Engine**: Evaluates metrics against rules defined in `config/elastic_swarm_rules.json`.
+3.  **Swarm Orchestrator**: Spawns or terminates agents via the Hive Mind protocol.
+
+### Configuration
+Scaling rules are defined in `config/elastic_swarm_rules.json`. Example:
+
+```json
+{
+  "metric": "xero.invoices.pending",
+  "threshold": 10,
+  "action": "spawn",
+  "agent_template": "billing_agent",
+  "count": 2,
+  "cooldown_threshold": 5,
+  "cooldown_action": "terminate"
+}
+```
+
+### Tools
+- `scale_agents`: Manually trigger a scaling cycle.
+- `get_swarm_status`: View active spawned agents.
