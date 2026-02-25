@@ -145,7 +145,7 @@ async function generateHandover(clientId: string) {
     `;
 
     const response = await llm.generate("You are a professional technical writer.", [{ role: "user", content: prompt }]);
-    const handoverContent = response.message;
+    const handoverContent = response.message || response.raw || "No content generated.";
 
     const handoverPath = join(archiveDir, "HANDOVER.md");
     await writeFile(handoverPath, handoverContent);
