@@ -232,7 +232,7 @@ export async function logNoteToHubSpot(contactId: string, noteBody: string): Pro
                     to: { id: contactId },
                     types: [
                         {
-                            associationCategory: "HUBSPOT_DEFINED",
+                            associationCategory: "HUBSPOT_DEFINED" as any,
                             associationTypeId: 202 // Note to Contact
                         }
                     ]
