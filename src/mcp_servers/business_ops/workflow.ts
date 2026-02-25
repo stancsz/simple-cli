@@ -1,23 +1,14 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
-import { Client as HubSpotClient } from "@hubspot/api-client";
 import { fetchLinear } from "./project_management.js";
 import { getXeroClient, getTenantId } from "./xero_tools.js";
 import { exec } from "child_process";
 import { promisify } from "util";
 import { writeFile, mkdir, readFile } from "fs/promises";
 import { join } from "path";
+import { syncCompanyToHubSpot, syncContactToHubSpot } from "./crm.js";
 
 const execAsync = promisify(exec);
-
-// Helper to get HubSpot Client
-const getHubSpotClient = () => {
-    const accessToken = process.env.HUBSPOT_ACCESS_TOKEN;
-    if (!accessToken) {
-        throw new Error("HUBSPOT_ACCESS_TOKEN environment variable is not set.");
-    }
-    return new HubSpotClient({ accessToken });
-};
 
 export function registerWorkflowTools(server: McpServer) {
     server.tool(
@@ -66,20 +57,15 @@ export function registerWorkflowTools(server: McpServer) {
                 let companyId: string | undefined;
                 let contactId: string | undefined;
                 try {
-                    const hubspot = getHubSpotClient();
-
-                    // Create Company
+                    // Sync Company
                     const companyProps: any = { name: clientName };
                     if (domain) companyProps.domain = domain;
 
-                    const companyResp = await hubspot.crm.companies.basicApi.create({
-                        properties: companyProps,
-                        associations: []
-                    });
-                    companyId = companyResp.id;
-                    logs.push(`Created HubSpot Company: ${companyId}`);
+                    const companyResult = await syncCompanyToHubSpot(companyProps);
+                    companyId = companyResult.id;
+                    logs.push(`${companyResult.action === 'created' ? 'Created' : 'Updated'} HubSpot Company: ${companyId}`);
 
-                    // Create Contact
+                    // Sync Contact
                     const nameParts = contactName.split(' ');
                     const firstname = nameParts[0];
                     const lastname = nameParts.length > 1 ? nameParts.slice(1).join(' ') : undefined;
@@ -91,12 +77,9 @@ export function registerWorkflowTools(server: McpServer) {
                     };
                     if (lastname) contactProps.lastname = lastname;
 
-                    const contactResp = await hubspot.crm.contacts.basicApi.create({
-                        properties: contactProps,
-                        associations: []
-                    });
-                    contactId = contactResp.id;
-                    logs.push(`Created HubSpot Contact: ${contactId}`);
+                    const contactResult = await syncContactToHubSpot(contactProps);
+                    contactId = contactResult.id;
+                    logs.push(`${contactResult.action === 'created' ? 'Created' : 'Updated'} HubSpot Contact: ${contactId}`);
 
                 } catch (e: any) {
                     errors.push(`CRM Error: ${e.message}`);

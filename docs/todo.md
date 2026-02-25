@@ -246,3 +246,8 @@
     - [x] Automated Workflow (`automated_billing_workflow`).
     - [x] Integration Tests (Xero Sandbox).
     - [x] Playbook Documentation (`docs/business_playbooks/automated_billing.md`).
+- [x] **CRM Synchronization**:
+    - [x] Implement core sync tools (`sync_contact`, `sync_deal`, `sync_company`).
+    - [x] Integrate with `client_onboarding_workflow`.
+    - [x] Integration Tests (HubSpot Mock).
+    - [x] Playbook Documentation (`docs/business_playbooks/crm_synchronization.md`).

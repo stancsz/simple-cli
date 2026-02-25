@@ -51,10 +51,16 @@ vi.mock("@hubspot/api-client", () => ({
     Client: class {
         crm = {
             companies: {
-                basicApi: { create: mockCreateCompany }
+                basicApi: { create: mockCreateCompany, update: vi.fn() },
+                searchApi: { doSearch: vi.fn().mockResolvedValue({ results: [] }) }
             },
             contacts: {
-                basicApi: { create: mockCreateContact }
+                basicApi: { create: mockCreateContact, update: vi.fn() },
+                searchApi: { doSearch: vi.fn().mockResolvedValue({ results: [] }) }
+            },
+            deals: {
+                basicApi: { create: vi.fn(), update: vi.fn() },
+                searchApi: { doSearch: vi.fn().mockResolvedValue({ results: [] }) }
             }
         }
     }
