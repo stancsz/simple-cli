@@ -48,6 +48,16 @@ When things go wrong, the system fixes itself.
 - **Action**: The **Showcase Healer** detects the failure, diagnoses it as transient using LLM reasoning, and autonomously triggers a retry via the SOP Engine.
 - **Result**: The system recovers without human intervention, and the healing action is logged for auditability.
 
+### 7. **Autonomous Client Onboarding (Agency Ops)**
+The agency can scale its client base autonomously.
+- **Scenario**: A new lead comes in via the website.
+- **Action**: The `client_onboarding_workflow` tool is triggered.
+    - **Step 1**: It creates an isolated **Company Context** (Brain, Filesystem, Settings).
+    - **Step 2**: It syncs the new client to **HubSpot CRM**.
+    - **Step 3**: It sets up a **Linear Project** with the appropriate template (e.g., "Web Dev").
+    - **Step 4**: It drafts an initial invoice in **Xero**.
+- **Result**: A new client is fully onboarded and ready for work in under 60 seconds.
+
 ---
 
 ## 🚀 Deployment Instructions

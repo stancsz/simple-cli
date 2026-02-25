@@ -1,0 +1,24 @@
+{
+  "serviceType": "marketing",
+  "projectTemplate": {
+    "title": "Digital Marketing Campaign",
+    "phases": [
+      {
+        "name": "Audit",
+        "tasks": ["SEO Audit", "Social Media Review", "Competitor Analysis"]
+      },
+      {
+        "name": "Campaign Setup",
+        "tasks": ["Ad Creative", "Copywriting", "Targeting Setup"]
+      },
+      {
+        "name": "Execution",
+        "tasks": ["Launch Campaign", "Monitor Performance", "Weekly Reporting"]
+      }
+    ]
+  },
+  "financial": {
+    "depositPercentage": 0,
+    "billingCycle": "monthly_retainer"
+  }
+}

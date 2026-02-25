@@ -1,0 +1,28 @@
+{
+  "serviceType": "web_dev",
+  "projectTemplate": {
+    "title": "Web Development Project",
+    "phases": [
+      {
+        "name": "Discovery",
+        "tasks": ["Requirement Gathering", "Stakeholder Interviews", "Tech Stack Selection"]
+      },
+      {
+        "name": "Design",
+        "tasks": ["Wireframing", "UI Design", "Prototyping"]
+      },
+      {
+        "name": "Development",
+        "tasks": ["Frontend Setup", "Backend API", "Database Schema", "Integration"]
+      },
+      {
+        "name": "Deployment",
+        "tasks": ["CI/CD Pipeline", "Staging Deploy", "Production Launch"]
+      }
+    ]
+  },
+  "financial": {
+    "depositPercentage": 50,
+    "billingCycle": "milestone"
+  }
+}

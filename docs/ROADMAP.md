@@ -80,7 +80,9 @@ The roadmap is structured around the four anatomical layers of the Digital Biosp
 ## Phase 21: Autonomous Agency Operations
 *Status: In Progress*
 *Current Focus: End-to-End Business Automation*
-- [ ] **Client Onboarding Workflow**: Automate full client intake and project setup (PR #538).
+- [x] **Client Onboarding Workflow**: Automate full client intake and project setup (PR #538).
+    - ✅ Implemented `client_onboarding_workflow` tool in `business_ops` MCP.
+    - ✅ Orchestrates Company Context, CRM (HubSpot), Project (Linear), and Finance (Xero).
 - [ ] **Automated Billing**: Implement invoice generation and payment tracking.
 - [ ] **CRM Synchronization**: Ensure real-time updates between operations and CRM.
 - [ ] **Project Management**: Auto-create and update Linear tasks based on agency activity.
