@@ -42,6 +42,17 @@ export interface CompanyProperties {
     [key: string]: any;
 }
 
+// Helper to sanitize properties by removing undefined/null values
+function sanitizeProperties(props: Record<string, any>): Record<string, string> {
+    const sanitized: Record<string, string> = {};
+    for (const [key, value] of Object.entries(props)) {
+        if (value !== undefined && value !== null) {
+            sanitized[key] = String(value);
+        }
+    }
+    return sanitized;
+}
+
 /**
  * Syncs a company to HubSpot (Create or Update).
  * Idempotent based on domain or name.
@@ -86,13 +97,13 @@ export async function syncCompanyToHubSpot(props: CompanyProperties): Promise<{ 
             // Update existing
             const companyId = searchResult.results[0].id;
             await hubspot.crm.companies.basicApi.update(companyId, {
-                properties: otherProps // We don't update name/domain usually unless forced, but here we just update other props
+                properties: sanitizeProperties(otherProps)
             });
             return { id: companyId, action: "updated" };
         } else {
             // Create new
             const createResult = await hubspot.crm.companies.basicApi.create({
-                properties: { name, domain, ...otherProps },
+                properties: sanitizeProperties({ name, domain, ...otherProps }),
                 associations: []
             });
             return { id: createResult.id, action: "created" };
@@ -137,13 +148,13 @@ export async function syncContactToHubSpot(props: ContactProperties): Promise<{ 
             // Update existing
             const contactId = searchResult.results[0].id;
             await hubspot.crm.contacts.basicApi.update(contactId, {
-                properties: otherProps
+                properties: sanitizeProperties(otherProps)
             });
             return { id: contactId, action: "updated" };
         } else {
             // Create new
             const createResult = await hubspot.crm.contacts.basicApi.create({
-                properties: { email, ...otherProps },
+                properties: sanitizeProperties({ email, ...otherProps }),
                 associations: []
             });
             return { id: createResult.id, action: "created" };
@@ -188,13 +199,13 @@ export async function syncDealToHubSpot(props: DealProperties): Promise<{ id: st
             // Update existing
             const dealId = searchResult.results[0].id;
             await hubspot.crm.deals.basicApi.update(dealId, {
-                properties: otherProps
+                properties: sanitizeProperties(otherProps)
             });
             return { id: dealId, action: "updated" };
         } else {
             // Create new
             const createResult = await hubspot.crm.deals.basicApi.create({
-                properties: { dealname, ...otherProps },
+                properties: sanitizeProperties({ dealname, ...otherProps }),
                 associations: []
             });
             return { id: createResult.id, action: "created" };
