@@ -16,7 +16,7 @@ export class Negotiator {
       taskDescription: string,
       existingAgents: { id: string; role: string }[] = [],
       simulationMode: boolean = false
-  ): Promise<{ winnerId?: string; role: string; rationale: string; strategy?: string }> {
+  ): Promise<{ winnerId?: string; role: string; rationale: string; strategy?: string; candidates?: any[] }> {
 
     if (simulationMode) {
         return this.negotiateSimulation(taskDescription);
@@ -38,20 +38,24 @@ export class Negotiator {
     };
   }
 
-  private async negotiateSimulation(task: string): Promise<{ role: string; rationale: string; strategy: string }> {
+  private async negotiateSimulation(task: string): Promise<{ role: string; rationale: string; strategy: string; candidates: any[] }> {
       const systemPrompt = `You are the Swarm Intelligence Orchestrator.
       Analyze the following failed task to determine the optimal agent expertise required to fix it.
 
-      Determine:
-      1. The best specialized role name (e.g., "React Component Specialist", "Postgres Query Optimizer", "DevOps Deployment Engineer").
-      2. A brief rationale for why this role is needed.
-      3. A collaboration strategy (e.g., "Analyze logs then patch code", "Reproduce locally then fix").
+      Simulate a "Hive Mind" deliberation by proposing 3 distinct specialized agent candidates who could solve this.
+      Then select the single best candidate.
 
       Output JSON format:
       {
-        "role": "...",
-        "rationale": "...",
-        "strategy": "..."
+        "candidates": [
+          { "role": "...", "strategy": "...", "score": 85 },
+          { "role": "...", "strategy": "...", "score": 92 }
+        ],
+        "winner": {
+          "role": "...",
+          "rationale": "...",
+          "strategy": "..."
+        }
       }`;
 
       const userPrompt = `Task/Failure Context: "${task}"`;
@@ -78,17 +82,28 @@ export class Negotiator {
               }
           }
 
+          const winner = result.winner || {};
+
+          // Fallback if structure is flat (backward compatibility or LLM hallucination)
+          if (!result.winner && result.role) {
+              winner.role = result.role;
+              winner.rationale = result.rationale;
+              winner.strategy = result.strategy;
+          }
+
           return {
-              role: result.role || "General Troubleshooter",
-              rationale: result.rationale || "General fix attempt.",
-              strategy: result.strategy || "Standard debugging."
+              role: winner.role || "General Troubleshooter",
+              rationale: winner.rationale || "General fix attempt.",
+              strategy: winner.strategy || "Standard debugging.",
+              candidates: result.candidates || []
           };
       } catch (e) {
           console.error("Error in negotiation LLM:", e);
           return {
               role: "Senior Developer",
               rationale: "Fallback due to negotiation error.",
-              strategy: "Standard fix."
+              strategy: "Standard fix.",
+              candidates: []
           };
       }
   }
