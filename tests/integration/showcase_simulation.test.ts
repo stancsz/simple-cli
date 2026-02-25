@@ -12,7 +12,8 @@ const mockGenerate = vi.fn().mockImplementation(async (system: string, history: 
     const next = mockLLMQueue.shift();
     if (!next) return { thought: "End of script", tool: "none", args: {}, message: "Done" };
     if (typeof next === 'function') return await next(system, history);
-    return next;
+    if (typeof next === 'object' && next.thought) return next; // Return structured response
+    return { thought: "Generated response", tool: "none", args: {}, message: JSON.stringify(next) }; // Default to stringify if simple object
 });
 
 const mockEmbed = vi.fn().mockImplementation(async (text: string) => {
@@ -23,6 +24,19 @@ vi.mock("../../src/llm.js", () => {
     return {
         createLLM: () => ({ embed: mockEmbed, generate: mockGenerate }),
         LLM: class { embed = mockEmbed; generate = mockGenerate; },
+    };
+});
+
+// Mock Episodic Memory to avoid DB
+const mockEpisodic = {
+    recall: vi.fn().mockResolvedValue([]),
+    store: vi.fn().mockResolvedValue(undefined),
+    getRecentEpisodes: vi.fn().mockResolvedValue([])
+};
+
+vi.mock("../../src/brain/episodic.js", () => {
+    return {
+        EpisodicMemory: vi.fn(() => mockEpisodic)
     };
 });
 
@@ -45,11 +59,12 @@ vi.mock("../../src/scheduler/trigger.js", () => ({
     killAllChildren: vi.fn()
 }));
 
-// Real Classes
+// Real Classes/Functions
 import { JobDelegator } from "../../src/scheduler/job_delegator.js";
 import { CompanyContextServer } from "../../src/mcp_servers/company_context.js";
 import { SOPEngineServer } from "../../src/mcp_servers/sop_engine/index.js";
 import { BrainServer } from "../../src/mcp_servers/brain/index.js";
+import { healShowcase } from "../../src/mcp_servers/showcase_healer/healer.js";
 
 describe("Showcase Simulation Integration Test", () => {
     let testRoot: string;
@@ -62,6 +77,11 @@ describe("Showcase Simulation Integration Test", () => {
         vi.clearAllMocks();
         resetMocks();
         mockLLMQueue.length = 0;
+
+        // Reset episodic mocks
+        mockEpisodic.recall.mockResolvedValue([]);
+        mockEpisodic.store.mockResolvedValue(undefined);
+        mockEpisodic.getRecentEpisodes.mockResolvedValue([]);
 
         testRoot = await mkdtemp(join(tmpdir(), "showcase-test-"));
         vi.spyOn(process, "cwd").mockReturnValue(testRoot);
@@ -88,16 +108,12 @@ describe("Showcase Simulation Integration Test", () => {
         const mcp = new MockMCP();
 
         // 1. Setup Company Context
-        // In the real demo, we manually place the context file or assume it's loaded.
-        // Here we simulate the state where the company is ready.
         const companyId = "showcase-corp";
         const companyDir = join(testRoot, ".agent", "companies", companyId);
         await mkdir(companyDir, { recursive: true });
         await writeFile(join(companyDir, "context.json"), JSON.stringify({ name: "Showcase Corp" }));
 
         // 2. Setup SOP
-        // In the demo, this file is in demos/simple-cli-showcase/docs/showcase_sop.md
-        // We put it in the test root docs/sops/
         const sopContent = `# Showcase SOP\n1. Initialize Project\n2. Deploy`;
         await writeFile(join(testRoot, "docs", "sops", "showcase_sop.md"), sopContent);
 
@@ -125,9 +141,8 @@ describe("Showcase Simulation Integration Test", () => {
         expect(sopRes.content[0].text).toContain("SOP 'Showcase SOP' executed successfully");
 
         // 4. Ghost Mode Task (Morning Standup)
-        // We simulate the trigger logic
         mockLLMQueue.push(async (task: any) => {
-             console.log(`[Mock] Executing task: ${task.name}`);
+             // console.log(`[Mock] Executing task: ${task.name}`);
         });
 
         await delegator.delegateTask({
@@ -146,7 +161,7 @@ describe("Showcase Simulation Integration Test", () => {
 
         // 5. HR Loop (Daily Review)
         mockLLMQueue.push(async (task: any) => {
-             console.log(`[Mock] Executing task: ${task.name}`);
+             // console.log(`[Mock] Executing task: ${task.name}`);
         });
 
         await delegator.delegateTask({
@@ -159,8 +174,67 @@ describe("Showcase Simulation Integration Test", () => {
             company: companyId
         });
 
-        // Verify ghost_logs for HR Review
         const logs2 = await readdir(join(testRoot, ".agent", "ghost_logs"));
         expect(logs2.length).toBe(2);
+    });
+
+    it("should activate self-healing loop on failure", async () => {
+        // Mock the MCP adapter passed to healShowcase
+        const mockMcpAdapter = {
+            callTool: vi.fn().mockImplementation(async (server, tool, args) => {
+                if (server === "health_monitor" && tool === "get_latest_showcase_run") {
+                    return {
+                        content: [{
+                            text: JSON.stringify({
+                                id: "failed-run-123",
+                                success: false,
+                                timestamp: new Date().toISOString(),
+                                error: "Network timeout during SOP execution",
+                                steps: []
+                            })
+                        }]
+                    };
+                }
+                if (server === "sop_engine" && tool === "sop_execute") {
+                    return { content: [{ text: "SOP Retry Successful" }] };
+                }
+                return { content: [{ text: "Mock response" }] };
+            })
+        };
+
+        // Prepare LLM to decide "retry_sop"
+        mockLLMQueue.push({
+             action: "retry_sop",
+             reason: "Transient network error detected",
+             sop_name: "showcase_sop"
+        });
+
+        // Call Healer
+        const result = await healShowcase({
+            mcp: mockMcpAdapter as any,
+            llm: { generate: mockGenerate } as any,
+            episodic: mockEpisodic as any
+        });
+
+        expect(result).toContain("Healed: retry_sop");
+        expect(result).toContain("Executed retry for showcase_sop");
+
+        // Verify Tool Calls
+        expect(mockMcpAdapter.callTool).toHaveBeenCalledWith("health_monitor", "get_latest_showcase_run", {});
+        expect(mockMcpAdapter.callTool).toHaveBeenCalledWith("sop_engine", "sop_execute", {
+            name: "showcase_sop",
+            input: "Healer retry"
+        });
+
+        // Verify Episode Logged
+        expect(mockEpisodic.store).toHaveBeenCalledWith(
+            expect.stringContaining("heal_showcase_failed-run-123"),
+            "Heal showcase failure",
+            expect.stringContaining("Action: retry_sop"),
+            expect.any(Array),
+            undefined, undefined, undefined, undefined, undefined, undefined, undefined,
+            "showcase_healing_episode",
+            "failed-run-123"
+        );
     });
 });
