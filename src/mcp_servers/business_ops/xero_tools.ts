@@ -249,6 +249,48 @@ export function registerXeroTools(server: McpServer) {
       }
   );
 
+  // Tool: Create Contact (xero_create_contact)
+  server.tool(
+    "xero_create_contact",
+    "Create a new contact in Xero.",
+    {
+        name: z.string().describe("Contact name."),
+        email: z.string().optional().describe("Email address."),
+        accountNumber: z.string().optional().describe("Account number."),
+        taxNumber: z.string().optional().describe("Tax number.")
+    },
+    async ({ name, email, accountNumber, taxNumber }) => {
+        try {
+            const xero = await getXeroClient();
+            const tenantId = await getTenantId(xero);
+
+            const contact: any = {
+                name
+            };
+            if (email) contact.emailAddress = email;
+            if (accountNumber) contact.accountNumber = accountNumber;
+            if (taxNumber) contact.taxNumber = taxNumber;
+
+            const response = await xero.accountingApi.createContacts(tenantId, { contacts: [contact] });
+
+            return {
+                content: [{
+                    type: "text",
+                    text: JSON.stringify(response.body.contacts?.[0], null, 2)
+                }]
+            };
+        } catch (e: any) {
+             return {
+                content: [{
+                    type: "text",
+                    text: `Error creating contact: ${e.message}`
+                }],
+                isError: true
+            };
+        }
+    }
+  );
+
   // Tool: Get Balance Sheet
   server.tool(
       "get_balance_sheet",

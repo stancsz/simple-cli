@@ -60,36 +60,6 @@ export function registerTools(server: McpServer) {
     }
   );
 
-  // Tool: Create CRM Contact
-  server.tool(
-    "create_crm_contact",
-    "Create a new contact in the CRM (e.g., HubSpot/Salesforce).",
-    {
-      name: z.string().describe("Full name of the contact."),
-      email: z.string().email().describe("Email address."),
-      company: z.string().optional().describe("Company name."),
-      status: z.enum(["lead", "prospect", "customer"]).default("lead").describe("Initial status.")
-    },
-    async ({ name, email, company, status }) => {
-      // Mock Creation
-      const id = `crm_${Math.floor(Math.random() * 10000)}`;
-      const contact: CRMContact = {
-        id,
-        name,
-        email,
-        company: company || "Unknown",
-        status
-      };
-
-      return {
-        content: [{
-          type: "text",
-          text: `Successfully created contact: ${name} (ID: ${id})`
-        }]
-      };
-    }
-  );
-
   // Tool: Update Project Status
   server.tool(
     "update_project_status",
