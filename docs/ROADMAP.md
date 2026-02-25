@@ -37,6 +37,18 @@ The roadmap is structured around the four anatomical layers of the Digital Biosp
     - ✅ Business Integrations validated via automated playbook tests.
 - [x] Elastic Swarms (Auto-scaling based on demand).
 
+## Phase VI: Visual & Desktop Agency
+*Current Focus: Polyglot Desktop Orchestrator*
+- [x] **Core Architecture**: Implemented `DesktopOrchestrator` with `DesktopDriver` interface.
+- [x] **Smart Router**: LLM-based routing between Stagehand, Skyvern, and Computer Use.
+- [x] **Drivers**:
+    - [x] Stagehand (Local Browser).
+    - [x] Skyvern (Vision-based Navigation).
+- [x] **Validation**:
+    - [x] Validated drivers via `tests/integration/desktop_validation.test.ts`.
+    - [x] Validated Visual Quality Gate with aesthetic scoring.
+    - [x] Established production SOPs for desktop workflows.
+
 ## Phase 8: Recursive Evolution
 *Current Focus: Self-Improvement*
 - [x] **Core Update**: Implement secure protocol for updating `engine.ts` (Implemented with Dual-Verification Safety Protocol).

@@ -194,6 +194,8 @@
 - [x] **Validation**:
     - [x] Integration tests for routing and driver selection.
     - [x] **Visual Quality Gate**: Implemented automated aesthetic validation and retry logic.
+    - [x] **Production Hardening**: Validated via `tests/integration/desktop_validation.test.ts` and `docs/DESKTOP_AGENCY_VALIDATION.md`.
+    - [x] **SOP Verification**: Created production workflows in `sops/desktop_workflows/`.
 
 ## Sprint 4: Autonomous Pipeline (✅ Completed)
 
