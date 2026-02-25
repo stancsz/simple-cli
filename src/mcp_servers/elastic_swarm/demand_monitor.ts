@@ -72,7 +72,7 @@ export class DemandMonitor {
             let value = 0;
             try {
                 if (rule.metric === "xero.invoices.pending") {
-                    const res = await client.callTool({
+                    const res: any = await client.callTool({
                         name: "xero_get_invoices",
                         arguments: { statuses: ["DRAFT", "SUBMITTED"] }
                     });
@@ -84,7 +84,7 @@ export class DemandMonitor {
                         }
                     }
                 } else if (rule.metric === "linear.issues.bugs") {
-                     const res = await client.callTool({
+                     const res: any = await client.callTool({
                         name: "linear_list_issues",
                         arguments: { state: "Bug" }
                     });

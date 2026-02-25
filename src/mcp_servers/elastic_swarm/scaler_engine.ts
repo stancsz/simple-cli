@@ -121,7 +121,7 @@ export class ScalerEngine {
                  return null;
              }
 
-             const res = await client.callTool({
+             const res: any = await client.callTool({
                  name: "spawn_subagent",
                  arguments: {
                      role: template.name,
