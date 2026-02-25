@@ -1,6 +1,8 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { scale_agents_for_project } from '../../src/mcp_servers/business_ops/tools/self_scaling_swarms.js';
-import { MCP } from '../../src/mcp.js'; // Import to check if mocked
+import { MCP } from '../../src/mcp.js';
+import * as fs from 'fs';
+import * as fsPromises from 'fs/promises';
 
 // Hoist mocks
 const mocks = vi.hoisted(() => {
@@ -28,7 +30,6 @@ vi.mock('../../src/mcp_servers/business_ops/linear_service.js', () => ({
 }));
 
 // Mock MCP
-// We use the path relative to the test file, which resolves to src/mcp.js
 vi.mock('../../src/mcp.js', () => ({
     MCP: vi.fn(() => ({
         init: mocks.mockMcpInstance.init,
@@ -38,6 +39,14 @@ vi.mock('../../src/mcp.js', () => ({
             return null;
         }
     }))
+}));
+
+// Mock FS
+vi.mock('fs', () => ({
+    existsSync: vi.fn()
+}));
+vi.mock('fs/promises', () => ({
+    readFile: vi.fn()
 }));
 
 describe('Self-Scaling Swarms Validation', () => {
@@ -51,8 +60,24 @@ describe('Self-Scaling Swarms Validation', () => {
         mocks.mockSwarmClient.callTool.mockResolvedValue({
             content: [{ type: 'text', text: '[]' }]
         });
-
         mocks.mockLinearClient.issues.mockResolvedValue({ nodes: [] });
+
+        // Mock FS for scaling rules
+        (fs.existsSync as any).mockImplementation((path: string) => path.includes('scaling_rules.json'));
+        (fsPromises.readFile as any).mockResolvedValue(JSON.stringify({
+            rules: [
+                {
+                    condition: "open_high_priority_issues > 3",
+                    action: "ensure_minimum_agents",
+                    count: 2,
+                    role: "Senior Developer",
+                    priority: 2
+                }
+            ],
+            max_agents_per_project: 5,
+            min_agents_per_project: 0,
+            scale_down_inactive_hours: 48
+        }));
     });
 
     it('should spawn agents when high priority issues exceed threshold', async () => {
