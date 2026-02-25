@@ -164,6 +164,16 @@ After running the demo, check `.agent/ghost_logs/`:
 > - **Proposal**: Increase default timeout for `git push` operations.
 > - **Status**: PENDING APPROVAL.
 
+### 4. Automated Daily Validation
+The showcase is validated daily via a GitHub Actions workflow.
+
+- **Check Results**: Visit the Health Monitor dashboard (`http://localhost:3000`) and see the "Showcase Validation" panel.
+- **Run Manually**:
+    ```bash
+    npx tsx scripts/showcase-runner.ts
+    ```
+- **See Logs**: Check `.agent/health_monitor/showcase_runs.json` or CI artifacts.
+
 ---
 
 ## 🏢 Managing Multiple Companies

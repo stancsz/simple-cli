@@ -23,6 +23,36 @@
         </ul>
     </div>
 
+    <div class="panel" v-if="showcaseRuns.length > 0">
+         <h3>Showcase Validation</h3>
+         <table id="showcase-table">
+             <thead>
+                 <tr>
+                     <th>Status</th>
+                     <th>Timestamp</th>
+                     <th>Duration (ms)</th>
+                     <th>Steps</th>
+                     <th>Artifacts</th>
+                 </tr>
+             </thead>
+             <tbody>
+                 <tr v-for="run in showcaseRuns" :key="run.id">
+                     <td :style="{ color: run.success ? 'green' : 'red', fontWeight: 'bold' }">{{ run.success ? 'PASS' : 'FAIL' }}</td>
+                     <td>{{ new Date(run.timestamp).toLocaleString() }}</td>
+                     <td>{{ run.total_duration_ms }}</td>
+                     <td>
+                         <ul class="steps-list" style="margin: 0; padding-left: 1em;">
+                             <li v-for="step in run.steps" :key="step.name">
+                                 <span :style="{ color: step.status === 'success' ? 'green' : 'red' }">●</span> {{ step.name }}
+                             </li>
+                         </ul>
+                     </td>
+                     <td>{{ run.artifact_count }}</td>
+                 </tr>
+             </tbody>
+         </table>
+    </div>
+
     <div class="panel">
          <h3>Company Details</h3>
          <table id="metrics-table">
@@ -58,6 +88,7 @@ export default {
         return {
             metrics: {},
             alerts: [],
+            showcaseRuns: [],
             summary: null,
             chartOptions: { responsive: true }
         }
@@ -122,6 +153,11 @@ export default {
             } catch (e) {
                 this.summary = "Failed to load summary.";
             }
+
+            try {
+                const showcaseRes = await fetch('/api/dashboard/showcase-runs');
+                this.showcaseRuns = await showcaseRes.json();
+            } catch (e) { console.error(e); }
         }
     }
 }
