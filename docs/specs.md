@@ -275,6 +275,7 @@ To move towards AGI-like behavior, the system must not just *learn* but *rewrite
     4.  **Simulation**: Spawns a specialized sub-agent (or swarm via `opencowork`) with the negotiated role to retry the task using the new strategy.
     5.  **Resolution**:
         - If successful: The old failure episode is removed/archived, and a new episode is stored with the solution, tagged `resolved_via_dreaming: true` and including `dreaming_outcomes` (negotiation data).
+        - **Swarm Pattern Storage**: A distinct memory entry of type `swarm_negotiation_pattern` is created, capturing the successful role/strategy pair and linking it to the failure context. This enables the Brain to recall optimal collaboration patterns for similar future problems.
         - If failed again: The attempt and negotiation result are logged in the `simulation_attempts` field for future reference.
 *   **Benefit**: The agent autonomously improves its success rate by leveraging downtime and specialized sub-agents to solve previously insurmountable problems ("learning while sleeping").
 

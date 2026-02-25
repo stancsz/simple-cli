@@ -90,6 +90,9 @@ describe("Dreaming Swarm Integration", () => {
         // 6. Mock Brain: Store New Episode
         mockCallTool.mockResolvedValueOnce({ content: [] });
 
+        // 7. Mock Brain: Store Negotiation Pattern
+        mockCallTool.mockResolvedValueOnce({ content: [] });
+
         // Execute
         const result = await server.startSession(1);
 
@@ -126,8 +129,8 @@ describe("Dreaming Swarm Integration", () => {
         // 3: negotiate_task
         // 4: run_simulation
         // 5: brain_delete_episode
-        // 6: brain_store
-        expect(mockCallTool).toHaveBeenLastCalledWith(expect.objectContaining({
+        // 6: brain_store (Resolved Episode)
+        expect(mockCallTool).toHaveBeenNthCalledWith(6, expect.objectContaining({
             name: "brain_store",
             arguments: expect.objectContaining({
                 resolved_via_dreaming: true,
@@ -135,10 +138,20 @@ describe("Dreaming Swarm Integration", () => {
             })
         }));
 
-        // Also verify candidates are in dreaming_outcomes
-        const lastCallArgs = mockCallTool.mock.calls[5][0];
-        expect(lastCallArgs.arguments.dreaming_outcomes).toContain("candidates");
-        expect(lastCallArgs.arguments.dreaming_outcomes).toContain("Generalist");
+        // 7: brain_store (Negotiation Pattern)
+        expect(mockCallTool).toHaveBeenNthCalledWith(7, expect.objectContaining({
+            name: "brain_store",
+            arguments: expect.objectContaining({
+                type: "swarm_negotiation_pattern",
+                related_episode_id: "fail-123",
+                dreaming_outcomes: expect.stringContaining("Bug Fix Specialist")
+            })
+        }));
+
+        // Also verify candidates are in dreaming_outcomes (from resolved episode)
+        const resolvedCallArgs = mockCallTool.mock.calls[5][0];
+        expect(resolvedCallArgs.arguments.dreaming_outcomes).toContain("candidates");
+        expect(resolvedCallArgs.arguments.dreaming_outcomes).toContain("Generalist");
 
         // Verify result text
         expect(result.content[0].text).toContain("Fixed failure task-abc using role Bug Fix Specialist");

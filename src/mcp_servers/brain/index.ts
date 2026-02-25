@@ -79,8 +79,10 @@ export class BrainServer {
         id: z.string().optional().describe("The unique ID of the episode (optional, for updates/overrides)."),
         tokens: z.number().optional().describe("Total tokens used for this task."),
         duration: z.number().optional().describe("Duration of the task in milliseconds."),
+        type: z.string().optional().describe("The type of memory (e.g., 'task' or 'swarm_negotiation_pattern')."),
+        related_episode_id: z.string().optional().describe("ID of a related episode (e.g., the failure episode for a negotiation pattern)."),
       },
-      async ({ taskId, request, solution, artifacts, company, simulation_attempts, resolved_via_dreaming, dreaming_outcomes, id, tokens, duration }) => {
+      async ({ taskId, request, solution, artifacts, company, simulation_attempts, resolved_via_dreaming, dreaming_outcomes, id, tokens, duration, type, related_episode_id }) => {
         let artifactList: string[] = [];
         if (artifacts) {
           try {
@@ -99,7 +101,7 @@ export class BrainServer {
                 simAttempts = undefined;
             }
         }
-        await this.episodic.store(taskId, request, solution, artifactList, company, simAttempts, resolved_via_dreaming, dreaming_outcomes, id, tokens, duration);
+        await this.episodic.store(taskId, request, solution, artifactList, company, simAttempts, resolved_via_dreaming, dreaming_outcomes, id, tokens, duration, type, related_episode_id);
         return {
           content: [{ type: "text", text: "Memory stored successfully." }],
         };
@@ -127,9 +129,10 @@ export class BrainServer {
         limit: z.number().optional().default(3).describe("Max number of results."),
         company: z.string().optional().describe("The company/client identifier for namespacing."),
         format: z.enum(["text", "json"]).optional().default("text").describe("Output format: 'text' (default) or 'json'."),
+        type: z.string().optional().describe("Filter by memory type (e.g., 'swarm_negotiation_pattern')."),
       },
-      async ({ query, limit = 3, company, format }) => {
-        const results = await this.episodic.recall(query, limit, company);
+      async ({ query, limit = 3, company, format, type }) => {
+        const results = await this.episodic.recall(query, limit, company, type);
         if (results.length === 0) {
           return { content: [{ type: "text", text: "No relevant memories found." }] };
         }
