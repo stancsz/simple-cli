@@ -101,7 +101,10 @@ The roadmap is structured around the four anatomical layers of the Digital Biosp
 *Current Focus: Full Lifecycle Automation & Scaling*
 - [x] **Lead Generation**: Automate outreach and lead qualification.
     - ✅ Implemented core discovery, qualification, and outreach tools integrated with HubSpot and Brain.
-- [ ] **Self-Scaling Swarms**: Dynamic agent allocation per client demand.
+- [x] **Self-Scaling Swarms**: Dynamic agent allocation per client demand.
+    - ✅ Implemented `scaling_engine` with `evaluate_demand` and `scale_swarm` tools.
+    - ✅ Configurable scaling thresholds based on Linear issue count and Brain context.
+    - ✅ Validated via integration tests (`tests/integration/scaling_engine_validation.test.ts`).
 - [x] **Project Delivery**: Automated milestone tracking and client reporting.
     - ✅ Implemented `track_milestone_progress` for Linear & Brain sync.
     - ✅ Implemented `generate_client_report` for automated Markdown reporting with Git integration.
