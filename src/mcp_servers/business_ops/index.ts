@@ -12,6 +12,7 @@ import { registerBillingWorkflow } from "./workflows/automated_billing_workflow.
 import { registerCrmTools } from "./crm.js";
 import { registerLinearIntegrationTools } from "./tools/linear_integration.js";
 import { registerLeadGenerationTools } from "./tools/lead_generation.js";
+import { registerScalingSwarmsTools } from "./tools/scaling_swarms.js";
 
 // Load secrets from .env.agent
 const envPath = join(process.cwd(), ".env.agent");
@@ -35,6 +36,7 @@ registerBillingWorkflow(server);
 registerCrmTools(server);
 registerLinearIntegrationTools(server);
 registerLeadGenerationTools(server);
+registerScalingSwarmsTools(server);
 
 // Start Server
 async function main() {

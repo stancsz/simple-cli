@@ -270,3 +270,9 @@
     - [x] Integrate with HubSpot (Notes/Contacts) and Brain (Episodic Memory).
     - [x] Create SOP (`sops/lead_generation_workflow.md`).
     - [x] Validation: `tests/integration/lead_generation_validation.test.ts`.
+- [x] **Self-Scaling Swarms**:
+    - [x] Create `src/mcp_servers/business_ops/tools/scaling_swarms.ts`.
+    - [x] Implement `monitor_workload`, `scale_swarm_up`, `scale_swarm_down`.
+    - [x] Integrate with Scheduler (10-min interval).
+    - [x] Create SOP (`sops/swarm_scaling_workflow.md`).
+    - [x] Validation: `tests/integration/scaling_swarms_validation.test.ts`.

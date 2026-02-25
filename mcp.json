@@ -127,6 +127,18 @@
         "tool": "update_roadmap",
         "arguments": {}
       }
+    },
+    {
+      "id": "swarm-scaling-monitor",
+      "name": "Swarm Scaling Monitor",
+      "trigger": "cron",
+      "schedule": "*/10 * * * *",
+      "action": "mcp.call_tool",
+      "args": {
+        "server": "business_ops",
+        "tool": "monitor_workload",
+        "arguments": {}
+      }
     }
   ]
 }
