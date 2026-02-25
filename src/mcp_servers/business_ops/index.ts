@@ -7,6 +7,8 @@ import { registerTools } from "./tools.js";
 import { registerXeroTools } from "./xero_tools.js";
 import { registerProjectManagementTools } from "./project_management.js";
 import { registerWorkflowTools } from "./workflow.js";
+import { registerBillingTools } from "./tools/automated_billing.js";
+import { registerBillingWorkflow } from "./workflows/automated_billing_workflow.js";
 
 // Load secrets from .env.agent
 const envPath = join(process.cwd(), ".env.agent");
@@ -25,6 +27,8 @@ registerTools(server);
 registerXeroTools(server);
 registerProjectManagementTools(server);
 registerWorkflowTools(server);
+registerBillingTools(server);
+registerBillingWorkflow(server);
 
 // Start Server
 async function main() {
