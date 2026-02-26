@@ -5,6 +5,7 @@ import { createServer } from 'net';
 import pc from 'picocolors';
 
 const HEALTH_MONITOR_PORT = 3004;
+const AGENCY_DASHBOARD_PORT = 3002;
 
 function checkPort(port: number): Promise<boolean> {
     return new Promise((resolve) => {
@@ -30,6 +31,58 @@ function openUrl(url: string) {
 }
 
 export async function dashboardCommand() {
+    const args = process.argv.slice(2);
+    const isAgency = args.includes('--agency');
+
+    if (isAgency) {
+        console.log(pc.cyan(`Initializing Agency Dashboard (Phase 23)...`));
+        const port = AGENCY_DASHBOARD_PORT;
+        const url = `http://localhost:${port}`;
+
+        const isRunning = await checkPort(port);
+        if (isRunning) {
+            console.log(pc.green(`Agency Dashboard is running. Opening dashboard at ${url}`));
+            openUrl(url);
+            return;
+        }
+
+        console.log(pc.yellow(`Agency Dashboard not running on port ${port}. Starting it...`));
+
+        const distPath = join(process.cwd(), "dist", "mcp_servers", "agency_dashboard", "index.js");
+        const srcPath = join(process.cwd(), "src", "mcp_servers", "agency_dashboard", "index.ts");
+
+        let command = "node";
+        let spawnArgs: string[] = [];
+
+        if (existsSync(distPath)) {
+            spawnArgs = [distPath];
+        } else if (existsSync(srcPath)) {
+            command = "npx";
+            spawnArgs = ["tsx", srcPath];
+        } else {
+            console.error(pc.red("Could not find agency_dashboard server script."));
+            return;
+        }
+
+        const env = { ...process.env, PORT: String(port) };
+
+        const subprocess = spawn(command, spawnArgs, {
+            env,
+            stdio: 'inherit',
+            detached: false
+        });
+
+        await new Promise(resolve => setTimeout(resolve, 3000));
+
+        console.log(pc.green(`Agency Dashboard server started.`));
+        console.log(pc.dim(`Press Ctrl+C to stop.`));
+
+        openUrl(url);
+
+        await new Promise(() => {}); // Keep alive
+        return;
+    }
+
     console.log(pc.cyan(`Initializing Jules Operational Dashboard...`));
 
     const isRunning = await checkPort(HEALTH_MONITOR_PORT);
@@ -48,13 +101,13 @@ export async function dashboardCommand() {
     const srcPath = join(process.cwd(), "src", "mcp_servers", "health_monitor", "index.ts");
 
     let command = "node";
-    let args: string[] = [];
+    let spawnArgs: string[] = [];
 
     if (existsSync(distPath)) {
-        args = [distPath];
+        spawnArgs = [distPath];
     } else if (existsSync(srcPath)) {
         command = "npx";
-        args = ["tsx", srcPath];
+        spawnArgs = ["tsx", srcPath];
     } else {
         console.error(pc.red("Could not find health_monitor server script."));
         return;
@@ -62,7 +115,7 @@ export async function dashboardCommand() {
 
     const env = { ...process.env, PORT: String(HEALTH_MONITOR_PORT) };
 
-    const subprocess = spawn(command, args, {
+    const subprocess = spawn(command, spawnArgs, {
         env,
         stdio: 'inherit',
         detached: false

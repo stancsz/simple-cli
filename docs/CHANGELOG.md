@@ -2,6 +2,15 @@
 
 All notable changes to this project will be documented in this file.
 
+## [Phase 23] - 2026-02-26
+
+### Added
+- **Agency Dashboard**: Unified operational dashboard (Phase 23).
+  - MCP Server at `src/mcp_servers/agency_dashboard/`.
+  - React UI at `scripts/dashboard/ui/`.
+  - CLI command `simple dashboard --agency`.
+  - Panels for Swarm Fleet, Financial KPIs, System Health, Client Health.
+
 ## [1.0.0] - 2025-01-26
 
 ### Validated

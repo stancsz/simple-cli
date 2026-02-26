@@ -289,5 +289,5 @@
     - [x] Create SOP (`sops/client_offboarding_workflow.md`).
     - [x] Validation: `tests/integration/client_offboarding_validation.test.ts`.
 
-## Phase 23
+## Phase 23 (Completed)
 (See [Roadmap](ROADMAP.md))
