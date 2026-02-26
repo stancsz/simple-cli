@@ -93,7 +93,7 @@ export class DataAggregator {
         const client = await this.connectToBusinessOps();
         if (!client) return { error: "Business Ops unavailable" };
         try {
-            const result = await client.callTool({
+            const result: any = await client.callTool({
                 name: "get_fleet_status",
                 arguments: {}
             });
@@ -132,7 +132,7 @@ export class DataAggregator {
         if (!client) return { error: "Health Monitor unavailable" };
         try {
              // get_health_report
-             const result = await client.callTool({
+             const result: any = await client.callTool({
                  name: "get_health_report",
                  arguments: { timeframe: "last_hour" }
              });
