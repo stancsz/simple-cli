@@ -13,7 +13,7 @@
     - [x] Devin (full-stack development) - 2 days
     - [x] Picoclaw (reasoning framework) - 1 day
     - [x] Cursor (IDE integration) - 1 day
-- [x] **Digest Phase**: Standardize via MCP servers
+    - [x] **Digest Phase**: Standardize via MCP servers
     - [x] Created `src/mcp_servers/` architecture
     - [x] Implemented MCP protocol for all integrated frameworks
     - [x] Added framework-specific optimizations (streaming, batching)
@@ -288,3 +288,6 @@
     - [x] Integrate with Linear, HubSpot, Xero, Brain, and Git.
     - [x] Create SOP (`sops/client_offboarding_workflow.md`).
     - [x] Validation: `tests/integration/client_offboarding_validation.test.ts`.
+
+## Phase 23
+(See [Roadmap](ROADMAP.md))
