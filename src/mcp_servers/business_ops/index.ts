@@ -17,6 +17,8 @@ import { registerClientOffboardingTools } from "./tools/client_offboarding.js";
 import { registerScalingTools } from "../scaling_engine/scaling_orchestrator.js";
 import { registerSwarmFleetManagementTools } from "./tools/swarm_fleet_management.js";
 import { registerPredictiveHealthTools } from "./tools/predictive_health.js";
+import { registerMarketAnalysisTools } from "./tools/market_analysis.js";
+import { registerEconomicOptimizationTools } from "./tools/economic_optimization.js";
 
 // Load secrets from .env.agent
 const envPath = join(process.cwd(), ".env.agent");
@@ -45,6 +47,8 @@ registerClientOffboardingTools(server);
 registerScalingTools(server);
 registerSwarmFleetManagementTools(server);
 registerPredictiveHealthTools(server);
+registerMarketAnalysisTools(server);
+registerEconomicOptimizationTools(server);
 
 // Start Server
 async function main() {

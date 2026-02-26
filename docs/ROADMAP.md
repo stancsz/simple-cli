@@ -136,5 +136,15 @@ The roadmap is structured around the four anatomical layers of the Digital Biosp
     - ✅ Integrates real-time Swarm Fleet status, Financial KPIs (Xero), and System Health.
     - ✅ Validated via `tests/integration/agency_dashboard.test.ts` and Playwright verification.
 
+## Phase 24: Self-Optimizing Economic Engine
+*Status: In Progress*
+*Current Focus: Autonomous Business Optimization*
+- [ ] **Performance Analytics**: Implement `analyze_performance_metrics` tool to aggregate revenue (Xero), efficiency (Linear), and satisfaction (HubSpot).
+- [ ] **Pricing Optimization**: Create `optimize_pricing_strategy` tool using LLM analysis of market data and value-based models.
+- [ ] **Service Adjustment**: Implement `adjust_service_offerings` to recommend profitable service bundles.
+- [ ] **Resource Allocation**: Add `allocate_resources_optimally` for predictive swarm capacity management.
+- [ ] **Market Analysis**: Develop `market_analysis` tools for data collection and competitor benchmarking.
+- [ ] **Validation**: End-to-end simulation of the quarterly optimization cycle.
+
 ## Legacy Achievements
 See [Legacy Roadmap](ROADMAP_LEGACY.md) for completed milestones of the previous "Simple CLI" era.
