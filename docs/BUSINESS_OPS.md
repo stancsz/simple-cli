@@ -91,6 +91,28 @@ Update an existing issue in Linear.
   - `assigneeId`: New Assignee User ID (optional).
 - **Output:** The updated issue.
 
+### Service Optimization Tools (Phase 24)
+
+#### `adjust_service_offerings`
+Analyzes internal performance metrics and market data to recommend strategic adjustments to service bundles.
+- **Inputs:**
+  - `current_offerings`: List of current service objects (`name`, `current_price`, `description`).
+  - `analysis_period`: Timeframe for performance analysis (`last_30_days`, `last_quarter`, `year_to_date`).
+- **Output:** List of recommendations (`action`, `service_name`, `target_segment`, `suggested_price`, `estimated_impact`, `reasoning`).
+
+#### `optimize_pricing_strategy`
+Analyzes internal performance and market data to recommend pricing updates.
+- **Inputs:**
+  - `current_services`: List of current services (`name`, `current_price`, `cost`).
+- **Output:** Pricing recommendations with confidence scores.
+
+#### `analyze_performance_metrics`
+Aggregates performance metrics from Xero, Linear, and HubSpot.
+- **Inputs:**
+  - `timeframe`: Time period (`last_30_days`, `last_quarter`, `year_to_date`).
+  - `clientId`: Optional Client ID filter.
+- **Output:** Consolidated metrics object (`financial`, `delivery`, `client`).
+
 ### CRM & Project Tools (Mock Implementation)
 
 #### `query_financials`
