@@ -1,6 +1,34 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
 
+export function getMarketData(sector: string, region: string) {
+    // In a production environment, this would integrate with market research APIs (e.g., Crunchbase, Statista)
+    // or perform broad web searches. For this implementation, we simulate structured market intelligence
+    // to enable the optimization loop.
+
+    const baseRate = sector.toLowerCase().includes("software") ? 150 : 100;
+    const growthRate = sector.toLowerCase().includes("ai") ? "12.5%" : "5.2%";
+
+    return {
+        sector,
+        region,
+        timestamp: new Date().toISOString(),
+        market_growth_rate: growthRate,
+        average_hourly_rates: {
+            junior: { min: baseRate * 0.4, max: baseRate * 0.6, currency: "USD" },
+            senior: { min: baseRate * 0.8, max: baseRate * 1.2, currency: "USD" },
+            expert: { min: baseRate * 1.5, max: baseRate * 2.5, currency: "USD" }
+        },
+        key_trends: [
+            "Shift towards AI-driven automation",
+            "Increased demand for specialized security audits",
+            "Rise of fractional CTO services"
+        ],
+        competitor_density: "High",
+        demand_score: 85 // 0-100 scale
+    };
+}
+
 export function registerMarketAnalysisTools(server: McpServer) {
     // Tool: Collect Market Data
     server.tool(
@@ -12,31 +40,7 @@ export function registerMarketAnalysisTools(server: McpServer) {
             query: z.string().optional().describe("Specific query or focus area.")
         },
         async ({ sector, region, query }) => {
-            // In a production environment, this would integrate with market research APIs (e.g., Crunchbase, Statista)
-            // or perform broad web searches. For this implementation, we simulate structured market intelligence
-            // to enable the optimization loop.
-
-            const baseRate = sector.toLowerCase().includes("software") ? 150 : 100;
-            const growthRate = sector.toLowerCase().includes("ai") ? "12.5%" : "5.2%";
-
-            const simulatedData = {
-                sector,
-                region,
-                timestamp: new Date().toISOString(),
-                market_growth_rate: growthRate,
-                average_hourly_rates: {
-                    junior: { min: baseRate * 0.4, max: baseRate * 0.6, currency: "USD" },
-                    senior: { min: baseRate * 0.8, max: baseRate * 1.2, currency: "USD" },
-                    expert: { min: baseRate * 1.5, max: baseRate * 2.5, currency: "USD" }
-                },
-                key_trends: [
-                    "Shift towards AI-driven automation",
-                    "Increased demand for specialized security audits",
-                    "Rise of fractional CTO services"
-                ],
-                competitor_density: "High",
-                demand_score: 85 // 0-100 scale
-            };
+            const simulatedData = getMarketData(sector, region);
 
             return {
                 content: [{

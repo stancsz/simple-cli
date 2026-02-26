@@ -3,60 +3,6 @@ import { z } from "zod";
 import { createLLM } from "../../../llm.js";
 
 export function registerEconomicOptimizationTools(server: McpServer) {
-    // 2. Optimize Pricing Strategy
-    server.tool(
-        "optimize_pricing_strategy",
-        "Uses LLM to analyze performance and market data to recommend pricing updates.",
-        {
-            current_services: z.array(z.object({
-                name: z.string(),
-                current_price: z.number(),
-                cost: z.number().optional()
-            })).describe("List of current services and prices."),
-            market_data_summary: z.string().describe("Summary of market data (from collect_market_data).")
-        },
-        async ({ current_services, market_data_summary }) => {
-            const llm = createLLM();
-            const systemPrompt = `You are a Chief Economic Officer. Analyze the service pricing against market data.
-
-            Current Services:
-            ${JSON.stringify(current_services, null, 2)}
-
-            Market Data Summary:
-            ${market_data_summary}
-
-            Task: Recommend pricing adjustments to maximize profit while remaining competitive.
-            Constraint: Return a strict JSON array of objects with fields: service_name, old_price, new_price, confidence_score (0-1), reasoning.`;
-
-            const response = await llm.generate(systemPrompt, []);
-
-            // Extract JSON from response
-            let recommendations = [];
-            try {
-                const message = response.message || "";
-                // Simple regex to find JSON array
-                const jsonMatch = message.match(/\[\s*\{.*\}\s*\]/s);
-                if (jsonMatch) {
-                    recommendations = JSON.parse(jsonMatch[0]);
-                } else {
-                     // Fallback if LLM returns text
-                     // Try to parse entire message if it looks like JSON
-                     recommendations = JSON.parse(message);
-                }
-            } catch (e) {
-                // Mock fallback if parsing fails (robustness)
-                recommendations = [{ service_name: "Consultation", old_price: 100, new_price: 120, confidence_score: 0.8, reasoning: "Inflation adjustment." }];
-            }
-
-            return {
-                content: [{
-                    type: "text",
-                    text: JSON.stringify(recommendations, null, 2)
-                }]
-            };
-        }
-    );
-
     // 3. Adjust Service Offerings
     server.tool(
         "adjust_service_offerings",
