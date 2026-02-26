@@ -174,7 +174,7 @@ export function registerProjectDeliveryTools(server: McpServer) {
                     // Check Cycle (if any)
                     if (!matches) {
                         const cycle = await issue.cycle;
-                        if (cycle && cycle.name.toLowerCase().includes(milestone_name.toLowerCase())) matches = true;
+                        if (cycle && cycle.name && cycle.name.toLowerCase().includes(milestone_name.toLowerCase())) matches = true;
                     }
 
                     // Check Labels
