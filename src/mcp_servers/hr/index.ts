@@ -12,6 +12,8 @@ import { EpisodicMemory } from "../../brain/episodic.js";
 import { ProposalManager } from "./proposal_manager.js";
 import { analyzePerformancePrompt } from "./prompts.js";
 import { Proposal, LogEntry } from "./types.js";
+import { analyzeCrossSwarmPatterns } from "./tools/pattern_analysis.js";
+import { generateSOPFromPatterns } from "./tools/sop_generation.js";
 
 export class HRServer {
   private server: McpServer;
@@ -70,6 +72,28 @@ export class HRServer {
       "Performs a deep analysis of logs and experiences from the past week to identify long-term patterns.",
       {},
       async () => this.performWeeklyReview()
+    );
+
+    this.server.tool(
+      "analyze_cross_swarm_patterns",
+      "Analyze execution logs and memory to find success patterns and failure modes across swarms.",
+      {
+        agent_type: z.string().optional().describe("Filter by agent type (e.g., 'planner', 'coder')."),
+        swarm_id: z.string().optional().describe("Filter by specific swarm ID."),
+        limit: z.number().optional().default(20).describe("Number of episodes to analyze."),
+      },
+      async (args) => analyzeCrossSwarmPatterns(this.memory, this.llm, args)
+    );
+
+    this.server.tool(
+      "generate_sop_from_patterns",
+      "Generate a new Standard Operating Procedure (SOP) based on pattern analysis.",
+      {
+        pattern_analysis: z.string().describe("The analysis text containing patterns and recommendations."),
+        title: z.string().describe("The title of the new SOP."),
+        filename: z.string().optional().describe("Optional filename (relative to sops/). Defaults to auto-generated."),
+      },
+      async (args) => generateSOPFromPatterns(this.llm, args)
     );
   }
 
