@@ -66,6 +66,10 @@ The roadmap is structured around the four anatomical layers of the Digital Biosp
     - Stores collaborative solution patterns in Brain.
     - ✅ Enhanced Dreaming now stores swarm negotiation patterns in Brain for future recall, enabling meta-learning of collaboration strategies.
 - [x] **Pattern Application**: Swarm Orchestrator recalls and applies stored negotiation patterns for similar tasks, reducing deliberation time.
+- [x] **Self-Optimizing Framework Integration**:
+    - **Closed-Loop Learning**: Framework integration outcomes (success/fail, duration, LoC) are stored in Brain.
+    - **Optimization Engine**: `framework_optimizer` MCP analyzes past integrations to propose SOP improvements.
+    - **Recursive Improvement**: Dreaming sessions trigger meta-analysis to refine `sops/framework_integration/optimized_patterns.md`.
 
 ## Phase 20: Continuous Real-World Validation
 *Status: Completed*
@@ -97,7 +101,7 @@ The roadmap is structured around the four anatomical layers of the Digital Biosp
     - ✅ Linear integration implemented and validated via end-to-end workflow test.
 
 ## Phase 22: Autonomous Client Lifecycle
-*Status: Proposed*
+*Status: Completed*
 *Current Focus: Full Lifecycle Automation & Scaling*
 - [x] **Lead Generation**: Automate outreach and lead qualification.
     - ✅ Implemented core discovery, qualification, and outreach tools integrated with HubSpot and Brain.

@@ -29,6 +29,43 @@ export class DreamingServer {
         return await this.startSession(simulation_count, company_id);
       }
     );
+
+    this.server.tool(
+      "start_framework_optimization_session",
+      "Analyzes framework integration performance and generates optimization patterns.",
+      {
+         limit: z.number().optional().default(5).describe("Number of past outcomes to analyze.")
+      },
+      async ({ limit }) => {
+         return await this.startOptimizationSession(limit);
+      }
+    );
+  }
+
+  async startOptimizationSession(limit: number) {
+      await this.mcp.init();
+
+      // Ensure Framework Optimizer is running
+      try {
+          await this.mcp.startServer("framework-optimizer");
+      } catch (e) {
+          // Ignore if already running or if auto-start logic handles it
+      }
+
+      const optimizer = this.mcp.getClient("framework-optimizer");
+      if (!optimizer) {
+          return { content: [{ type: "text", text: "Framework Optimizer server not available." }], isError: true };
+      }
+
+      try {
+          const res: any = await optimizer.callTool({
+              name: "propose_integration_optimization",
+              arguments: { limit }
+          });
+          return res;
+      } catch (e) {
+          return { content: [{ type: "text", text: `Optimization session failed: ${(e as Error).message}` }], isError: true };
+      }
   }
 
   async startSession(limit: number = 3, companyId?: string) {

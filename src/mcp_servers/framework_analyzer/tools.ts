@@ -4,6 +4,7 @@ import { promisify } from "util";
 import { join, basename } from "path";
 import { writeFile, mkdir, readFile } from "fs/promises";
 import { testTemplate } from "./templates/test_template.js";
+import { MCP } from "../../mcp.js"; // Import MCP for Brain integration
 
 const execFileAsync = promisify(execFile);
 const execAsync = promisify(exec);
@@ -282,7 +283,8 @@ Guidelines for index.ts:
         return {
             success: true,
             message: `Generated MCP server for '${safeFrameworkName}' at ${targetDir}`,
-            files: results
+            files: results,
+            usage: response.usage
         };
 
     } catch (error: any) {
@@ -291,6 +293,12 @@ Guidelines for index.ts:
 }
 
 export async function integrate_framework(framework_name: string, source_type: 'cli' | 'sdk' | 'gui', source_path: string): Promise<any> {
+    const startTime = Date.now();
+    let outcome = "pending";
+    let failureDetails = "";
+    let loc = 0;
+    let totalTokens = 0;
+
     // 1. Analyze
     const analysis = await analyze_framework_source(source_type, source_path);
     if (analysis.error) return analysis;
@@ -298,6 +306,23 @@ export async function integrate_framework(framework_name: string, source_type: '
     // 2. Generate Scaffold
     const scaffoldResult = await generate_mcp_scaffold(framework_name, analysis);
     if (scaffoldResult.error) return scaffoldResult;
+
+    // Capture usage if available
+    if (scaffoldResult.usage) {
+        totalTokens = scaffoldResult.usage.totalTokens || 0;
+    }
+
+    // Calculate Lines of Code
+    if (scaffoldResult.files && Array.isArray(scaffoldResult.files)) {
+        try {
+            for (const filePath of scaffoldResult.files) {
+                const content = await readFile(filePath, "utf-8");
+                loc += content.split('\n').length;
+            }
+        } catch (e) {
+            console.error("Failed to calculate LoC:", e);
+        }
+    }
 
     const serverDir = join(process.cwd(), "src", "mcp_servers", basename(framework_name));
     const testFilePath = join(serverDir, "basic.test.ts");
@@ -315,8 +340,15 @@ export async function integrate_framework(framework_name: string, source_type: '
             timeout: 30000, // 30s timeout
             env: { ...process.env, PATH: process.env.PATH }
         });
+        outcome = "success";
 
     } catch (error: any) {
+         outcome = "failure";
+         failureDetails = error.message;
+
+         // Log failure to Brain
+         await logToBrain(framework_name, "failure", Date.now() - startTime, loc, totalTokens, failureDetails);
+
          return {
              error: "Validation failed.",
              details: error.message,
@@ -346,10 +378,62 @@ export async function integrate_framework(framework_name: string, source_type: '
 
     await writeFile(stagingPath, JSON.stringify(stagingConfig, null, 2));
 
+    // Log success to Brain
+    await logToBrain(framework_name, "success", Date.now() - startTime, loc, totalTokens);
+
     return {
         success: true,
         message: `Framework '${framework_name}' integrated and validated successfully.`,
         scaffold_path: serverDir,
         staging_entry: stagingConfig.mcpServers[framework_name]
     };
+}
+
+async function logToBrain(frameworkName: string, outcome: string, duration: number, loc: number, tokens: number, details?: string) {
+    try {
+        const mcp = new MCP();
+        await mcp.init();
+
+        // We need to ensure Brain is running.
+        // If this process is running inside an environment where Brain is available, we might connect.
+        // But since we are a standalone tool/process here, we likely need to spawn it or rely on existing config.
+        // mcp.startServer will spawn it if config is correct.
+
+        // Note: In production, Brain might be a long-running service.
+        // If mcp.json points to a URL, startServer will connect.
+        // If it points to a command, startServer will spawn.
+        // Since we are recursive, we are careful.
+
+        // Check if 'brain' is configured in mcp.json (via init())
+        try {
+            await mcp.startServer("brain");
+        } catch (e: any) {
+            // If it fails (e.g., "already running" or connection issue), we log and proceed.
+            // But usually startServer throws if it can't start.
+            // If it says "already running" (because we track clients), it returns a string.
+            // But this is a new MCP instance, so it won't know about other processes.
+            // It will try to spawn.
+            // If spawn fails, we catch it.
+        }
+
+        const brain = mcp.getClient("brain");
+        if (brain) {
+            await brain.callTool({
+                name: "brain_store",
+                arguments: {
+                    taskId: `framework-integration-${frameworkName}-${Date.now()}`,
+                    request: `Integrate framework: ${frameworkName}`,
+                    solution: `Outcome: ${outcome}\nLoC: ${loc}\nDuration: ${duration}ms\nDetails: ${details || "None"}`,
+                    type: "framework_integration_outcome",
+                    tokens: tokens,
+                    duration: duration,
+                    company: "internal" // Use 'internal' or similar for system tasks
+                }
+            });
+            // Stop server to release resources/locks if spawned
+            await mcp.stopServer("brain");
+        }
+    } catch (e) {
+        console.warn(`[FrameworkAnalyzer] Failed to log outcome to Brain: ${(e as Error).message}`);
+    }
 }

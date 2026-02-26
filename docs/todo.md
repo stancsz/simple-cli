@@ -235,7 +235,7 @@
 - [x] **Dashboard**: Visualize validation status.
 - [x] **Self-Healing Loop**: Validated via `tests/integration/showcase_simulation.test.ts`.
 
-## Sprint 7: Autonomous Agency Operations (In Progress)
+## Sprint 7: Autonomous Agency Operations (✅ Completed)
 
 **Goal:** End-to-End Business Automation.
 
@@ -259,7 +259,7 @@
 - [x] **End-to-End Validation**:
     - [x] Full Lifecycle Test (`tests/integration/agency_workflow_validation.test.ts`).
 
-## Sprint 8: Autonomous Client Lifecycle (New)
+## Sprint 8: Autonomous Client Lifecycle (✅ Completed)
 
 **Goal:** Automate the entire client lifecycle from discovery to offboarding.
 
@@ -288,3 +288,13 @@
     - [x] Integrate with Linear, HubSpot, Xero, Brain, and Git.
     - [x] Create SOP (`sops/client_offboarding_workflow.md`).
     - [x] Validation: `tests/integration/client_offboarding_validation.test.ts`.
+
+## Sprint 9: Recursive Framework Evolution (Next)
+
+**Goal:** Enable self-optimizing framework integration capabilities.
+
+### Phase 8.5: Framework Self-Optimization
+- [ ] **Instrument Framework Analyzer**: Log integration outcomes to Brain.
+- [ ] **Framework Optimizer MCP**: Create `framework_optimizer` server to analyze past outcomes.
+- [ ] **Closed-Loop Dreaming**: Integrate optimizer with Dreaming scheduler.
+- [ ] **Validation**: Verify self-correction loop via `tests/integration/framework_self_optimization.test.ts`.
