@@ -157,7 +157,7 @@ describe("Performance Analytics Tool Validation", () => {
 
          expect(mockEpisodicMemory.store).toHaveBeenCalledWith(
              expect.stringContaining("performance_snapshot_last_30_days"),
-             "Agenc Performance Snapshot",
+             "Agency Performance Snapshot",
              expect.any(String),
              [],
              undefined,
