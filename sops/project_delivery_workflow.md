@@ -1,75 +1,49 @@
-# Project Delivery Automation SOP
+# Standard Operating Procedure: Project Delivery Automation
 
-**Objective:** Automate milestone tracking, client reporting, and blocker escalation to ensure timely project delivery and transparent communication.
+**Objective:** Automate the tracking, reporting, and escalation of client project deliverables to ensure transparency and proactive issue resolution.
+**Scope:** Active client projects managed in Linear.
+**Trigger:**
+- Weekly Schedule (Reporting).
+- Manual Request (Progress Check).
+- Blocker Detection (Escalation).
 
-## Workflow Overview
+## Workflow Steps
 
-1.  **Milestone Tracking**
-    - **Trigger:** Milestone status change or progress update.
-    - **Action:** Use `track_milestone_progress(project_id, milestone_name, status, notes)`.
-    - **Outcome:** Linear issue updated, progress logged to Brain memory.
+### 1. Milestone Progress Tracking
+**Tool:** `track_milestone_progress`
+**Frequency:** Daily or On-Demand.
 
-2.  **Weekly Status Reporting**
-    - **Trigger:** Scheduled weekly (e.g., Friday 4 PM).
-    - **Action:** Use `automate_status_update(project_id)`.
-    - **Outcome:**
-        - Generates a Markdown report in `reports/{project_id}/` including Linear progress and Git activity.
-        - Notifies team via Slack (if configured).
+1.  **Identify Project:** Determine the `project_id` from the request or active project list.
+2.  **Determine Milestone:** (Optional) Identify specific milestone name (e.g., "Sprint 1").
+3.  **Execute Tool:** Call `track_milestone_progress(project_id, milestone_name)`.
+4.  **Review Output:** Check completion percentage and total issues.
+5.  **Action:** If progress is stalled (< 10% progress in 3 days), consider triggering `escalate_blockers`.
 
-3.  **Client Reporting**
-    - **Trigger:** Ad-hoc request or end of sprint/month.
-    - **Action:** Use `generate_client_report(project_id, period_start, period_end, github_repo_url?)`.
-    - **Outcome:** comprehensive Markdown report aggregating completed items, in-progress work, blockers, key events, and recent commits.
+### 2. Client Reporting
+**Tool:** `generate_client_report`
+**Frequency:** Weekly (e.g., Friday PM).
 
-4.  **Blocker Escalation**
-    - **Trigger:** Daily check or specific event.
-    - **Action:** Use `escalate_blockers(project_id)`.
-    - **Outcome:**
-        - Identifies blocked issues in Linear.
-        - Applies "Escalated" label.
-        - Creates a high-priority "Escalation" task.
-        - Adds comments to original issue.
+1.  **Define Period:** Set `period_start` and `period_end` (typically last 7 days).
+2.  **Execute Tool:** Call `generate_client_report(project_id, period_start, period_end)`.
+    - *Note:* Ensure `GITHUB_TOKEN` and `SLACK_WEBHOOK_URL` are set for full functionality.
+3.  **Verify Artifacts:**
+    - Report saved to `reports/{project_id}/`.
+    - Git commit created.
+    - Slack notification sent.
 
-## Tools Usage
+### 3. Blocker Escalation
+**Tool:** `escalate_blockers`
+**Frequency:** Continuous / Daily.
 
-### `track_milestone_progress`
-Updates a specific milestone (Linear issue) and logs the event to episodic memory.
-```json
-{
-  "project_id": "proj_123",
-  "milestone_name": "Phase 1 Delivery",
-  "status": "In Progress",
-  "notes": "Backend API complete, working on frontend integration."
-}
-```
+1.  **Scan Project:** Call `escalate_blockers(project_id)`.
+2.  **Analyze Output:**
+    - If `escalated_issues` is not empty, verify that escalation tasks were created in Linear.
+    - Verify Slack alert was sent.
+3.  **Follow Up:**
+    - If blockers persist > 48h, escalate to human operator manually.
 
-### `generate_client_report`
-Generates a detailed report for a specific time range.
-```json
-{
-  "project_id": "proj_123",
-  "period_start": "2023-10-01",
-  "period_end": "2023-10-07",
-  "github_repo_url": "https://github.com/owner/repo"
-}
-```
+## Troubleshooting
 
-### `automate_status_update`
-Wrapper for weekly reporting and notification.
-```json
-{
-  "project_id": "proj_123"
-}
-```
-
-### `escalate_blockers`
-Scans for issues with "Blocked" status and escalates them.
-```json
-{
-  "project_id": "proj_123"
-}
-```
-
-## Maintenance
-- Ensure `LINEAR_API_KEY`, `GITHUB_TOKEN` and `SLACK_WEBHOOK_URL` are set in `.env.agent`.
-- Periodically review `reports/` folder for generated artifacts.
+- **"Git commit skipped":** Ensure the agent is running within a Git repository and has `git` installed.
+- **"Slack notification failed":** Check `SLACK_WEBHOOK_URL` environment variable.
+- **"Brain memory retrieval unavailable":** Ensure `EpisodicMemory` is initialized and `LanceDB` is accessible.
