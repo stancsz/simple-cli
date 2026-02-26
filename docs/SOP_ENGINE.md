@@ -72,6 +72,7 @@ The SOP Engine powers the autonomous business operations of the Digital Biospher
 ### Available Playbooks
 - **Client Onboarding** (`client_onboarding.md`): Automates CRM entry, Xero contact creation, invoicing, and project setup.
 - **Monthly Billing** (`monthly_billing.md`): Manages recurring billing cycles and CRM updates.
+- **Self-Scaling Swarms** (`self_scaling_swarm_workflow.md`): Manages dynamic agent allocation based on client workload.
 
 ## Best Practices
 
