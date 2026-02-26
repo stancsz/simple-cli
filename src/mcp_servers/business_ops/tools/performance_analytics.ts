@@ -194,6 +194,7 @@ async function getClientMetrics(timeframe: string, clientId?: string): Promise<C
         if (clientId) {
             // Specific client
             // @ts-ignore
+            // @ts-ignore - HubSpot SDK types for FilterOperatorEnum can be strict
             const search = await hubspot.crm.companies.searchApi.doSearch({
                 filterGroups: [{ filters: [{ propertyName: "name", operator: "CONTAINS_TOKEN", value: clientId }] }],
                 properties: ["nps_score", "client_satisfaction_score"]
