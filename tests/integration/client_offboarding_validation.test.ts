@@ -6,7 +6,8 @@ const mocks = vi.hoisted(() => {
     return {
         linearClient: {
             projects: vi.fn(),
-            updateProject: vi.fn()
+            updateProject: vi.fn(),
+            projectStatuses: vi.fn()
         },
         hubSpotClient: {
             crm: {
@@ -103,6 +104,10 @@ describe('Client Offboarding Workflow', () => {
             nodes: [{ id: 'proj_123', name: 'Test Project' }]
         });
 
+        mocks.linearClient.projectStatuses.mockResolvedValue({
+            nodes: [{ id: 'status_completed', name: 'Completed' }]
+        });
+
         mocks.xeroClient.accountingApi.getContacts.mockResolvedValue({
             body: { contacts: [{ contactID: 'cont_123', name: 'Test Client' }] }
         });
@@ -137,7 +142,8 @@ describe('Client Offboarding Workflow', () => {
 
         // Verify Linear
         expect(mocks.linearClient.projects).toHaveBeenCalled();
-        expect(mocks.linearClient.updateProject).toHaveBeenCalledWith('proj_123', { state: 'completed' });
+        expect(mocks.linearClient.projectStatuses).toHaveBeenCalled();
+        expect(mocks.linearClient.updateProject).toHaveBeenCalledWith('proj_123', { statusId: 'status_completed' });
 
         // Verify HubSpot
         expect(mocks.hubSpotClient.crm.deals.basicApi.update).toHaveBeenCalledWith('deal_123', expect.objectContaining({
