@@ -6,6 +6,7 @@ import { promises as fs } from "fs";
 import { join } from "path";
 import { existsSync } from "fs";
 import { LinearClient } from "@linear/sdk";
+import simpleGit from "simple-git";
 
 // Helper to ensure directory exists
 async function ensureDir(dir: string) {
@@ -146,53 +147,55 @@ export function registerProjectDeliveryTools(server: McpServer) {
     // 1. track_milestone_progress
     server.tool(
         "track_milestone_progress",
-        "Updates milestone status in Linear and logs to Brain",
+        "Calculates milestone completion percentage and logs progress to the Brain.",
         {
             project_id: z.string().describe("Linear Project ID"),
-            milestone_name: z.string().describe("Name of the milestone (issue title)"),
-            status: z.string().describe("New status (e.g., In Progress, Done, Canceled)"),
-            notes: z.string().optional().describe("Progress notes")
+            milestone_name: z.string().optional().describe("Name of the milestone (issue title or cycle) to filter by. If omitted, tracks entire project.")
         },
-        async ({ project_id, milestone_name, status, notes }) => {
+        async ({ project_id, milestone_name }) => {
             const client = getLinearClient();
 
-            // Find the issue
-            const issues = await client.issues({
-                filter: {
-                    project: { id: { eq: project_id } },
-                    title: { eq: milestone_name }
+            // Find issues
+            const filter: any = { project: { id: { eq: project_id } } };
+            const issues = await client.issues({ filter });
+
+            let total = 0;
+            let completed = 0;
+
+            for (const issue of issues.nodes) {
+                // If milestone_name is provided, filter by title match or cycle name match
+                // Note: This is an in-memory filter as Linear API filtering is limited for complex text matches or cross-relations.
+                let matches = true;
+                if (milestone_name) {
+                    matches = false;
+                    // Check Issue Title
+                    if (issue.title.toLowerCase().includes(milestone_name.toLowerCase())) matches = true;
+
+                    // Check Cycle (if any)
+                    if (!matches) {
+                        const cycle = await issue.cycle;
+                        if (cycle && cycle.name && cycle.name.toLowerCase().includes(milestone_name.toLowerCase())) matches = true;
+                    }
+
+                    // Check Labels
+                    if (!matches) {
+                        const labels = await issue.labels();
+                        if (labels.nodes.some(l => l.name.toLowerCase() === milestone_name.toLowerCase())) matches = true;
+                    }
                 }
-            });
 
-            if (issues.nodes.length === 0) {
-                return {
-                    content: [{ type: "text", text: `Error: Milestone '${milestone_name}' not found in project ${project_id}.` }],
-                    isError: true
-                };
-            }
-
-            const issue = issues.nodes[0];
-
-            // Find status ID based on name
-            let statusId: string | undefined;
-            const team = await issue.team;
-            if (team) {
-                const states = await team.states();
-                const targetState = states.nodes.find(s => s.name.toLowerCase() === status.toLowerCase());
-                if (targetState) {
-                    statusId = targetState.id;
+                if (matches) {
+                    total++;
+                    const state = await issue.state;
+                    if (state && state.type === "completed") {
+                        completed++;
+                    }
                 }
             }
 
-            if (statusId) {
-                await client.updateIssue(issue.id, { stateId: statusId });
-            } else {
-                 await client.createComment({ issueId: issue.id, body: `Status update requested: ${status}. (State not found in workflow)` });
-            }
-
-            if (notes) {
-                await client.createComment({ issueId: issue.id, body: `Progress Update: ${notes}` });
-            }
+            const percentage = total > 0 ? Math.round((completed / total) * 100) : 0;
+            const scope = milestone_name ? `Milestone '${milestone_name}'` : 'Project';
+            const statusMessage = `Progress Update: ${scope} is ${percentage}% complete (${completed}/${total}).`;
 
             // Brain Storage
             try {
@@ -200,8 +203,8 @@ export function registerProjectDeliveryTools(server: McpServer) {
                 await memory.init();
                 await memory.store(
                     "track_milestone",
-                    `Update ${milestone_name} to ${status}`,
-                    JSON.stringify({ project_id, milestone_name, status, notes, issueId: issue.id }),
+                    statusMessage,
+                    JSON.stringify({ project_id, milestone_name, completion_percentage: percentage, total_issues: total, completed_issues: completed }),
                     [],
                     undefined, undefined, false, undefined, undefined, 0, 0,
                     "project_delivery"
@@ -211,7 +214,7 @@ export function registerProjectDeliveryTools(server: McpServer) {
             }
 
             return {
-                content: [{ type: "text", text: `Updated milestone '${milestone_name}' to '${status}'. Logged to Brain.` }]
+                content: [{ type: "text", text: JSON.stringify({ status: "success", data: { completion_percentage: percentage, total_issues: total, completed_issues: completed, scope } }) }]
             };
         }
     );
@@ -219,7 +222,7 @@ export function registerProjectDeliveryTools(server: McpServer) {
     // 2. generate_client_report
     server.tool(
         "generate_client_report",
-        "Aggregates activity from Linear, Git, and Brain to generate a professional client report.",
+        "Aggregates activity from Linear, Git, and Brain to generate a report, commits it, and notifies Slack.",
         {
             project_id: z.string().describe("Linear Project ID"),
             period_start: z.string().describe("ISO date string (YYYY-MM-DD)"),
@@ -237,66 +240,47 @@ export function registerProjectDeliveryTools(server: McpServer) {
 
                 await fs.writeFile(filepath, report);
 
-                return {
-                    content: [{ type: "text", text: `Report generated successfully at ${filepath}` }]
-                };
-            } catch (e: any) {
-                return { content: [{ type: "text", text: `Error generating report: ${e.message}` }], isError: true };
-            }
-        }
-    );
+                // Commit to Git (Using simple-git)
+                let gitStatus = "Git commit skipped (not a repo)";
+                const git = simpleGit(process.cwd());
+                try {
+                    const isRepo = await git.checkIsRepo();
+                    if (isRepo) {
+                        await git.add(filepath);
+                        await git.commit(`docs: client report for ${projectName} (${period_start} - ${period_end})`);
+                        // Try push if configured
+                        try { await git.push(); } catch(e) {}
+                        gitStatus = "Committed to Git";
+                    }
+                } catch (e: any) {
+                    gitStatus = `Git operation failed: ${e.message}`;
+                }
 
-    // 3. automate_status_update
-    server.tool(
-        "automate_status_update",
-        "Automated weekly status reporting that pulls from Linear issues and activity logs.",
-        {
-            project_id: z.string().describe("Linear Project ID")
-        },
-        async ({ project_id }) => {
-            // Calculate last week period
-            const end = new Date();
-            const start = new Date();
-            start.setDate(start.getDate() - 7);
-
-            const period_start = start.toISOString().split('T')[0];
-            const period_end = end.toISOString().split('T')[0];
-
-            try {
-                const { report, projectName } = await generateReportLogic(project_id, period_start, period_end);
-
-                const reportDir = join(process.cwd(), "reports", project_id);
-                await ensureDir(reportDir);
-                const filename = `weekly_status_${period_end}.md`;
-                const filepath = join(reportDir, filename);
-
-                await fs.writeFile(filepath, report);
-
-                // Notify (Slack/Email)
-                let notificationStatus = "Notification skipped (No webhook)";
+                // Notify Slack
+                let slackStatus = "Slack notification skipped";
                 if (process.env.SLACK_WEBHOOK_URL) {
                     try {
                         await fetch(process.env.SLACK_WEBHOOK_URL, {
                             method: 'POST',
                             headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({ text: `Weekly Status Report for ${projectName} is ready: ${filepath}` })
+                            body: JSON.stringify({ text: `📊 *Client Report Generated*: ${projectName}\nfile: ${filepath}\n${gitStatus}` })
                         });
-                        notificationStatus = "Notification sent to Slack";
+                        slackStatus = "Slack notified";
                     } catch (e: any) {
-                        notificationStatus = `Notification failed: ${e.message}`;
+                        slackStatus = `Slack notification failed: ${e.message}`;
                     }
                 }
 
                 return {
-                    content: [{ type: "text", text: `Weekly status update completed. Report saved to ${filepath}. ${notificationStatus}` }]
+                    content: [{ type: "text", text: JSON.stringify({ status: "success", data: { report_path: filepath, git_status: gitStatus, slack_status: slackStatus } }) }]
                 };
             } catch (e: any) {
-                 return { content: [{ type: "text", text: `Error generating weekly status: ${e.message}` }], isError: true };
+                return { content: [{ type: "text", text: JSON.stringify({ status: "error", error: e.message }) }], isError: true };
             }
         }
     );
 
-    // 4. escalate_blockers
+    // 3. escalate_blockers
     server.tool(
         "escalate_blockers",
         "Identifies blocked milestones and creates escalation tasks.",
@@ -309,6 +293,8 @@ export function registerProjectDeliveryTools(server: McpServer) {
             const issues = await project.issues();
 
             const escalatedIssues: string[] = [];
+            const memory = new EpisodicMemory();
+            await memory.init();
 
             for (const issue of issues.nodes) {
                 const state = await issue.state;
@@ -340,11 +326,24 @@ export function registerProjectDeliveryTools(server: McpServer) {
                             priority: 1 // Urgent
                         });
 
-                        // Add comment to original
-                        await client.createComment({
-                            issueId: issue.id,
-                            body: "Issue escalated due to blocker status."
-                        });
+                        // Brain Log
+                        await memory.store(
+                            "escalation_event",
+                            `Escalated issue ${issue.identifier}`,
+                            JSON.stringify({ issueId: issue.id, title: issue.title, reason: "Blocked" }),
+                            [], undefined, undefined, false, undefined, undefined, 0, 0, "project_delivery"
+                        );
+
+                        // Slack Notification
+                        if (process.env.SLACK_WEBHOOK_URL) {
+                             try {
+                                await fetch(process.env.SLACK_WEBHOOK_URL, {
+                                    method: 'POST',
+                                    headers: { 'Content-Type': 'application/json' },
+                                    body: JSON.stringify({ text: `🚨 *Escalation*: Issue ${issue.identifier} (${issue.title}) is BLOCKED. Escalation task created.` })
+                                });
+                            } catch (e) {}
+                        }
 
                         escalatedIssues.push(`${issue.title} (${issue.identifier})`);
                     }
@@ -353,12 +352,12 @@ export function registerProjectDeliveryTools(server: McpServer) {
 
             if (escalatedIssues.length === 0) {
                 return {
-                    content: [{ type: "text", text: "No new blockers found to escalate." }]
+                    content: [{ type: "text", text: JSON.stringify({ status: "success", data: { escalated_issues: [] } }) }]
                 };
             }
 
             return {
-                content: [{ type: "text", text: `Escalated the following blocked issues: ${escalatedIssues.join(", ")}` }]
+                content: [{ type: "text", text: JSON.stringify({ status: "success", data: { escalated_issues: escalatedIssues } }) }]
             };
         }
     );

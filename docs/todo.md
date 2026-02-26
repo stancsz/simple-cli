@@ -276,3 +276,9 @@
     - [x] Register tools in `business_ops`.
     - [x] Create SOP (`sops/self_scaling_swarm_workflow.md`).
     - [x] Validation: `tests/integration/scaling_engine_validation.test.ts`.
+- [x] **Project Delivery**:
+    - [x] Create `src/mcp_servers/business_ops/tools/project_delivery.ts`.
+    - [x] Implement `track_milestone_progress`, `generate_client_report`, `escalate_blockers`.
+    - [x] Integrate with Linear, Brain, Git, and Slack.
+    - [x] Create SOP (`sops/project_delivery_workflow.md`).
+    - [x] Validation: `tests/integration/project_delivery_validation.test.ts`.
