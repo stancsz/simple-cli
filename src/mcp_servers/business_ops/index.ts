@@ -15,6 +15,7 @@ import { registerLeadGenerationTools } from "./tools/lead_generation.js";
 import { registerProjectDeliveryTools } from "./tools/project_delivery.js";
 import { registerClientOffboardingTools } from "./tools/client_offboarding.js";
 import { registerScalingTools } from "../scaling_engine/scaling_orchestrator.js";
+import { registerSwarmFleetManagementTools } from "./tools/swarm_fleet_management.js";
 
 // Load secrets from .env.agent
 const envPath = join(process.cwd(), ".env.agent");
@@ -41,6 +42,7 @@ registerLeadGenerationTools(server);
 registerProjectDeliveryTools(server);
 registerClientOffboardingTools(server);
 registerScalingTools(server);
+registerSwarmFleetManagementTools(server);
 
 // Start Server
 async function main() {
