@@ -143,14 +143,15 @@ export function registerEconomicOptimizationTools(server: McpServer) {
             // Extract JSON from response
             let recommendations = [];
             try {
+                const message = response.message || "";
                 // Simple regex to find JSON array
-                const jsonMatch = response.message.match(/\[\s*\{.*\}\s*\]/s);
+                const jsonMatch = message.match(/\[\s*\{.*\}\s*\]/s);
                 if (jsonMatch) {
                     recommendations = JSON.parse(jsonMatch[0]);
                 } else {
                      // Fallback if LLM returns text
                      // Try to parse entire message if it looks like JSON
-                     recommendations = JSON.parse(response.message);
+                     recommendations = JSON.parse(message);
                 }
             } catch (e) {
                 // Mock fallback if parsing fails (robustness)
@@ -281,7 +282,7 @@ export function registerEconomicOptimizationTools(server: McpServer) {
             return {
                 content: [{
                     type: "text",
-                    text: response.message
+                    text: response.message || "No insights generated."
                 }]
             };
         }
