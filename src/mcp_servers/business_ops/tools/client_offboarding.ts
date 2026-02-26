@@ -55,35 +55,35 @@ export function registerClientOffboardingTools(server: McpServer) {
                 let projectToArchive: any = null;
                 try {
                     const linear = getLinearClient();
-                    // Find project by deal ID in description or name match
-                    if (deal_id) {
-                         const projects = await linear.projects({
-                            filter: {
-                                description: { contains: deal_id }
-                            }
-                        });
-                        if (projects.nodes.length > 0) projectToArchive = projects.nodes[0];
-                    }
 
-                    if (!projectToArchive) {
-                        // Fallback: search by name
-                        const projects = await linear.projects({
-                            filter: {
-                                name: { contains: company_id }
-                            }
-                        });
-                         if (projects.nodes.length > 0) projectToArchive = projects.nodes[0];
+                    // Search by project name (Company ID usually maps to project name)
+                    // Note: 'description' filter is not supported by Linear SDK
+                    const projects = await linear.projects({
+                        filter: {
+                            name: { contains: company_id }
+                        }
+                    });
+
+                    if (projects.nodes.length > 0) {
+                        projectToArchive = projects.nodes[0];
                     }
 
                     if (projectToArchive) {
-                        // Update state to Completed (using 'state' field which accepts specific enum strings for projects)
-                        // Note: For custom workflow states on ISSUES, use 'stateId'. For PROJECTS, use 'state' enum.
-                        await linear.updateProject(projectToArchive.id, {
-                            state: "completed"
-                        });
-                        logs.push(`✅ Linear Project '${projectToArchive.name}' marked as Completed.`);
+                        // Find the 'Completed' status ID
+                        // ProjectUpdateInput requires 'statusId', not 'state'
+                        const statuses = await linear.projectStatuses();
+                        const completedStatus = statuses.nodes.find(s => s.name === "Completed" || s.name === "Done");
+
+                        if (completedStatus) {
+                            await linear.updateProject(projectToArchive.id, {
+                                statusId: completedStatus.id
+                            });
+                            logs.push(`✅ Linear Project '${projectToArchive.name}' marked as Completed.`);
+                        } else {
+                            logs.push(`⚠️ Could not find 'Completed' project status in Linear. Project '${projectToArchive.name}' remains active.`);
+                        }
                     } else {
-                        logs.push(`⚠️ Linear Project not found for ${company_id} / ${deal_id}.`);
+                        logs.push(`⚠️ Linear Project not found for ${company_id}.`);
                     }
                 } catch (e: any) {
                     logs.push(`⚠️ Linear archival failed: ${e.message}`);
