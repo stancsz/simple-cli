@@ -87,15 +87,21 @@ describe("Performance Analytics Integration", () => {
     it("should aggregate data correctly when all services are available (Happy Path)", async () => {
         // Mock Xero Data (Revenue & Expenses)
         mockXeroClient.accountingApi.getInvoices.mockImplementation((tenantId, _, where) => {
-            if (where.includes("ACCPAY")) {
+            // Ensure dates are within range (last month to today)
+            const date = new Date();
+            // Subtract 2 days to be safe
+            date.setDate(date.getDate() - 2);
+            const dateStr = date.toISOString();
+
+            if (where && where.includes("ACCPAY")) {
                 // Bills
                 return Promise.resolve({
-                    body: { invoices: [{ total: 5000, date: new Date().toISOString() }] }
+                    body: { invoices: [{ total: 5000, date: dateStr }] }
                 });
             } else {
                 // Invoices (Revenue)
                 return Promise.resolve({
-                    body: { invoices: [{ total: 20000, date: new Date().toISOString() }] }
+                    body: { invoices: [{ total: 20000, date: dateStr }] }
                 });
             }
         });
@@ -133,7 +139,8 @@ describe("Performance Analytics Integration", () => {
 
         // Operational: 2 completed / 4 weeks (approx) = 0.5. Backlog age 5 days.
         expect(report.operational.velocity).toBeGreaterThan(0);
-        expect(report.operational.backlogAgeDays).toBe(5);
+        // Allow tiny variance for execution time
+        expect(report.operational.backlogAgeDays).toBeCloseTo(5, 1);
 
         // Client: Avg NPS 85, Avg Sat 9.5
         expect(report.client.npsScore).toBe(85);

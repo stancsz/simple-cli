@@ -1,17 +1,33 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { registerEconomicOptimizationTools } from "../../src/mcp_servers/business_ops/tools/economic_optimization.js";
 import { registerMarketAnalysisTools } from "../../src/mcp_servers/business_ops/tools/market_analysis.js";
+import { registerPerformanceAnalyticsTools } from "../../src/mcp_servers/business_ops/tools/performance_analytics.js";
 
 // Mock Dependencies
 const mockXeroClient = {
     accountingApi: {
-        getInvoices: vi.fn()
+        getInvoices: vi.fn(),
+        getReportProfitAndLoss: vi.fn().mockResolvedValue({ body: {} })
     }
 };
 
-const mockLinearClient = {}; // Not used deeply in simulation, but good to have
+const mockLinearClient = {
+    issues: vi.fn().mockResolvedValue({ nodes: [] }),
+    projects: vi.fn().mockResolvedValue({ nodes: [] })
+};
 
-const mockHubSpotClient = {};
+const mockHubSpotClient = {
+    crm: {
+        companies: {
+            basicApi: {
+                getPage: vi.fn().mockResolvedValue({ results: [] })
+            },
+            searchApi: {
+                doSearch: vi.fn().mockResolvedValue({ results: [] })
+            }
+        }
+    }
+};
 
 const mockEpisodicMemory = {
     init: vi.fn(),
@@ -61,6 +77,7 @@ describe("Economic Optimization Engine Validation", () => {
         // Register tools
         registerEconomicOptimizationTools(mockServer as any);
         registerMarketAnalysisTools(mockServer as any);
+        registerPerformanceAnalyticsTools(mockServer as any);
 
         // Extract tools
         const calls = (mockServer.tool as any).mock.calls;
@@ -81,25 +98,28 @@ describe("Economic Optimization Engine Validation", () => {
         mockXeroClient.accountingApi.getInvoices.mockResolvedValue({
             body: {
                 invoices: [
-                    { amountDue: 1000, total: 5000 },
-                    { amountDue: 0, total: 3000 }
+                    { amountDue: 1000, total: 5000, date: new Date().toISOString() },
+                    { amountDue: 0, total: 3000, date: new Date().toISOString() }
                 ]
             }
         });
 
-        const result = await analyzePerfTool({ period: "last_30_days" });
+        const result = await analyzePerfTool({ timeframe: "last_month" });
         const metrics = JSON.parse(result.content[0].text);
 
         console.log("Performance Metrics:", JSON.stringify(metrics, null, 2));
 
         expect(metrics.financial.revenue).toBe(8000);
-        expect(metrics.financial.outstanding).toBe(1000);
-        expect(metrics.delivery.velocity).toBe(25); // Simulated default
-        expect(metrics.client.nps).toBe(72); // Simulated default
+        // expect(metrics.financial.outstanding).toBe(1000); // Removed in real implementation
+
+        // Real implementation returns 0 if mocked dependencies return empty/simulated failures
+        // Since we are mocking dependencies to return empty/basic data in this file:
+        expect(metrics.operational.velocity).toBe(0);
+        expect(metrics.client.npsScore).toBe(0);
 
         // Check Brain storage
         expect(mockEpisodicMemory.store).toHaveBeenCalledWith(
-            expect.stringContaining("performance_snapshot"),
+            expect.stringContaining("performance_audit"),
             expect.any(String),
             expect.any(String),
             [],
@@ -110,7 +130,7 @@ describe("Economic Optimization Engine Validation", () => {
             undefined,
             0,
             0,
-            "performance_metric"
+            "performance_audit"
         );
     });
 
