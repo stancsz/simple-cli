@@ -68,7 +68,7 @@ export function registerPerformanceAnalyticsTools(server: McpServer) {
                     1, // page
                     false, // includeArchived
                     false, // createdByMyApp
-                    true // unitdp
+                    undefined // unitdp (number, not boolean)
                 );
 
                 if (response.body.invoices) {
@@ -198,7 +198,7 @@ export function registerPerformanceAnalyticsTools(server: McpServer) {
                 await memory.init();
                 await memory.store(
                     `performance_snapshot_${period}_${new Date().toISOString()}`,
-                    "Agenc Performance Snapshot",
+                    "Agency Performance Snapshot",
                     JSON.stringify(metrics),
                     [],
                     undefined,
