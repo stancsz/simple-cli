@@ -135,8 +135,8 @@ export function registerPerformanceAnalyticsTools(server: McpServer) {
                 const dealsSearch = await hubspot.crm.deals.searchApi.doSearch({
                     filterGroups: [{
                         filters: [
-                            { propertyName: "dealstage", operator: "EQ", value: "closedwon" }, // specific stage ID needed in real world
-                            { propertyName: "closedate", operator: "GTE", value: startDate.getTime().toString() }
+                            { propertyName: "dealstage", operator: "EQ" as any, value: "closedwon" }, // specific stage ID needed in real world
+                            { propertyName: "closedate", operator: "GTE" as any, value: startDate.getTime().toString() }
                         ]
                     }],
                     limit: 100
