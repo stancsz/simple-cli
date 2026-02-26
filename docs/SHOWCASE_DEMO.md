@@ -217,3 +217,33 @@ The Phase 20 Showcase was validated via the robust integration test suite `tests
 -   **[View the Roadmap](ROADMAP.md)**: Phase 20 is now Completed.
 -   **[Read the Specs](specs.md)**: Deep dive into the technical architecture.
 -   **[Try it Yourself](#quickstart-the-simulation-recommended)**: Run `npm run demo` now!
+
+## 🏭 Advanced: Production Load Simulation
+
+To validate the **Phase 23 Autonomous Agency Governance** layer, we provide a comprehensive load simulator that mimics a high-traffic production environment.
+
+### What it Does
+-   **Simulates 10+ Concurrent Clients**: Creates virtual Company Contexts and generates realistic Linear issue activity.
+-   **Swarm Fleet Management**: Stresses the `scaling_engine` to ensure swarms are spawned and balanced dynamically.
+-   **Predictive Health**: Triggers interventions for "at-risk" clients based on simulated metrics.
+-   **Enhanced Dreaming**: Verifies that the HR Loop detects cross-swarm patterns and generates SOPs.
+
+### How to Run
+Execute the validation suite:
+```bash
+npm test -- tests/integration/production_load_validation.test.ts
+```
+
+### Expected Output
+You will see the `ProductionLoadSimulator` initialize, generate load, and log key events:
+```text
+[SIM] [T+12h] Generating simulated load...
+[SIM] [T+12h] Generated 15 new issues across fleet.
+[SIM] [T+12h] Evaluating fleet demand...
+[SIM] [T+12h] Evaluation result: 2 Scale Up, 1 Scale Down.
+[SIM] [T+12h] Balancing fleet resources...
+[SIM] [T+12h] Executed 2 balancing actions.
+...
+[SIM] Finalizing simulation: Analyzing cross-swarm patterns...
+[SIM] SOP generation triggered.
+```
