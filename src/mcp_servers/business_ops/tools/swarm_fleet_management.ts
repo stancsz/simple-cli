@@ -19,12 +19,17 @@ export function registerSwarmFleetManagementTools(server: McpServer, mcpClient?:
     // Helper to get active projects (proxies for active swarms)
     async function getActiveProjects() {
         const linear = getLinearClient();
-        const projects = await linear.projects({
-            filter: {
-                state: { type: { neq: "completed" } }
+        // Fetch all projects and filter in memory to avoid SDK typing issues with complex filters
+        const projects = await linear.projects();
+        const activeProjects = [];
+
+        for (const project of projects.nodes) {
+            const state = await project.state;
+            if (state && (state as any).type !== "completed" && (state as any).type !== "canceled") {
+                activeProjects.push(project);
             }
-        });
-        return projects.nodes;
+        }
+        return activeProjects;
     }
 
     server.tool(

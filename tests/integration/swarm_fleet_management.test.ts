@@ -124,12 +124,14 @@ describe('Swarm Fleet Management Integration', () => {
             id: "p1",
             name: "Client A",
             updatedAt: new Date().toISOString(),
+            state: { type: "started" },
             issues: vi.fn().mockResolvedValue({ nodes: Array(3).fill({}) })
         };
         const proj2 = {
             id: "p2",
             name: "Client B",
             updatedAt: new Date().toISOString(),
+            state: { type: "started" },
             issues: vi.fn().mockResolvedValue({ nodes: Array(12).fill({}) })
         };
         mockProjects.nodes = [proj1, proj2];
@@ -158,6 +160,7 @@ describe('Swarm Fleet Management Integration', () => {
             id: "p1",
             name: "Client A",
             updatedAt: new Date().toISOString(),
+            state: { type: "started" },
             issues: vi.fn().mockResolvedValue({ nodes: Array(6).fill({}) })
         };
 
@@ -165,6 +168,7 @@ describe('Swarm Fleet Management Integration', () => {
             id: "p2",
             name: "Client B",
             updatedAt: new Date().toISOString(),
+            state: { type: "started" },
             issues: vi.fn().mockResolvedValue({ nodes: [] })
         };
 
