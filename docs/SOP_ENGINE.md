@@ -79,3 +79,12 @@ The SOP Engine powers the autonomous business operations of the Digital Biospher
 *   **Be Explicit**: Write clear instructions in each step.
 *   **Atomic Steps**: Keep steps focused on a single action (e.g., "Run tests" instead of "Run tests and deploy").
 *   **Use Standard Tools**: Ensure the agent has access to the necessary tools (e.g., ensure `git` server is running if the SOP involves git operations).
+
+## Autonomous SOP Generation
+
+The system now supports **Autonomous SOP Generation** via the **HR Loop** and **Dreaming** capabilities.
+
+1.  **Pattern Analysis**: The `HR` MCP server analyzes cross-swarm execution logs (`analyze_cross_swarm_patterns`) to identify successful strategies and common failure modes.
+2.  **SOP Synthesis**: When high-confidence success patterns are found, the system automatically generates a new SOP (`generate_sop_from_patterns`) capturing the successful workflow.
+3.  **Dreaming Integration**: The `Dreaming` MCP server proactively triggers this process after successfully simulating and resolving a past failure, ensuring that new solutions are immediately codified into SOPs.
+4.  **Brain Linkage**: Generated SOPs are linked in the Brain's semantic graph, making them available for future task planning and execution.

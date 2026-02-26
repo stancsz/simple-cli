@@ -3,6 +3,7 @@ import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js"
 import { z } from "zod";
 import { MCP } from "../../mcp.js";
 import { fileURLToPath } from "url";
+import { jsonrepair } from "jsonrepair";
 
 export class DreamingServer {
   private server: McpServer;
@@ -200,6 +201,100 @@ export class DreamingServer {
                      } catch (e) {
                          console.warn("Failed to store negotiation pattern:", e);
                      }
+                }
+
+                // HR Analysis & SOP Generation
+                try {
+                    const hr = this.mcp.getClient("hr_loop");
+                    if (hr) {
+                        // 1. Analyze Patterns
+                        // Use casting to avoid type errors with unknown properties in negotiationData
+                        const negotiationWithId = negotiationData as any;
+                        const analysisRes: any = await hr.callTool({
+                            name: "analyze_cross_swarm_patterns",
+                            arguments: {
+                                agent_type: role,
+                                swarm_id: negotiationWithId.swarm_id || undefined,
+                                limit: 10
+                            }
+                        });
+
+                        const analysisText = analysisRes?.content?.[0]?.text;
+
+                        let isSopCandidate = false;
+                        if (analysisText) {
+                            try {
+                                const repaired = jsonrepair(analysisText);
+                                const json = JSON.parse(repaired);
+                                if (json.sop_candidate) isSopCandidate = true;
+                            } catch {
+                                if (analysisText.includes('"sop_candidate": true')) isSopCandidate = true;
+                            }
+                        }
+
+                        if (isSopCandidate) {
+                            // 2. Generate SOP
+                            const sopRes: any = await hr.callTool({
+                                name: "generate_sop_from_patterns",
+                                arguments: {
+                                    pattern_analysis: analysisText,
+                                    title: `SOP for ${role} handling ${strategy.substring(0, 30)}...`,
+                                }
+                            });
+
+                            const sopOutput = sopRes?.content?.[0]?.text;
+                            if (sopOutput && sopOutput.includes("saved to:")) {
+                                console.error(`[Dreaming] SOP Generated: ${sopOutput.split('\n')[0]}`);
+
+                                // 3. Link in Brain Graph
+                                await brain.callTool({
+                                    name: "brain_update_graph",
+                                    arguments: {
+                                        operation: "add_node",
+                                        args: JSON.stringify({
+                                            id: `SOP-${role}-${Date.now()}`,
+                                            type: "SOP",
+                                            properties: {
+                                                role: role,
+                                                generated_by: "dreaming",
+                                                pattern_source: fail.taskId
+                                            }
+                                        })
+                                    }
+                                });
+
+                                // 4. Update Memory with Metadata
+                                try {
+                                    // We delete and re-store to update the metadata, reusing the attempts array from earlier scope
+                                    await brain.callTool({
+                                        name: "brain_delete_episode",
+                                        arguments: { id: fail.id, company: companyId }
+                                    });
+
+                                    const updatedOutcomes = { ...negotiationData, sop_generated_from_pattern: true };
+
+                                    // Re-store with updated metadata
+                                    await brain.callTool({
+                                        name: "brain_store",
+                                        arguments: {
+                                            id: fail.id,
+                                            taskId: fail.taskId,
+                                            request: fail.userPrompt,
+                                            solution: `[Dreaming Resolved] ${simOutput}`,
+                                            company: companyId,
+                                            simulation_attempts: JSON.stringify(attempts),
+                                            resolved_via_dreaming: true,
+                                            dreaming_outcomes: JSON.stringify(updatedOutcomes)
+                                        }
+                                    });
+                                } catch (e) {
+                                    console.warn("Failed to update memory with SOP metadata:", e);
+                                }
+                            }
+                        }
+                    }
+                } catch (e) {
+                    console.warn("[Dreaming] Failed to trigger HR loop:", e);
                 }
 
                 results.push(`Fixed failure ${fail.taskId} using role ${role}`);
