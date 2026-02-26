@@ -97,8 +97,8 @@ The roadmap is structured around the four anatomical layers of the Digital Biosp
     - ✅ Linear integration implemented and validated via end-to-end workflow test.
 
 ## Phase 22: Autonomous Client Lifecycle
-*Status: Proposed*
-*Current Focus: Full Lifecycle Automation & Scaling*
+*Status: Completed*
+*Current Focus: Validated Full Lifecycle Automation*
 - [x] **Lead Generation**: Automate outreach and lead qualification.
     - ✅ Implemented core discovery, qualification, and outreach tools integrated with HubSpot and Brain.
 - [x] **Self-Scaling Swarms**: Dynamic agent allocation per client demand.
@@ -114,6 +114,15 @@ The roadmap is structured around the four anatomical layers of the Digital Biosp
     - ✅ Implemented `execute_client_offboarding` tool in `business_ops` MCP.
     - ✅ Orchestrates secure archival for Brain (Context), CRM (HubSpot), Project (Linear), Finance (Xero), and Git (Assets).
     - ✅ Validated via integration tests (`tests/integration/client_offboarding_validation.test.ts`).
+
+## Phase 23: Autonomous Agency Governance & Profitability
+*Status: Proposed*
+*Current Focus: Self-Optimizing Business Intelligence*
+- [ ] **Autonomous KPI Tracking & Reporting**: Implement real-time business metrics (revenue, client satisfaction, agent efficiency) and automated board-level reporting.
+- [ ] **Profitability Optimization**: Build tools to analyze project margins, recommend pricing adjustments, and automate cost-saving measures.
+- [ ] **Strategic Decision Engine**: Create a system that uses historical data and market signals to propose new service offerings, staffing changes, or investment areas.
+- [ ] **Compliance & Risk Management**: Automate regulatory checks, contract reviews, and risk assessment for client engagements.
+- [ ] **Validation**: End-to-end simulation of agency self-governance, including stress tests and 'what-if' scenario planning.
 
 ## Legacy Achievements
 See [Legacy Roadmap](ROADMAP_LEGACY.md) for completed milestones of the previous "Simple CLI" era.

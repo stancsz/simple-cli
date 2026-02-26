@@ -263,28 +263,39 @@
 
 **Goal:** Automate the entire client lifecycle from discovery to offboarding.
 
-### Phase 22: Lead Generation & Scaling
-- [x] **Lead Generation**:
-    - [x] Create `src/mcp_servers/business_ops/tools/lead_generation.ts`.
-    - [x] Implement `discover_leads`, `qualify_lead`, `initiate_outreach`.
-    - [x] Integrate with HubSpot (Notes/Contacts) and Brain (Episodic Memory).
-    - [x] Create SOP (`sops/lead_generation_workflow.md`).
-    - [x] Validation: `tests/integration/lead_generation_validation.test.ts`.
-- [x] **Self-Scaling Swarms**:
-    - [x] Create `src/mcp_servers/scaling_engine/` and `scaling_orchestrator.ts`.
-    - [x] Implement `evaluate_demand` and `scale_swarm` tools.
-    - [x] Register tools in `business_ops`.
-    - [x] Create SOP (`sops/self_scaling_swarm_workflow.md`).
-    - [x] Validation: `tests/integration/scaling_engine_validation.test.ts`.
-- [x] **Project Delivery**:
-    - [x] Create `src/mcp_servers/business_ops/tools/project_delivery.ts`.
-    - [x] Implement `track_milestone_progress`, `generate_client_report`, `escalate_blockers`.
-    - [x] Integrate with Linear, Brain, Git, and Slack.
-    - [x] Create SOP (`sops/project_delivery_workflow.md`).
-    - [x] Validation: `tests/integration/project_delivery_validation.test.ts`.
-- [x] **Offboarding**:
-    - [x] Create `src/mcp_servers/business_ops/tools/client_offboarding.ts`.
-    - [x] Implement `execute_client_offboarding` tool.
-    - [x] Integrate with Linear, HubSpot, Xero, Brain, and Git.
-    - [x] Create SOP (`sops/client_offboarding_workflow.md`).
-    - [x] Validation: `tests/integration/client_offboarding_validation.test.ts`.
+### Phase 22: Lead Generation & Scaling (✅ Completed)
+- [x] ~~**Lead Generation**:~~
+    - [x] ~~Create `src/mcp_servers/business_ops/tools/lead_generation.ts`.~~
+    - [x] ~~Implement `discover_leads`, `qualify_lead`, `initiate_outreach`.~~
+    - [x] ~~Integrate with HubSpot (Notes/Contacts) and Brain (Episodic Memory).~~
+    - [x] ~~Create SOP (`sops/lead_generation_workflow.md`).~~
+    - [x] ~~Validation: `tests/integration/lead_generation_validation.test.ts`.~~
+- [x] ~~**Self-Scaling Swarms**:~~
+    - [x] ~~Create `src/mcp_servers/scaling_engine/` and `scaling_orchestrator.ts`.~~
+    - [x] ~~Implement `evaluate_demand` and `scale_swarm` tools.~~
+    - [x] ~~Register tools in `business_ops`.~~
+    - [x] ~~Create SOP (`sops/self_scaling_swarm_workflow.md`).~~
+    - [x] ~~Validation: `tests/integration/scaling_engine_validation.test.ts`.~~
+- [x] ~~**Project Delivery**:~~
+    - [x] ~~Create `src/mcp_servers/business_ops/tools/project_delivery.ts`.~~
+    - [x] ~~Implement `track_milestone_progress`, `generate_client_report`, `escalate_blockers`.~~
+    - [x] ~~Integrate with Linear, Brain, Git, and Slack.~~
+    - [x] ~~Create SOP (`sops/project_delivery_workflow.md`).~~
+    - [x] ~~Validation: `tests/integration/project_delivery_validation.test.ts`.~~
+- [x] ~~**Offboarding**:~~
+    - [x] ~~Create `src/mcp_servers/business_ops/tools/client_offboarding.ts`.~~
+    - [x] ~~Implement `execute_client_offboarding` tool.~~
+    - [x] ~~Integrate with Linear, HubSpot, Xero, Brain, and Git.~~
+    - [x] ~~Create SOP (`sops/client_offboarding_workflow.md`).~~
+    - [x] ~~Validation: `tests/integration/client_offboarding_validation.test.ts`.~~
+
+## Sprint 9: Autonomous Agency Governance
+
+**Goal:** Establish self-governing mechanisms for agency profitability and risk management.
+
+### Phase 23: Autonomous Agency Governance & Profitability
+- [ ] **Autonomous KPI Tracking & Reporting**: Implement real-time business metrics (revenue, client satisfaction, agent efficiency) and automated board-level reporting.
+- [ ] **Profitability Optimization**: Build tools to analyze project margins, recommend pricing adjustments, and automate cost-saving measures.
+- [ ] **Strategic Decision Engine**: Create a system that uses historical data and market signals to propose new service offerings, staffing changes, or investment areas.
+- [ ] **Compliance & Risk Management**: Automate regulatory checks, contract reviews, and risk assessment for client engagements.
+- [ ] **Validation**: End-to-end simulation of agency self-governance, including stress tests and 'what-if' scenario planning.
