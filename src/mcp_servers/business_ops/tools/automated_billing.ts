@@ -210,4 +210,81 @@ export function registerBillingTools(server: McpServer) {
             }
         }
     );
+
+    // Tool: Get Financial KPIs
+    server.tool(
+        "billing_get_financial_kpis",
+        "Get high-level financial KPIs (MRR, Outstanding, Overdue).",
+        {},
+        async () => {
+            try {
+                const xero = await getXeroClient();
+                const tenantId = await getTenantId(xero);
+
+                // Outstanding & Overdue
+                // @ts-ignore
+                const authorisedRes = await xero.accountingApi.getInvoices(tenantId, undefined, 'Status=="AUTHORISED"');
+                const authorised = authorisedRes.body.invoices || [];
+
+                let outstanding = 0;
+                let overdue = 0;
+                const now = new Date();
+
+                for (const inv of authorised) {
+                    outstanding += inv.amountDue || 0;
+                    if (inv.dueDate && new Date(inv.dueDate) < now) {
+                        overdue += inv.amountDue || 0;
+                    }
+                }
+
+                // Revenue Last 30 Days (MRR Proxy)
+                const thirtyDaysAgo = new Date();
+                thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+
+                const y = thirtyDaysAgo.getFullYear();
+                const m = thirtyDaysAgo.getMonth() + 1;
+                const d = thirtyDaysAgo.getDate();
+
+                // @ts-ignore
+                const recentPaidRes = await xero.accountingApi.getInvoices(tenantId, undefined, `Status=="PAID" && Date >= DateTime(${y}, ${m}, ${d})`);
+                const recentPaid = recentPaidRes.body.invoices || [];
+
+                let revenue30d = 0;
+                for (const inv of recentPaid) {
+                    revenue30d += inv.total || 0;
+                }
+
+                // Active Clients (Unique contacts in authorized or recent paid)
+                const contacts = new Set<string>();
+                for (const inv of authorised) {
+                    if (inv.contact?.contactID) contacts.add(inv.contact.contactID);
+                }
+                for (const inv of recentPaid) {
+                    if (inv.contact?.contactID) contacts.add(inv.contact.contactID);
+                }
+
+                return {
+                    content: [{
+                        type: "text",
+                        text: JSON.stringify({
+                            outstanding_amount: outstanding,
+                            overdue_amount: overdue,
+                            revenue_last_30d: revenue30d,
+                            active_clients_billing: contacts.size,
+                            currency: "USD" // Assumption
+                        }, null, 2)
+                    }]
+                };
+
+            } catch (e: any) {
+                return {
+                    content: [{
+                        type: "text",
+                        text: `Error getting financial KPIs: ${e.message}`
+                    }],
+                    isError: true
+                };
+            }
+        }
+    );
 }

@@ -6,6 +6,15 @@
     </div>
 
     <div class="grid">
+        <SystemHealthPanel :healthData="systemData" />
+        <FinancialKPIsPanel :financialData="financialData" />
+    </div>
+
+    <div class="grid-full">
+        <SwarmFleetPanel :fleetData="fleetData" />
+    </div>
+
+    <div class="grid">
         <div class="panel">
             <h3>Task Completion & Success Rate</h3>
             <Bar v-if="tasksChartData" :data="tasksChartData" :options="chartOptions" />
@@ -16,15 +25,8 @@
         </div>
     </div>
 
-    <div id="alerts-panel" class="panel" v-if="alerts.length > 0">
-        <h3>Active Alerts</h3>
-        <ul id="alerts-list">
-            <li v-for="alert in alerts" :key="alert">{{ alert }}</li>
-        </ul>
-    </div>
-
     <div class="panel" v-if="showcaseRuns.length > 0">
-         <h3>Showcase Validation</h3>
+         <h3>Showcase Validation History</h3>
          <table id="showcase-table">
              <thead>
                  <tr>
@@ -52,45 +54,29 @@
              </tbody>
          </table>
     </div>
-
-    <div class="panel">
-         <h3>Company Details</h3>
-         <table id="metrics-table">
-             <thead>
-                 <tr>
-                     <th>Company</th>
-                     <th>Tasks</th>
-                     <th>Success Rate</th>
-                     <th>Avg Duration (ms)</th>
-                     <th>Cost (USD)</th>
-                 </tr>
-             </thead>
-             <tbody>
-                 <tr v-for="(data, company) in validMetrics" :key="company">
-                     <td>{{ company }}</td>
-                     <td>{{ data.task_count }}</td>
-                     <td>{{ data.success_rate }}%</td>
-                     <td>{{ data.avg_duration_ms }}</td>
-                     <td>${{ data.estimated_cost_usd }}</td>
-                 </tr>
-             </tbody>
-         </table>
-    </div>
   </div>
 </template>
 
 <script>
 import { Bar, Doughnut } from 'vue-chartjs'
+import SwarmFleetPanel from '../components/SwarmFleetPanel.vue'
+import FinancialKPIsPanel from '../components/FinancialKPIsPanel.vue'
+import SystemHealthPanel from '../components/SystemHealthPanel.vue'
 
 export default {
-    components: { Bar, Doughnut },
+    components: { Bar, Doughnut, SwarmFleetPanel, FinancialKPIsPanel, SystemHealthPanel },
     data() {
         return {
             metrics: {},
             alerts: [],
             showcaseRuns: [],
             summary: null,
-            chartOptions: { responsive: true }
+            chartOptions: { responsive: true },
+
+            fleetData: [],
+            financialData: {},
+            systemData: {},
+            pollingInterval: null
         }
     },
     computed: {
@@ -132,26 +118,38 @@ export default {
     },
     async mounted() {
         await this.loadData();
+        this.pollingInterval = setInterval(this.loadData, 30000);
+    },
+    beforeUnmount() {
+        if (this.pollingInterval) clearInterval(this.pollingInterval);
     },
     methods: {
         async loadData() {
             try {
-                const metricsRes = await fetch('/api/dashboard/metrics');
-                this.metrics = await metricsRes.json();
-            } catch (e) { console.error(e); }
+                const res = await fetch('/api/dashboard/data');
+                const data = await res.json();
 
-            try {
-                const alertsRes = await fetch('/api/dashboard/alerts');
-                const data = await alertsRes.json();
-                this.alerts = data.alerts || [];
-            } catch (e) { console.error(e); }
+                this.fleetData = data.fleet || [];
+                this.financialData = data.finance || {};
+                this.systemData = data.system || {};
 
-            try {
-                const summaryRes = await fetch('/api/dashboard/summary');
-                const data = await summaryRes.json();
-                this.summary = data.summary;
-            } catch (e) {
-                this.summary = "Failed to load summary.";
+                if (data.system && data.system.metrics) {
+                    this.metrics = data.system.metrics;
+                }
+                if (data.system && data.system.active_alerts) {
+                    this.alerts = data.system.active_alerts;
+                }
+
+            } catch(e) { console.error("Failed to load dashboard data:", e); }
+
+            if (!this.summary) {
+                try {
+                    const summaryRes = await fetch('/api/dashboard/summary');
+                    const data = await summaryRes.json();
+                    this.summary = data.summary;
+                } catch (e) {
+                    this.summary = "Failed to load summary.";
+                }
             }
 
             try {
@@ -162,3 +160,10 @@ export default {
     }
 }
 </script>
+
+<style>
+.grid-full {
+    width: 100%;
+    margin-bottom: 20px;
+}
+</style>
