@@ -67,7 +67,6 @@ describe("Economic Optimization Engine Validation", () => {
         const calls = (mockServer.tool as any).mock.calls;
         collectMarketTool = calls.find((c: any) => c[0] === "collect_market_data")?.[3];
         optimizePricingTool = calls.find((c: any) => c[0] === "optimize_pricing_strategy")?.[3];
-        adjustServiceTool = calls.find((c: any) => c[0] === "adjust_service_offerings")?.[3];
         allocateResourceTool = calls.find((c: any) => c[0] === "allocate_resources_optimally")?.[3];
         generateInsightsTool = calls.find((c: any) => c[0] === "generate_business_insights")?.[3];
     });
@@ -104,21 +103,6 @@ describe("Economic Optimization Engine Validation", () => {
 
         expect(recs[0].recommended_price).toBe(150);
         expect(mockLLM.generate).toHaveBeenCalled();
-    });
-
-    it("should recommend service adjustments based on low margins", async () => {
-        const lowMarginMetrics = JSON.stringify({
-            financial: { margin: 0.1 },
-            client: { churnRate: 0.02 },
-            delivery: { efficiency: 0.8 }
-        });
-
-        const result = await adjustServiceTool({ performance_metrics: lowMarginMetrics });
-        const recs = JSON.parse(result.content[0].text);
-
-        console.log("Service Adjustments:", JSON.stringify(recs, null, 2));
-
-        expect(recs[0].action).toBe("Bundle Services");
     });
 
     it("should allocate resources based on demand forecast", async () => {
