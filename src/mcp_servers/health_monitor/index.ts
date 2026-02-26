@@ -488,7 +488,10 @@ server.tool(
         try {
             // @ts-ignore
             const res = await businessClientGlobal.callTool({ name: "get_fleet_status", arguments: {} });
-            return res;
+            return {
+                content: res.content as any,
+                isError: res.isError as boolean | undefined
+            };
         } catch (e: any) {
             return { content: [{ type: "text", text: e.message }], isError: true };
         }
@@ -506,7 +509,10 @@ server.tool(
         try {
             // @ts-ignore
             const res = await businessClientGlobal.callTool({ name: "billing_get_financial_kpis", arguments: {} });
-            return res;
+            return {
+                content: res.content as any,
+                isError: res.isError as boolean | undefined
+            };
         } catch (e: any) {
             return { content: [{ type: "text", text: e.message }], isError: true };
         }
