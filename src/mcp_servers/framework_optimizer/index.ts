@@ -43,7 +43,7 @@ export class FrameworkOptimizerServer {
 
     const brain = this.mcp.getClient("brain");
     if (!brain) {
-        return { content: [{ type: "text", text: "Brain server not available." }], isError: true };
+        return { content: [{ type: "text" as const, text: "Brain server not available." }], isError: true };
     }
 
     // Query Brain
@@ -67,11 +67,11 @@ export class FrameworkOptimizerServer {
             }
         }
     } catch (e) {
-        return { content: [{ type: "text", text: `Failed to query brain: ${(e as Error).message}` }], isError: true };
+        return { content: [{ type: "text" as const, text: `Failed to query brain: ${(e as Error).message}` }], isError: true };
     }
 
     if (!Array.isArray(outcomes) || outcomes.length === 0) {
-        return { content: [{ type: "text", text: "No framework integration outcomes found to analyze." }] };
+        return { content: [{ type: "text" as const, text: "No framework integration outcomes found to analyze." }] };
     }
 
     // Prepare context for LLM
@@ -129,11 +129,11 @@ The output will be saved to 'sops/framework_integration/optimized_patterns.md'.
         // Let's rely on process exit if standalone, or kept alive if part of larger system.
 
         return {
-            content: [{ type: "text", text: `Optimization proposal generated and saved to ${filePath}.` }]
+            content: [{ type: "text" as const, text: `Optimization proposal generated and saved to ${filePath}.` }]
         };
 
     } catch (e: any) {
-        return { content: [{ type: "text", text: `Optimization analysis failed: ${e.message}` }], isError: true };
+        return { content: [{ type: "text" as const, text: `Optimization analysis failed: ${e.message}` }], isError: true };
     }
   }
 
