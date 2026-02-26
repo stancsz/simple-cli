@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { registerEconomicOptimizationTools } from "../../src/mcp_servers/business_ops/tools/economic_optimization.js";
 import { registerMarketAnalysisTools } from "../../src/mcp_servers/business_ops/tools/market_analysis.js";
+import { registerPricingOptimizationTools } from "../../src/mcp_servers/business_ops/tools/pricing_optimization.js";
 
 // Mock Dependencies
 const mockXeroClient = {
@@ -60,6 +61,7 @@ describe("Economic Optimization Engine Validation", () => {
         // Register tools
         registerEconomicOptimizationTools(mockServer as any);
         registerMarketAnalysisTools(mockServer as any);
+        registerPricingOptimizationTools(mockServer as any);
 
         // Extract tools
         const calls = (mockServer.tool as any).mock.calls;
@@ -85,22 +87,22 @@ describe("Economic Optimization Engine Validation", () => {
     });
 
     it("should optimize pricing strategy using LLM", async () => {
+        mockEpisodicMemory.recall.mockResolvedValue([]);
         mockLLM.generate.mockResolvedValue({
             message: JSON.stringify([
-                { service_name: "Test Service", old_price: 100, new_price: 150, confidence_score: 0.9, reasoning: "Underpriced." }
+                { service_name: "Test Service", current_price: 100, recommended_price: 150, confidence_score: 0.9, reasoning: "Underpriced." }
             ])
         });
 
         const result = await optimizePricingTool({
-            current_services: [{ name: "Test Service", current_price: 100 }],
-            market_data_summary: "High demand."
+            current_services: [{ name: "Test Service", current_price: 100 }]
         });
 
         const recs = JSON.parse(result.content[0].text);
 
         console.log("Pricing Recommendations:", JSON.stringify(recs, null, 2));
 
-        expect(recs[0].new_price).toBe(150);
+        expect(recs[0].recommended_price).toBe(150);
         expect(mockLLM.generate).toHaveBeenCalled();
     });
 
