@@ -19,6 +19,7 @@ import { registerSwarmFleetManagementTools } from "./tools/swarm_fleet_managemen
 import { registerPredictiveHealthTools } from "./tools/predictive_health.js";
 import { registerMarketAnalysisTools } from "./tools/market_analysis.js";
 import { registerEconomicOptimizationTools } from "./tools/economic_optimization.js";
+import { registerPerformanceAnalyticsTools } from "./tools/performance_analytics.js";
 
 // Load secrets from .env.agent
 const envPath = join(process.cwd(), ".env.agent");
@@ -49,6 +50,7 @@ registerSwarmFleetManagementTools(server);
 registerPredictiveHealthTools(server);
 registerMarketAnalysisTools(server);
 registerEconomicOptimizationTools(server);
+registerPerformanceAnalyticsTools(server);
 
 // Start Server
 async function main() {

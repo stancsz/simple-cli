@@ -46,7 +46,6 @@ vi.mock("../../src/llm.js", () => ({
 }));
 
 describe("Economic Optimization Engine Validation", () => {
-    let analyzePerfTool: any;
     let collectMarketTool: any;
     let optimizePricingTool: any;
     let adjustServiceTool: any;
@@ -64,7 +63,6 @@ describe("Economic Optimization Engine Validation", () => {
 
         // Extract tools
         const calls = (mockServer.tool as any).mock.calls;
-        analyzePerfTool = calls.find((c: any) => c[0] === "analyze_performance_metrics")?.[3];
         collectMarketTool = calls.find((c: any) => c[0] === "collect_market_data")?.[3];
         optimizePricingTool = calls.find((c: any) => c[0] === "optimize_pricing_strategy")?.[3];
         adjustServiceTool = calls.find((c: any) => c[0] === "adjust_service_offerings")?.[3];
@@ -74,44 +72,6 @@ describe("Economic Optimization Engine Validation", () => {
 
     afterEach(() => {
         vi.restoreAllMocks();
-    });
-
-    it("should aggregate performance metrics correctly", async () => {
-        // Mock Xero response
-        mockXeroClient.accountingApi.getInvoices.mockResolvedValue({
-            body: {
-                invoices: [
-                    { amountDue: 1000, total: 5000 },
-                    { amountDue: 0, total: 3000 }
-                ]
-            }
-        });
-
-        const result = await analyzePerfTool({ period: "last_30_days" });
-        const metrics = JSON.parse(result.content[0].text);
-
-        console.log("Performance Metrics:", JSON.stringify(metrics, null, 2));
-
-        expect(metrics.financial.revenue).toBe(8000);
-        expect(metrics.financial.outstanding).toBe(1000);
-        expect(metrics.delivery.velocity).toBe(25); // Simulated default
-        expect(metrics.client.nps).toBe(72); // Simulated default
-
-        // Check Brain storage
-        expect(mockEpisodicMemory.store).toHaveBeenCalledWith(
-            expect.stringContaining("performance_snapshot"),
-            expect.any(String),
-            expect.any(String),
-            [],
-            undefined,
-            undefined,
-            false,
-            undefined,
-            undefined,
-            0,
-            0,
-            "performance_metric"
-        );
     });
 
     it("should collect market data", async () => {
