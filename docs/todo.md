@@ -282,3 +282,9 @@
     - [x] Integrate with Linear, Brain, Git, and Slack.
     - [x] Create SOP (`sops/project_delivery_workflow.md`).
     - [x] Validation: `tests/integration/project_delivery_validation.test.ts`.
+- [x] **Offboarding**:
+    - [x] Create `src/mcp_servers/business_ops/tools/client_offboarding.ts`.
+    - [x] Implement `execute_client_offboarding` tool.
+    - [x] Integrate with Linear, HubSpot, Xero, Brain, and Git.
+    - [x] Create SOP (`sops/client_offboarding_workflow.md`).
+    - [x] Validation: `tests/integration/client_offboarding_validation.test.ts`.

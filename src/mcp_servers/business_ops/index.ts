@@ -13,6 +13,7 @@ import { registerCrmTools } from "./crm.js";
 import { registerLinearIntegrationTools } from "./tools/linear_integration.js";
 import { registerLeadGenerationTools } from "./tools/lead_generation.js";
 import { registerProjectDeliveryTools } from "./tools/project_delivery.js";
+import { registerClientOffboardingTools } from "./tools/client_offboarding.js";
 import { registerScalingTools } from "../scaling_engine/scaling_orchestrator.js";
 
 // Load secrets from .env.agent
@@ -38,6 +39,7 @@ registerCrmTools(server);
 registerLinearIntegrationTools(server);
 registerLeadGenerationTools(server);
 registerProjectDeliveryTools(server);
+registerClientOffboardingTools(server);
 registerScalingTools(server);
 
 // Start Server

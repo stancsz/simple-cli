@@ -110,7 +110,10 @@ The roadmap is structured around the four anatomical layers of the Digital Biosp
     - ✅ Implemented `generate_client_report` for automated Markdown reporting with Git integration.
     - ✅ Implemented `escalate_blockers` for proactive issue resolution.
     - ✅ Integrated with `business_ops` MCP and verified via integration tests.
-- [ ] **Offboarding**: Secure project handover and archival.
+- [x] **Offboarding**: Secure project handover and archival.
+    - ✅ Implemented `execute_client_offboarding` tool in `business_ops` MCP.
+    - ✅ Orchestrates secure archival for Brain (Context), CRM (HubSpot), Project (Linear), Finance (Xero), and Git (Assets).
+    - ✅ Validated via integration tests (`tests/integration/client_offboarding_validation.test.ts`).
 
 ## Legacy Achievements
 See [Legacy Roadmap](ROADMAP_LEGACY.md) for completed milestones of the previous "Simple CLI" era.
