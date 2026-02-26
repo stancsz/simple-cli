@@ -289,5 +289,8 @@
     - [x] Create SOP (`sops/client_offboarding_workflow.md`).
     - [x] Validation: `tests/integration/client_offboarding_validation.test.ts`.
 
-## Phase 23
-(See [Roadmap](ROADMAP.md))
+## Phase 23: Autonomous Agency Governance & Meta-Orchestration
+- [x] **Swarm Fleet Management**: `get_fleet_status`, `evaluate_fleet_demand`, `balance_fleet_resources`.
+- [x] **Predictive Client Health**: `analyze_client_health`, `predict_retention_risk`, `trigger_preemptive_intervention`.
+- [x] **HR Loop & Dreaming Enhancement**: Cross-swarm pattern analysis & SOP generation.
+- [x] **Agency Dashboard**: Unified dashboard for Swarm Status, Financial KPIs, and System Health.

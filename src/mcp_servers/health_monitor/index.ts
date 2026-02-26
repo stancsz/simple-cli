@@ -385,6 +385,8 @@ server.tool(
   }
 );
 
+let businessClientGlobal: Client | null = null;
+
 // Helper to connect to Operational Persona
 async function connectToOperationalPersona(): Promise<Client | null> {
     const srcPath = join(process.cwd(), "src", "mcp_servers", "operational_persona", "index.ts");
@@ -430,6 +432,111 @@ async function connectToOperationalPersona(): Promise<Client | null> {
     }
 }
 
+// Helper to connect to Business Ops
+async function connectToBusinessOps(): Promise<Client | null> {
+    const srcPath = join(process.cwd(), "src", "mcp_servers", "business_ops", "index.ts");
+    const distPath = join(process.cwd(), "dist", "mcp_servers", "business_ops", "index.js");
+
+    let command = "node";
+    let args = [distPath];
+
+    if (existsSync(srcPath) && !existsSync(distPath)) {
+        command = "npx";
+        args = ["tsx", srcPath];
+    } else if (!existsSync(distPath)) {
+        console.warn("Could not find Business Ops server script.");
+        return null;
+    }
+
+    const env: Record<string, string> = {};
+    for (const key in process.env) {
+        const val = process.env[key];
+        if (val !== undefined && key !== 'PORT') {
+            env[key] = val;
+        }
+    }
+    env.MCP_DISABLE_DEPENDENCIES = 'true';
+
+    const transport = new StdioClientTransport({
+        command,
+        args,
+        env
+    });
+
+    const client = new Client(
+        { name: "health-monitor-client-business", version: "1.0.0" },
+        { capabilities: {} }
+    );
+
+    try {
+        await client.connect(transport);
+        return client;
+    } catch (e) {
+        console.error("Failed to connect to Business Ops:", e);
+        return null;
+    }
+}
+
+server.tool(
+    "get_swarm_fleet_status",
+    "Get swarm fleet status (proxies to business_ops).",
+    {},
+    async () => {
+        if (!businessClientGlobal) {
+             return { content: [{ type: "text", text: "Business Ops client not connected." }], isError: true };
+        }
+        try {
+            // @ts-ignore
+            const res = await businessClientGlobal.callTool({ name: "get_fleet_status", arguments: {} });
+            return res;
+        } catch (e: any) {
+            return { content: [{ type: "text", text: e.message }], isError: true };
+        }
+    }
+);
+
+server.tool(
+    "get_financial_kpis",
+    "Get financial KPIs (proxies to business_ops).",
+    {},
+    async () => {
+        if (!businessClientGlobal) {
+             return { content: [{ type: "text", text: "Business Ops client not connected." }], isError: true };
+        }
+        try {
+            // @ts-ignore
+            const res = await businessClientGlobal.callTool({ name: "billing_get_financial_kpis", arguments: {} });
+            return res;
+        } catch (e: any) {
+            return { content: [{ type: "text", text: e.message }], isError: true };
+        }
+    }
+);
+
+server.tool(
+    "get_system_health_summary",
+    "Get system health summary (internal aggregation).",
+    {},
+    async () => {
+        try {
+            const alerts = await getAlerts();
+            const metrics = await aggregateCompanyMetrics();
+            const recentShowcase = await getShowcaseRuns(1);
+
+            const system = {
+                alerts: alerts.length,
+                active_alerts: alerts,
+                metrics: metrics,
+                last_showcase_success: recentShowcase[0]?.success,
+                uptime: process.uptime()
+            };
+             return { content: [{ type: "text", text: JSON.stringify(system, null, 2) }] };
+        } catch (e: any) {
+            return { content: [{ type: "text", text: e.message }], isError: true };
+        }
+    }
+);
+
 export async function main() {
   if (process.env.PORT) {
     const app = express();
@@ -438,6 +545,9 @@ export async function main() {
 
     // Connect to Operational Persona Client
     const personaClient = await connectToOperationalPersona();
+
+    // Connect to Business Ops Client
+    businessClientGlobal = await connectToBusinessOps();
 
     // Serve Dashboard Static Files
     const dashboardPublic = join(process.cwd(), 'scripts', 'dashboard', 'dist');
@@ -567,6 +677,86 @@ export async function main() {
             }
         } catch (e) {
             console.error("Summary generation failed:", e);
+            res.status(500).json({ error: (e as Error).message });
+        }
+    });
+
+    app.get("/api/dashboard/data", async (req, res) => {
+        if (process.env.MOCK_DATA === 'true') {
+             return res.json({
+                 fleet: [{
+                     company: 'Mock Company A',
+                     projectId: 'mock-123',
+                     active_agents: 3,
+                     pending_issues: 5,
+                     health: 'healthy',
+                     last_updated: new Date().toISOString()
+                 }, {
+                     company: 'Mock Company B',
+                     projectId: 'mock-456',
+                     active_agents: 1,
+                     pending_issues: 12,
+                     health: 'strained',
+                     last_updated: new Date().toISOString()
+                 }],
+                 finance: {
+                     revenue_last_30d: 15000,
+                     outstanding_amount: 2000,
+                     overdue_amount: 500,
+                     active_clients_billing: 2
+                 },
+                 system: {
+                     uptime: 3600,
+                     alerts: 1,
+                     active_alerts: [{ message: "High CPU usage", timestamp: new Date().toISOString() }],
+                     metrics: {},
+                     last_showcase_success: true
+                 }
+             });
+        }
+        try {
+            let fleet: any[] = [];
+            let finance: any = {};
+
+            if (businessClientGlobal) {
+                try {
+                    // @ts-ignore
+                    const fleetRes: any = await businessClientGlobal.callTool({ name: "get_fleet_status", arguments: {} });
+                    if (fleetRes.content && fleetRes.content[0].text) {
+                        fleet = JSON.parse(fleetRes.content[0].text);
+                    }
+                } catch(e) { console.error("Error fetching fleet status:", e); }
+
+                try {
+                    // @ts-ignore
+                    const financeRes: any = await businessClientGlobal.callTool({ name: "billing_get_financial_kpis", arguments: {} });
+                    if (financeRes.content && financeRes.content[0].text) {
+                        finance = JSON.parse(financeRes.content[0].text);
+                    }
+                } catch(e) { console.error("Error fetching finance KPIs:", e); }
+            } else {
+                 console.warn("Business Ops not connected, returning empty fleet/finance data.");
+            }
+
+            // System Health (Local)
+            const alerts = await getAlerts();
+            const metrics = await aggregateCompanyMetrics();
+            const recentShowcase = await getShowcaseRuns(1);
+
+            const system = {
+                alerts: alerts.length,
+                active_alerts: alerts,
+                metrics: metrics,
+                last_showcase_success: recentShowcase[0]?.success,
+                uptime: process.uptime()
+            };
+
+            res.json({
+                fleet,
+                finance,
+                system
+            });
+        } catch (e) {
             res.status(500).json({ error: (e as Error).message });
         }
     });
