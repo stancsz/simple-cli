@@ -112,10 +112,11 @@ export function registerPricingOptimizationTools(server: McpServer) {
             await memory.init();
 
             // Idempotency Check (Last 24 Hours)
-            const recentRuns = await memory.search(
+            const recentRuns = await memory.recall(
                 "pricing_optimization_run",
-                ["pricing_optimization"],
-                1
+                1,
+                undefined,
+                "pricing_recommendation"
             );
 
             if (recentRuns.length > 0) {
@@ -126,7 +127,7 @@ export function registerPricingOptimizationTools(server: McpServer) {
                      return {
                         content: [{
                             type: "text",
-                            text: `Pricing optimization already run recently. Last recommendation: ${lastRun.content}`
+                            text: `Pricing optimization already run recently. Last recommendation: ${lastRun.agentResponse}`
                         }]
                     };
                 }

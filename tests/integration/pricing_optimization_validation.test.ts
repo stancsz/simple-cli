@@ -25,7 +25,7 @@ const mockHubSpotClient = {
 const mockEpisodicMemory = {
     init: vi.fn(),
     store: vi.fn(),
-    search: vi.fn()
+    recall: vi.fn()
 };
 
 const mockLLM = {
@@ -89,7 +89,7 @@ describe("Pricing Optimization Validation", () => {
         });
 
         // 2. Mock Memory (No recent runs)
-        mockEpisodicMemory.search.mockResolvedValue([]);
+        mockEpisodicMemory.recall.mockResolvedValue([]);
 
         // 3. Mock LLM Response
         const mockRecommendation = [
@@ -117,9 +117,9 @@ describe("Pricing Optimization Validation", () => {
 
     it("should handle idempotency (skip if run recently)", async () => {
         // Mock Memory (Recent run exists)
-        mockEpisodicMemory.search.mockResolvedValue([{
+        mockEpisodicMemory.recall.mockResolvedValue([{
             timestamp: new Date().toISOString(),
-            content: "Last run result"
+            agentResponse: "Last run result"
         }]);
 
         const result = await optimizePricingTool({
@@ -131,7 +131,7 @@ describe("Pricing Optimization Validation", () => {
     });
 
     it("should use fallback if LLM fails", async () => {
-        mockEpisodicMemory.search.mockResolvedValue([]);
+        mockEpisodicMemory.recall.mockResolvedValue([]);
         mockLLM.generate.mockRejectedValue(new Error("LLM Down"));
 
         // Force errors in APIs to test full fallback path
