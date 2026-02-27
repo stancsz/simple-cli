@@ -13,24 +13,47 @@ function getLinearClient() {
     return new LinearClient({ apiKey });
 }
 
+// Helper to get active projects (proxies for active swarms)
+export async function getActiveProjects(linearClient?: LinearClient) {
+    const linear = linearClient || getLinearClient();
+    // Fetch all projects and filter in memory to avoid SDK typing issues with complex filters
+    const projects = await linear.projects();
+    const activeProjects = [];
+
+    for (const project of projects.nodes) {
+        const state = await project.state;
+        if (state && (state as any).type !== "completed" && (state as any).type !== "canceled") {
+            activeProjects.push(project);
+        }
+    }
+    return activeProjects;
+}
+
+// Logic for fetching fleet status
+export async function getFleetStatusLogic(linearClient?: LinearClient) {
+    const projects = await getActiveProjects(linearClient);
+    const fleetStatus = [];
+
+    for (const project of projects) {
+        const issues = await project.issues({
+            filter: { state: { type: { neq: "completed" } } }
+        });
+
+        fleetStatus.push({
+            company: project.name, // Using Project Name as Company/Client Name
+            projectId: project.id,
+            active_agents: 1, // Baseline. In a real system, we'd query the Swarm server for exact count.
+            pending_issues: issues.nodes.length,
+            health: issues.nodes.length > 10 ? "strained" : "healthy",
+            last_updated: project.updatedAt
+        });
+    }
+
+    return fleetStatus;
+}
+
 export function registerSwarmFleetManagementTools(server: McpServer, mcpClient?: MCP) {
     const mcp = mcpClient || new MCP();
-
-    // Helper to get active projects (proxies for active swarms)
-    async function getActiveProjects() {
-        const linear = getLinearClient();
-        // Fetch all projects and filter in memory to avoid SDK typing issues with complex filters
-        const projects = await linear.projects();
-        const activeProjects = [];
-
-        for (const project of projects.nodes) {
-            const state = await project.state;
-            if (state && (state as any).type !== "completed" && (state as any).type !== "canceled") {
-                activeProjects.push(project);
-            }
-        }
-        return activeProjects;
-    }
 
     server.tool(
         "get_fleet_status",
@@ -38,24 +61,7 @@ export function registerSwarmFleetManagementTools(server: McpServer, mcpClient?:
         {},
         async () => {
             try {
-                const projects = await getActiveProjects();
-                const fleetStatus = [];
-
-                for (const project of projects) {
-                    const issues = await project.issues({
-                        filter: { state: { type: { neq: "completed" } } }
-                    });
-
-                    fleetStatus.push({
-                        company: project.name, // Using Project Name as Company/Client Name
-                        projectId: project.id,
-                        active_agents: 1, // Baseline. In a real system, we'd query the Swarm server for exact count.
-                        pending_issues: issues.nodes.length,
-                        health: issues.nodes.length > 10 ? "strained" : "healthy",
-                        last_updated: project.updatedAt
-                    });
-                }
-
+                const fleetStatus = await getFleetStatusLogic();
                 return {
                     content: [{
                         type: "text",
