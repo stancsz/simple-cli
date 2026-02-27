@@ -100,7 +100,7 @@ Return a strictly valid JSON object matching this structure:
     }
 }
 
-export function getMarketData(sector: string, region: string) {
+export async function getMarketData(sector: string, region: string) {
     // In a production environment, this would integrate with market research APIs (e.g., Crunchbase, Statista)
     // or perform broad web searches. For this implementation, we simulate structured market intelligence
     // to enable the optimization loop.
@@ -139,7 +139,7 @@ export function registerMarketAnalysisTools(server: McpServer) {
             query: z.string().optional().describe("Specific query or focus area.")
         },
         async ({ sector, region, query }) => {
-            const simulatedData = getMarketData(sector, region);
+            const simulatedData = await getMarketData(sector, region);
 
             // Enhance with LLM analysis
             const llm = createLLM();
