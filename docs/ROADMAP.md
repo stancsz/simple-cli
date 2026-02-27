@@ -47,8 +47,9 @@ The roadmap is structured around the four anatomical layers of the Digital Biosp
     - [x] Implement `scan_strategic_horizon` tool.
     - ✅ Implemented `scan_strategic_horizon` tool which synthesizes internal pattern analysis and mock external market signals into a strategic report. Validated via `tests/integration/phase25_validation.test.ts`.
 - [ ] **Federated Policy Engine**: Create a governance mechanism where "C-Suite" agents (CEO, CSO, CFO personas) set policies that dynamically update individual swarm operating parameters.
-    - [ ] Implement `update_operating_policy` tool.
-    - [ ] Build "Policy Propagation" mechanism to push updates to Swarm Fleet.
+    - [x] Implement `update_operating_policy` tool with versioning and validation.
+    - [x] Build "Policy Propagation" mechanism to push updates to Swarm Fleet.
+    - ✅ Implemented `update_operating_policy`, `get_active_policy`, and `rollback_operating_policy`. Validated via `tests/integration/policy_engine_validation.test.ts` including policy propagation to fleet status.
 - [ ] **Autonomous Board Meeting**: Simulate periodic "Board Meetings" where C-Suite agents review the "State of the Union" and make binding decisions.
     - [ ] Create `convene_board_meeting` workflow.
     - [ ] Validate decision-making quality and coherence.
