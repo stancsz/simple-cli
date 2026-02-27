@@ -147,7 +147,9 @@ The roadmap is structured around the four anatomical layers of the Digital Biosp
     - ✅ Validated via `tests/integration/pricing_optimization_validation.test.ts`.
 - [ ] **Service Adjustment**: Implement `adjust_service_offerings` to recommend profitable service bundles.
 - [ ] **Resource Allocation**: Add `allocate_resources_optimally` for predictive swarm capacity management.
-- [ ] **Market Analysis**: Develop `market_analysis` tools for data collection and competitor benchmarking.
+- [x] **Market Analysis**: Develop `market_analysis` tools for data collection and competitor benchmarking.
+    - ✅ Implemented `collect_market_data` with LLM enhancement and `analyze_competitor_pricing` with caching.
+    - ✅ Validated via `tests/integration/market_analysis_validation.test.ts`.
 - [ ] **Validation**: End-to-end simulation of the quarterly optimization cycle.
 
 ## Legacy Achievements
