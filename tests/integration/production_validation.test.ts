@@ -6,18 +6,19 @@ import { existsSync } from "fs";
 import { tmpdir } from "os";
 
 // --- Hoisted Variables ---
-const { mockLLMQueue, mockEmbed } = vi.hoisted(() => {
+const mocks = vi.hoisted(() => {
     return {
         mockLLMQueue: [] as any[],
-        mockEmbed: vi.fn()
+        mockEmbed: vi.fn(),
+        mockGenerate: vi.fn()
     };
 });
 
 // --- Mock Setup ---
 
 // 1. Mock LLM (shared across all components)
-const mockGenerate = vi.fn().mockImplementation(async (system: string, history: any[]) => {
-    const next = mockLLMQueue.shift();
+mocks.mockGenerate.mockImplementation(async (system: string, history: any[]) => {
+    const next = mocks.mockLLMQueue.shift();
     if (!next) {
         return {
             thought: "No mock response queued.",
@@ -32,8 +33,9 @@ const mockGenerate = vi.fn().mockImplementation(async (system: string, history: 
     return next;
 });
 
-// Implement mockEmbed
-mockEmbed.mockImplementation(async (text: string) => {
+mocks.mockEmbed.mockImplementation(async (text: string) => {
+    // Generate a pseudo-embedding based on text length/hash to allow simple vector search
+    // This is a naive mock, but better than constant for checking "different" vectors
     const val = text.length % 100 / 100;
     return new Array(1536).fill(val);
 });
@@ -41,12 +43,12 @@ mockEmbed.mockImplementation(async (text: string) => {
 vi.mock("../../src/llm.js", () => {
     return {
         createLLM: () => ({
-            embed: mockEmbed,
-            generate: mockGenerate,
+            embed: mocks.mockEmbed,
+            generate: mocks.mockGenerate,
         }),
         LLM: class {
-            embed = mockEmbed;
-            generate = mockGenerate;
+            embed = mocks.mockEmbed;
+            generate = mocks.mockGenerate;
         },
     };
 });
@@ -78,8 +80,8 @@ vi.mock("../../src/scheduler/trigger.js", () => ({
         console.log(`[MockTrigger] Executing task: ${task.name}`);
 
         // If there's a queued mock function for the task, run it
-        if (mockLLMQueue.length > 0 && typeof mockLLMQueue[0] === 'function') {
-             const fn = mockLLMQueue.shift();
+        if (mocks.mockLLMQueue.length > 0 && typeof mocks.mockLLMQueue[0] === 'function') {
+             const fn = mocks.mockLLMQueue.shift();
              await fn(task);
         }
 
@@ -115,7 +117,7 @@ describe("Production Validation Test (Multi-Tenant & 4-Pillar)", () => {
 
     beforeEach(async () => {
         vi.clearAllMocks();
-        mockLLMQueue.length = 0;
+        mocks.mockLLMQueue.length = 0;
         resetMocks();
 
         // 1. Setup Test Environment
@@ -241,26 +243,26 @@ describe("Production Validation Test (Multi-Tenant & 4-Pillar)", () => {
 
         // Prepare LLM responses for SOP execution
         // Step 1: Check Access
-        mockLLMQueue.push({
+        mocks.mockLLMQueue.push({
             thought: "Checking access...",
             tool: "none",
             args: {},
             message: "Access granted."
         });
-        mockLLMQueue.push({
+        mocks.mockLLMQueue.push({
              thought: "Access checked.",
              tool: "complete_step",
              args: { summary: "Access confirmed." }
         });
 
         // Step 2: Setup Env
-        mockLLMQueue.push({
+        mocks.mockLLMQueue.push({
             thought: "Setting up env...",
             tool: "none",
             args: {},
             message: "Env ready."
         });
-        mockLLMQueue.push({
+        mocks.mockLLMQueue.push({
              thought: "Setup done.",
              tool: "complete_step",
              args: { summary: "Environment setup complete." }
@@ -291,7 +293,7 @@ describe("Production Validation Test (Multi-Tenant & 4-Pillar)", () => {
         });
 
         // Queue LLM response for Morning Standup
-        mockLLMQueue.push(async (task: any) => {
+        mocks.mockLLMQueue.push(async (task: any) => {
              console.log("[MockTask] Performing Morning Standup...");
              // Simulate calling a tool if needed
         });
@@ -351,7 +353,7 @@ describe("Production Validation Test (Multi-Tenant & 4-Pillar)", () => {
         // We need to simulate what the Orchestrator would do: call HR tool.
 
         // We can inject a function into mockLLMQueue that 'handleTaskTrigger' will execute
-        mockLLMQueue.push(async (task: any) => {
+        mocks.mockLLMQueue.push(async (task: any) => {
              // Simulate Orchestrator calling analyze_logs
              const hrClient = mcp.getClient("hr_loop");
              await hrClient.callTool({
@@ -361,7 +363,7 @@ describe("Production Validation Test (Multi-Tenant & 4-Pillar)", () => {
         });
 
         // Prepare LLM response for 'analyze_logs' inside HR Server
-        mockLLMQueue.push({
+        mocks.mockLLMQueue.push({
             message: JSON.stringify({
                 title: "Increase Timeout",
                 description: "Fix deployment timeout.",

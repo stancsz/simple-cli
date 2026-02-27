@@ -6,18 +6,19 @@ import { tmpdir } from "os";
 import { StressGenerator } from "../../scripts/stress_simulator/generator.js";
 
 // --- Hoisted Variables ---
-const { mockLLMQueue, mockEmbed } = vi.hoisted(() => {
+const mocks = vi.hoisted(() => {
     return {
         mockLLMQueue: [] as any[],
-        mockEmbed: vi.fn()
+        mockEmbed: vi.fn(),
+        mockGenerate: vi.fn()
     };
 });
 
 // --- Mock Setup ---
 
 // 1. Mock LLM
-const mockGenerate = vi.fn().mockImplementation(async (system: string, history: any[]) => {
-    const next = mockLLMQueue.shift();
+mocks.mockGenerate.mockImplementation(async (system: string, history: any[]) => {
+    const next = mocks.mockLLMQueue.shift();
     if (!next) {
         return {
             thought: "Default stress test response.",
@@ -32,8 +33,7 @@ const mockGenerate = vi.fn().mockImplementation(async (system: string, history: 
     return next;
 });
 
-// Implement mockEmbed
-mockEmbed.mockImplementation(async (text: string) => {
+mocks.mockEmbed.mockImplementation(async (text: string) => {
     const val = (text.length % 100) / 100;
     return new Array(1536).fill(val);
 });
@@ -41,12 +41,12 @@ mockEmbed.mockImplementation(async (text: string) => {
 vi.mock("../../src/llm.js", () => {
     return {
         createLLM: () => ({
-            embed: mockEmbed,
-            generate: mockGenerate,
+            embed: mocks.mockEmbed,
+            generate: mocks.mockGenerate,
         }),
         LLM: class {
-            embed = mockEmbed;
-            generate = mockGenerate;
+            embed = mocks.mockEmbed;
+            generate = mocks.mockGenerate;
         },
     };
 });
@@ -70,8 +70,8 @@ vi.mock("@modelcontextprotocol/sdk/server/stdio.js", () => ({
 vi.mock("../../src/scheduler/trigger.js", () => ({
     handleTaskTrigger: async (task: any) => {
         // console.log(`[MockTrigger] Executing task: ${task.name}`);
-        if (mockLLMQueue.length > 0 && typeof mockLLMQueue[0] === 'function') {
-             const fn = mockLLMQueue.shift();
+        if (mocks.mockLLMQueue.length > 0 && typeof mocks.mockLLMQueue[0] === 'function') {
+             const fn = mocks.mockLLMQueue.shift();
              await fn(task);
         }
         return { exitCode: 0 };
@@ -124,7 +124,7 @@ describe("Long-Running Stress Test (7-Day Simulation)", () => {
 
     beforeEach(async () => {
         vi.clearAllMocks();
-        mockLLMQueue.length = 0;
+        mocks.mockLLMQueue.length = 0;
         resetMocks();
 
         // 1. Setup Test Environment
@@ -231,7 +231,7 @@ describe("Long-Running Stress Test (7-Day Simulation)", () => {
             // --- 09:00 Morning Standup ---
             console.log(`[09:00] Morning Standup...`);
             // Queue LLM response for Standup task
-            mockLLMQueue.push(async () => {
+            mocks.mockLLMQueue.push(async () => {
                 // The task would call 'generate_daily_standup'
                 // We simulate checking status manually here to verify functionality
                 const status = await statusGenerator.getSystemStatus();
@@ -290,7 +290,7 @@ describe("Long-Running Stress Test (7-Day Simulation)", () => {
             await vi.advanceTimersByTimeAsync(1000 * 60 * 60 * 2); // +2h -> 12:00
 
             // Queue LLM response for HR Review
-            mockLLMQueue.push(async () => {
+            mocks.mockLLMQueue.push(async () => {
                  // HR analyzes logs. We simulate it finding errors.
                  if (totalErrorsDetected > 0) {
                      // console.log("   [HR] Analyzing logs... Found anomalies.");
@@ -343,7 +343,7 @@ describe("Long-Running Stress Test (7-Day Simulation)", () => {
             // Current is 14:00. Need +12h to 02:00 next day
             await vi.advanceTimersByTimeAsync(1000 * 60 * 60 * 12);
 
-            mockLLMQueue.push(async () => {
+            mocks.mockLLMQueue.push(async () => {
                 // Dreaming task
                 // console.log("   [Dreaming] Simulating offline scenarios...");
             });

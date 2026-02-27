@@ -6,18 +6,19 @@ import { existsSync } from "fs";
 import { tmpdir } from "os";
 
 // --- Hoisted Variables ---
-const { mockLLMQueue, mockEmbed } = vi.hoisted(() => {
+const mocks = vi.hoisted(() => {
     return {
         mockLLMQueue: [] as any[],
-        mockEmbed: vi.fn() // Initialize hoisted mock
+        mockEmbed: vi.fn(),
+        mockGenerate: vi.fn()
     };
 });
 
 // --- Mock Setup ---
 
 // 1. Mock LLM (shared across all components)
-const mockGenerate = vi.fn().mockImplementation(async (system: string, history: any[]) => {
-    const next = mockLLMQueue.shift();
+mocks.mockGenerate.mockImplementation(async (system: string, history: any[]) => {
+    const next = mocks.mockLLMQueue.shift();
     if (!next) {
         return {
             thought: "Default stress test response.",
@@ -32,9 +33,7 @@ const mockGenerate = vi.fn().mockImplementation(async (system: string, history: 
     return next;
 });
 
-// Implement mockEmbed logic in the mock itself if needed, or keeping it simpler
-mockEmbed.mockImplementation(async (text: string) => {
-    // Generate a pseudo-embedding based on text length/hash to allow simple vector search
+mocks.mockEmbed.mockImplementation(async (text: string) => {
     const val = text.length % 100 / 100;
     return new Array(1536).fill(val);
 });
@@ -42,12 +41,12 @@ mockEmbed.mockImplementation(async (text: string) => {
 vi.mock("../../src/llm.js", () => {
     return {
         createLLM: () => ({
-            embed: mockEmbed,
-            generate: mockGenerate,
+            embed: mocks.mockEmbed,
+            generate: mocks.mockGenerate,
         }),
         LLM: class {
-            embed = mockEmbed;
-            generate = mockGenerate;
+            embed = mocks.mockEmbed;
+            generate = mocks.mockGenerate;
         },
     };
 });
@@ -71,8 +70,8 @@ vi.mock("@modelcontextprotocol/sdk/server/stdio.js", () => ({
 vi.mock("../../src/scheduler/trigger.js", () => ({
     handleTaskTrigger: async (task: any) => {
         // Run task logic in-process
-        if (mockLLMQueue.length > 0 && typeof mockLLMQueue[0] === 'function') {
-             const fn = mockLLMQueue.shift();
+        if (mocks.mockLLMQueue.length > 0 && typeof mocks.mockLLMQueue[0] === 'function') {
+             const fn = mocks.mockLLMQueue.shift();
              await fn(task);
         }
         return { exitCode: 0 };
@@ -120,7 +119,7 @@ describe("Multi-Company Production Stress Test (12-Tenant Simulation)", () => {
 
     beforeEach(async () => {
         vi.clearAllMocks();
-        mockLLMQueue.length = 0;
+        mocks.mockLLMQueue.length = 0;
         resetMocks();
 
         // 1. Setup Test Environment
