@@ -37,7 +37,9 @@ export function registerResourceAllocationTools(server: McpServer, mcpClient?: M
                         name: "get_system_health_summary",
                         arguments: {}
                     });
-                    if (healthRes && healthRes.content && healthRes.content[0].text) {
+                    // @ts-ignore
+                    if (healthRes && healthRes.content && healthRes.content[0] && healthRes.content[0].text) {
+                        // @ts-ignore
                         systemHealth = healthRes.content[0].text;
                     }
                 } catch (e) {
