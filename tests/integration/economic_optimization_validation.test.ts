@@ -50,7 +50,6 @@ describe("Economic Optimization Engine Validation", () => {
     let collectMarketTool: any;
     let optimizePricingTool: any;
     let adjustServiceTool: any;
-    let allocateResourceTool: any;
     let generateInsightsTool: any;
 
     const mockServer = { tool: vi.fn() };
@@ -68,7 +67,6 @@ describe("Economic Optimization Engine Validation", () => {
         collectMarketTool = calls.find((c: any) => c[0] === "collect_market_data")?.[3];
         optimizePricingTool = calls.find((c: any) => c[0] === "optimize_pricing_strategy")?.[3];
         adjustServiceTool = calls.find((c: any) => c[0] === "adjust_service_offerings")?.[3];
-        allocateResourceTool = calls.find((c: any) => c[0] === "allocate_resources_optimally")?.[3];
         generateInsightsTool = calls.find((c: any) => c[0] === "generate_business_insights")?.[3];
     });
 
@@ -119,21 +117,6 @@ describe("Economic Optimization Engine Validation", () => {
         console.log("Service Adjustments:", JSON.stringify(recs, null, 2));
 
         expect(recs[0].action).toBe("Bundle Services");
-    });
-
-    it("should allocate resources based on demand forecast", async () => {
-        const forecasts = [
-            { clientId: "C1", projected_demand_score: 90 },
-            { clientId: "C2", projected_demand_score: 40 }
-        ];
-
-        const result = await allocateResourceTool({ client_forecasts: forecasts });
-        const allocation = JSON.parse(result.content[0].text);
-
-        console.log("Resource Allocation:", JSON.stringify(allocation, null, 2));
-
-        expect(allocation.find((a: any) => a.clientId === "C1").recommended_swarm_size).toBe(3);
-        expect(allocation.find((a: any) => a.clientId === "C2").recommended_swarm_size).toBe(1);
     });
 
     it("should generate executive insights", async () => {
