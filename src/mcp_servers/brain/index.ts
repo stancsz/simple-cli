@@ -13,6 +13,7 @@ import { FrameworkIngestionEngine } from "../../framework_ingestion/ingest.js";
 import { createLLM } from "../../llm.js";
 import { readStrategy, proposeStrategicPivot } from "./tools/strategy.js";
 import { scanStrategicHorizon } from "./tools/scan_strategic_horizon.js";
+import { updateOperatingPolicy } from "./tools/corporate_governance.js";
 
 export class BrainServer {
   private server: McpServer;
@@ -230,6 +231,46 @@ export class BrainServer {
             content: [{ type: "text", text: `Failed to generate strategic horizon report: ${e.message}` }],
             isError: true
           };
+        }
+      }
+    );
+
+    this.server.tool(
+      "update_operating_policy",
+      "Sets or updates an operating policy for a specific swarm or globally. This allows C-Suite agents to enforce governance.",
+      {
+        swarmId: z.string().optional().describe("The target swarm/project ID. If omitted, applies globally."),
+        policy: z.string().describe("JSON string object containing policy parameters (e.g., { minMargin: 0.4, riskTolerance: 'low' })."),
+        effectiveFrom: z.string().describe("ISO8601 date string when the policy becomes effective."),
+        issuedBy: z.string().describe("The name/role of the issuer (e.g., 'CEO', 'RiskOfficer')."),
+        company: z.string().optional().describe("The company/client identifier for namespacing."),
+      },
+      async ({ swarmId, policy, effectiveFrom, issuedBy, company }) => {
+        let policyObj: any;
+        try {
+            policyObj = JSON.parse(policy);
+        } catch {
+            return {
+                content: [{ type: "text", text: "Invalid JSON format for 'policy'." }],
+                isError: true
+            };
+        }
+
+        try {
+            const newPolicy = await updateOperatingPolicy(this.episodic, {
+                swarmId,
+                policy: policyObj,
+                effectiveFrom,
+                issuedBy
+            }, company);
+            return {
+                content: [{ type: "text", text: `Policy updated successfully.\n\n${JSON.stringify(newPolicy, null, 2)}` }]
+            };
+        } catch (e: any) {
+            return {
+                content: [{ type: "text", text: `Failed to update policy: ${e.message}` }],
+                isError: true
+            };
         }
       }
     );

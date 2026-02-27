@@ -4,6 +4,9 @@ import { LinearClient } from "@linear/sdk";
 import { getXeroClient, getTenantId } from "../xero_tools.js";
 import { scaleSwarmLogic } from "../../scaling_engine/scaling_orchestrator.js";
 import { MCP } from "../../../mcp.js";
+import { writeFile, readFile } from "fs/promises";
+import { join } from "path";
+import { existsSync } from "fs";
 
 function getLinearClient() {
     const apiKey = process.env.LINEAR_API_KEY;
@@ -58,6 +61,122 @@ export async function getFleetStatusLogic(): Promise<FleetStatus[]> {
         });
     }
     return fleetStatus;
+}
+
+/**
+ * Logic for propagating policy updates from the Brain to local swarm configurations.
+ * Exported for testing.
+ */
+export async function propagatePolicies(mcpClient: MCP, swarmId?: string, company?: string): Promise<{ status: string; updates_count: number; config_path: string; logs: string[] }> {
+    const logs: string[] = [];
+
+    // 1. Query Brain for active policies
+    const query = "operating policy update";
+
+    // Call Brain tool
+    // Note: In tests, mcpClient.callTool will be mocked.
+    // In production, mcpClient must be provided.
+    if (!mcpClient) {
+        throw new Error("MCP Client is required to query Brain for policies.");
+    }
+
+    const brainResponse = await mcpClient.callTool("brain", "brain_query", {
+        query,
+        limit: 20,
+        type: "corporate_policy",
+        format: "json",
+        company
+    });
+
+    if (brainResponse.isError) {
+        throw new Error(`Failed to query Brain: ${brainResponse.content[0].text}`);
+    }
+
+    let memories: any[] = [];
+    try {
+        memories = JSON.parse(brainResponse.content[0].text);
+    } catch {
+        logs.push("Failed to parse Brain response as JSON.");
+    }
+
+    if (!Array.isArray(memories) || memories.length === 0) {
+        logs.push("No policy memories found.");
+        // Continue to write empty/existing config if needed, or just return early?
+        // Let's continue to process what we have (empty list) which might clear policies if we were doing a full sync,
+        // but here we are just applying updates. If no memories, no updates from brain.
+    }
+
+    // Filter and Dedup Policies
+    const policies = [];
+    const now = new Date();
+
+    for (const memory of memories) {
+        try {
+            const policy = JSON.parse(memory.agentResponse);
+            // Check effective date
+            if (new Date(policy.effectiveFrom) > now) continue;
+
+            // Check scope
+            if (!policy.swarmId || (swarmId && policy.swarmId === swarmId) || (!swarmId)) {
+                policies.push(policy);
+            }
+        } catch (e) {
+            // ignore parse errors
+        }
+    }
+
+    // Sort by newest first
+    policies.sort((a, b) => b.timestamp - a.timestamp);
+
+    // Apply to config (Simple implementation: Write to swarm_config.json)
+    const configPath = process.env.SWARM_CONFIG_PATH || join(process.cwd(), "swarm_config.json");
+    let currentConfig: any = {};
+
+    if (existsSync(configPath)) {
+        try {
+            currentConfig = JSON.parse(await readFile(configPath, "utf-8"));
+        } catch {
+            currentConfig = {};
+        }
+    }
+
+    let updates = 0;
+    // We take the latest policy for each swarm (or global)
+    // Map: swarmId -> Policy
+    const effectivePolicies = new Map<string, any>();
+
+    for (const p of policies) {
+        const key = p.swarmId || "GLOBAL";
+        if (!effectivePolicies.has(key)) {
+            effectivePolicies.set(key, p);
+        }
+    }
+
+    for (const [key, p] of effectivePolicies) {
+        if (key === "GLOBAL") {
+            // Only update if changed? For now, overwrite is fine.
+            currentConfig.global_policy = p.policy;
+            updates++;
+            logs.push(`Updated GLOBAL policy: ${JSON.stringify(p.policy)}`);
+        } else {
+            if (!currentConfig.swarms) currentConfig.swarms = {};
+            if (!currentConfig.swarms[key]) currentConfig.swarms[key] = {};
+            currentConfig.swarms[key].policy = p.policy;
+            updates++;
+            logs.push(`Updated swarm ${key} policy: ${JSON.stringify(p.policy)}`);
+        }
+    }
+
+    // Only write if we have updates or just to ensure config exists?
+    // Let's write to persist the state.
+    await writeFile(configPath, JSON.stringify(currentConfig, null, 2));
+
+    return {
+        status: "success",
+        updates_count: updates,
+        config_path: configPath,
+        logs
+    };
 }
 
 export function registerSwarmFleetManagementTools(server: McpServer, mcpClient?: MCP) {
@@ -301,6 +420,37 @@ export function registerSwarmFleetManagementTools(server: McpServer, mcpClient?:
                      }, null, 2)
                  }]
              };
+        }
+    );
+
+    server.tool(
+        "propagate_policy_updates",
+        "Queries the Brain for the latest corporate policies and updates the local swarm configuration file.",
+        {
+             swarmId: z.string().optional().describe("If specified, only propagates for this swarm. Otherwise, updates all."),
+             company: z.string().optional().describe("Company context for the Brain query.")
+        },
+        async ({ swarmId, company }) => {
+             try {
+                 // Use the extracted logic
+                 const result = await propagatePolicies(mcp, swarmId, company);
+
+                 return {
+                     content: [{
+                         type: "text",
+                         text: JSON.stringify(result, null, 2)
+                     }]
+                 };
+
+             } catch (error) {
+                 return {
+                     content: [{
+                         type: "text",
+                         text: `Error propagating policies: ${(error as Error).message}`
+                     }],
+                     isError: true
+                 };
+             }
         }
     );
 }

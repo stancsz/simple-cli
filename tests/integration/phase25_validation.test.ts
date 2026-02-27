@@ -1,4 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+import { writeFile } from "fs/promises";
 
 // --- Mocks Setup ---
 
@@ -25,10 +26,15 @@ vi.mock("../../src/brain/episodic.js", () => ({
 // 2. Business Ops Tools (Fleet Management & Performance)
 // We need to mock the logic functions that these tools use.
 
-vi.mock("../../src/mcp_servers/business_ops/tools/swarm_fleet_management.js", () => ({
-    getFleetStatusLogic: vi.fn(),
-    getActiveProjects: vi.fn()
-}));
+vi.mock("../../src/mcp_servers/business_ops/tools/swarm_fleet_management.js", async (importOriginal) => {
+    const actual = await importOriginal();
+    return {
+        // @ts-ignore
+        ...actual,
+        getFleetStatusLogic: vi.fn(),
+        getActiveProjects: vi.fn(),
+    };
+});
 
 vi.mock("../../src/mcp_servers/business_ops/tools/performance_analytics.js", () => ({
     collectPerformanceMetrics: vi.fn()
@@ -37,6 +43,17 @@ vi.mock("../../src/mcp_servers/business_ops/tools/performance_analytics.js", () 
 // 3. HR Tools (Pattern Analysis)
 vi.mock("../../src/mcp_servers/hr/tools/pattern_analysis.js", () => ({
     analyzeCrossSwarmPatterns: vi.fn()
+}));
+
+// 4. FS Mocks for Policy Propagation
+vi.mock("fs/promises", () => ({
+    writeFile: vi.fn(),
+    readFile: vi.fn().mockResolvedValue("{}"),
+    readdir: vi.fn().mockResolvedValue([])
+}));
+
+vi.mock("fs", () => ({
+    existsSync: vi.fn().mockReturnValue(true)
 }));
 
 // --- Test Suite: Phase 25 Autonomous Corporate Consciousness ---
@@ -267,18 +284,6 @@ describe("Phase 25: Autonomous Corporate Consciousness (Strategic Validation)", 
             synthesis: "Keep pushing"
         };
 
-        // Mock readStrategy (which is imported internally by scanStrategicHorizon)
-        // Since we are importing the source, we might need to rely on the fact that
-        // scanStrategicHorizon uses imports that are mocked at the top of this file?
-        // Wait, standard jest/vitest module mocking might not work if we don't mock the relative import
-        // inside scan_strategic_horizon.js.
-        // However, in this test file we didn't mock "../../src/mcp_servers/brain/tools/strategy.js" globally yet.
-        // We only mocked modules like "../../src/llm.js".
-
-        // Let's rely on mocking the behavior of `readStrategy` if we can, or just mock `mockEpisodicMemory.recall`
-        // because `readStrategy` uses it.
-        // `readStrategy` calls `episodic.recall("current corporate strategy", ...)`
-
         mockEpisodicMemory.recall.mockResolvedValueOnce([{
             id: "strategy_1",
             timestamp: Date.now(),
@@ -316,11 +321,122 @@ describe("Phase 25: Autonomous Corporate Consciousness (Strategic Validation)", 
         expect(report).toBeDefined();
         expect(report.emerging_opportunities).toContain("Quantum Computing");
         expect(report.strategic_recommendations[0].action).toBe("Buy Quantum Computer");
-
-        // Verify external signals were requested (boolean flag to analyzePatterns)
-        // Since we didn't spy on analyzePatterns specifically here (it's internal),
-        // we implicitly verify it ran by the fact that we got a result.
-
         expect(report.synthesis_summary).toBe("Future is bright.");
+    });
+
+    it("should update operating policy and verify governance (Phase 25.3)", async () => {
+        const { updateOperatingPolicy, getActivePolicies } = await import("../../src/mcp_servers/brain/tools/corporate_governance.js");
+
+        // 1. Update Policy (Global)
+        const policyData = {
+            policy: { minMargin: 0.4, riskTolerance: 'low' },
+            effectiveFrom: new Date().toISOString(),
+            issuedBy: "CEO"
+        };
+
+        await updateOperatingPolicy(mockEpisodicMemory as any, policyData, "default");
+
+        // Verify Storage
+        expect(mockEpisodicMemory.store).toHaveBeenCalledWith(
+            expect.stringContaining("policy_update"),
+            expect.stringContaining("Update Operating Policy [Global]"),
+            expect.any(String), // agentResponse (JSON)
+            expect.arrayContaining(["corporate_governance", "policy_update"]),
+            "default",
+            undefined, undefined, undefined, undefined, undefined, undefined,
+            "corporate_policy"
+        );
+
+        // 2. Retrieve Policy (Mock retrieval)
+        // Store returns promise void, so we must manually mock what recall would return if called.
+        // We construct the stored object from the call arguments for realism, or just mock a static return.
+
+        const storedPolicy = {
+            swarmId: undefined,
+            policy: policyData.policy,
+            effectiveFrom: policyData.effectiveFrom,
+            issuedBy: policyData.issuedBy,
+            timestamp: Date.now()
+        };
+
+        mockEpisodicMemory.recall.mockResolvedValueOnce([{
+            id: "pol_1",
+            timestamp: Date.now(),
+            agentResponse: JSON.stringify(storedPolicy),
+            type: "corporate_policy"
+        }]);
+
+        const activePolicies = await getActivePolicies(mockEpisodicMemory as any, undefined, "default");
+
+        expect(activePolicies).toHaveLength(1);
+        expect(activePolicies[0].policy.minMargin).toBe(0.4);
+        expect(activePolicies[0].issuedBy).toBe("CEO");
+    });
+
+    it("should propagate policy updates to swarm configuration (Phase 25.3)", async () => {
+        const { propagatePolicies } = await import("../../src/mcp_servers/business_ops/tools/swarm_fleet_management.js");
+
+        // Mock MCP Client with callTool
+        const mockMcpClient = {
+            callTool: vi.fn()
+        };
+
+        // Mock Brain Response (simulating the 'brain_query' response)
+        const mockPolicies = [
+            {
+                swarmId: "Swarm-Alpha",
+                policy: { minMargin: 0.5 },
+                effectiveFrom: new Date().toISOString(),
+                issuedBy: "CFO",
+                timestamp: Date.now()
+            },
+            {
+                swarmId: undefined, // Global
+                policy: { riskTolerance: "medium" },
+                effectiveFrom: new Date().toISOString(),
+                issuedBy: "CEO",
+                timestamp: Date.now() - 1000
+            }
+        ];
+
+        const brainResponse = {
+            content: [{
+                text: JSON.stringify([
+                    { agentResponse: JSON.stringify(mockPolicies[0]) },
+                    { agentResponse: JSON.stringify(mockPolicies[1]) }
+                ])
+            }],
+            isError: false
+        };
+
+        // @ts-ignore
+        mockMcpClient.callTool.mockResolvedValue(brainResponse);
+
+        // Execute Propagation
+        // @ts-ignore
+        const result = await propagatePolicies(mockMcpClient as any, undefined, "default");
+
+        // Verify Logic
+        expect(mockMcpClient.callTool).toHaveBeenCalledWith(
+            "brain",
+            "brain_query",
+            expect.objectContaining({
+                query: "operating policy update",
+                type: "corporate_policy"
+            })
+        );
+
+        // Verify File Write (using FS mock)
+        expect(writeFile).toHaveBeenCalledWith(
+            expect.stringContaining("swarm_config.json"),
+            expect.stringContaining('"Swarm-Alpha"')
+        );
+
+        // Check content of write
+        const writtenContent = JSON.parse((writeFile as any).mock.calls[0][1]);
+        expect(writtenContent.global_policy).toEqual({ riskTolerance: "medium" });
+        expect(writtenContent.swarms["Swarm-Alpha"].policy).toEqual({ minMargin: 0.5 });
+
+        expect(result.updates_count).toBe(2);
     });
 });

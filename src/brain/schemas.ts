@@ -4,3 +4,11 @@ export interface CorporateStrategy {
   policies: Record<string, any>;
   timestamp: number;
 }
+
+export interface CorporatePolicy {
+  swarmId?: string;
+  policy: Record<string, any>;
+  effectiveFrom: string;
+  issuedBy: string;
+  timestamp: number;
+}

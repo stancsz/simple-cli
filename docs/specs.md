@@ -446,7 +446,18 @@ To maintain continuity, the system extends the Brain with a dedicated **Strategi
     ```
 *   **Access**: Read-only for operational swarms; Write-access only for C-Suite during Board Meetings.
 
-### 16.3 The "Board Meeting" Simulation
+### 16.3 Policy Enforcement & Propagation
+To translate high-level strategy into operational behavior, the system uses a **Federated Policy Engine**.
+
+*   **Mechanism**:
+    1.  **Creation**: C-Suite agents invoke `update_operating_policy` to define constraints (e.g., `minMargin: 0.4`, `riskTolerance: 'low'`).
+    2.  **Storage**: Policies are stored in the Brain as immutable `corporate_policy` records with an `effectiveFrom` timestamp.
+    3.  **Propagation**: The Swarm Fleet Management system runs a `propagate_policy_updates` cycle (triggered on update or during initialization).
+        - Queries the Brain for the latest active policies for each swarm (and global defaults).
+        - Updates the local `swarm_config.json` (or environment variables) which dictates the operating parameters for each swarm.
+    4.  **Enforcement**: Operational agents read this config at runtime to validate decisions (e.g., rejecting a project with margin < `minMargin`).
+
+### 16.4 The "Board Meeting" Simulation
 A periodic (e.g., Monthly/Quarterly) recursive simulation where the agency reflects on itself.
 
 1.  **Convener**: The `Dreaming` server triggers a special session type: `board_meeting`.
