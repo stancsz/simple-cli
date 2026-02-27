@@ -137,8 +137,9 @@ The roadmap is structured around the four anatomical layers of the Digital Biosp
     - ✅ Validated via `tests/integration/agency_dashboard.test.ts` and Playwright verification.
 
 ## Phase 24: Self-Optimizing Economic Engine
-*Status: In Progress*
+*Status: Completed*
 *Current Focus: Autonomous Business Optimization*
+*Validation: ✅ Fully validated via end-to-end economic cycle simulation.*
 - [x] **Performance Analytics**: Implement `analyze_performance_metrics` tool to aggregate revenue (Xero), efficiency (Linear), and satisfaction (HubSpot).
     - ✅ Implemented `analyze_performance_metrics` fetching data from Xero, Linear, and HubSpot.
     - ✅ Validated via `tests/integration/performance_analytics_validation.test.ts`.
@@ -154,7 +155,9 @@ The roadmap is structured around the four anatomical layers of the Digital Biosp
 - [x] **Market Analysis**: Develop `market_analysis` tools for data collection and competitor benchmarking.
     - ✅ Implemented `collect_market_data` with LLM enhancement and `analyze_competitor_pricing` with caching.
     - ✅ Validated via `tests/integration/market_analysis_validation.test.ts`.
-- [ ] **Validation**: End-to-end simulation of the quarterly optimization cycle.
+- [x] **Validation**: End-to-end simulation of the quarterly optimization cycle.
+    - ✅ Implemented `scripts/simulate_economic_cycle.ts` orchestrating the 5-step optimization process.
+    - ✅ Validated via `tests/integration/economic_cycle_validation.test.ts` generating full Executive Reports.
 
 ## Legacy Achievements
 See [Legacy Roadmap](ROADMAP_LEGACY.md) for completed milestones of the previous "Simple CLI" era.

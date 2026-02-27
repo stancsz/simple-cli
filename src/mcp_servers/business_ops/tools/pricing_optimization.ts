@@ -124,12 +124,20 @@ export function registerPricingOptimizationTools(server: McpServer) {
                 const lastRunTime = new Date(lastRun.timestamp).getTime();
                 const now = new Date().getTime();
                 if ((now - lastRunTime) < 24 * 60 * 60 * 1000) {
-                     return {
-                        content: [{
-                            type: "text",
-                            text: `Pricing optimization already run recently. Last recommendation: ${lastRun.agentResponse}`
-                        }]
-                    };
+                     // Check if response is valid JSON array before returning
+                     try {
+                         const cached = JSON.parse(lastRun.agentResponse);
+                         if (Array.isArray(cached)) {
+                            return {
+                                content: [{
+                                    type: "text",
+                                    text: lastRun.agentResponse
+                                }]
+                            };
+                         }
+                     } catch (e) {
+                         // Ignore invalid cache
+                     }
                 }
             }
 

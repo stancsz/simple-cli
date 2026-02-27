@@ -58,6 +58,16 @@ The agency can scale its client base autonomously.
     - **Step 4**: It drafts an initial invoice in **Xero**.
 - **Result**: A new client is fully onboarded and ready for work in under 60 seconds.
 
+### 8. **Autonomous Economic Optimization (Strategic Intelligence)**
+The agency manages its own business strategy.
+- **Scenario**: End of Q3.
+- **Action**: The **Economic Engine** triggers the quarterly optimization cycle.
+    - **Step 1**: Analyzes **Xero** revenue and **Linear** efficiency metrics.
+    - **Step 2**: Scrapes competitor pricing to build a market baseline.
+    - **Step 3**: Optimizes service pricing and proposes new bundles.
+    - **Step 4**: Forecasts swarm resource needs for the next quarter.
+- **Result**: A comprehensive **Economic Optimization Report** is generated with actionable strategic recommendations.
+
 ---
 
 ## 🚀 Deployment Instructions
@@ -247,3 +257,26 @@ You will see the `ProductionLoadSimulator` initialize, generate load, and log ke
 [SIM] Finalizing simulation: Analyzing cross-swarm patterns...
 [SIM] SOP generation triggered.
 ```
+
+## 💰 Economic Optimization Showcase
+
+To validate the **Phase 24 Self-Optimizing Economic Engine**, we simulate a full 90-day business quarter.
+
+### What it Does
+- **Performance Baseline**: Aggregates revenue, efficiency, and satisfaction metrics.
+- **Market Intelligence**: Scrapes competitor pricing and analyzes trends.
+- **Strategy Formulation**: Uses LLM agents to optimize pricing and recommend new service bundles.
+- **Resource Forecasting**: Predicts swarm capacity needs for the next quarter.
+
+### How to Run
+Execute the validation suite:
+```bash
+npm test -- tests/integration/economic_cycle_validation.test.ts
+```
+
+### Expected Output
+The simulation generates a Markdown report (`tests/output/economic_optimization_report_Q{x}_{year}.md`) containing:
+- Executive Summary
+- Pricing Strategy Recommendations
+- New Service Bundle Proposals
+- Resource Allocation Forecasts
