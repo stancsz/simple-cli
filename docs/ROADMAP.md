@@ -158,5 +158,28 @@ The roadmap is structured around the four anatomical layers of the Digital Biosp
 - [x] **Validation**: End-to-end simulation of the quarterly optimization cycle.
     - ✅ Validated full quarterly optimization cycle via `tests/integration/economic_engine_quarterly_simulation.test.ts`.
 
+## Phase 25: Autonomous Corporate Consciousness & Strategic Evolution
+*Status: Planned*
+*Current Focus: Strategic Autonomy & Federated Intelligence*
+*Goal: Evolve the agency from an automated operator to a strategic thinker.*
+- [ ] **Strategic Horizon Scanning (25.1)**: Market, competitor, and trend analysis.
+    - Objective: System detects macro-economic shifts (e.g., "AI Regulation") and proposes strategic pivots.
+    - Validation: `scan_strategic_horizon` tool successfully identifies meaningful trends from external data.
+- [ ] **Corporate Identity & Brand Evolution (25.2)**: Dynamic persona and brand voice.
+    - Objective: System autonomously refines its public persona and communication style based on audience resonance.
+    - Validation: `evaluate_corporate_identity` tool suggests brand adjustments that align with market trends.
+- [ ] **Inter-Agency Federation Protocol (25.3)**: Multi-instance collaboration.
+    - Objective: Enable multiple independent Simple-CLI instances to form a "Guild" or "Conglomerate" for large projects.
+    - Validation: `initiate_federated_collaboration` establishes a secure handshake with another node.
+- [ ] **Automated Legal & Ethical Governance (25.4)**: Compliance and contract generation.
+    - Objective: Real-time verification of operational decisions against legal frameworks and ethical guidelines.
+    - Validation: `verify_regulatory_compliance` flags risky strategic moves.
+- [ ] **Strategic Pivot Execution Engine (25.5)**: Resource and service realignment.
+    - Objective: Automatically restructure teams and service offerings to execute a new strategy.
+    - Validation: `propose_strategic_pivot` generates a viable execution plan.
+- [ ] **Self-Actualization Dashboard (25.6)**: Beyond revenue metrics.
+    - Objective: Track intangible assets like Brand Equity, Innovation Velocity, and Market Influence.
+    - Validation: Dashboard visualizes "Self-Actualization" metrics alongside financial KPIs.
+
 ## Legacy Achievements
 See [Legacy Roadmap](ROADMAP_LEGACY.md) for completed milestones of the previous "Simple CLI" era.

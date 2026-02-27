@@ -307,3 +307,20 @@
 - [x] **Market Analysis**: Develop `market_analysis` tools.
 - [x] **Validation**: End-to-end simulation of the quarterly optimization cycle.
     - ✅ Validated full quarterly optimization cycle via `tests/integration/economic_engine_quarterly_simulation.test.ts`.
+
+## Phase 25: Autonomous Corporate Consciousness & Strategic Evolution (Planned)
+
+**Goal:** Evolve the agency from an automated operator to a strategic thinker.
+
+- [ ] **Strategic Horizon Scanning (25.1)**
+    - [ ] Implement `scan_strategic_horizon` tool (Market/Competitor/Trend analysis).
+    - [ ] Integrate with external news APIs (e.g., GNews, Bing).
+    - [ ] Create `strategic_memory` partition in Brain.
+- [ ] **Corporate Identity & Brand Evolution (25.2)**
+    - [ ] Implement `evaluate_corporate_identity` tool.
+    - [ ] Define dynamic "Brand Persona" schema in `persona.json`.
+    - [ ] Create SOP for autonomous PR/Blog post generation.
+- [ ] **Inter-Agency Federation Protocol (25.3)**
+    - [ ] Define Federation Protocol (Handshake, Service Discovery).
+    - [ ] Implement `initiate_federated_collaboration` tool.
+    - [ ] Validate cross-node communication in simulation.
