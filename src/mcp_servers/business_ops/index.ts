@@ -25,6 +25,7 @@ import { registerServiceAdjustmentTools } from "./tools/service_adjustment.js";
 import { registerResourceAllocationTools } from "./tools/resource_allocation.js";
 import { registerPolicyEngineTools } from "./tools/policy_engine.js";
 import { registerStrategicExecutionTools } from "./tools/strategic_execution.js";
+import { registerEnhancedLeadGenerationTools } from "./tools/enhanced_lead_generation.js";
 
 // Load secrets from .env.agent
 const envPath = join(process.cwd(), ".env.agent");
@@ -61,6 +62,7 @@ registerServiceAdjustmentTools(server);
 registerResourceAllocationTools(server);
 registerPolicyEngineTools(server);
 registerStrategicExecutionTools(server);
+registerEnhancedLeadGenerationTools(server);
 
 // Start Server
 async function main() {
