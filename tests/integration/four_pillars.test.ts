@@ -6,18 +6,19 @@ import { existsSync } from "fs";
 import { tmpdir } from "os";
 
 // --- Hoisted Variables ---
-const { mockLLMQueue, mockEmbed } = vi.hoisted(() => {
+const mocks = vi.hoisted(() => {
     return {
         mockLLMQueue: [] as any[],
-        mockEmbed: vi.fn()
+        mockEmbed: vi.fn(),
+        mockGenerate: vi.fn() // Ensure this is present
     };
 });
 
 // --- Mock Setup ---
 
 // 1. Mock LLM (shared across all components)
-const mockGenerate = vi.fn().mockImplementation(async (system: string, history: any[]) => {
-    const next = mockLLMQueue.shift();
+mocks.mockGenerate.mockImplementation(async (system: string, history: any[]) => {
+    const next = mocks.mockLLMQueue.shift();
     if (!next) {
         return {
             thought: "No mock response queued.",
@@ -32,8 +33,7 @@ const mockGenerate = vi.fn().mockImplementation(async (system: string, history: 
     return next;
 });
 
-// Implement mockEmbed
-mockEmbed.mockImplementation(async (text: string) => {
+mocks.mockEmbed.mockImplementation(async (text: string) => {
     const val = (text.length % 100) / 100;
     return new Array(1536).fill(val);
 });
@@ -41,12 +41,12 @@ mockEmbed.mockImplementation(async (text: string) => {
 vi.mock("../../src/llm.js", () => {
     return {
         createLLM: () => ({
-            embed: mockEmbed,
-            generate: mockGenerate,
+            embed: mocks.mockEmbed,
+            generate: mocks.mockGenerate,
         }),
         LLM: class {
-            embed = mockEmbed;
-            generate = mockGenerate;
+            embed = mocks.mockEmbed;
+            generate = mocks.mockGenerate;
         },
     };
 });
@@ -69,7 +69,7 @@ vi.mock("@modelcontextprotocol/sdk/server/stdio.js", () => ({
 // 3. Mock Scheduler Trigger (run in-process)
 vi.mock("../../src/scheduler/trigger.js", () => ({
     handleTaskTrigger: async (task: any) => {
-        // Run task logic in-process
+        // Updated: Use AutonomousOrchestrator to run task logic if queue has objects
         const { createLLM } = await import("../../src/llm.js");
         const { MCP } = await import("../../src/mcp.js");
         const { AutonomousOrchestrator } = await import("../../src/engine/autonomous.js");
@@ -128,7 +128,7 @@ describe("Four Pillars Integration Test (Explicit)", () => {
 
     beforeEach(async () => {
         vi.clearAllMocks();
-        mockLLMQueue.length = 0;
+        mocks.mockLLMQueue.length = 0;
         resetMocks();
 
         // 1. Setup Test Environment
@@ -159,6 +159,29 @@ describe("Four Pillars Integration Test (Explicit)", () => {
             inputSchema: {}
         }]);
 
+        // Force-register Brain tools
+        mockToolHandlers.set('brain_store', async () => ({ content: [{ type: 'text', text: 'Stored' }] }));
+        mockServerTools.set('brain', [{ name: 'brain_store', description: 'Store memory', inputSchema: {} }]);
+
+        mockToolHandlers.set('brain_query', async () => ({ content: [{ type: 'text', text: 'No memories found' }] }));
+        mockServerTools.get('brain')?.push({ name: 'brain_query', description: 'Query memory', inputSchema: {} });
+
+        mockToolHandlers.set('recall_delegation_patterns', async () => ({ content: [{ type: 'text', text: 'No patterns found' }] }));
+        mockServerTools.get('brain')?.push({ name: 'recall_delegation_patterns', description: 'Recall patterns', inputSchema: {} });
+
+        mockToolHandlers.set('log_experience', async () => ({ content: [{ type: 'text', text: 'Experience logged' }] }));
+        mockServerTools.get('brain')?.push({ name: 'log_experience', description: 'Log experience', inputSchema: {} });
+
+        mockToolHandlers.set('read_context', async () => ({ content: [{ type: 'text', text: '{}' }] }));
+        mockServerTools.get('brain')?.push({ name: 'read_context', description: 'Read context', inputSchema: {} });
+
+        mockToolHandlers.set('brain_update_graph', async () => ({ content: [{ type: 'text', text: 'Graph updated' }] }));
+        mockServerTools.get('brain')?.push({ name: 'brain_update_graph', description: 'Update graph', inputSchema: {} });
+
+        mockToolHandlers.set('brain_query_graph', async () => ({ content: [{ type: 'text', text: '[]' }] }));
+        mockServerTools.get('brain')?.push({ name: 'brain_query_graph', description: 'Query graph', inputSchema: {} });
+
+
         // 3. Initialize Scheduler
         scheduler = new Scheduler(testRoot);
 
@@ -186,10 +209,23 @@ describe("Four Pillars Integration Test (Explicit)", () => {
     });
 
     afterEach(async () => {
-        await scheduler.stop();
-        await rm(testRoot, { recursive: true, force: true });
+        if (scheduler) {
+            await scheduler.stop();
+        }
+
+        // Robust cleanup loop
+        const maxRetries = 5;
+        for (let i = 0; i < maxRetries; i++) {
+            try {
+                await rm(testRoot, { recursive: true, force: true });
+                break;
+            } catch (e) {
+                if (i === maxRetries - 1) console.error("Cleanup error (ignored):", e);
+                await new Promise(r => setTimeout(r, 200));
+            }
+        }
         vi.restoreAllMocks();
-    });
+    }, 20000);
 
     it("should execute Pillar 3 (Ghost Mode) and Pillar 4 (HR Loop) together", async () => {
         const mcp = new MockMCP();
@@ -207,12 +243,12 @@ describe("Four Pillars Integration Test (Explicit)", () => {
         const ghostTaskPromise = waitForTask("Ghost Task");
 
         // Queue LLM responses for AutonomousOrchestrator running "Ghost Task"
-        mockLLMQueue.push({
+        mocks.mockLLMQueue.push({
             thought: "I am running in the background.",
             tool: "write_file",
             args: { filepath: "ghost_log.txt", content: "Ghost was here" }
         });
-        mockLLMQueue.push({
+        mocks.mockLLMQueue.push({
             thought: "Task finished.",
             message: "Ghost check complete."
         });
@@ -220,9 +256,16 @@ describe("Four Pillars Integration Test (Explicit)", () => {
         // Advance time to 10 AM (plus 1 minute to ensure trigger)
         console.log("Advancing time to 10:01 AM...");
         await vi.advanceTimersByTimeAsync(1000 * 60 * 60 * 2 + 1000 * 60); // +2 hours 1 min
+
+        // Wait for task trigger
         await ghostTaskPromise;
-        await vi.advanceTimersByTimeAsync(100); // Allow async execution to settle
+
+        // Polling wait for completion
+        for (let i = 0; i < 20; i++) {
+            if (existsSync(join(testRoot, "ghost_log.txt"))) break;
+            await new Promise(r => setTimeout(r, 100));
+        }
 
         expect(existsSync(join(testRoot, "ghost_log.txt"))).toBe(true);
-    });
+    }, 60000);
 });

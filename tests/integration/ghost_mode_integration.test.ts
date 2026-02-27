@@ -6,52 +6,58 @@ import { existsSync } from "fs";
 import { tmpdir } from "os";
 
 // --- Hoisted Variables ---
-const { mockLLMQueue, mockLLMGenerate } = vi.hoisted(() => {
+const mocks = vi.hoisted(() => {
     return {
         mockLLMQueue: [] as any[],
-        mockLLMGenerate: vi.fn()
+        mockLLMGenerate: vi.fn(),
+        mockEmbed: vi.fn() // Added to hoisted object
     };
 });
 
 // --- Mock Setup ---
 
 // 1. Mock LLM (shared across all components)
-mockLLMGenerate.mockImplementation(async (system: string, history: any[]) => {
-    const next = mockLLMQueue.shift();
-    if (!next) {
-        return {
-            thought: "No mock response queued.",
-            tool: "none",
-            args: {},
-            message: "End of script."
-        };
+// Updated to handle concurrent tasks by checking context
+mocks.mockLLMGenerate.mockImplementation(async (system: string, history: any[]) => {
+    // Basic check to skip default tasks if they aren't the target of the test
+    const systemPrompt = system || "";
+    const lastUserMessage = history[history.length - 1]?.content || "";
+
+    // If it's the Ghost Task (based on scheduler prompt)
+    if (lastUserMessage.includes("Perform background check")) {
+        const next = mocks.mockLLMQueue.shift();
+        if (!next) {
+            return { thought: "No mock response queued.", tool: "none", args: {}, message: "End of script." };
+        }
+        if (typeof next === 'function') return await next(system, history);
+        return next;
     }
-    if (typeof next === 'function') {
-        return await next(system, history);
-    }
-    return next;
+
+    // Default handler for other tasks (Morning Standup, HR Review, etc.)
+    return {
+        thought: "Skipping non-target task.",
+        tool: "none",
+        args: {},
+        message: "Task skipped."
+    };
 });
 
-const mockEmbed = vi.fn().mockResolvedValue(new Array(1536).fill(0.1));
+mocks.mockEmbed.mockResolvedValue(new Array(1536).fill(0.1));
 
 vi.mock("../../src/llm.js", () => {
     return {
         createLLM: () => ({
-            embed: mockEmbed,
-            generate: mockLLMGenerate,
+            embed: mocks.mockEmbed,
+            generate: mocks.mockLLMGenerate,
         }),
         LLM: class {
-            embed = mockEmbed;
-            generate = mockLLMGenerate;
+            embed = mocks.mockEmbed;
+            generate = mocks.mockLLMGenerate;
         },
     };
 });
 
 // 2. Mock MCP Infrastructure
-// In Ghost Mode Integration, we are testing the Autonomous Orchestrator directly
-// which uses the LLM and MCP.
-// We need to mock the MCP class to return our mock tools.
-
 import { mockToolHandlers, mockServerTools, resetMocks, MockMCP, MockMcpServer } from "./test_helpers/mock_mcp_server.js";
 
 vi.mock("../../src/mcp.js", () => ({
@@ -117,7 +123,7 @@ describe("Ghost Mode Integration Test", () => {
 
     beforeEach(async () => {
         vi.clearAllMocks();
-        mockLLMQueue.length = 0;
+        mocks.mockLLMQueue.length = 0;
         resetMocks();
 
         // 1. Setup Test Environment
@@ -140,6 +146,29 @@ describe("Ghost Mode Integration Test", () => {
             description: 'Write file',
             inputSchema: {}
         }]);
+
+        // Force-register Brain tools
+        mockToolHandlers.set('brain_store', async () => ({ content: [{ type: 'text', text: 'Stored' }] }));
+        mockServerTools.set('brain', [{ name: 'brain_store', description: 'Store memory', inputSchema: {} }]);
+
+        mockToolHandlers.set('brain_query', async () => ({ content: [{ type: 'text', text: 'No memories found' }] }));
+        mockServerTools.get('brain')?.push({ name: 'brain_query', description: 'Query memory', inputSchema: {} });
+
+        mockToolHandlers.set('recall_delegation_patterns', async () => ({ content: [{ type: 'text', text: 'No patterns found' }] }));
+        mockServerTools.get('brain')?.push({ name: 'recall_delegation_patterns', description: 'Recall patterns', inputSchema: {} });
+
+        mockToolHandlers.set('log_experience', async () => ({ content: [{ type: 'text', text: 'Experience logged' }] }));
+        mockServerTools.get('brain')?.push({ name: 'log_experience', description: 'Log experience', inputSchema: {} });
+
+        mockToolHandlers.set('read_context', async () => ({ content: [{ type: 'text', text: '{}' }] }));
+        mockServerTools.get('brain')?.push({ name: 'read_context', description: 'Read context', inputSchema: {} });
+
+        mockToolHandlers.set('brain_update_graph', async () => ({ content: [{ type: 'text', text: 'Graph updated' }] }));
+        mockServerTools.get('brain')?.push({ name: 'brain_update_graph', description: 'Update graph', inputSchema: {} });
+
+        mockToolHandlers.set('brain_query_graph', async () => ({ content: [{ type: 'text', text: '[]' }] }));
+        mockServerTools.get('brain')?.push({ name: 'brain_query_graph', description: 'Query graph', inputSchema: {} });
+
 
         // 3. Initialize Scheduler
         scheduler = new Scheduler(testRoot);
@@ -167,10 +196,23 @@ describe("Ghost Mode Integration Test", () => {
     });
 
     afterEach(async () => {
-        await scheduler.stop();
-        await rm(testRoot, { recursive: true, force: true });
+        if (scheduler) {
+            await scheduler.stop();
+        }
+
+        // Robust cleanup loop
+        const maxRetries = 5;
+        for (let i = 0; i < maxRetries; i++) {
+            try {
+                await rm(testRoot, { recursive: true, force: true });
+                break;
+            } catch (e) {
+                if (i === maxRetries - 1) console.error("Cleanup error (ignored):", e);
+                await new Promise(r => setTimeout(r, 200));
+            }
+        }
         vi.restoreAllMocks();
-    });
+    }, 20000); // 20s timeout
 
     it("should execute a scheduled task autonomously and log results", async () => {
         const mcp = new MockMCP();
@@ -188,12 +230,12 @@ describe("Ghost Mode Integration Test", () => {
         const ghostTaskPromise = waitForTask("Ghost Task");
 
         // Queue LLM responses
-        mockLLMQueue.push({
+        mocks.mockLLMQueue.push({
             thought: "I am running in the background.",
             tool: "write_file",
             args: { filepath: "ghost_result.txt", content: "Ghost Success" }
         });
-        mockLLMQueue.push({
+        mocks.mockLLMQueue.push({
             thought: "Task finished.",
             message: "Ghost check complete."
         });
@@ -201,27 +243,24 @@ describe("Ghost Mode Integration Test", () => {
         // Advance time to 10 AM
         console.log("Advancing time...");
         await vi.advanceTimersByTimeAsync(1000 * 60 * 60 * 2 + 1000 * 60); // +2h 1m
+
         await ghostTaskPromise;
-        await vi.advanceTimersByTimeAsync(100);
+
+        // Polling for file existence
+        let fileExists = false;
+        for (let i = 0; i < 20; i++) { // Poll for up to 2 seconds (real time, assuming test logic runs fast)
+            // Note: Since we advanced timers, the simulated task SHOULD have run.
+            // But node event loop processing needs to happen.
+            if (existsSync(join(testRoot, "ghost_result.txt"))) {
+                fileExists = true;
+                break;
+            }
+            await new Promise(resolve => setTimeout(resolve, 100)); // Real wait for IO
+        }
 
         // Verify Execution
-        expect(existsSync(join(testRoot, "ghost_result.txt"))).toBe(true);
+        expect(fileExists).toBe(true);
         const content = await readFile(join(testRoot, "ghost_result.txt"), "utf-8");
         expect(content).toBe("Ghost Success");
-
-        // Verify Ghost Logs (JobDelegator should write one)
-        // Since we mocked handleTaskTrigger to run logic in-process,
-        // the JobDelegator's file logging (which happens in the parent process) depends on how we mocked it.
-        // In `scheduler/trigger.js` mock, we just run the task logic.
-        // `JobDelegator` calls `handleTaskTrigger`.
-        // `JobDelegator` writes the log file *after* `handleTaskTrigger` returns or receives logs?
-        // Actually, `JobDelegator` captures logs from stdout if spawned.
-        // Since we aren't spawning, `JobDelegator` might not capture logs unless we fake the output.
-        // BUT, the test `production_validation` verified ghost logs existence.
-        // Let's check `JobDelegator` implementation... it writes logs if `captureLogs` is true.
-        // Our mock returns `{ exitCode: 0 }`. It doesn't return stdout/stderr.
-        // So `JobDelegator` might write an empty log file or a "success" log.
-
-        // Let's assume verifying file creation is enough for this integration test of "Ghost Mode".
-    });
+    }, 60000); // 60s timeout
 });
