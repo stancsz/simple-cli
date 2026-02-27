@@ -458,6 +458,39 @@ A periodic (e.g., Monthly/Quarterly) recursive simulation where the agency refle
 
 ---
 
+## 17. Autonomous Market Expansion Architecture (Phase 26)
+
+The "Growth Engine" is the commercial arm of the Corporate Consciousness. It translates high-level strategy (Brain) into specific business development actions (Outreach, Proposals, Contracts).
+
+### 17.1 Growth Engine Logic
+The engine operates on a continuous loop:
+1.  **Strategic Input**: Polls `CorporateStrategy` for current target markets (e.g., "HealthTech").
+2.  **Lead Identification**: Uses `market_analysis` tools to find potential clients matching the strategy.
+3.  **Qualification**: Filters leads based on `ideal_client_profile` and potential revenue.
+4.  **Action**: Triggers the "Sales Swarm" to initiate contact or nurture.
+
+### 17.2 Proposal Generation Engine (RAG-Based)
+To generate high-quality proposals autonomously, the system uses a Retrieval-Augmented Generation approach.
+-   **Inputs**:
+    -   **Client Context**: Notes from discovery calls (CRM).
+    -   **Agency Capability**: Past successful projects (Linear/Brain).
+    -   **Pricing Model**: Dynamic rates from `optimize_pricing_strategy`.
+-   **Process**:
+    1.  The `ProposalAgent` queries the Brain for similar past proposals.
+    2.  It fetches the latest pricing and terms from the `PolicyEngine`.
+    3.  It assembles a draft using a standard template (Markdown/PDF).
+    4.  **Review**: A "Supervisor Agent" reviews the draft for tone, accuracy, and persuasion.
+
+### 17.3 Contract Negotiation Swarm (Game Theoretic)
+Before presenting a contract, the system simulates the negotiation to find the optimal terms.
+-   **Participants**:
+    -   **Sales Agent**: Maximizes Total Contract Value (TCV).
+    -   **Client Proxy Agent**: Minimizes cost, maximizes scope (simulated based on industry data).
+    -   **Legal/Finance Agent**: Enforces `CorporatePolicy` constraints (e.g., min margin, liability caps).
+-   **Simulation**: The agents engage in a multi-turn dialogue. The outcome is a set of "Pre-Approved Terms" that are likely to be accepted by the real client while remaining profitable.
+
+---
+
 ## Appendix A: Philosophical Metaphors
 
 The architecture is conceptually driven by a duality of persistence and impermanence, referred to internally as "The Claw & The Molt".
