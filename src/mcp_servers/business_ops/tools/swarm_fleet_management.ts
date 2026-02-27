@@ -4,6 +4,7 @@ import { LinearClient } from "@linear/sdk";
 import { getXeroClient, getTenantId } from "../xero_tools.js";
 import { scaleSwarmLogic } from "../../scaling_engine/scaling_orchestrator.js";
 import { MCP } from "../../../mcp.js";
+import { getLatestPolicy, applyPolicyToFleet, PolicyCompliantFleetStatus } from "../../../swarm/fleet_manager.js";
 
 function getLinearClient() {
     const apiKey = process.env.LINEAR_API_KEY;
@@ -39,23 +40,43 @@ export interface FleetStatus {
     last_updated: Date | undefined;
 }
 
-export async function getFleetStatusLogic(): Promise<FleetStatus[]> {
+export async function getFleetStatusLogic(): Promise<PolicyCompliantFleetStatus[]> {
     const projects = await getActiveProjects();
-    const fleetStatus: FleetStatus[] = [];
+    const fleetStatus: PolicyCompliantFleetStatus[] = [];
+
+    // Fetch global policy first (assuming one global policy for now, or per company inside loop)
+    // The policy engine allows per-company. We should try to fetch per company.
+    // However, if no company-specific policy, fall back to default?
+    // `getLatestPolicy` handles "default" or specific company.
+    // Let's assume we try company specific first, then default.
+    // But `getLatestPolicy` takes one argument.
+    // For MVP, let's fetch for the specific company. If not found, it returns null.
+    // We might want a fallback logic here, but let's stick to simple: check for company policy.
 
     for (const project of projects) {
         const issues = await project.issues({
             filter: { state: { type: { neq: "completed" } } }
         });
 
-        fleetStatus.push({
+        const rawStatus: FleetStatus = {
             company: project.name, // Using Project Name as Company/Client Name
             projectId: project.id,
             active_agents: 1, // Baseline. In a real system, we'd query the Swarm server for exact count.
             pending_issues: issues.nodes.length,
             health: issues.nodes.length > 10 ? "strained" : "healthy",
             last_updated: project.updatedAt
-        });
+        };
+
+        // Fetch Policy
+        // Note: Project Name might not match Company ID perfectly in all setups, but we use it as key here.
+        let policy = await getLatestPolicy(project.name);
+        if (!policy) {
+            // Fallback to global default policy
+            policy = await getLatestPolicy("default");
+        }
+
+        const compliantStatus = applyPolicyToFleet(rawStatus, policy);
+        fleetStatus.push(compliantStatus);
     }
     return fleetStatus;
 }
@@ -65,7 +86,7 @@ export function registerSwarmFleetManagementTools(server: McpServer, mcpClient?:
 
     server.tool(
         "get_fleet_status",
-        "Returns an overview of all active client swarms (company, metrics, health).",
+        "Returns an overview of all active client swarms (company, metrics, health) including policy compliance status.",
         {},
         async () => {
             try {
