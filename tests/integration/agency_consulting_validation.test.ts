@@ -5,16 +5,25 @@ import { mkdtemp, rm, mkdir, writeFile } from "fs/promises";
 import { tmpdir } from "os";
 
 // --- Hoisted Variables ---
-const { mockLLMQueue } = vi.hoisted(() => {
+const { mockLLMQueue, mockGenerate, mockEmbed } = vi.hoisted(() => {
+    // We must define simple values or factories here.
+    // Functions that access external scope are risky if not carefully handled.
     return {
-        mockLLMQueue: [] as any[]
+        mockLLMQueue: [] as any[],
+        // We define stub functions that will be implemented later, OR implementation here if simple.
+        // For `mockGenerate`, it needs access to `mockLLMQueue`.
+        // Since `mockLLMQueue` is in the SAME hoisted block, we can't reference it directly
+        // inside the initializer of `mockGenerate` if we define them in parallel properties.
+        // BUT, `vi.hoisted` returns the object. We can modify properties later or use a closure if we return a factory.
+        // Actually, easiest way: just return the stubs, and implement them in the test file scope
+        // BEFORE the mocks that use them.
+        mockGenerate: vi.fn(),
+        mockEmbed: vi.fn()
     };
 });
 
-// --- Mock Setup ---
-
-// 1. Mock LLM (shared across all components)
-const mockGenerate = vi.fn().mockImplementation(async (system: string, history: any[]) => {
+// Implement Logic for Hoisted Mocks
+mockGenerate.mockImplementation(async (system: string, history: any[]) => {
     const next = mockLLMQueue.shift();
     if (!next) {
         return {
@@ -30,11 +39,12 @@ const mockGenerate = vi.fn().mockImplementation(async (system: string, history: 
     return next;
 });
 
-const mockEmbed = vi.fn().mockImplementation(async (text: string) => {
-    // Generate a pseudo-embedding based on text length/hash
+mockEmbed.mockImplementation(async (text: string) => {
     const val = text.length % 100 / 100;
     return new Array(1536).fill(val);
 });
+
+// --- Mock Setup ---
 
 vi.mock("../../src/llm.js", () => {
     return {

@@ -4,8 +4,15 @@ import { mkdtemp, rm, writeFile, mkdir, readdir } from "fs/promises";
 import { tmpdir } from "os";
 
 // --- Hoisted Mocks ---
-const { mockLLMQueue } = vi.hoisted(() => {
-    return { mockLLMQueue: [] as any[] };
+const { mockLLMQueue, mockEpisodic } = vi.hoisted(() => {
+    return {
+        mockLLMQueue: [] as any[],
+        mockEpisodic: {
+            recall: vi.fn().mockResolvedValue([]),
+            store: vi.fn().mockResolvedValue(undefined),
+            getRecentEpisodes: vi.fn().mockResolvedValue([])
+        }
+    };
 });
 
 const mockGenerate = vi.fn().mockImplementation(async (system: string, history: any[]) => {
@@ -26,13 +33,6 @@ vi.mock("../../src/llm.js", () => {
         LLM: class { embed = mockEmbed; generate = mockGenerate; },
     };
 });
-
-// Mock Episodic Memory to avoid DB
-const mockEpisodic = {
-    recall: vi.fn().mockResolvedValue([]),
-    store: vi.fn().mockResolvedValue(undefined),
-    getRecentEpisodes: vi.fn().mockResolvedValue([])
-};
 
 vi.mock("../../src/brain/episodic.js", () => {
     return {

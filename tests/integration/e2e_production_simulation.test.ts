@@ -6,9 +6,10 @@ import { existsSync } from "fs";
 import { tmpdir } from "os";
 
 // --- Hoisted Variables ---
-const { mockLLMQueue } = vi.hoisted(() => {
+const { mockLLMQueue, mockEmbed } = vi.hoisted(() => {
     return {
-        mockLLMQueue: [] as any[]
+        mockLLMQueue: [] as any[],
+        mockEmbed: vi.fn()
     };
 });
 
@@ -31,8 +32,9 @@ const mockGenerate = vi.fn().mockImplementation(async (system: string, history: 
     return next;
 });
 
-const mockEmbed = vi.fn().mockImplementation(async (text: string) => {
-    const val = text.length % 100 / 100;
+// Implement mockEmbed
+mockEmbed.mockImplementation(async (text: string) => {
+    const val = (text.length % 100) / 100;
     return new Array(1536).fill(val);
 });
 
