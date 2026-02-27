@@ -21,6 +21,7 @@ import { registerMarketAnalysisTools } from "./tools/market_analysis.js";
 import { registerEconomicOptimizationTools } from "./tools/economic_optimization.js";
 import { registerPerformanceAnalyticsTools } from "./tools/performance_analytics.js";
 import { registerPricingOptimizationTools } from "./tools/pricing_optimization.js";
+import { registerResourceAllocationTools } from "./tools/resource_allocation.js";
 
 // Load secrets from .env.agent
 const envPath = join(process.cwd(), ".env.agent");
@@ -53,6 +54,7 @@ registerMarketAnalysisTools(server);
 registerEconomicOptimizationTools(server);
 registerPerformanceAnalyticsTools(server);
 registerPricingOptimizationTools(server);
+registerResourceAllocationTools(server);
 
 // Start Server
 async function main() {
