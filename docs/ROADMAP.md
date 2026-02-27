@@ -190,5 +190,15 @@ The roadmap is structured around the four anatomical layers of the Digital Biosp
 - [x] **Validation**: End-to-end simulation of the quarterly optimization cycle.
     - ✅ Validated full quarterly optimization cycle via `tests/integration/economic_engine_quarterly_simulation.test.ts`.
 
+## Phase 26: Autonomous Market Expansion
+*Status: In Progress*
+*Current Focus: Growth & Revenue Autonomy*
+*Validation: ⏳ Pending validation via `tests/integration/phase26_growth_validation.test.ts`*
+- [ ] **Autonomous Lead Generation**: Enhance existing lead generation to use corporate strategy and market analysis for targeted outreach.
+- [ ] **Intelligent Proposal Generation**: Automatically create tailored proposals based on client needs and agency capabilities.
+- [ ] **Contract Negotiation Simulation**: Use swarm intelligence to simulate and optimize contract terms.
+- [ ] **Market Positioning Automation**: Continuously analyze competitive landscape and adjust agency positioning.
+- [ ] **Revenue Growth Validation**: Define metrics and tests for autonomous business expansion.
+
 ## Legacy Achievements
 See [Legacy Roadmap](ROADMAP_LEGACY.md) for completed milestones of the previous "Simple CLI" era.
