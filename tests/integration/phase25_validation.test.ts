@@ -56,7 +56,7 @@ describe("Phase 25: Autonomous Corporate Consciousness (Strategic Validation)", 
 
     it("should manage Corporate Strategy via Brain tools (Read & Pivot)", async () => {
         // Import tools dynamically to use the mocks
-        const { readStrategy, proposeStrategicPivot } = await import("../../src/mcp_servers/brain/tools.js");
+        const { readStrategy, proposeStrategicPivot } = await import("../../src/mcp_servers/brain/tools/strategy.js");
 
         // --- Test Case 1: Read Strategy (Empty Brain) ---
         // Setup mock: recall returns empty array
@@ -248,5 +248,79 @@ describe("Phase 25: Autonomous Corporate Consciousness (Strategic Validation)", 
         );
 
         console.log("--- BOARD MEETING ADJOURNED ---");
+    });
+
+    it("should perform a Strategic Horizon Scan (Phase 25.2)", async () => {
+        // Import the new tool
+        const { scanStrategicHorizon } = await import("../../src/mcp_servers/brain/tools/scan_strategic_horizon.js");
+
+        // Mock dependencies for the scan
+        const mockStrategy = {
+            vision: "Current Vision",
+            objectives: ["Current Objective"],
+            timestamp: Date.now()
+        };
+
+        const mockPatterns = {
+            internal_patterns: ["Strong Engineering"],
+            external_trends: ["Market Growing"],
+            synthesis: "Keep pushing"
+        };
+
+        // Mock readStrategy (which is imported internally by scanStrategicHorizon)
+        // Since we are importing the source, we might need to rely on the fact that
+        // scanStrategicHorizon uses imports that are mocked at the top of this file?
+        // Wait, standard jest/vitest module mocking might not work if we don't mock the relative import
+        // inside scan_strategic_horizon.js.
+        // However, in this test file we didn't mock "../../src/mcp_servers/brain/tools/strategy.js" globally yet.
+        // We only mocked modules like "../../src/llm.js".
+
+        // Let's rely on mocking the behavior of `readStrategy` if we can, or just mock `mockEpisodicMemory.recall`
+        // because `readStrategy` uses it.
+        // `readStrategy` calls `episodic.recall("current corporate strategy", ...)`
+
+        mockEpisodicMemory.recall.mockResolvedValueOnce([{
+            id: "strategy_1",
+            timestamp: Date.now(),
+            agentResponse: JSON.stringify(mockStrategy),
+            type: "corporate_strategy"
+        }]);
+
+        // Mock `analyzePatterns`... wait, `scanStrategicHorizon` calls it.
+        // `analyzePatterns` calls `episodic.recall("pattern success failure", ...)`
+        // So we need another mock response for that recall.
+        mockEpisodicMemory.recall.mockResolvedValueOnce([
+            { type: "task", userPrompt: "Task A", agentResponse: "Success", timestamp: Date.now() }
+        ]);
+
+        // Mock LLM for the final synthesis
+        const horizonReport = {
+            emerging_opportunities: ["Quantum Computing"],
+            potential_threats: ["Bit rot"],
+            strategic_recommendations: [
+                { action: "Buy Quantum Computer", priority: "high", rationale: "Speed" }
+            ],
+            synthesis_summary: "Future is bright."
+        };
+
+        // We need to provide TWO mock responses for LLM because scanStrategicHorizon calls analyzePatterns
+        // which calls LLM, AND then scanStrategicHorizon calls LLM again.
+        mockLLM.generate
+            .mockResolvedValueOnce({ message: JSON.stringify(mockPatterns) }) // for analyzePatterns
+            .mockResolvedValueOnce({ message: JSON.stringify(horizonReport) }); // for scanStrategicHorizon
+
+        // Execute
+        const report = await scanStrategicHorizon(mockEpisodicMemory as any, "default");
+
+        // Verify
+        expect(report).toBeDefined();
+        expect(report.emerging_opportunities).toContain("Quantum Computing");
+        expect(report.strategic_recommendations[0].action).toBe("Buy Quantum Computer");
+
+        // Verify external signals were requested (boolean flag to analyzePatterns)
+        // Since we didn't spy on analyzePatterns specifically here (it's internal),
+        // we implicitly verify it ran by the fact that we got a result.
+
+        expect(report.synthesis_summary).toBe("Future is bright.");
     });
 });
