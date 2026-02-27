@@ -14,6 +14,7 @@ import { createLLM } from "../../llm.js";
 import { readStrategy, proposeStrategicPivot } from "./tools/strategy.js";
 import { scanStrategicHorizon } from "./tools/scan_strategic_horizon.js";
 import { conveneBoardMeeting } from "./tools/convene_board_meeting.js";
+import { getGrowthTargets } from "./tools/strategic_growth.js";
 
 export class BrainServer {
   private server: McpServer;
@@ -168,7 +169,29 @@ export class BrainServer {
       }
     );
 
-    // Corporate Strategy Tools (Phase 25)
+    // Corporate Strategy Tools (Phase 25 & 26)
+    this.server.tool(
+      "get_growth_targets",
+      "Analyzes current corporate strategy and returns target markets, ICP attributes, and strategic goals.",
+      {
+        company: z.string().optional().describe("The company/client identifier for namespacing."),
+      },
+      async ({ company }) => {
+        try {
+          const llm = createLLM();
+          const targets = await getGrowthTargets(this.episodic, llm, company);
+          return {
+            content: [{ type: "text", text: JSON.stringify(targets, null, 2) }],
+          };
+        } catch (e: any) {
+          return {
+            content: [{ type: "text", text: `Failed to extract growth targets: ${e.message}` }],
+            isError: true,
+          };
+        }
+      }
+    );
+
     this.server.tool(
       "read_strategy",
       "Retrieves the latest Corporate Strategy from Episodic Memory.",
