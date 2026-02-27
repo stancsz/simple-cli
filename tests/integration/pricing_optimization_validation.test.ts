@@ -117,16 +117,24 @@ describe("Pricing Optimization Validation", () => {
 
     it("should handle idempotency (skip if run recently)", async () => {
         // Mock Memory (Recent run exists)
+        const cachedResponse = JSON.stringify([{
+            service_name: "Web Dev",
+            current_price: 100,
+            recommended_price: 105,
+            confidence_score: 0.7,
+            reasoning: "Cached result"
+        }]);
+
         mockEpisodicMemory.recall.mockResolvedValue([{
             timestamp: new Date().toISOString(),
-            agentResponse: "Last run result"
+            agentResponse: cachedResponse
         }]);
 
         const result = await optimizePricingTool({
             current_services: [{ name: "Web Dev", current_price: 100 }]
         });
 
-        expect(result.content[0].text).toContain("Pricing optimization already run recently");
+        expect(result.content[0].text).toBe(cachedResponse);
         expect(mockLLM.generate).not.toHaveBeenCalled();
     });
 
