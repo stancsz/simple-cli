@@ -456,6 +456,8 @@ A periodic (e.g., Monthly/Quarterly) recursive simulation where the agency refle
     *   **Deliberation**: LLM (Persona: CEO) reviews data and proposes `StrategicPivot` if needed.
     *   **Resolution**: New policies are written to `CorporateStrategy` and propagated to Swarm Configs.
 
+**Implementation Note (Phase 25):** The `convene_board_meeting` tool orchestrates this process. It aggregates fleet status, financial metrics, and strategic horizon data ("State of the Union"), then simulates a multi-turn deliberation between the CSO, CFO, and CEO personas using the LLM. The final output is a binding JSON decision (`strategic_pivot`, `policy_update`, or `no_action`) which is automatically executed and logged to Episodic Memory.
+
 ---
 
 ## Appendix A: Philosophical Metaphors

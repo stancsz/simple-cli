@@ -8,10 +8,10 @@ import { dirname } from "path";
 // Initialize Episodic Memory (singleton-ish for this module)
 // In a real server, this would be passed in or resolved via DI.
 const baseDir = process.env.JULES_AGENT_DIR ? dirname(process.env.JULES_AGENT_DIR) : process.cwd();
-const episodic = new EpisodicMemory(baseDir);
+const episodicInstance = new EpisodicMemory(baseDir);
 
 // Helper to get the latest active policy
-async function getLatestPolicy(company: string = "default"): Promise<CorporatePolicy | null> {
+export async function getLatestPolicy(episodic: EpisodicMemory, company: string = "default"): Promise<CorporatePolicy | null> {
     const memories = await episodic.recall("corporate_policy", 10, company, "corporate_policy");
     if (!memories || memories.length === 0) return null;
 
@@ -30,6 +30,58 @@ async function getLatestPolicy(company: string = "default"): Promise<CorporatePo
     return policies.length > 0 ? policies[0] : null;
 }
 
+export async function updateOperatingPolicyLogic(
+    episodic: EpisodicMemory,
+    name: string,
+    description: string,
+    min_margin: number,
+    risk_tolerance: "low" | "medium" | "high",
+    max_agents_per_swarm: number,
+    company?: string
+) {
+    const companyId = company || "default";
+    const currentPolicy = await getLatestPolicy(episodic, companyId);
+
+    const newVersion = currentPolicy ? currentPolicy.version + 1 : 1;
+    const previousId = currentPolicy ? currentPolicy.id : undefined;
+
+    const newPolicy: CorporatePolicy = {
+        id: randomUUID(),
+        version: newVersion,
+        name,
+        description,
+        parameters: {
+            min_margin,
+            risk_tolerance,
+            max_agents_per_swarm
+        },
+        isActive: true,
+        timestamp: Date.now(),
+        author: "C-Suite Agent", // In a real system, this would come from the session
+        previous_version_id: previousId
+    };
+
+    // Store in Brain
+    // We store the policy object as the "solution" (agentResponse) so it can be parsed back.
+    // The "request" (userPrompt) is the intent.
+    await episodic.store(
+        `policy_update_v${newVersion}`,
+        `Update operating policy to version ${newVersion}: ${description}`,
+        JSON.stringify(newPolicy),
+        [],
+        companyId,
+        undefined,
+        undefined,
+        undefined,
+        newPolicy.id,
+        0,
+        0,
+        "corporate_policy"
+    );
+
+    return newPolicy;
+}
+
 export function registerPolicyEngineTools(server: McpServer) {
     server.tool(
         "update_operating_policy",
@@ -43,44 +95,14 @@ export function registerPolicyEngineTools(server: McpServer) {
             company: z.string().optional().describe("The company/client identifier for namespacing.")
         },
         async ({ name, description, min_margin, risk_tolerance, max_agents_per_swarm, company }) => {
-            const companyId = company || "default";
-            const currentPolicy = await getLatestPolicy(companyId);
-
-            const newVersion = currentPolicy ? currentPolicy.version + 1 : 1;
-            const previousId = currentPolicy ? currentPolicy.id : undefined;
-
-            const newPolicy: CorporatePolicy = {
-                id: randomUUID(),
-                version: newVersion,
+            const newPolicy = await updateOperatingPolicyLogic(
+                episodicInstance,
                 name,
                 description,
-                parameters: {
-                    min_margin,
-                    risk_tolerance,
-                    max_agents_per_swarm
-                },
-                isActive: true,
-                timestamp: Date.now(),
-                author: "C-Suite Agent", // In a real system, this would come from the session
-                previous_version_id: previousId
-            };
-
-            // Store in Brain
-            // We store the policy object as the "solution" (agentResponse) so it can be parsed back.
-            // The "request" (userPrompt) is the intent.
-            await episodic.store(
-                `policy_update_v${newVersion}`,
-                `Update operating policy to version ${newVersion}: ${description}`,
-                JSON.stringify(newPolicy),
-                [],
-                companyId,
-                undefined,
-                undefined,
-                undefined,
-                newPolicy.id,
-                0,
-                0,
-                "corporate_policy"
+                min_margin,
+                risk_tolerance,
+                max_agents_per_swarm,
+                company
             );
 
             return {
@@ -88,7 +110,7 @@ export function registerPolicyEngineTools(server: McpServer) {
                     type: "text",
                     text: JSON.stringify({
                         status: "success",
-                        message: `Policy updated to version ${newVersion}`,
+                        message: `Policy updated to version ${newPolicy.version}`,
                         policy: newPolicy
                     }, null, 2)
                 }]
@@ -103,7 +125,7 @@ export function registerPolicyEngineTools(server: McpServer) {
             company: z.string().optional().describe("The company/client identifier for namespacing.")
         },
         async ({ company }) => {
-            const policy = await getLatestPolicy(company || "default");
+            const policy = await getLatestPolicy(episodicInstance, company || "default");
             if (!policy) {
                 return {
                     content: [{ type: "text", text: "No active policy found." }]
@@ -123,7 +145,7 @@ export function registerPolicyEngineTools(server: McpServer) {
         },
         async ({ company }) => {
             const companyId = company || "default";
-            const currentPolicy = await getLatestPolicy(companyId);
+            const currentPolicy = await getLatestPolicy(episodicInstance, companyId);
 
             if (!currentPolicy) {
                 return {
@@ -144,7 +166,7 @@ export function registerPolicyEngineTools(server: McpServer) {
             // But we can search by "type: corporate_policy" and filter in memory since volume is low.
             // Or use getRecentEpisodes if available.
             // Let's use recall with type and filter.
-            const memories = await episodic.recall("corporate_policy", 50, companyId, "corporate_policy");
+            const memories = await episodicInstance.recall("corporate_policy", 50, companyId, "corporate_policy");
              const previousPolicyMem = memories.find(m => m.id === currentPolicy.previous_version_id);
 
              if (!previousPolicyMem) {
@@ -170,7 +192,7 @@ export function registerPolicyEngineTools(server: McpServer) {
                  description: `Rollback to version ${previousPolicy.version}: ${previousPolicy.description}`
              };
 
-            await episodic.store(
+            await episodicInstance.store(
                 `policy_rollback_v${newVersion}`,
                 `Rollback policy to version ${previousPolicy.version}`,
                 JSON.stringify(newPolicy),

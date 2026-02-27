@@ -51,8 +51,8 @@ The roadmap is structured around the four anatomical layers of the Digital Biosp
     - [x] Build "Policy Propagation" mechanism to push updates to Swarm Fleet.
     - ✅ Implemented `update_operating_policy`, `get_active_policy`, and `rollback_operating_policy`. Validated via `tests/integration/policy_engine_validation.test.ts` including policy propagation to fleet status.
 - [ ] **Autonomous Board Meeting**: Simulate periodic "Board Meetings" where C-Suite agents review the "State of the Union" and make binding decisions.
-    - [ ] Create `convene_board_meeting` workflow.
-    - [ ] Validate decision-making quality and coherence.
+    - [x] Create `convene_board_meeting` workflow.
+    - 🚧 Validate decision-making quality and coherence via integration tests.
 - [ ] **Validation**: Demonstrate a full loop of: Opportunity Detection -> Strategy Shift -> Policy Update -> Swarm Behavior Change.
     - [ ] Validated via `tests/integration/phase25_validation.test.ts`.
 

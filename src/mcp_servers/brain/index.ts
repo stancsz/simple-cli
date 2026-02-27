@@ -13,6 +13,7 @@ import { FrameworkIngestionEngine } from "../../framework_ingestion/ingest.js";
 import { createLLM } from "../../llm.js";
 import { readStrategy, proposeStrategicPivot } from "./tools/strategy.js";
 import { scanStrategicHorizon } from "./tools/scan_strategic_horizon.js";
+import { registerBoardMeetingTools } from "./tools/convene_board_meeting.js";
 
 export class BrainServer {
   private server: McpServer;
@@ -166,6 +167,9 @@ export class BrainServer {
         return { content: [{ type: "text", text }] };
       }
     );
+
+    // Register Board Meeting Tools
+    registerBoardMeetingTools(this.server);
 
     // Corporate Strategy Tools (Phase 25)
     this.server.tool(
