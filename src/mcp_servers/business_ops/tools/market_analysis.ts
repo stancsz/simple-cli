@@ -4,14 +4,14 @@ import TurndownService from "turndown";
 import { createLLM } from "../../../llm.js";
 import { EpisodicMemory } from "../../../brain/episodic.js";
 
-interface CompetitorOffering {
+export interface CompetitorOffering {
     plan: string;
     price: number | string;
     period: string;
     features: string[];
 }
 
-interface CompetitorAnalysis {
+export interface CompetitorAnalysis {
     url: string;
     pricing_model: string;
     extracted_offerings: CompetitorOffering[];
@@ -128,6 +128,102 @@ export function getMarketData(sector: string, region: string) {
     };
 }
 
+export async function collectMarketData(sector: string, region: string, query?: string): Promise<any> {
+    const simulatedData = getMarketData(sector, region);
+
+    // Enhance with LLM analysis
+    const llm = createLLM();
+    const enhancementPrompt = `Act as a Senior Market Research Analyst.
+
+    Simulated Data:
+    ${JSON.stringify(simulatedData)}
+
+    User Query: ${query || "Provide general market overview"}
+
+    Task: Synthesize a market analysis report. Expand on the simulated data with your own knowledge of the ${sector} industry in ${region}.
+    Add specific emerging trends, regulatory considerations, and strategic opportunities.
+
+    Return a JSON object merging the simulated data with your new insights under an "analysis" field.`;
+
+    let finalData: any = simulatedData;
+    try {
+        const response = await llm.generate(enhancementPrompt, []);
+        const jsonMatch = response.message?.match(/\{[\s\S]*\}/);
+        if (jsonMatch) {
+            const analysis = JSON.parse(jsonMatch[0]);
+            finalData = { ...simulatedData, ...analysis };
+        }
+    } catch (e) {
+        console.warn("LLM market analysis enhancement failed, returning base data", e);
+    }
+
+    return finalData;
+}
+
+export async function analyzeCompetitorPricing(competitor_urls: string[], force_refresh: boolean = false): Promise<CompetitorAnalysis[]> {
+    const memory = new EpisodicMemory();
+    await memory.init();
+    const llm = createLLM();
+
+    const results: CompetitorAnalysis[] = [];
+
+    for (const url of competitor_urls) {
+        let analysis: CompetitorAnalysis | null = null;
+
+        if (!force_refresh) {
+            // Check Cache
+            try {
+                const episodes = await memory.recall(url, 1, undefined, "competitor_analysis");
+                if (episodes.length > 0) {
+                     // Check freshness (e.g. 7 days)
+                     const lastRun = episodes[0];
+                     const age = Date.now() - lastRun.timestamp;
+                     if (age < 7 * 24 * 60 * 60 * 1000) {
+                         const parsed = JSON.parse(lastRun.agentResponse);
+                         // Simple check if it looks like our schema
+                         if (parsed.url === url) {
+                             analysis = parsed;
+                         }
+                     }
+                }
+            } catch (e) {
+                console.warn(`Cache lookup failed for ${url}`, e);
+            }
+        }
+
+        if (!analysis) {
+            // Fetch fresh
+            analysis = await fetchAndAnalyze(url, llm);
+
+            // Store in Cache
+            try {
+                // Using 'default' company for now as per simple-cli usage,
+                // but allowing caller to specify context in future refactors.
+                 await memory.store(
+                     `analyze_competitor_${Date.now()}_${Math.floor(Math.random()*1000)}`,
+                     `Analyze competitor: ${url}`,
+                     JSON.stringify(analysis),
+                     ["market_analysis", "competitor_pricing"],
+                     undefined,
+                     [],
+                     false,
+                     undefined,
+                     undefined,
+                     0,
+                     0,
+                     "competitor_analysis"
+                         );
+            } catch (e) {
+                console.warn(`Cache store failed for ${url}`, e);
+            }
+        }
+
+        if (analysis) results.push(analysis);
+    }
+
+    return results;
+}
+
 export function registerMarketAnalysisTools(server: McpServer) {
     // Tool: Collect Market Data
     server.tool(
@@ -139,34 +235,7 @@ export function registerMarketAnalysisTools(server: McpServer) {
             query: z.string().optional().describe("Specific query or focus area.")
         },
         async ({ sector, region, query }) => {
-            const simulatedData = getMarketData(sector, region);
-
-            // Enhance with LLM analysis
-            const llm = createLLM();
-            const enhancementPrompt = `Act as a Senior Market Research Analyst.
-
-            Simulated Data:
-            ${JSON.stringify(simulatedData)}
-
-            User Query: ${query || "Provide general market overview"}
-
-            Task: Synthesize a market analysis report. Expand on the simulated data with your own knowledge of the ${sector} industry in ${region}.
-            Add specific emerging trends, regulatory considerations, and strategic opportunities.
-
-            Return a JSON object merging the simulated data with your new insights under an "analysis" field.`;
-
-            let finalData: any = simulatedData;
-            try {
-                const response = await llm.generate(enhancementPrompt, []);
-                const jsonMatch = response.message?.match(/\{[\s\S]*\}/);
-                if (jsonMatch) {
-                    const analysis = JSON.parse(jsonMatch[0]);
-                    finalData = { ...simulatedData, ...analysis };
-                }
-            } catch (e) {
-                console.warn("LLM market analysis enhancement failed, returning base data", e);
-            }
-
+            const finalData = await collectMarketData(sector, region, query);
             return {
                 content: [{
                     type: "text",
@@ -185,66 +254,7 @@ export function registerMarketAnalysisTools(server: McpServer) {
             force_refresh: z.boolean().optional().default(false).describe("If true, ignores cache and re-scrapes.")
         },
         async ({ competitor_urls, force_refresh }) => {
-            const memory = new EpisodicMemory();
-            await memory.init();
-            const llm = createLLM();
-
-            const results: CompetitorAnalysis[] = [];
-
-            for (const url of competitor_urls) {
-                let analysis: CompetitorAnalysis | null = null;
-
-                if (!force_refresh) {
-                    // Check Cache
-                    try {
-                        const episodes = await memory.recall(url, 1, undefined, "competitor_analysis");
-                        if (episodes.length > 0) {
-                             // Check freshness (e.g. 7 days)
-                             const lastRun = episodes[0];
-                             const age = Date.now() - lastRun.timestamp;
-                             if (age < 7 * 24 * 60 * 60 * 1000) {
-                                 const parsed = JSON.parse(lastRun.agentResponse);
-                                 // Simple check if it looks like our schema
-                                 if (parsed.url === url) {
-                                     analysis = parsed;
-                                 }
-                             }
-                        }
-                    } catch (e) {
-                        console.warn(`Cache lookup failed for ${url}`, e);
-                    }
-                }
-
-                if (!analysis) {
-                    // Fetch fresh
-                    analysis = await fetchAndAnalyze(url, llm);
-
-                    // Store in Cache
-                    try {
-                        // Using 'default' company for now as per simple-cli usage,
-                        // but allowing caller to specify context in future refactors.
-                         await memory.store(
-                             `analyze_competitor_${Date.now()}_${Math.floor(Math.random()*1000)}`,
-                             `Analyze competitor: ${url}`,
-                             JSON.stringify(analysis),
-                             ["market_analysis", "competitor_pricing"],
-                             undefined,
-                             [],
-                             false,
-                             undefined,
-                             undefined,
-                             0,
-                             0,
-                             "competitor_analysis"
-                         );
-                    } catch (e) {
-                        console.warn(`Cache store failed for ${url}`, e);
-                    }
-                }
-
-                if (analysis) results.push(analysis);
-            }
-
+            const results = await analyzeCompetitorPricing(competitor_urls, force_refresh);
             return {
                 content: [{
                     type: "text",
