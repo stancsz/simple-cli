@@ -1,10 +1,10 @@
 import { z } from "zod";
-import { EpisodicMemory } from "../../brain/episodic.js";
-import { LLM } from "../../llm.js";
+import { EpisodicMemory } from "../../../brain/episodic.js";
+import { LLM } from "../../../llm.js";
 
 // Define the schema interface here or import it if you have it in schemas.ts
 // Assuming schemas.ts exists based on the plan, let's import it.
-import { CorporateStrategy } from "../../brain/schemas.js";
+import { CorporateStrategy } from "../../../brain/schemas.js";
 
 /**
  * Retrieves the latest corporate strategy from episodic memory.

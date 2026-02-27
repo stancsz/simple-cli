@@ -11,7 +11,8 @@ import { readFile, readdir } from "fs/promises";
 import { existsSync } from "fs";
 import { FrameworkIngestionEngine } from "../../framework_ingestion/ingest.js";
 import { createLLM } from "../../llm.js";
-import { readStrategy, proposeStrategicPivot } from "./tools.js";
+import { readStrategy, proposeStrategicPivot } from "./tools/strategy.js";
+import { scanStrategicHorizon } from "./tools/scan_strategic_horizon.js";
 
 export class BrainServer {
   private server: McpServer;
@@ -208,6 +209,27 @@ export class BrainServer {
                 content: [{ type: "text", text: `Failed to propose strategic pivot: ${e.message}` }],
                 isError: true
             };
+        }
+      }
+    );
+
+    this.server.tool(
+      "scan_strategic_horizon",
+      "Performs a comprehensive scan of internal patterns and external market signals to generate a strategic horizon report.",
+      {
+        company: z.string().optional().describe("The company/client identifier for namespacing."),
+      },
+      async ({ company }) => {
+        try {
+          const report = await scanStrategicHorizon(this.episodic, company);
+          return {
+            content: [{ type: "text", text: JSON.stringify(report, null, 2) }],
+          };
+        } catch (e: any) {
+          return {
+            content: [{ type: "text", text: `Failed to generate strategic horizon report: ${e.message}` }],
+            isError: true
+          };
         }
       }
     );
