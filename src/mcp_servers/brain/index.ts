@@ -10,6 +10,8 @@ import { join, dirname } from "path";
 import { readFile, readdir } from "fs/promises";
 import { existsSync } from "fs";
 import { FrameworkIngestionEngine } from "../../framework_ingestion/ingest.js";
+import { createLLM } from "../../llm.js";
+import { readStrategy, proposeStrategicPivot } from "./tools.js";
 
 export class BrainServer {
   private server: McpServer;
@@ -161,6 +163,52 @@ export class BrainServer {
           )
           .join("\n\n---\n\n");
         return { content: [{ type: "text", text }] };
+      }
+    );
+
+    // Corporate Strategy Tools (Phase 25)
+    this.server.tool(
+      "read_strategy",
+      "Retrieves the latest Corporate Strategy from Episodic Memory.",
+      {
+        company: z.string().optional().describe("The company/client identifier for namespacing."),
+      },
+      async ({ company }) => {
+        const strategy = await readStrategy(this.episodic, company);
+        if (!strategy) {
+          return {
+            content: [{ type: "text", text: "No corporate strategy found." }],
+          };
+        }
+        return {
+          content: [{ type: "text", text: JSON.stringify(strategy, null, 2) }],
+        };
+      }
+    );
+
+    this.server.tool(
+      "propose_strategic_pivot",
+      "Proposes a new strategic pivot, analyzing the current strategy and storing the update.",
+      {
+        proposal: z.string().describe("The strategic pivot proposal."),
+        company: z.string().optional().describe("The company/client identifier for namespacing."),
+      },
+      async ({ proposal, company }) => {
+        // Create an LLM instance for this operation.
+        // In a persistent server, we might reuse one, but creating one ensures fresh config.
+        const llm = createLLM();
+
+        try {
+            const newStrategy = await proposeStrategicPivot(this.episodic, llm, proposal, company);
+            return {
+                content: [{ type: "text", text: `Strategy updated successfully.\n\n${JSON.stringify(newStrategy, null, 2)}` }],
+            };
+        } catch (e: any) {
+            return {
+                content: [{ type: "text", text: `Failed to propose strategic pivot: ${e.message}` }],
+                isError: true
+            };
+        }
       }
     );
 
