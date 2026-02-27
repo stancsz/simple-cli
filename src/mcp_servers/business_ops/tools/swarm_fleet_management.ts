@@ -96,13 +96,16 @@ export async function propagatePolicies(mcpClient: MCP, swarmId?: string, compan
         }
     });
 
-    if (brainResponse.isError) {
-        throw new Error(`Failed to query Brain: ${brainResponse.content[0].text}`);
+    // Cast content to any to fix TS error (content is 'unknown' in SDK type definition for CallToolResult)
+    const content = (brainResponse as any).content;
+
+    if ((brainResponse as any).isError) {
+        throw new Error(`Failed to query Brain: ${content[0].text}`);
     }
 
     let memories: any[] = [];
     try {
-        memories = JSON.parse(brainResponse.content[0].text);
+        memories = JSON.parse(content[0].text);
     } catch {
         logs.push("Failed to parse Brain response as JSON.");
     }
