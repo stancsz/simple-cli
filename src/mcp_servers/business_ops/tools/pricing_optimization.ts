@@ -96,6 +96,52 @@ async function fetchAggregatedMetrics() {
     return { revenue, velocity, efficiency, satisfaction };
 }
 
+export async function generatePricingRecommendations(current_services: { name: string, current_price: number, cost?: number }[]): Promise<PricingRecommendation[]> {
+    // Fetch Data
+    const internalMetrics = await fetchAggregatedMetrics();
+    const marketData = getMarketData("Software Development", "US"); // Default context
+
+    // LLM Analysis
+    const llm = createLLM();
+    const systemPrompt = `You are a Chief Economic Officer. Analyze the service pricing against market data.
+
+            Internal Metrics:
+            ${JSON.stringify(internalMetrics, null, 2)}
+
+            Current Services:
+            ${JSON.stringify(current_services, null, 2)}
+
+            Market Data Summary:
+            ${JSON.stringify(marketData, null, 2)}
+
+            Task: Recommend pricing adjustments to maximize profit while remaining competitive.
+            Constraint: Return a strict JSON array of objects with fields: service_name, current_price, recommended_price, confidence_score (0-1), reasoning.`;
+
+    let recommendations: PricingRecommendation[] = [];
+    try {
+        const response = await llm.generate(systemPrompt, []);
+
+        const message = response.message || "";
+        const jsonMatch = message.match(/\[\s*\{.*\}\s*\]/s);
+        if (jsonMatch) {
+            recommendations = JSON.parse(jsonMatch[0]);
+        } else {
+             recommendations = JSON.parse(message);
+        }
+    } catch (e) {
+        // Mock fallback
+        recommendations = current_services.map(s => ({
+            service_name: s.name,
+            current_price: s.current_price,
+            recommended_price: s.current_price * 1.05,
+            confidence_score: 0.7,
+            reasoning: "Inflation adjustment fallback."
+        }));
+    }
+
+    return recommendations;
+}
+
 export function registerPricingOptimizationTools(server: McpServer) {
     server.tool(
         "optimize_pricing_strategy",
@@ -133,47 +179,7 @@ export function registerPricingOptimizationTools(server: McpServer) {
                 }
             }
 
-            // Fetch Data
-            const internalMetrics = await fetchAggregatedMetrics();
-            const marketData = getMarketData("Software Development", "US"); // Default context
-
-            // LLM Analysis
-            const llm = createLLM();
-            const systemPrompt = `You are a Chief Economic Officer. Analyze the service pricing against market data.
-
-            Internal Metrics:
-            ${JSON.stringify(internalMetrics, null, 2)}
-
-            Current Services:
-            ${JSON.stringify(current_services, null, 2)}
-
-            Market Data Summary:
-            ${JSON.stringify(marketData, null, 2)}
-
-            Task: Recommend pricing adjustments to maximize profit while remaining competitive.
-            Constraint: Return a strict JSON array of objects with fields: service_name, current_price, recommended_price, confidence_score (0-1), reasoning.`;
-
-            let recommendations: PricingRecommendation[] = [];
-            try {
-                const response = await llm.generate(systemPrompt, []);
-
-                const message = response.message || "";
-                const jsonMatch = message.match(/\[\s*\{.*\}\s*\]/s);
-                if (jsonMatch) {
-                    recommendations = JSON.parse(jsonMatch[0]);
-                } else {
-                     recommendations = JSON.parse(message);
-                }
-            } catch (e) {
-                // Mock fallback
-                recommendations = current_services.map(s => ({
-                    service_name: s.name,
-                    current_price: s.current_price,
-                    recommended_price: s.current_price * 1.05,
-                    confidence_score: 0.7,
-                    reasoning: "Inflation adjustment fallback."
-                }));
-            }
+            const recommendations = await generatePricingRecommendations(current_services);
 
             // Store in Brain
             await memory.store(
