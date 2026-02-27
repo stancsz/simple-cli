@@ -449,12 +449,15 @@ To maintain continuity, the system extends the Brain with a dedicated **Strategi
 ### 16.3 The "Board Meeting" Simulation
 A periodic (e.g., Monthly/Quarterly) recursive simulation where the agency reflects on itself.
 
-1.  **Convener**: The `Dreaming` server triggers a special session type: `board_meeting`.
+1.  **Convener**: The `Dreaming` server triggers a special session type: `board_meeting` (or manually invoked via `convene_board_meeting` tool).
 2.  **Agenda**:
     *   **State of the Union**: Aggregate `getFleetStatus` and `collectPerformanceMetrics`.
     *   **Horizon Scan**: `analyzeCrossSwarmPatterns` + Market Data.
-    *   **Deliberation**: LLM (Persona: CEO) reviews data and proposes `StrategicPivot` if needed.
-    *   **Resolution**: New policies are written to `CorporateStrategy` and propagated to Swarm Configs.
+    *   **Deliberation**: A multi-persona LLM simulation (CEO, CFO, CSO) reviews data, debates priorities, and aligns on a path forward.
+    *   **Resolution**:
+        - **Strategic Pivot**: Updates the high-level `CorporateStrategy` (Vision/Objectives).
+        - **Policy Update**: Enacts binding `CorporatePolicy` changes (e.g., `min_margin`, `risk_tolerance`) which are automatically propagated to all Swarms via the Fleet Manager.
+    *   **Artifact**: A `BoardMeetingMinutes` JSON object is stored in Episodic Memory for audit and history.
 
 ---
 
