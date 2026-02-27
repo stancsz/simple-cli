@@ -13,6 +13,7 @@ import { FrameworkIngestionEngine } from "../../framework_ingestion/ingest.js";
 import { createLLM } from "../../llm.js";
 import { readStrategy, proposeStrategicPivot } from "./tools/strategy.js";
 import { scanStrategicHorizon } from "./tools/scan_strategic_horizon.js";
+import { conveneBoardMeeting } from "./tools/convene_board_meeting.js";
 
 export class BrainServer {
   private server: McpServer;
@@ -230,6 +231,27 @@ export class BrainServer {
             content: [{ type: "text", text: `Failed to generate strategic horizon report: ${e.message}` }],
             isError: true
           };
+        }
+      }
+    );
+
+    this.server.tool(
+      "convene_board_meeting",
+      "Orchestrates an autonomous board meeting with C-Suite personas to review strategy and set policy.",
+      {
+        company: z.string().optional().describe("The company/client identifier for namespacing."),
+      },
+      async ({ company }) => {
+        try {
+            const minutes = await conveneBoardMeeting(this.episodic, company);
+            return {
+                content: [{ type: "text", text: JSON.stringify(minutes, null, 2) }],
+            };
+        } catch (e: any) {
+            return {
+                content: [{ type: "text", text: `Failed to convene board meeting: ${e.message}` }],
+                isError: true
+            };
         }
       }
     );
