@@ -74,18 +74,26 @@ export async function propagatePolicies(mcpClient: MCP, swarmId?: string, compan
     const query = "operating policy update";
 
     // Call Brain tool
-    // Note: In tests, mcpClient.callTool will be mocked.
+    // Note: In tests, mcpClient.getClient will be mocked.
     // In production, mcpClient must be provided.
     if (!mcpClient) {
         throw new Error("MCP Client is required to query Brain for policies.");
     }
 
-    const brainResponse = await mcpClient.callTool("brain", "brain_query", {
-        query,
-        limit: 20,
-        type: "corporate_policy",
-        format: "json",
-        company
+    const brainClient = mcpClient.getClient("brain");
+    if (!brainClient) {
+        throw new Error("Brain MCP server is not connected. Ensure 'brain' is running.");
+    }
+
+    const brainResponse = await brainClient.callTool({
+        name: "brain_query",
+        arguments: {
+            query,
+            limit: 20,
+            type: "corporate_policy",
+            format: "json",
+            company
+        }
     });
 
     if (brainResponse.isError) {

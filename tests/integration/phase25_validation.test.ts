@@ -33,6 +33,8 @@ vi.mock("../../src/mcp_servers/business_ops/tools/swarm_fleet_management.js", as
         ...actual,
         getFleetStatusLogic: vi.fn(),
         getActiveProjects: vi.fn(),
+        // We do NOT mock propagatePolicies here because we want to test it.
+        // But we need to ensure the mocks inside it (fs/promises) are used.
     };
 });
 
@@ -376,9 +378,13 @@ describe("Phase 25: Autonomous Corporate Consciousness (Strategic Validation)", 
     it("should propagate policy updates to swarm configuration (Phase 25.3)", async () => {
         const { propagatePolicies } = await import("../../src/mcp_servers/business_ops/tools/swarm_fleet_management.js");
 
-        // Mock MCP Client with callTool
-        const mockMcpClient = {
+        // Mock MCP Client Structure
+        const mockBrainClient = {
             callTool: vi.fn()
+        };
+
+        const mockMcpClient = {
+            getClient: vi.fn().mockReturnValue(mockBrainClient)
         };
 
         // Mock Brain Response (simulating the 'brain_query' response)
@@ -410,21 +416,21 @@ describe("Phase 25: Autonomous Corporate Consciousness (Strategic Validation)", 
         };
 
         // @ts-ignore
-        mockMcpClient.callTool.mockResolvedValue(brainResponse);
+        mockBrainClient.callTool.mockResolvedValue(brainResponse);
 
         // Execute Propagation
         // @ts-ignore
         const result = await propagatePolicies(mockMcpClient as any, undefined, "default");
 
         // Verify Logic
-        expect(mockMcpClient.callTool).toHaveBeenCalledWith(
-            "brain",
-            "brain_query",
-            expect.objectContaining({
+        expect(mockMcpClient.getClient).toHaveBeenCalledWith("brain");
+        expect(mockBrainClient.callTool).toHaveBeenCalledWith({
+            name: "brain_query",
+            arguments: expect.objectContaining({
                 query: "operating policy update",
                 type: "corporate_policy"
             })
-        );
+        });
 
         // Verify File Write (using FS mock)
         expect(writeFile).toHaveBeenCalledWith(
