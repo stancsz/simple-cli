@@ -54,6 +54,79 @@ describe("Phase 25: Autonomous Corporate Consciousness (Strategic Validation)", 
         vi.restoreAllMocks();
     });
 
+    it("should manage Corporate Strategy via Brain tools (Read & Pivot)", async () => {
+        // Import tools dynamically to use the mocks
+        const { readStrategy, proposeStrategicPivot } = await import("../../src/mcp_servers/brain/tools.js");
+
+        // --- Test Case 1: Read Strategy (Empty Brain) ---
+        // Setup mock: recall returns empty array
+        mockEpisodicMemory.recall.mockResolvedValueOnce([]);
+
+        const initialStrategy = await readStrategy(mockEpisodicMemory as any, "default");
+        expect(initialStrategy).toBeNull();
+        expect(mockEpisodicMemory.recall).toHaveBeenCalledWith(
+            expect.stringContaining("current corporate strategy"),
+            10,
+            "default",
+            "corporate_strategy"
+        );
+
+        // --- Test Case 2: Propose Strategic Pivot ---
+        const proposal = "Focus on enterprise AI compliance audits.";
+
+        // Setup mock: LLM generates a new strategy
+        const newStrategyJson = {
+            vision: "To be the leading autonomous agency for AI compliance.",
+            objectives: ["Launch Audit Service", "Certify 50 Agents"],
+            policies: { "audit_frequency": "quarterly" },
+            rationale: "Market demand for compliance is high."
+        };
+
+        mockLLM.generate.mockResolvedValueOnce({
+            message: JSON.stringify(newStrategyJson)
+        });
+
+        // Setup mock: recall returns null (simulating no previous strategy)
+        mockEpisodicMemory.recall.mockResolvedValueOnce([]);
+
+        const createdStrategy = await proposeStrategicPivot(mockEpisodicMemory as any, mockLLM as any, proposal, "default");
+
+        // Verification
+        expect(createdStrategy).toBeDefined();
+        expect(createdStrategy.vision).toBe(newStrategyJson.vision);
+        expect(createdStrategy.timestamp).toBeDefined();
+
+        expect(mockLLM.generate).toHaveBeenCalledWith(
+            expect.stringContaining(proposal),
+            []
+        );
+
+        expect(mockEpisodicMemory.store).toHaveBeenCalledWith(
+            expect.stringContaining("strategy_update"),
+            expect.stringContaining(proposal),
+            expect.any(String), // The JSON string of the new strategy
+            expect.arrayContaining(["corporate_governance", "phase_25"]),
+            "default",
+            undefined, undefined, undefined, undefined, undefined, undefined,
+            "corporate_strategy" // Verify correct type tagging
+        );
+
+        // --- Test Case 3: Read Strategy (After Update) ---
+        // Setup mock: recall returns the stored strategy
+        const storedMemory = {
+            id: "mem_123",
+            timestamp: Date.now(),
+            agentResponse: JSON.stringify(createdStrategy)
+        };
+        mockEpisodicMemory.recall.mockResolvedValueOnce([storedMemory]);
+
+        const retrievedStrategy = await readStrategy(mockEpisodicMemory as any, "default");
+
+        expect(retrievedStrategy).toBeDefined();
+        expect(retrievedStrategy?.vision).toBe(newStrategyJson.vision);
+        expect(retrievedStrategy?.objectives).toEqual(newStrategyJson.objectives);
+    });
+
     it("should simulate a corporate board meeting and autonomous strategic pivot", async () => {
         // --- Step 0: Setup Mock Data ---
 
@@ -151,20 +224,27 @@ describe("Phase 25: Autonomous Corporate Consciousness (Strategic Validation)", 
         expect(strategicPlan.rationale).toMatch(/compliance/i);
 
         // --- Step 3: Persist Strategy (Corporate Memory) ---
+        // Updated to use the new Type system for Corporate Memory
 
         mockEpisodicMemory.store.mockResolvedValue(true);
         await mockEpisodicMemory.store(
             `corporate_strategy_${Date.now()}`,
             strategicPlan.strategy_name,
             JSON.stringify(strategicPlan),
-            ["corporate_governance", "phase_25"]
+            ["corporate_governance", "phase_25"],
+            "default",
+            undefined, undefined, undefined, undefined, undefined, undefined,
+            "corporate_strategy" // Explicitly tag as corporate_strategy
         );
 
         expect(mockEpisodicMemory.store).toHaveBeenCalledWith(
             expect.stringContaining("corporate_strategy"),
             "Operation Compliance Fortress",
             expect.any(String),
-            expect.arrayContaining(["corporate_governance"])
+            expect.arrayContaining(["corporate_governance"]),
+            "default",
+            undefined, undefined, undefined, undefined, undefined, undefined,
+            "corporate_strategy"
         );
 
         console.log("--- BOARD MEETING ADJOURNED ---");

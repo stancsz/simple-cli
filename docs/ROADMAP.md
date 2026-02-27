@@ -39,8 +39,9 @@ The roadmap is structured around the four anatomical layers of the Digital Biosp
 *Current Focus: Emergent Intelligence & Strategic Autonomy*
 *Validation: 🚧 In Progress via `tests/integration/phase25_validation.test.ts`*
 - [ ] **Corporate Memory**: Implement persistent, high-level strategic memory (Mission, Vision, Values, Long-term Goals) accessible to all swarms.
-    - [ ] Define schema for `CorporateStrategy` in Brain.
-    - [ ] Create tools for `read_strategy` and `propose_strategic_pivot`.
+    - [x] Define schema for `CorporateStrategy` in Brain.
+    - [x] Create tools for `read_strategy` and `propose_strategic_pivot`.
+    - 🚧 Implemented `read_strategy` and `propose_strategic_pivot` tools in Brain MCP. Validated via unit/integration tests.
 - [ ] **Strategic Horizon Scanner**: Develop a meta-analysis engine that aggregates cross-swarm patterns, market data, and financial performance to identify threats and opportunities.
     - [ ] Extend `pattern_analysis` to include external market signals.
     - [ ] Implement `scan_strategic_horizon` tool.
