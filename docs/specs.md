@@ -410,6 +410,54 @@ Simple-CLI is designed to be the Orchestrator that holds the world and the Deleg
 
 ---
 
+## 16. Corporate Consciousness Architecture (Phase 25)
+
+As the agency scales from single swarms to a "Fleet of Swarms," it requires a unifying layer of intelligence—a **Corporate Consciousness**. This is not a single agent, but a federated architecture that enables high-level strategic reasoning, long-term memory, and coherent policy enforcement across the entire organization.
+
+### 16.1 The "C-Suite" Personas
+The system utilizes specialized personas to handle high-level governance functions. These are not separate "servers" but distinct roles assumed by the Brain/LLM during "Board Meeting" simulations.
+
+1.  **CEO (Chief Executive Agent)**:
+    *   **Focus**: Mission alignment, long-term vision, and high-level strategy (e.g., "Pivot to Enterprise").
+    *   **Authority**: Can override swarm-level priorities and initiate agency-wide pivots.
+2.  **CSO (Chief Strategy Agent)**:
+    *   **Focus**: Market positioning, competitive analysis, and identifying "Blue Ocean" opportunities.
+    *   **Input**: Cross-swarm pattern analysis + External market data.
+3.  **CFO (Chief Financial Agent)**:
+    *   **Focus**: Profitability optimization, resource allocation, and risk management.
+    *   **Authority**: Sets budget caps and profitability thresholds for client engagement.
+
+### 16.2 Strategic Memory (The Corporate Hippocampus)
+To maintain continuity, the system extends the Brain with a dedicated **Strategic Layer**.
+
+*   **Storage**: `CorporateStrategy` records in the Episodic Memory.
+*   **Schema**:
+    ```json
+    {
+      "type": "corporate_strategy",
+      "timestamp": "ISO8601",
+      "vision": "Become the #1 AI Agency for Healthcare",
+      "objectives": ["Onboard 5 HealthTech clients", "Launch HIPAA-compliant swarm"],
+      "policies": {
+        "min_margin": 0.35,
+        "risk_tolerance": "low"
+      }
+    }
+    ```
+*   **Access**: Read-only for operational swarms; Write-access only for C-Suite during Board Meetings.
+
+### 16.3 The "Board Meeting" Simulation
+A periodic (e.g., Monthly/Quarterly) recursive simulation where the agency reflects on itself.
+
+1.  **Convener**: The `Dreaming` server triggers a special session type: `board_meeting`.
+2.  **Agenda**:
+    *   **State of the Union**: Aggregate `getFleetStatus` and `collectPerformanceMetrics`.
+    *   **Horizon Scan**: `analyzeCrossSwarmPatterns` + Market Data.
+    *   **Deliberation**: LLM (Persona: CEO) reviews data and proposes `StrategicPivot` if needed.
+    *   **Resolution**: New policies are written to `CorporateStrategy` and propagated to Swarm Configs.
+
+---
+
 ## Appendix A: Philosophical Metaphors
 
 The architecture is conceptually driven by a duality of persistence and impermanence, referred to internally as "The Claw & The Molt".

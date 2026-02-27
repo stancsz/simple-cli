@@ -2,6 +2,7 @@
 
 **Mission Statement:** [Read the Technical Constitution](../MISSION.md)
 **Last Updated:** February 26, 2026
+**Current Focus:** Phase 25: Autonomous Corporate Consciousness
 
 The roadmap is structured around the four anatomical layers of the Digital Biosphere.
 
@@ -32,6 +33,25 @@ The roadmap is structured around the four anatomical layers of the Digital Biosp
 - [x] Develop Ribosome Agents for JIT synthesis of binaries (WASM/eBPF).
 - [x] Implement the "Disposable Lifecycle" for code modules.
 - [x] Enable "Homeostatic Repair" (Self-Healing) workflows.
+
+## Phase 25: Autonomous Corporate Consciousness
+*Status: Planning*
+*Current Focus: Emergent Intelligence & Strategic Autonomy*
+*Validation: 🚧 In Progress via `tests/integration/phase25_validation.test.ts`*
+- [ ] **Corporate Memory**: Implement persistent, high-level strategic memory (Mission, Vision, Values, Long-term Goals) accessible to all swarms.
+    - [ ] Define schema for `CorporateStrategy` in Brain.
+    - [ ] Create tools for `read_strategy` and `propose_strategic_pivot`.
+- [ ] **Strategic Horizon Scanner**: Develop a meta-analysis engine that aggregates cross-swarm patterns, market data, and financial performance to identify threats and opportunities.
+    - [ ] Extend `pattern_analysis` to include external market signals.
+    - [ ] Implement `scan_strategic_horizon` tool.
+- [ ] **Federated Policy Engine**: Create a governance mechanism where "C-Suite" agents (CEO, CSO, CFO personas) set policies that dynamically update individual swarm operating parameters.
+    - [ ] Implement `update_operating_policy` tool.
+    - [ ] Build "Policy Propagation" mechanism to push updates to Swarm Fleet.
+- [ ] **Autonomous Board Meeting**: Simulate periodic "Board Meetings" where C-Suite agents review the "State of the Union" and make binding decisions.
+    - [ ] Create `convene_board_meeting` workflow.
+    - [ ] Validate decision-making quality and coherence.
+- [ ] **Validation**: Demonstrate a full loop of: Opportunity Detection -> Strategy Shift -> Policy Update -> Swarm Behavior Change.
+    - [ ] Validated via `tests/integration/phase25_validation.test.ts`.
 
 ## Phase V: Autonomous Business Operations
 *Status: Completed*
