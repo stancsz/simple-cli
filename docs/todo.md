@@ -295,3 +295,15 @@
 - [x] **HR Loop & Dreaming Enhancement**: Cross-swarm pattern analysis & SOP generation.
 - [x] **Agency Dashboard**: Unified dashboard for Swarm Status, Financial KPIs, and System Health.
 - [x] **Production Load Simulation**: Validated 10+ concurrent swarms via `scripts/simulate_production_load.ts`.
+
+## Phase 24: Self-Optimizing Economic Engine
+*Status: Completed*
+*Current Focus: Autonomous Business Optimization*
+*Validation: ✅ Fully validated via quarterly simulation test.*
+- [x] **Performance Analytics**: Implement `analyze_performance_metrics` tool.
+- [x] **Pricing Optimization**: Create `optimize_pricing_strategy` tool.
+- [x] **Service Adjustment**: Implement `adjust_service_offerings` tool.
+- [x] **Resource Allocation**: Add `allocate_resources_optimally` tool.
+- [x] **Market Analysis**: Develop `market_analysis` tools.
+- [x] **Validation**: End-to-end simulation of the quarterly optimization cycle.
+    - ✅ Validated full quarterly optimization cycle via `tests/integration/economic_engine_quarterly_simulation.test.ts`.
