@@ -27,7 +27,18 @@ This playbook defines the autonomous process for optimizing the agency's economi
 - **Output**: Structured recommendations for new bundles, including pricing and target profiles.
 
 ### 5. `allocate_resources_optimally`
-- **Purpose**: Aligns swarm capacity with projected client demand.
+- **Purpose**: Aligns swarm capacity with projected client demand using predictive analysis.
+- **Logic**:
+  - Aggregates **Fleet Status** (Active agents, health, pending issues) via `get_fleet_status`.
+  - Aggregates **Performance Metrics** (Revenue, efficiency, NPS) via `analyze_performance_metrics`.
+  - Uses LLM to analyze the context and recommend scaling actions (Scale Up, Scale Down, Maintain, Reallocate).
+  - Can operate in `dry_run` mode (recommendation only) or execute scaling via `scale_swarm`.
+- **Inputs**:
+  - `dry_run`: (boolean) Default `true`. If `false`, executes scaling.
+  - `focus_clients`: (optional array) List of client IDs to restrict analysis.
+- **Outputs**:
+  - Structured JSON with recommendations, confidence scores, and reasoning.
+  - Execution logs if actions were taken.
 - **Usage**: Prevents over-provisioning and bottlenecks.
 
 ## Optimization Workflow
