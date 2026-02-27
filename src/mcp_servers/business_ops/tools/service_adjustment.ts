@@ -34,10 +34,16 @@ export function registerServiceAdjustmentTools(server: McpServer) {
             const marketData = await getMarketData("Software Development", "US");
 
             // 3. Query Brain for Success Patterns
-            let successfulPatterns = [];
+            let successfulPatterns: any[] = [];
             try {
-                const episodes = await memory.recall("successful project", 5);
-                successfulPatterns = episodes.map(e => e.content);
+                // Use default company (undefined) and default limit (5)
+                const episodes = await memory.recall("successful project", 5, undefined, undefined);
+                // Map to agentResponse as 'content' does not exist on PastEpisode
+                successfulPatterns = episodes.map(e => ({
+                    request: e.userPrompt,
+                    solution: e.agentResponse,
+                    outcome: e.dreaming_outcomes
+                }));
             } catch (e) {
                 console.warn("Failed to recall success patterns:", e);
             }
