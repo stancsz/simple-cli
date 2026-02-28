@@ -3,7 +3,7 @@ import { z } from "zod";
 import { createLLM } from "../../../llm.js";
 import { EpisodicMemory } from "../../../brain/episodic.js";
 import { getMarketData, analyzeCompetitorPricingInternal } from "./market_analysis.js";
-import { getLatestStrategy } from "../../brain/tools/strategy.js";
+import { readStrategy } from "../../brain/tools/strategy.js";
 import { CorporatePolicy } from "../../../brain/schemas.js";
 import { randomUUID } from "crypto";
 
@@ -29,7 +29,7 @@ export function registerMarketPositioningTools(server: McpServer) {
             const competitorData = await analyzeCompetitorPricingInternal(competitor_urls, false);
 
             // 3. Get Corporate Strategy
-            const currentStrategy = await getLatestStrategy(company);
+            const currentStrategy = await readStrategy(memory, company);
             const strategyContext = currentStrategy ? JSON.stringify(currentStrategy) : "No specific strategy found.";
 
             // 4. Synthesize with LLM
@@ -106,7 +106,7 @@ Return a structured JSON report with the following format:
                 }
             }
 
-            const currentStrategy = await getLatestStrategy(company);
+            const currentStrategy = await readStrategy(memory, company);
             const strategyContext = currentStrategy ? JSON.stringify(currentStrategy) : "No specific strategy found.";
 
             const prompt = `Act as a Chief Strategy Officer and Chief Marketing Officer.

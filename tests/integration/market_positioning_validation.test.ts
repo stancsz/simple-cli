@@ -12,7 +12,7 @@ const mocks = vi.hoisted(() => ({
     mockStore: vi.fn(),
     mockGetMarketData: vi.fn(),
     mockAnalyzeCompetitorPricingInternal: vi.fn(),
-    mockGetLatestStrategy: vi.fn()
+    mockReadStrategy: vi.fn()
 }));
 
 vi.mock('../../src/llm.js', () => ({
@@ -37,7 +37,7 @@ vi.mock('../../src/mcp_servers/business_ops/tools/market_analysis.js', () => ({
 }));
 
 vi.mock('../../src/mcp_servers/brain/tools/strategy.js', () => ({
-    getLatestStrategy: mocks.mockGetLatestStrategy,
+    readStrategy: mocks.mockReadStrategy,
     registerStrategyTools: vi.fn()
 }));
 
@@ -71,7 +71,7 @@ describe('Market Positioning Validation', () => {
             }
         ]);
 
-        mocks.mockGetLatestStrategy.mockResolvedValue({
+        mocks.mockReadStrategy.mockResolvedValue({
             vision: 'Lead the AI Agency market',
             strategic_pillars: ['Innovation', 'Efficiency']
         });
@@ -100,7 +100,7 @@ describe('Market Positioning Validation', () => {
 
         expect(mocks.mockGetMarketData).toHaveBeenCalledWith('AI Agents', 'Global');
         expect(mocks.mockAnalyzeCompetitorPricingInternal).toHaveBeenCalledWith(['https://competitor.com'], false);
-        expect(mocks.mockGetLatestStrategy).toHaveBeenCalledWith('test-co');
+        expect(mocks.mockReadStrategy).toHaveBeenCalled();
 
         expect(mocks.mockGenerate).toHaveBeenCalled();
         const callArgs = mocks.mockGenerate.mock.calls[0][0];
@@ -162,7 +162,7 @@ describe('Market Positioning Validation', () => {
         });
 
         expect(mocks.mockRecall).toHaveBeenCalledWith('competitive landscape', 1, 'test-co', 'competitive_landscape');
-        expect(mocks.mockGetLatestStrategy).toHaveBeenCalledWith('test-co');
+        expect(mocks.mockReadStrategy).toHaveBeenCalled();
 
         expect(mocks.mockStore).toHaveBeenCalledTimes(2); // One for positioning update, one for policy update
 
