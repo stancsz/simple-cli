@@ -29,6 +29,7 @@ import { registerEnhancedLeadGenerationTools } from "./tools/enhanced_lead_gener
 import { registerProposalGenerationTools } from "./tools/proposal_generation.js";
 import { registerContractNegotiationTools } from "./tools/contract_negotiation.js";
 import { registerMarketPositioningTools } from "./tools/market_positioning.js";
+import { registerRevenueValidationTools } from "./tools/revenue_validation.js";
 
 // Load secrets from .env.agent
 const envPath = join(process.cwd(), ".env.agent");

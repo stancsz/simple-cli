@@ -58,6 +58,15 @@ The agency can scale its client base autonomously.
     - **Step 4**: It drafts an initial invoice in **Xero**.
 - **Result**: A new client is fully onboarded and ready for work in under 60 seconds.
 
+### 8. **Revenue Growth Validation (Phase 26)**
+The agency tracks its own autonomous expansion success rates.
+- **Scenario**: The Autonomous Market Expansion campaign concludes.
+- **Action**: The system invokes `generate_revenue_validation_report`.
+    - **Step 1**: It aggregates Lead generation from CRM (HubSpot).
+    - **Step 2**: It counts generated intelligent proposals from Episodic Memory.
+    - **Step 3**: It evaluates simulated contract negotiations against `CorporatePolicy.financials.target_margin`.
+- **Result**: A validated growth metrics report is pushed, showing Lead-to-Proposal conversions, Acceptance Rates, and Margin Threshold Compliance.
+
 ---
 
 ## 🚀 Deployment Instructions

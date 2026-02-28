@@ -206,7 +206,10 @@ The roadmap is structured around the four anatomical layers of the Digital Biosp
     - ✅ Implemented `analyze_competitive_landscape` and `propose_positioning_adjustment` tools in `business_ops` MCP.
     - ✅ Synthesizes market data, competitor pricing, and corporate strategy, routing policy updates via memory.
     - ✅ Validated via `tests/integration/market_positioning_validation.test.ts`.
-- [ ] **Revenue Growth Validation**: Define metrics and tests for autonomous business expansion.
+- [x] **Revenue Growth Validation**: Define metrics and tests for autonomous business expansion.
+    - ✅ Implemented `track_growth_metrics` and `generate_revenue_validation_report` tools in `business_ops` MCP to validate autonomous end-to-end metrics against policy constraints.
+    - ✅ Defined core metrics (Lead-to-Proposal Rate, Acceptance Rate, Average Margin, Campaign Revenue) in `docs/metrics/phase26_revenue_validation.md`.
+    - ✅ Validated via `tests/integration/phase26_revenue_validation.test.ts` showing robust calculations and policy checks.
 
 ## Legacy Achievements
 See [Legacy Roadmap](ROADMAP_LEGACY.md) for completed milestones of the previous "Simple CLI" era.
