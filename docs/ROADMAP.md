@@ -213,10 +213,14 @@ The roadmap is structured around the four anatomical layers of the Digital Biosp
 
 ## Phase 27: Enterprise Resilience & Anti-Fragility
 *Mission*: Ensure the agency operates continuously and securely at global scale, with self-healing capabilities for infrastructure and business continuity.
-*Status*: Planned
+*Status*: In-Progress
 - [ ] **Disaster Recovery System**: Implement automated, encrypted backups for the Brain (Vector/Graph DB), Company Contexts, and financial data (Xero). Design a recovery procedure that can restore agency state within 1 hour.
 - [ ] **Security Hardening MCP**: Create an MCP server (`security_monitor`) that scans for vulnerabilities in dependencies, monitors anomalous API activity, and applies automated patches (via PRs) for critical vulnerabilities.
-- [ ] **Market Shock Absorption**: Enhance the Strategic Horizon Scanner to detect economic downturns or sudden opportunities (via market data APIs) and trigger pre-defined contingency plans (e.g., adjust pricing, pause non-critical swarms).
+- [x] **Market Shock Absorption**: Enhance the Strategic Horizon Scanner to detect economic downturns or sudden opportunities (via market data APIs) and trigger pre-defined contingency plans (e.g., adjust pricing, pause non-critical swarms).
+    - ✅ Implemented `monitor_market_signals` to capture sector and macro indicators.
+    - ✅ Implemented `evaluate_economic_risk` to calculate market vulnerability utilizing Brain and Strategy context.
+    - ✅ Implemented `trigger_contingency_plan` to write adaptive operating policies to EpisodicMemory depending on risk thresholds.
+    - ✅ Scheduled script execution implemented for autonomous risk evaluation.
 - [ ] **Multi-Region High Availability**: Extend the Kubernetes Helm chart to support multi-region deployment (e.g., AWS us-east-1, eu-west-1) with automated failover and geographic load balancing.
 - [ ] **Validation**: Simulate a regional outage and verify automated recovery; run penetration testing via the security MCP.
 

@@ -113,6 +113,13 @@
         "tsx",
         "src/mcp_servers/showcase_healer/index.ts"
       ]
+    },
+    "market_shock_absorption": {
+      "command": "npx",
+      "args": [
+        "tsx",
+        "src/mcp_servers/market_shock_absorption/index.ts"
+      ]
     }
   },
   "scheduledTasks": [

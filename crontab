@@ -7,3 +7,6 @@
 
 # Code Reviewer - runs at :15 and :45 every hour
 15,45 * * * * cd /app && npx tsx .github/scripts/review.ts >> /var/log/cron/reviewer.log 2>&1
+
+# Market Shock Absorption - runs daily at midnight
+0 0 * * * cd /app && npx tsx .github/scripts/market-shock.ts >> /var/log/cron/market-shock.log 2>&1
