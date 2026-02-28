@@ -1,10 +1,10 @@
 {
-  "timestamp": "2026-02-24T11:54:27.598Z",
+  "timestamp": "2026-02-28T08:55:22.561Z",
   "results": [
     {
       "task": "integration_speed",
       "framework": "Simple-CLI",
-      "duration_ms": 87957,
+      "duration_ms": 149813,
       "success": false,
       "details": "Validation failed.",
       "tokens": 0
@@ -12,28 +12,28 @@
     {
       "task": "code_editing",
       "framework": "Direct Usage (Aider-like)",
-      "duration_ms": 154,
+      "duration_ms": 153,
       "tokens": 5100,
       "cost": 0.051
     },
     {
       "task": "code_editing",
       "framework": "Simple-CLI",
-      "duration_ms": 261,
+      "duration_ms": 262,
       "tokens": 522,
       "cost": 0.005220000000000001
     },
     {
       "task": "research",
       "framework": "CrewAI (Direct)",
-      "duration_ms": 302,
+      "duration_ms": 303,
       "tokens": 1870,
       "cost": 0.0187
     },
     {
       "task": "research",
       "framework": "Simple-CLI",
-      "duration_ms": 301,
+      "duration_ms": 302,
       "tokens": 40,
       "cost": 0.0004
     },
