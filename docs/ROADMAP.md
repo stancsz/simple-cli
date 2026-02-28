@@ -191,9 +191,9 @@ The roadmap is structured around the four anatomical layers of the Digital Biosp
     - ✅ Validated full quarterly optimization cycle via `tests/integration/economic_engine_quarterly_simulation.test.ts`.
 
 ## Phase 26: Autonomous Market Expansion
-*Status: In Progress*
+*Status: Completed*
 *Current Focus: Growth & Revenue Autonomy*
-*Validation: ✅ Validated via `tests/integration/phase26_growth_validation.test.ts`. The comprehensive test covers the full loop: strategic lead generation, intelligent proposal generation, and contract negotiation simulation.*
+*Validation: ✅ Validated via `tests/integration/phase26_growth_validation.test.ts` and `tests/integration/phase26_revenue_validation.test.ts`. The comprehensive tests cover the full loop: strategic lead generation, intelligent proposal generation, contract negotiation simulation, and robust revenue metric validation.*
 - [x] **Autonomous Lead Generation**: Enhance existing lead generation to use corporate strategy and market analysis for targeted outreach.
     - ✅ Implemented `get_growth_targets` in Brain MCP to extract ICP attributes from Corporate Strategy.
     - ✅ Implemented `discover_strategic_leads` in Business Ops MCP to synthesize strategy and market data into qualified leads.
