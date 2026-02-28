@@ -1,55 +1,27 @@
 [
   {
-    "timestamp": "2026-02-28T08:53:54.622Z",
-    "sop": "Title: Deployment SOP",
-    "step": 1,
-    "status": "success",
-    "details": "Clean"
-  },
-  {
-    "timestamp": "2026-02-28T08:53:54.625Z",
-    "sop": "Title: Deployment SOP",
-    "step": 1,
-    "status": "success",
-    "details": "Clean"
-  },
-  {
-    "timestamp": "2026-02-28T08:53:54.628Z",
-    "sop": "Title: Deployment SOP",
-    "step": 2,
-    "status": "success",
-    "details": "Written"
-  },
-  {
-    "timestamp": "2026-02-28T08:53:54.630Z",
+    "timestamp": "2026-02-28T20:05:13.871Z",
     "sop": "Title: Deployment SOP",
     "step": 3,
     "status": "success",
     "details": "Committed"
   },
   {
-    "timestamp": "2026-02-28T08:53:54.633Z",
-    "sop": "Title: Deployment SOP",
-    "step": 3,
-    "status": "success",
-    "details": "Committed"
-  },
-  {
-    "timestamp": "2026-02-28T08:53:54.655Z",
+    "timestamp": "2026-02-28T20:05:13.899Z",
     "sop": "Title: Deployment SOP",
     "step": 1,
     "status": "success",
     "details": "Repository is clean."
   },
   {
-    "timestamp": "2026-02-28T08:53:54.657Z",
+    "timestamp": "2026-02-28T20:05:13.901Z",
     "sop": "Title: Deployment SOP",
     "step": 2,
     "status": "success",
     "details": "Updated version.txt to v1.0.1"
   },
   {
-    "timestamp": "2026-02-28T08:53:54.658Z",
+    "timestamp": "2026-02-28T20:05:13.902Z",
     "sop": "Title: Deployment SOP",
     "step": 3,
     "status": "success",

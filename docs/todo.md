@@ -323,3 +323,15 @@
     - ✅ Synthesizes Corporate Strategy, past proposals (RAG), and Policy Engine parameters using LLM.
     - ✅ Uses a professional template `sops/proposal_template.md`.
     - ✅ Validated via `tests/integration/phase26_growth_validation.test.ts` and `tests/integration/phase26_revenue_validation.test.ts`.
+
+## Phase 27: Enterprise Resilience & Anti-Fragility
+- [ ] **Resilience MCP Server (Core)**: Establish the base resilience layer.
+    - [ ] Create `resilience` MCP server scaffold.
+    - [ ] Implement `simulate_failure` tool for chaos engineering.
+    - [ ] Implement `enable_circuit_breaker` tool for degraded mode operations.
+    - [ ] Implement `trigger_failover` tool for simulated region/service failovers.
+- [ ] **Disaster Recovery System**: Implement automated, encrypted backups for the Brain (Vector/Graph DB), Company Contexts, and financial data (Xero). Design a recovery procedure that can restore agency state within 1 hour.
+- [ ] **Security Hardening MCP**: Create an MCP server (`security_monitor`) that scans for vulnerabilities in dependencies, monitors anomalous API activity, and applies automated patches (via PRs) for critical vulnerabilities.
+- [ ] **Market Shock Absorption**: Enhance the Strategic Horizon Scanner to detect economic downturns or sudden opportunities (via market data APIs) and trigger pre-defined contingency plans (e.g., adjust pricing, pause non-critical swarms).
+- [ ] **Multi-Region High Availability**: Extend the Kubernetes Helm chart to support multi-region deployment (e.g., AWS us-east-1, eu-west-1) with automated failover and geographic load balancing.
+- [ ] **Validation**: Simulate a regional outage and verify automated recovery; run penetration testing via the security MCP.

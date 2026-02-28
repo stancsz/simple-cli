@@ -1,8 +1,8 @@
 # Simple Biosphere Roadmap
 
 **Mission Statement:** [Read the Technical Constitution](../MISSION.md)
-**Last Updated:** February 26, 2026
-**Current Focus:** Phase 25: Autonomous Corporate Consciousness
+**Last Updated:** February 28, 2026
+**Current Focus:** Phase 27: Enterprise Resilience & Anti-Fragility
 
 The roadmap is structured around the four anatomical layers of the Digital Biosphere.
 
@@ -210,6 +210,19 @@ The roadmap is structured around the four anatomical layers of the Digital Biosp
     - ✅ Implemented `track_growth_metrics` and `generate_revenue_validation_report` tools in `business_ops` MCP to validate autonomous end-to-end metrics against policy constraints.
     - ✅ Defined core metrics (Lead-to-Proposal Rate, Acceptance Rate, Average Margin, Campaign Revenue) in `docs/metrics/phase26_revenue_validation.md`.
     - ✅ Validated via `tests/integration/phase26_revenue_validation.test.ts` showing robust calculations and policy checks.
+
+## Phase 27: Enterprise Resilience & Anti-Fragility
+*Mission*: Ensure the agency operates continuously and securely at global scale, with self-healing capabilities for infrastructure and business continuity.
+*Status*: Active
+*Current Focus*: Core Resilience Layer (Circuit Breakers & Failover)
+- [ ] **Core Resilience Layer**:
+    - [ ] Create `resilience` MCP server for chaos engineering and failure simulation.
+    - [ ] Implement `simulate_failure`, `enable_circuit_breaker`, and `trigger_failover` tools.
+- [ ] **Disaster Recovery System**: Implement automated, encrypted backups for the Brain (Vector/Graph DB), Company Contexts, and financial data (Xero). Design a recovery procedure that can restore agency state within 1 hour.
+- [ ] **Security Hardening MCP**: Create an MCP server (`security_monitor`) that scans for vulnerabilities in dependencies, monitors anomalous API activity, and applies automated patches (via PRs) for critical vulnerabilities.
+- [ ] **Market Shock Absorption**: Enhance the Strategic Horizon Scanner to detect economic downturns or sudden opportunities (via market data APIs) and trigger pre-defined contingency plans (e.g., adjust pricing, pause non-critical swarms).
+- [ ] **Multi-Region High Availability**: Extend the Kubernetes Helm chart to support multi-region deployment (e.g., AWS us-east-1, eu-west-1) with automated failover and geographic load balancing.
+- [ ] **Validation**: Simulate a regional outage and verify automated recovery; run penetration testing via the security MCP.
 
 ## Legacy Achievements
 See [Legacy Roadmap](ROADMAP_LEGACY.md) for completed milestones of the previous "Simple CLI" era.
