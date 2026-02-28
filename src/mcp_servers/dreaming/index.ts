@@ -16,6 +16,32 @@ export class DreamingServer {
     });
     this.mcp = new MCP();
     this.setupTools();
+
+    // Scheduling Hook: Monthly Market Positioning Analysis
+    // Node.js setInterval maximum delay is 2,147,483,647 ms (~24.8 days).
+    // Using 24 days to avoid 32-bit int overflow.
+    const TWENTY_FOUR_DAYS = 24 * 24 * 60 * 60 * 1000;
+    setInterval(async () => {
+      try {
+        console.error("[Dreaming] Triggering scheduled Market Positioning Analysis...");
+        await this.mcp.init();
+        // Fallback to business_ops as some deployments merge market analysis tools there
+        const marketAnalysis = this.mcp.getClient("market_analysis");
+        const analysisClient = marketAnalysis || this.mcp.getClient("business_ops");
+
+        if (analysisClient) {
+          await analysisClient.callTool({
+            name: "analyze_and_adjust_positioning",
+            arguments: {
+              sector: "Software Development", // Example defaults
+              region: "Global"
+            }
+          });
+        }
+      } catch (e: any) {
+        console.error("[Dreaming] Scheduled Market Positioning failed:", e.message);
+      }
+    }, TWENTY_FOUR_DAYS);
   }
 
   private setupTools() {
