@@ -1,0 +1,25 @@
+{
+  "nodes": [
+    {
+      "id": "22f3bee5-6d9b-47da-acc5-9100cdc3d54c",
+      "type": "task",
+      "properties": {
+        "description": "Fix the login bug in auth.ts",
+        "outcome": "Fixed by adding null check."
+      }
+    },
+    {
+      "id": "src/auth.ts",
+      "type": "file",
+      "properties": {}
+    }
+  ],
+  "edges": [
+    {
+      "from": "22f3bee5-6d9b-47da-acc5-9100cdc3d54c",
+      "to": "src/auth.ts",
+      "relation": "modifies",
+      "properties": {}
+    }
+  ]
+}
