@@ -1,7 +1,6 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
 import { EpisodicMemory } from "../../../brain/episodic.js";
-import { CorporatePolicy } from "../../../brain/schemas.js";
 import { createLLM } from "../../../llm.js";
 import { dirname } from "path";
 import { MCP } from "../../../mcp.js";
@@ -35,7 +34,7 @@ export function registerContractNegotiationTools(server: McpServer) {
                 try {
                     const brainClient = mcp.getClient("brain");
                     if (brainClient) {
-                        const policyRes = await brainClient.callTool({ name: "get_active_policy", arguments: {} });
+                        const policyRes = await brainClient.callTool({ name: "get_active_policy", arguments: {} }) as any;
                         if (policyRes && policyRes.content && policyRes.content[0].text) {
                             const parsedPolicy = JSON.parse(policyRes.content[0].text);
                             policyStr = JSON.stringify(parsedPolicy.parameters || parsedPolicy);
@@ -46,7 +45,7 @@ export function registerContractNegotiationTools(server: McpServer) {
                     try {
                         const opsClient = mcp.getClient("business_ops");
                         if (opsClient) {
-                            const policyRes = await opsClient.callTool({ name: "get_active_policy", arguments: {} });
+                            const policyRes = await opsClient.callTool({ name: "get_active_policy", arguments: {} }) as any;
                             if (policyRes && policyRes.content && policyRes.content[0].text) {
                                 const parsedPolicy = JSON.parse(policyRes.content[0].text);
                                 policyStr = JSON.stringify(parsedPolicy.parameters || parsedPolicy);
@@ -93,7 +92,7 @@ export function registerContractNegotiationTools(server: McpServer) {
                         task_description: taskDescription,
                         simulation_mode: true
                     }
-                });
+                }) as any;
 
                 let negotiation_history = "Negotiation History:\n\n";
                 if (negotiateRes && negotiateRes.content && negotiateRes.content[0].text) {
