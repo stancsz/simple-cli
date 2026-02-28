@@ -1,0 +1,283 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Showcase Demo - Simple CLI</title>
+    <link rel="stylesheet" href="styles.css">
+    <link rel="icon" type="image/x-icon" href="assets/logo.jpeg">
+</head>
+<body>
+    <header>
+        <a href="index.html" class="logo">Simple CLI</a>
+        <nav>
+            <a href="getting-started.html">Get Started</a>
+            <a href="showcase.html">Showcase</a>
+            <a href="roadmap.html">Roadmap</a>
+            <a href="integrations.html">Integrations</a>
+            <a href="benchmarks/dashboard/index.html">Benchmarks</a>
+        </nav>
+    </header>
+
+    <main>
+        <h1>🌟 The Simple CLI Showcase: Digital Agency in Action</h1>
+<p>Welcome to the <strong>Digital Agency Capability</strong> demonstration. This guide shows how Simple CLI transforms from a simple terminal tool into a fully autonomous software engineering workforce that can adopt a company&#39;s identity, follow standard procedures, and improve itself over time.</p>
+<hr>
+<h2>🏗️ The 4-Pillar Vision in Action</h2>
+<p>This demo simulates a 24-hour cycle of a digital employee working for &quot;Showcase Corp,&quot; a fictional startup. It demonstrates the seamless integration of our four core pillars:</p>
+<h3>1. <strong>Company Context (The Briefcase)</strong></h3>
+<p>The agent doesn&#39;t just execute commands; it understands <em>who</em> it works for.</p>
+<ul>
+<li><strong>Input</strong>: <code>company_context.json</code> defines the brand voice (&quot;Professional, tech-forward&quot;), tech stack (React, Node.js), and mission.</li>
+<li><strong>Action</strong>: The agent ingests this context into its Brain (Vector DB) and uses it to tailor every response and code snippet.</li>
+<li><strong>Result</strong>: Code that matches your style guide and PR descriptions that sound like your team.</li>
+</ul>
+<h3>2. <strong>SOP-as-Code (The Operating Manual)</strong></h3>
+<p>Professional work follows standards. The agent executes <strong>Standard Operating Procedures (SOPs)</strong> written in Markdown.</p>
+<ul>
+<li><strong>Input</strong>: <code>docs/sops/showcase_sop.md</code>.</li>
+<li><strong>Action</strong>: The SOP Engine parses the checklist (&quot;1. Initialize Repo&quot;, &quot;2. Deploy to Staging&quot;) and executes each step using available tools (Git, Filesystem).</li>
+<li><strong>Result</strong>: Reliable, repeatable project setup without human intervention.</li>
+</ul>
+<h3>3. <strong>Ghost Mode (The 24/7 Employee)</strong></h3>
+<p>The agent works while you sleep.</p>
+<ul>
+<li><strong>Scenario</strong>: It&#39;s 9:00 AM.</li>
+<li><strong>Action</strong>: The <strong>Job Delegator</strong> wakes up via CRON, checks the <code>scheduler.json</code>, and performs a &quot;Morning Standup.&quot;</li>
+<li><strong>Result</strong>: A summary of yesterday&#39;s work and today&#39;s plan is logged to <code>.agent/ghost_logs/</code> before you even log in.</li>
+</ul>
+<h3>4. <strong>HR Loop (Recursive Self-Improvement)</strong></h3>
+<p>The agency gets smarter every day.</p>
+<ul>
+<li><strong>Scenario</strong>: It&#39;s 6:00 PM.</li>
+<li><strong>Action</strong>: The <strong>HR Manager</strong> (HR Loop MCP) analyzes the day&#39;s execution logs for errors or inefficiencies.</li>
+<li><strong>Result</strong>: It proposes concrete improvements (e.g., &quot;Update <code>sop_execute</code> retry logic&quot;) and stores them as proposals in <code>.agent/hr/proposals/</code>.</li>
+</ul>
+<h3>5. <strong>Intelligent Nightly Maintenance (Swarm Dreaming)</strong></h3>
+<p>The system heals itself using specialized swarm agents.</p>
+<ul>
+<li><strong>Scenario</strong>: It&#39;s 2:00 AM.</li>
+<li><strong>Action</strong>: The <code>dreaming</code> server activates.<ul>
+<li><strong>Step 1</strong>: It queries the Brain for recent task failures (e.g., &quot;React hydration error on signup page&quot;).</li>
+<li><strong>Step 2</strong>: It negotiates with the <strong>Swarm Intelligence</strong> to find the best expert.</li>
+<li><strong>Step 3</strong>: The Swarm spawns a temporary &quot;Frontend Specialist&quot; sub-agent.</li>
+<li><strong>Step 4</strong>: The agent simulates a fix in a sandbox environment.</li>
+</ul>
+</li>
+<li><strong>Result</strong>: The failure is resolved, and the solution is stored in the Brain (<code>resolved_via_dreaming: true</code>) for future use, preventing the same bug from recurring.</li>
+</ul>
+<h3>6. <strong>Self-Healing Loop (Autonomous Maintenance)</strong></h3>
+<p>When things go wrong, the system fixes itself.</p>
+<ul>
+<li><strong>Scenario</strong>: The nightly showcase run fails due to a network timeout.</li>
+<li><strong>Action</strong>: The <strong>Showcase Healer</strong> detects the failure, diagnoses it as transient using LLM reasoning, and autonomously triggers a retry via the SOP Engine.</li>
+<li><strong>Result</strong>: The system recovers without human intervention, and the healing action is logged for auditability.</li>
+</ul>
+<h3>7. <strong>Autonomous Client Onboarding (Agency Ops)</strong></h3>
+<p>The agency can scale its client base autonomously.</p>
+<ul>
+<li><strong>Scenario</strong>: A new lead comes in via the website.</li>
+<li><strong>Action</strong>: The <code>client_onboarding_workflow</code> tool is triggered.<ul>
+<li><strong>Step 1</strong>: It creates an isolated <strong>Company Context</strong> (Brain, Filesystem, Settings).</li>
+<li><strong>Step 2</strong>: It syncs the new client to <strong>HubSpot CRM</strong>.</li>
+<li><strong>Step 3</strong>: It sets up a <strong>Linear Project</strong> with the appropriate template (e.g., &quot;Web Dev&quot;).</li>
+<li><strong>Step 4</strong>: It drafts an initial invoice in <strong>Xero</strong>.</li>
+</ul>
+</li>
+<li><strong>Result</strong>: A new client is fully onboarded and ready for work in under 60 seconds.</li>
+</ul>
+<h3>8. <strong>Revenue Growth Validation (Phase 26)</strong></h3>
+<p>The agency tracks its own autonomous expansion success rates.</p>
+<ul>
+<li><strong>Scenario</strong>: The Autonomous Market Expansion campaign concludes.</li>
+<li><strong>Action</strong>: The system invokes <code>generate_revenue_validation_report</code>.<ul>
+<li><strong>Step 1</strong>: It aggregates Lead generation from CRM (HubSpot).</li>
+<li><strong>Step 2</strong>: It counts generated intelligent proposals from Episodic Memory.</li>
+<li><strong>Step 3</strong>: It evaluates simulated contract negotiations against <code>CorporatePolicy.financials.target_margin</code>.</li>
+</ul>
+</li>
+<li><strong>Result</strong>: A validated growth metrics report is pushed, showing Lead-to-Proposal conversions, Acceptance Rates, and Margin Threshold Compliance.</li>
+</ul>
+<hr>
+<h2>🚀 Deployment Instructions</h2>
+<p>You can run this entire simulation on your local machine in minutes.</p>
+<h3>Prerequisites</h3>
+<ul>
+<li>Node.js (v18+)</li>
+<li>Docker (Optional, for production mode)</li>
+<li>OpenAI API Key (or compatible LLM key)</li>
+</ul>
+<h3>Quickstart: The Simulation (Recommended)</h3>
+<p>This runs a self-contained &quot;Time Lapse&quot; of the 24-hour cycle immediately.</p>
+<ol>
+<li><p><strong>Clone the Repository</strong>:</p>
+<pre><code class="language-bash">git clone https://github.com/stan-chen/simple-cli.git
+cd simple-cli
+npm install
+</code></pre>
+</li>
+<li><p><strong>Run the Showcase</strong>:</p>
+<pre><code class="language-bash">npm run demo
+</code></pre>
+</li>
+<li><p><strong>Watch the Magic</strong>:
+The CLI will output the agent&#39;s thought process as it:</p>
+<ul>
+<li>Initializing MCP Servers...</li>
+<li>Loading Showcase Corp Context...</li>
+<li>Executing <code>showcase_sop.md</code>...</li>
+<li>Triggering Morning Standup...</li>
+<li>Performing Daily HR Review...</li>
+</ul>
+</li>
+</ol>
+<h3>CLI Installation (Interactive Mode)</h3>
+<p>To install &quot;Showcase Corp&quot; into your main CLI environment and interact with it manually:</p>
+<ol>
+<li><p><strong>Run the Setup Script</strong>:</p>
+<pre><code class="language-bash">npx tsx scripts/setup-showcase.ts
+</code></pre>
+</li>
+<li><p><strong>Switch Context</strong>:</p>
+<pre><code class="language-bash">simple company switch showcase-corp
+</code></pre>
+</li>
+</ol>
+<h3>Production Deployment: Docker (Ghost Mode)</h3>
+<p>To deploy the agent as a background service that runs 24/7:</p>
+<ol>
+<li><p><strong>Configure Environment</strong>:
+Ensure your <code>.env</code> file has your API keys.</p>
+</li>
+<li><p><strong>Start the Container</strong>:
+Navigate to the showcase directory and use Docker Compose:</p>
+<pre><code class="language-bash">cd demos/simple-cli-showcase
+docker compose -f docker-compose.prod.yml up -d --build
+</code></pre>
+</li>
+<li><p><strong>Verify Operation</strong>:
+Check the logs to see the daemon starting up:</p>
+<pre><code class="language-bash">docker compose -f docker-compose.prod.yml logs -f
+</code></pre>
+</li>
+</ol>
+<hr>
+<h2>📂 Configuration Artifacts</h2>
+<h3>1. <code>docker-compose.prod.yml</code></h3>
+<p>Optimized for &quot;One-Click&quot; deployment of the Digital Agency.</p>
+<pre><code class="language-yaml">version: &#39;3.8&#39;
+services:
+  showcase-agent:
+    image: simple-cli:latest
+    volumes:
+      - ./.agent:/app/.agent
+      - ./company_context.json:/app/company_context.json
+      - ./docs/sops:/app/showcase_sops
+    environment:
+      - JULES_AGENT_DIR=/app/.agent
+      - JULES_SOP_DIR=/app/showcase_sops
+    command: &gt;
+      sh -c &quot;
+        mkdir -p /app/.agent/companies/showcase-corp/docs &amp;&amp;
+        # ... (context loading logic) ... &amp;&amp;
+        node dist/daemon.js
+      &quot;
+    restart: unless-stopped
+</code></pre>
+<h3>2. Validation Results (Autonomous Operation)</h3>
+<p>The system is rigorously tested. Below is an excerpt from our validation suite (<code>tests/integration/showcase_simulation.test.ts</code>):</p>
+<pre><code class="language-text">PASS tests/integration/showcase_simulation.test.ts
+  Showcase Simulation Integration Test
+    ✓ should execute the full Showcase scenario: Context, SOP, Ghost Mode, HR Loop
+    ✓ should activate self-healing loop on failure
+
+Test Suites: 1 passed, 1 total
+Tests:       2 passed, 2 total
+</code></pre>
+<h3>3. Generated Logs (Example)</h3>
+<p>After running the demo, check <code>.agent/ghost_logs/</code>:</p>
+<p><strong><code>standup_2023-10-27.md</code></strong>:</p>
+<blockquote>
+<p><strong>Morning Standup</strong></p>
+<ul>
+<li><strong>Yesterday</strong>: Initialized project repo, deployed to staging.</li>
+<li><strong>Today</strong>: Monitoring error rates.</li>
+<li><strong>Blockers</strong>: None.</li>
+</ul>
+</blockquote>
+<p><strong><code>hr_review_2023-10-27.md</code></strong>:</p>
+<blockquote>
+<p><strong>Daily HR Review</strong></p>
+<ul>
+<li><strong>Analysis</strong>: 2 SOP steps failed initially but succeeded on retry.</li>
+<li><strong>Proposal</strong>: Increase default timeout for <code>git push</code> operations.</li>
+<li><strong>Status</strong>: PENDING APPROVAL.</li>
+</ul>
+</blockquote>
+<h3>4. Automated Daily Validation</h3>
+<p>The showcase is validated daily via a GitHub Actions workflow.</p>
+<ul>
+<li><strong>Check Results</strong>: Visit the Health Monitor dashboard (<code>http://localhost:3000</code>) and see the &quot;Showcase Validation&quot; panel.</li>
+<li><strong>Run Manually</strong>:<pre><code class="language-bash">npx tsx scripts/showcase-runner.ts
+</code></pre>
+</li>
+<li><strong>See Logs</strong>: Check <code>.agent/health_monitor/showcase_runs.json</code> or CI artifacts.</li>
+</ul>
+<hr>
+<h2>🏢 Managing Multiple Companies</h2>
+<p>The enhanced Company Context system allows you to manage multiple client environments seamlessly using the CLI:</p>
+<ol>
+<li><strong>Initialize</strong>: <code>simple init-company &lt;name&gt;</code> (Creates context, SOPs, and Brain)</li>
+<li><strong>Switch</strong>: <code>simple company switch &lt;name&gt;</code> (Sets active context)</li>
+<li><strong>List</strong>: <code>simple company list</code> (View active and archived companies)</li>
+<li><strong>Archive</strong>: <code>simple company archive &lt;name&gt;</code> (Deactivate and move to storage)</li>
+<li><strong>Status</strong>: <code>simple company status</code> (Check current context)</li>
+</ol>
+<hr>
+<h2>✅ Validation Run (Latest)</h2>
+<p><strong>Date</strong>: 2024-05-22
+<strong>Status</strong>: PASSED</p>
+<p>The Phase 20 Showcase was validated via the robust integration test suite <code>tests/integration/showcase_simulation.test.ts</code>. This validation covered:</p>
+<ol>
+<li><strong>Full Lifecycle Simulation</strong>: Successful execution of Company Context loading, SOP execution, Ghost Mode tasks, and HR Loop.</li>
+<li><strong>Self-Healing Loop</strong>: Verification that the <code>ShowcaseHealer</code> correctly detects failures and triggers retry mechanisms via the SOP Engine.</li>
+</ol>
+<h2>🔗 Next Steps</h2>
+<ul>
+<li><strong><a href="roadmap.html">View the Roadmap</a></strong>: Phase 20 is now Completed.</li>
+<li><strong><a href="specs.html">Read the Specs</a></strong>: Deep dive into the technical architecture.</li>
+<li><strong><a href="#quickstart-the-simulation-recommended">Try it Yourself</a></strong>: Run <code>npm run demo</code> now!</li>
+</ul>
+<h2>🏭 Advanced: Production Load Simulation</h2>
+<p>To validate the <strong>Phase 23 Autonomous Agency Governance</strong> layer, we provide a comprehensive load simulator that mimics a high-traffic production environment.</p>
+<h3>What it Does</h3>
+<ul>
+<li><strong>Simulates 10+ Concurrent Clients</strong>: Creates virtual Company Contexts and generates realistic Linear issue activity.</li>
+<li><strong>Swarm Fleet Management</strong>: Stresses the <code>scaling_engine</code> to ensure swarms are spawned and balanced dynamically.</li>
+<li><strong>Predictive Health</strong>: Triggers interventions for &quot;at-risk&quot; clients based on simulated metrics.</li>
+<li><strong>Enhanced Dreaming</strong>: Verifies that the HR Loop detects cross-swarm patterns and generates SOPs.</li>
+</ul>
+<h3>How to Run</h3>
+<p>Execute the validation suite:</p>
+<pre><code class="language-bash">npm test -- tests/integration/production_load_validation.test.ts
+</code></pre>
+<h3>Expected Output</h3>
+<p>You will see the <code>ProductionLoadSimulator</code> initialize, generate load, and log key events:</p>
+<pre><code class="language-text">[SIM] [T+12h] Generating simulated load...
+[SIM] [T+12h] Generated 15 new issues across fleet.
+[SIM] [T+12h] Evaluating fleet demand...
+[SIM] [T+12h] Evaluation result: 2 Scale Up, 1 Scale Down.
+[SIM] [T+12h] Balancing fleet resources...
+[SIM] [T+12h] Executed 2 balancing actions.
+...
+[SIM] Finalizing simulation: Analyzing cross-swarm patterns...
+[SIM] SOP generation triggered.
+</code></pre>
+
+    </main>
+
+    <footer>
+        <p>&copy; 2024 Simple CLI. Open source on <a href="https://github.com/stan-chen/simple-cli">GitHub</a>.</p>
+    </footer>
+</body>
+</html>

@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Integrations - Simple CLI</title>
+    <link rel="stylesheet" href="styles.css">
+    <link rel="icon" type="image/x-icon" href="assets/logo.jpeg">
+</head>
+<body>
+    <header>
+        <a href="index.html" class="logo">Simple CLI</a>
+        <nav>
+            <a href="getting-started.html">Get Started</a>
+            <a href="showcase.html">Showcase</a>
+            <a href="roadmap.html">Roadmap</a>
+            <a href="integrations.html">Integrations</a>
+            <a href="benchmarks/dashboard/index.html">Benchmarks</a>
+        </nav>
+    </header>
+
+    <main>
+        <h1>Framework Integration</h1>
+<h2>Overview</h2>
+<p>Simple CLI uses a &quot;Meta-Orchestrator&quot; architecture to integrate various AI frameworks (Jules, Aider, CrewAI, Picoclaw, etc.) as subordinate agents. Each framework is wrapped in an MCP server, allowing the core orchestrator to invoke them via standardized tool calls.</p>
+<h2>DeepSeek Reasoner Upgrade</h2>
+<p>We have recently switched the default reasoner from Claude/GPT-4o to <strong>DeepSeek Reasoner (R1)</strong>. This change brings significant benefits:</p>
+<ul>
+<li><strong>Cost Efficiency</strong>: DeepSeek R1 offers comparable or superior reasoning capabilities at a fraction of the cost of other frontier models.</li>
+<li><strong>Reasoning Quality</strong>: The &quot;Chain of Thought&quot; reasoning provided by DeepSeek R1 excels at complex planning, architectural decisions, and bug diagnosis, making it an ideal choice for the orchestrator&#39;s &quot;Brain&quot;.</li>
+<li><strong>Performance</strong>: The model demonstrates high throughput and low latency, essential for maintaining a responsive CLI experience.</li>
+</ul>
+<h2>Integrated Frameworks</h2>
+<ul>
+<li><strong>Jules</strong>: GitHub PR automation and code review.</li>
+<li><strong>Aider</strong>: Rapid, reliable code editing in local files.</li>
+<li><strong>CrewAI</strong>: Multi-agent research and complex task delegation.</li>
+<li><strong>Picoclaw</strong>: A lightweight, efficient reasoning framework for specific sub-tasks.</li>
+<li><strong>Kimi</strong>: Deep reasoning and long-context processing.</li>
+<li><strong>Devin</strong>: Full-stack software engineering capabilities.</li>
+<li><strong>Cursor</strong>: Advanced IDE integration for context-aware code generation.</li>
+<li><strong>Windsurf</strong>: Collaborative coding agent.</li>
+<li><strong>Bolt.new</strong>: Rapid prototyping tool (simulated integration).</li>
+<li><strong>v0.dev</strong>: AI-powered UI generation for React/Vue/HTML components.</li>
+<li><strong>Gemini</strong>: Google&#39;s multimodal AI models (Pro and Flash).</li>
+</ul>
+<h2>Framework Auto-Registration</h2>
+<p>The Brain now includes an auto-discovery mechanism for framework integration.</p>
+<h3>Mechanism</h3>
+<ol>
+<li><strong>Discovery</strong>: On startup, the <code>FrameworkIngestionEngine</code> scans <code>src/mcp_servers/</code> for available frameworks.</li>
+<li><strong>Registration</strong>: It registers them with a default memory policy (Read-Write, Shared).</li>
+<li><strong>Injection</strong>: The Brain makes the memory configuration available. The framework wrapper can call <code>FrameworkIngestionEngine.injectContext(name)</code> to retrieve the policy and configure its toolset to include Brain capabilities.</li>
+</ol>
+<h3>Manual Registration</h3>
+<p>You can also manually register a framework using the Brain tool:</p>
+<pre><code class="language-bash">simple call brain_register_framework --name my_framework
+</code></pre>
+<h3>Memory Policy</h3>
+<p>Default policy for auto-discovered frameworks:</p>
+<pre><code class="language-json">{
+  &quot;access&quot;: &quot;read-write&quot;,
+  &quot;shared&quot;: true,
+  &quot;isolation&quot;: &quot;shared&quot;
+}
+</code></pre>
+<h2>Adding New Frameworks</h2>
+<p>To add a new framework:</p>
+<ol>
+<li><strong>Ingest</strong>: Analyze the CLI or API of the target framework.</li>
+<li><strong>Digest</strong>: Create a new MCP server in <code>src/mcp_servers/&lt;framework_name&gt;/</code>.</li>
+<li><strong>Deploy</strong>: Register the server in <code>src/cli.ts</code> (for local discovery) or <code>mcp.json</code> (for Docker/explicit config).</li>
+<li><strong>Auto-Register</strong>: The Brain will automatically detect the new server and enable memory sharing capabilities.</li>
+</ol>
+<h2>Specific Integration Notes</h2>
+<h3>v0.dev Integration</h3>
+<ul>
+<li><strong>Capabilities</strong>: Generates UI components from text descriptions.</li>
+<li><strong>API</strong>: v0.dev does not have a fully public, documented REST API at this time. The integration uses a client that mimics the expected structure (<code>https://api.v0.dev/...</code>) but includes robust fallback mechanisms (simulation/mocking) if the API is unreachable or changes.</li>
+<li><strong>Authentication</strong>: Uses <code>V0DEV_API_KEY</code>.</li>
+<li><strong>Tools</strong>: <code>v0dev_generate_component</code>, <code>v0dev_list_frameworks</code>, <code>v0dev_validate_prompt</code>.</li>
+</ul>
+<h3>Google Gemini Integration</h3>
+<ul>
+<li><strong>Capabilities</strong>: Multimodal generation, chat, and streaming using Gemini 1.5 Pro and Flash.</li>
+<li><strong>API</strong>: Uses the official Google Generative AI SDK (<code>@google/generative-ai</code>).</li>
+<li><strong>Authentication</strong>: Uses <code>GOOGLE_API_KEY</code>.</li>
+<li><strong>Tools</strong>: <code>gemini_generate_content</code>, <code>gemini_chat</code>, <code>gemini_stream_content</code>.</li>
+</ul>
+
+    </main>
+
+    <footer>
+        <p>&copy; 2024 Simple CLI. Open source on <a href="https://github.com/stan-chen/simple-cli">GitHub</a>.</p>
+    </footer>
+</body>
+</html>

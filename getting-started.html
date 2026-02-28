@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Getting Started - Simple CLI</title>
+    <link rel="stylesheet" href="styles.css">
+    <link rel="icon" type="image/x-icon" href="assets/logo.jpeg">
+</head>
+<body>
+    <header>
+        <a href="index.html" class="logo">Simple CLI</a>
+        <nav>
+            <a href="getting-started.html">Get Started</a>
+            <a href="showcase.html">Showcase</a>
+            <a href="roadmap.html">Roadmap</a>
+            <a href="integrations.html">Integrations</a>
+            <a href="benchmarks/dashboard/index.html">Benchmarks</a>
+        </nav>
+    </header>
+
+    <main>
+        <h1>🚀 Getting Started with Simple CLI</h1>
+<p>Welcome to <strong>Simple CLI</strong>, the Universal AI Integration Platform. This guide will walk you through installing the tool, setting up your first &quot;Company Context&quot; (Digital Agency), and running your first autonomous tasks.</p>
+<h2>⚡ 0. First Steps (5 Minutes)</h2>
+<p>Before diving into configuration, take the <strong>Interactive Tour</strong> to see what Simple CLI can do.</p>
+<p>Run the Onboarding Wizard:</p>
+<pre><code class="language-bash">simple onboard
+</code></pre>
+<p>This comprehensive, interactive wizard (First-Day Experience) will guide you through:</p>
+<ol>
+<li><strong>Environment Check</strong>: Auto-detects dependencies and keys.</li>
+<li><strong>Company Context Setup</strong>: Defines your Digital Agency&#39;s brand voice and goals.</li>
+<li><strong>Framework Integration</strong>: Demonstrates the &quot;Ingest-Digest-Deploy&quot; cycle (e.g., Roo Code).</li>
+<li><strong>SOP Execution</strong>: Creates and runs a real Standard Operating Procedure (<code>initialize_project.sop</code>).</li>
+<li><strong>Ghost Mode</strong>: Activates the Job Delegator and schedules background tasks.</li>
+<li><strong>HR Loop</strong>: Demonstrates the system&#39;s self-improvement capability.</li>
+<li><strong>Operational Dashboard</strong>: Launches the real-time metrics view.</li>
+</ol>
+<p><a href="QUICK_START.html">Read the Quick Start Guide</a> for more details.</p>
+<hr>
+<h2>📦 1. Installation</h2>
+<h3>Prerequisites</h3>
+<ul>
+<li><strong>Node.js</strong>: Version 18.0.0 or higher.</li>
+<li><strong>Git</strong>: Installed and available in your PATH.</li>
+<li><strong>Docker</strong> (Optional): Recommended for &quot;Ghost Mode&quot; (24/7 background agents).</li>
+</ul>
+<h3>Install via NPM</h3>
+<p>Install the CLI globally to access the <code>simple</code> command from anywhere:</p>
+<pre><code class="language-bash">npm install -g @stan-chen/simple-cli
+</code></pre>
+<h3>Configuration</h3>
+<p>Simple CLI requires an LLM provider to function. Create a <code>.env</code> file in your project root or export the variables in your shell profile (<code>~/.zshrc</code> or <code>~/.bashrc</code>).</p>
+<pre><code class="language-bash"># Required: Primary Brain
+export OPENAI_API_KEY=&quot;sk-...&quot;
+
+# Optional: Specialized Agents
+export ANTHROPIC_API_KEY=&quot;sk-...&quot; # For Claude
+export GEMINI_API_KEY=&quot;...&quot;       # For Google Gemini
+export DEEPSEEK_API_KEY=&quot;...&quot;     # For DeepSeek V3/R1
+</code></pre>
+<hr>
+<h2>🏢 2. Setting Up Your Digital Agency</h2>
+<p>Simple CLI isn&#39;t just a chatbot; it simulates a team of digital employees. To start, you need to &quot;Onboard&quot; a company. This process sets up the <strong>Company Context</strong>, <strong>Brain</strong>, and <strong>SOPs</strong>.</p>
+<p>Run the onboarding command:</p>
+<pre><code class="language-bash">simple onboard-company MyTechStartup
+</code></pre>
+<h3>What just happened? (The 6-Pillar Setup)</h3>
+<p>The onboarding command automatically executed a <strong>Standard Operating Procedure (SOP)</strong> that established the 6 core pillars of your digital agency:</p>
+<ol>
+<li><strong>Company Context</strong>: Created <code>.agent/companies/MyTechStartup/config/company_context.json</code>. This file tells the agent <em>who</em> it works for (Brand Voice, Tech Stack, Goals).</li>
+<li><strong>The Brain</strong>: Initialized a Vector Database in <code>.agent/companies/MyTechStartup/brain/</code> to remember past interactions and learnings.</li>
+<li><strong>SOPs</strong>: Created a <code>sops/</code> directory for your operational procedures.</li>
+<li><strong>Ghost Mode</strong>: Scheduled background tasks (Job Delegator, Reviewer) in <code>.agent/scheduler.json</code>.</li>
+<li><strong>HR Loop</strong>: Enabled the &quot;Daily HR Review&quot; task to analyze logs and propose self-improvements.</li>
+<li><strong>Health Monitor</strong>: Activated the system health tracking.</li>
+</ol>
+<h3>Verify the Setup</h3>
+<p>Check that your company is active:</p>
+<pre><code class="language-bash">simple company status
+</code></pre>
+<p>You can list all available companies:</p>
+<pre><code class="language-bash">simple company list
+</code></pre>
+<hr>
+<h2>⚡ 3. Running Your First Task</h2>
+<p>Now that your digital agency is set up, let&#39;s assign a task.</p>
+<h3>Interactive Mode</h3>
+<p>Just run <code>simple</code> and describe what you need. The agent will use its <strong>Smart Router</strong> to pick the best tool for the job.</p>
+<pre><code class="language-bash">simple &quot;Create a &#39;Hello World&#39; Python script and write a test for it.&quot;
+</code></pre>
+<p><strong>What happens next:</strong></p>
+<ol>
+<li><strong>Planning</strong>: The agent analyzes the request.</li>
+<li><strong>Delegation</strong>: It might delegate the coding to a sub-agent (e.g., <code>coding_agent</code>).</li>
+<li><strong>Execution</strong>: It writes <code>hello.py</code> and <code>test_hello.py</code>.</li>
+<li><strong>Verification</strong>: It runs the test to ensure it passes.</li>
+</ol>
+<h3>Direct Command</h3>
+<p>You can also run one-off commands without entering the interactive shell:</p>
+<pre><code class="language-bash">simple &quot;Refactor src/utils.ts to be more readable&quot;
+</code></pre>
+<hr>
+<h2>🌟 4. The 4 Pillars in Practice</h2>
+<p>Understanding these concepts will help you get the most out of Simple CLI.</p>
+<h3>1. Company Context (The &quot;Briefcase&quot;)</h3>
+<p>Every time the agent runs, it consults the <strong>Company Context</strong>.</p>
+<ul>
+<li><strong>Try it</strong>: Edit <code>.agent/companies/MyTechStartup/config/company_context.json</code> and change the &quot;brand_voice&quot; to &quot;Pirate&quot;.</li>
+<li><strong>Run</strong>: <code>simple &quot;Write a commit message for the last change&quot;</code></li>
+<li><strong>Result</strong>: &quot;Arrr! We shipped a bounty of bug fixes!&quot;</li>
+</ul>
+<h3>2. SOP-as-Code (The &quot;Operating Manual&quot;)</h3>
+<p>Don&#39;t rely on prompts; rely on procedures.</p>
+<ul>
+<li><strong>Create</strong>: Write a Markdown file in <code>sops/deployment.md</code>.</li>
+<li><strong>Run</strong>: <code>simple &quot;Run the deployment SOP&quot;</code></li>
+<li><strong>Result</strong>: The agent follows your checklist step-by-step, handling errors and retries automatically.</li>
+</ul>
+<h3>3. Ghost Mode (The &quot;Night Shift&quot;)</h3>
+<p>Your agents work while you sleep.</p>
+<ul>
+<li><strong>Check</strong>: Look at <code>.agent/scheduler.json</code>. You&#39;ll see tasks like <code>job-delegator</code> scheduled to run hourly.</li>
+<li><strong>Logs</strong>: Check <code>.agent/ghost_logs/</code> to see what your digital employees did overnight.</li>
+</ul>
+<h3>4. HR Loop (The &quot;Self-Correction&quot;)</h3>
+<p>The system improves itself.</p>
+<ul>
+<li><strong>Mechanism</strong>: Every night, the HR agent analyzes execution logs.</li>
+<li><strong>Outcome</strong>: If a tool failed repeatedly, it might propose a code change to fix it. Check <code>.agent/hr/proposals/</code> for pending updates.</li>
+</ul>
+<hr>
+<h2>🔌 5. Framework Integration (Ingest-Digest-Deploy)</h2>
+<p>Simple CLI can &quot;absorb&quot; other AI tools.</p>
+<ul>
+<li><strong>Ingest</strong>: Learn a new tool&#39;s CLI (e.g., <code>aider</code>).</li>
+<li><strong>Digest</strong>: Wrap it in an MCP Server (<code>src/mcp_servers/aider</code>).</li>
+<li><strong>Deploy</strong>: Register it in <code>mcp.json</code>.</li>
+</ul>
+<p>Now, <code>simple</code> can use <code>aider</code> as a subordinate agent!</p>
+<h3>Power User Path</h3>
+<p>Want to build your own integration?
+<a href="TUTORIAL_INTEGRATE_NEW_FRAMEWORK.html"><strong>Take the Rapid Framework Integration Tutorial</strong></a> to learn how to add &quot;Roo Code&quot; in 15 minutes.</p>
+<hr>
+<h2>🎭 6. Configuring Persona &amp; Interfaces</h2>
+<p>Your digital agent can mimic human behavior (typing, working hours) across Slack, Teams, and Discord.</p>
+<h3>Configuration</h3>
+<p>Edit <code>.agent/config/persona.json</code> (or <code>.agent/companies/&lt;name&gt;/config/persona.json</code>):</p>
+<pre><code class="language-json">{
+  &quot;name&quot;: &quot;Sarah_DevOps&quot;,
+  &quot;role&quot;: &quot;Senior DevOps Engineer&quot;,
+  &quot;voice&quot;: {
+    &quot;tone&quot;: &quot;Professional but friendly&quot;
+  },
+  &quot;emoji_usage&quot;: true,
+  &quot;working_hours&quot;: &quot;09:00-17:00&quot;,
+  &quot;response_latency&quot;: {
+    &quot;min&quot;: 500,
+    &quot;max&quot;: 2000
+  },
+  &quot;catchphrases&quot;: {
+    &quot;greeting&quot;: [&quot;Hey team!&quot;, &quot;Hi all,&quot;],
+    &quot;signoff&quot;: [&quot;Best,&quot;, &quot;Cheers!&quot;]
+  }
+}
+</code></pre>
+<h3>Interface Behavior</h3>
+<ul>
+<li><strong>Working Hours</strong>: If you message the agent outside <code>working_hours</code>, it will reply with an &quot;Out of Office&quot; message and will not execute tasks.</li>
+<li><strong>Typing Indicators</strong>: The agent simulates typing latency (<code>response_latency</code>) and displays &quot;Typing...&quot; indicators in Slack/Teams/Discord while thinking.</li>
+<li><strong>Styling</strong>: Responses are automatically styled with the configured tone, emojis, and catchphrases.</li>
+</ul>
+<hr>
+<h2>📚 7. Advanced Guides</h2>
+<p>Ready for production? Check out our real-world deployment playbooks:</p>
+<ul>
+<li><strong><a href="deployment/startup_mvp.html">Startup MVP Playbook</a></strong>: From zero to k8s in a weekend.</li>
+<li><strong><a href="deployment/ENTERPRISE_MIGRATION_PLAYBOOK.html">Enterprise Migration Playbook</a></strong>: Modernize legacy monoliths with zero downtime.</li>
+</ul>
+<hr>
+<h2>🎥 Next Steps</h2>
+<ul>
+<li><strong>Try the Showcase</strong>: Run <code>npm run demo</code> to see a full 24-hour simulation in 2 minutes. <a href="showcase.html">Read more</a>.</li>
+<li><strong>Deploy to Kubernetes</strong>: Ready for production? <a href="K8S_DEPLOYMENT.html">Read the Deployment Guide</a>.</li>
+<li><strong>Customize</strong>: Edit <code>persona.json</code> to change your agent&#39;s personality.</li>
+</ul>
+<p>Happy Building! 🚀</p>
+
+    </main>
+
+    <footer>
+        <p>&copy; 2024 Simple CLI. Open source on <a href="https://github.com/stan-chen/simple-cli">GitHub</a>.</p>
+    </footer>
+</body>
+</html>
