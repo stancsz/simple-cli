@@ -318,8 +318,8 @@
 - [x] **Autonomous Board Meeting**: `convene_board_meeting`.
     - ✅ Validated via `tests/integration/phase25_validation.test.ts` demonstrating the full cycle from horizon scanning to policy propagation.
 
-## Phase 26: Autonomous Market Expansion
+## Phase 26: Autonomous Market Expansion (✅ Completed)
 - [x] **Intelligent Proposal Generation**: `generate_client_proposal` tool in `business_ops` MCP server.
     - ✅ Synthesizes Corporate Strategy, past proposals (RAG), and Policy Engine parameters using LLM.
     - ✅ Uses a professional template `sops/proposal_template.md`.
-    - ✅ Validated via `tests/integration/phase26_growth_validation.test.ts`.
+    - ✅ Validated via `tests/integration/phase26_growth_validation.test.ts` and `tests/integration/phase26_revenue_validation.test.ts`.
