@@ -3,6 +3,7 @@ import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { registerProposalGenerationTools } from '../../src/mcp_servers/business_ops/tools/proposal_generation.js';
 import { registerContractNegotiationTools } from '../../src/mcp_servers/business_ops/tools/contract_negotiation.js';
 import { registerEnhancedLeadGenerationTools } from '../../src/mcp_servers/business_ops/tools/enhanced_lead_generation.js';
+import { registerRevenueMetricsTools } from '../../src/mcp_servers/business_ops/tools/revenue_metrics.js';
 import * as fs from 'fs';
 import * as path from 'path';
 
@@ -20,7 +21,9 @@ const mocks = vi.hoisted(() => ({
     mockSyncCompany: vi.fn(),
     mockGetGrowthTargets: vi.fn(),
     mockGetMarketData: vi.fn(),
-    mockAnalyzeCompetitorPricing: vi.fn()
+    mockAnalyzeCompetitorPricing: vi.fn(),
+    mockGetXeroClient: vi.fn(),
+    mockGetTenantId: vi.fn()
 }));
 
 // Mock OpenCoworkServer
@@ -70,6 +73,12 @@ vi.mock('../../src/mcp_servers/brain/tools/strategic_growth.js', () => ({
     getGrowthTargets: mocks.mockGetGrowthTargets
 }));
 
+// Mock Xero Tools
+vi.mock('../../src/mcp_servers/business_ops/xero_tools.js', () => ({
+    getXeroClient: mocks.mockGetXeroClient,
+    getTenantId: mocks.mockGetTenantId
+}));
+
 // Mock FS
 vi.mock('fs', async (importOriginal) => {
     const actual = await importOriginal<typeof import('fs')>();
@@ -85,6 +94,7 @@ describe('Intelligent Proposal Generation & Negotiation (Phase 26)', () => {
     let generateClientProposal: Function;
     let simulateContractNegotiation: Function;
     let discoverStrategicLeads: Function;
+    let trackRevenueGrowth: Function;
 
     beforeEach(() => {
         vi.clearAllMocks();
@@ -99,6 +109,8 @@ describe('Intelligent Proposal Generation & Negotiation (Phase 26)', () => {
                 simulateContractNegotiation = func;
             } else if (name === 'discover_strategic_leads') {
                 discoverStrategicLeads = func;
+            } else if (name === 'track_revenue_growth') {
+                trackRevenueGrowth = func;
             }
             return originalTool(name, desc, schema, func);
         });
@@ -106,6 +118,7 @@ describe('Intelligent Proposal Generation & Negotiation (Phase 26)', () => {
         registerProposalGenerationTools(server);
         registerContractNegotiationTools(server);
         registerEnhancedLeadGenerationTools(server);
+        registerRevenueMetricsTools(server);
     });
 
 
@@ -292,6 +305,49 @@ $50,000 based on standard rates.
         expect(finalTerms.status).toBe("Consensus Reached");
         expect(finalTerms.negotiated_terms.pre_approved_terms).toBe("$50,000 with 10% upfront");
         expect(finalTerms.negotiated_terms.final_margin).toBe(0.38);
+
+        // --- STEP 4: REVENUE METRICS MOCKS & EXECUTION ---
+        mocks.mockGetXeroClient.mockResolvedValue({
+            accountingApi: {
+                getReportProfitAndLoss: vi.fn().mockResolvedValue({
+                    body: {
+                        Reports: [{
+                            ReportID: "ProfitAndLoss",
+                            ReportName: "Profit and Loss",
+                            ReportType: "ProfitAndLoss",
+                            Rows: [
+                                { RowType: "Section", Title: "Revenue", Rows: [{ Cells: [{ Value: "100000" }] }] },
+                                { RowType: "Section", Title: "Operating Expenses", Rows: [{ Cells: [{ Value: "60000" }] }] }
+                            ]
+                        }]
+                    }
+                })
+            }
+        });
+        mocks.mockGetTenantId.mockResolvedValue("tenant-123");
+
+        mocks.mockGenerate.mockResolvedValueOnce({
+            message: JSON.stringify({
+                metrics: {
+                    mrr_arr_growth_rate: 25,
+                    cac: 1500,
+                    ltv: 25000,
+                    lead_to_close_rate: 12
+                },
+                growth_score: 85,
+                report: "Strong growth observed, exceeding strategy targets."
+            })
+        });
+
+        // --- EXECUTE STEP 4: TRACK REVENUE GROWTH ---
+        const revenueResult = await trackRevenueGrowth({ period: 'last_quarter', company: 'test_co' });
+
+        // Assertions for Step 4
+        expect(revenueResult.isError).toBeUndefined();
+        const revenueData = JSON.parse(revenueResult.content[0].text);
+        expect(revenueData.growth_score).toBeGreaterThan(70);
+        expect(revenueData.metrics.mrr_arr_growth_rate).toBe(25);
+        expect(revenueData.report).toContain("Strong growth");
     });
 
 
