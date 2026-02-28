@@ -28,6 +28,7 @@ import { registerStrategicExecutionTools } from "./tools/strategic_execution.js"
 import { registerEnhancedLeadGenerationTools } from "./tools/enhanced_lead_generation.js";
 import { registerProposalGenerationTools } from "./tools/proposal_generation.js";
 import { registerContractNegotiationTools } from "./tools/contract_negotiation.js";
+import { registerMarketPositioningTools } from "./tools/market_positioning.js";
 
 // Load secrets from .env.agent
 const envPath = join(process.cwd(), ".env.agent");
@@ -67,6 +68,7 @@ registerStrategicExecutionTools(server);
 registerEnhancedLeadGenerationTools(server);
 registerProposalGenerationTools(server);
 registerContractNegotiationTools(server);
+registerMarketPositioningTools(server);
 
 // Start Server
 async function main() {
