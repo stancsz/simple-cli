@@ -7,6 +7,7 @@ import { CorporatePolicy } from "../../../brain/schemas.js";
 import { syncDealToHubSpot } from "../crm.js";
 import * as fs from "fs";
 import * as path from "path";
+import { simulateContractNegotiationLogic } from "./contract_negotiation.js";
 
 export function registerProposalGenerationTools(server: McpServer) {
     server.tool(
@@ -156,9 +157,13 @@ Return ONLY the raw markdown text of the (revised or original) proposal. Do not 
 
                 // 8. Sync Deal to HubSpot
                 let syncStatus = "Not attempted";
+                let dealAmountNum = estimated_hours * 150;
                 try {
                     // Derive an amount or use a dummy for the deal
-                    const amount = activePolicy?.parameters?.min_margin ? (estimated_hours * 150 * (1 + activePolicy.parameters.min_margin)).toString() : (estimated_hours * 150).toString();
+                    if (activePolicy?.parameters?.min_margin) {
+                        dealAmountNum = estimated_hours * 150 * (1 + activePolicy.parameters.min_margin);
+                    }
+                    const amount = dealAmountNum.toString();
 
                     const dealResult = await syncDealToHubSpot({
                         dealname: `Proposal: ${company_name} - ${project_scope.substring(0, 30)}`,
@@ -171,6 +176,22 @@ Return ONLY the raw markdown text of the (revised or original) proposal. Do not 
                     console.error("HubSpot sync failed:", e);
                 }
 
+                // 9. Optional High-Value Contract Negotiation Simulation
+                let negotiationResult = "Skipped (Deal value below threshold)";
+                if (dealAmountNum > 10000) { // Threshold for high value
+                    try {
+                        const simResult = await simulateContractNegotiationLogic({
+                            client_context: company_name,
+                            proposal_summary: `Proposal for ${project_scope}. Estimated hours: ${estimated_hours}.`,
+                            deal_value: dealAmountNum
+                        });
+                        negotiationResult = `Simulated successfully: ${simResult.status}`;
+                    } catch (e: any) {
+                        console.error("Simulation failed:", e);
+                        negotiationResult = `Simulation Error: ${e.message}`;
+                    }
+                }
+
                 return {
                     content: [{
                         type: "text",
@@ -178,6 +199,7 @@ Return ONLY the raw markdown text of the (revised or original) proposal. Do not 
                             status: "Proposal generated successfully",
                             company: company_name,
                             hubspot_sync: syncStatus,
+                            negotiation_simulation: negotiationResult,
                             proposal_preview: finalProposal.substring(0, 500) + "..."
                         }, null, 2)
                     }]

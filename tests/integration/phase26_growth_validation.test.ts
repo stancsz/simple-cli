@@ -152,11 +152,21 @@ $50,000 based on standard rates.
         mocks.mockStore.mockResolvedValue(undefined);
         mocks.mockSyncDeal.mockResolvedValue({ id: 'deal_123', action: 'created' });
 
+        // Setup LLM mock for the internal high-value negotiation synthesis step (triggered automatically)
+        mocks.mockGenerate.mockResolvedValueOnce({
+            message: JSON.stringify({
+                pre_approved_terms: "$50,000",
+                simulated_concessions: "None",
+                final_margin: 0.4,
+                policy_compliance_status: "Compliant"
+            })
+        });
+
         // Execute Tool
         const result = await generateClientProposal({
             company_name: 'TechCorp',
             project_scope: 'Build an AI assistant',
-            estimated_hours: 100
+            estimated_hours: 100 // At 100 hours * 150 * 1.3 = 19500 (deal amount > 10000 -> triggers negotiation)
         });
 
         // Assertions
@@ -170,15 +180,16 @@ $50,000 based on standard rates.
         // Verify Strategy fetched
         expect(mocks.mockReadStrategy).toHaveBeenCalled();
 
-        // Verify Recall called for past proposals and policy
-        expect(mocks.mockRecall).toHaveBeenCalledTimes(2);
+        // Verify Recall called for past proposals, policy (initial), and policy (during negotiation simulation)
+        expect(mocks.mockRecall).toHaveBeenCalledTimes(3);
 
         // Verify Template read
         expect(mocks.mockExistsSync).toHaveBeenCalled();
         expect(mocks.mockReadFileSync).toHaveBeenCalled();
 
         // Verify LLM calls
-        expect(mocks.mockGenerate).toHaveBeenCalledTimes(2);
+        // 1. Generation, 2. Review, 3. Negotiation Synthesis
+        expect(mocks.mockGenerate).toHaveBeenCalledTimes(3);
         const genPrompt = mocks.mockGenerate.mock.calls[0][0];
         expect(genPrompt).toContain('TechCorp');
         expect(genPrompt).toContain('Build an AI assistant');
@@ -192,11 +203,17 @@ $50,000 based on standard rates.
         expect(reviewPrompt).toContain('min_margin');
 
         // Verify Storage
-        expect(mocks.mockStore).toHaveBeenCalledTimes(1);
+        // 1 for proposal, 1 for negotiation
+        expect(mocks.mockStore).toHaveBeenCalledTimes(2);
+
         const storeArgs = mocks.mockStore.mock.calls[0];
         expect(storeArgs[0]).toMatch(/proposal_TechCorp_\d+/);
         expect(storeArgs[2]).toBe(reviewedProposal.trim()); // The final markdown
         expect(storeArgs[3]).toEqual(["proposal", "client_acquisition", "phase_26"]);
+
+        const negoStoreArgs = mocks.mockStore.mock.calls[1];
+        expect(negoStoreArgs[0]).toMatch(/^negotiation_\d+$/);
+        expect(negoStoreArgs[3]).toEqual(["negotiation_pattern", "contract", "phase_26"]);
 
         // Verify CRM Sync
         expect(mocks.mockSyncDeal).toHaveBeenCalledTimes(1);
@@ -205,35 +222,31 @@ $50,000 based on standard rates.
             dealstage: 'presentationscheduled'
         }));
 
-        // --- PHASE 26 ADDITION: Simulate Negotiation ---
+        // --- PHASE 26 ADDITION: Simulate Negotiation Explicitly ---
 
-        // Setup final LLM mock for the negotiation synthesis step
+        // Setup final LLM mock for explicit tool invocation
         mocks.mockGenerate.mockResolvedValueOnce({
             message: JSON.stringify({
-                pricing_structure: "$50,000",
-                scope_adjustments: "None",
-                timeline: "3 months",
-                key_risks: "Low",
-                approval_confidence_score: 1.0
+                pre_approved_terms: "$50,000",
+                simulated_concessions: "None",
+                final_margin: 0.4,
+                policy_compliance_status: "Compliant"
             })
         });
 
         const negotiationResult = await simulateContractNegotiation({
-            proposal_draft: reviewedProposal,
-            client_profile: 'startup',
-            negotiation_parameters: { max_rounds: 3, temperature: 0.7 }
+            proposal_summary: reviewedProposal,
+            client_context: 'startup',
+            deal_value: 50000
         });
 
         expect(negotiationResult.isError).toBeUndefined();
         const finalTerms = JSON.parse(negotiationResult.content[0].text);
         expect(finalTerms.status).toBe("Consensus Reached");
-        expect(finalTerms.negotiated_terms.pricing_structure).toBe("$50,000");
+        expect(finalTerms.negotiated_terms.pre_approved_terms).toBe("$50,000");
 
-        // Verify storage for negotiation pattern
-        expect(mocks.mockStore).toHaveBeenCalledTimes(2); // 1 for proposal, 1 for negotiation
-        const negoStoreArgs = mocks.mockStore.mock.calls[1];
-        expect(negoStoreArgs[0]).toMatch(/^negotiation_\d+$/);
-        expect(negoStoreArgs[3]).toEqual(["negotiation_pattern", "contract", "phase_26"]);
+        // Verify explicit storage for negotiation pattern
+        expect(mocks.mockStore).toHaveBeenCalledTimes(3);
     });
 
     it('should handle template missing error gracefully', async () => {
