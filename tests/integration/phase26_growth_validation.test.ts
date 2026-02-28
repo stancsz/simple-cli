@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { registerProposalGenerationTools } from '../../src/mcp_servers/business_ops/tools/proposal_generation.js';
+import { registerContractNegotiationTools } from '../../src/mcp_servers/business_ops/tools/contract_negotiation.js';
 import * as fs from 'fs';
 import * as path from 'path';
 
@@ -14,6 +15,14 @@ const mocks = vi.hoisted(() => ({
     mockSyncDeal: vi.fn(),
     mockExistsSync: vi.fn(),
     mockReadFileSync: vi.fn()
+}));
+
+// Mock OpenCoworkServer
+vi.mock('../../src/mcp_servers/opencowork/index.js', () => ({
+    OpenCoworkServer: vi.fn().mockImplementation(() => ({
+        hireWorker: vi.fn().mockResolvedValue({ content: [{ text: "Worker hired" }] }),
+        delegateTask: vi.fn().mockResolvedValue({ content: [{ text: "I ACCEPT these terms." }] }) // Fast-track consensus
+    }))
 }));
 
 // Mock LLM
@@ -52,9 +61,10 @@ vi.mock('fs', async (importOriginal) => {
     };
 });
 
-describe('Intelligent Proposal Generation (Phase 26)', () => {
+describe('Intelligent Proposal Generation & Negotiation (Phase 26)', () => {
     let server: McpServer;
     let generateClientProposal: Function;
+    let simulateContractNegotiation: Function;
 
     beforeEach(() => {
         vi.clearAllMocks();
@@ -65,11 +75,14 @@ describe('Intelligent Proposal Generation (Phase 26)', () => {
         vi.spyOn(server, 'tool').mockImplementation((name, desc, schema, func) => {
             if (name === 'generate_client_proposal') {
                 generateClientProposal = func;
+            } else if (name === 'simulate_contract_negotiation') {
+                simulateContractNegotiation = func;
             }
             return originalTool(name, desc, schema, func);
         });
 
         registerProposalGenerationTools(server);
+        registerContractNegotiationTools(server);
     });
 
     it('should generate a proposal synthesizing strategy, past projects, and policy', async () => {
@@ -191,6 +204,36 @@ $50,000 based on standard rates.
             dealname: 'Proposal: TechCorp - Build an AI assistant',
             dealstage: 'presentationscheduled'
         }));
+
+        // --- PHASE 26 ADDITION: Simulate Negotiation ---
+
+        // Setup final LLM mock for the negotiation synthesis step
+        mocks.mockGenerate.mockResolvedValueOnce({
+            message: JSON.stringify({
+                pricing_structure: "$50,000",
+                scope_adjustments: "None",
+                timeline: "3 months",
+                key_risks: "Low",
+                approval_confidence_score: 1.0
+            })
+        });
+
+        const negotiationResult = await simulateContractNegotiation({
+            proposal_draft: reviewedProposal,
+            client_profile: 'startup',
+            negotiation_parameters: { max_rounds: 3, temperature: 0.7 }
+        });
+
+        expect(negotiationResult.isError).toBeUndefined();
+        const finalTerms = JSON.parse(negotiationResult.content[0].text);
+        expect(finalTerms.status).toBe("Consensus Reached");
+        expect(finalTerms.negotiated_terms.pricing_structure).toBe("$50,000");
+
+        // Verify storage for negotiation pattern
+        expect(mocks.mockStore).toHaveBeenCalledTimes(2); // 1 for proposal, 1 for negotiation
+        const negoStoreArgs = mocks.mockStore.mock.calls[1];
+        expect(negoStoreArgs[0]).toMatch(/^negotiation_\d+$/);
+        expect(negoStoreArgs[3]).toEqual(["negotiation_pattern", "contract", "phase_26"]);
     });
 
     it('should handle template missing error gracefully', async () => {
