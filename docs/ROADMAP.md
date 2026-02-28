@@ -198,7 +198,7 @@ The roadmap is structured around the four anatomical layers of the Digital Biosp
     - ✅ Implemented `get_growth_targets` in Brain MCP to extract ICP attributes from Corporate Strategy.
     - ✅ Implemented `discover_strategic_leads` in Business Ops MCP to synthesize strategy and market data into qualified leads.
     - ✅ Validated via `tests/integration/strategic_lead_generation.test.ts`.
-- [ ] **Intelligent Proposal Generation**: Automatically create tailored proposals based on client needs and agency capabilities.
+- [x] **Intelligent Proposal Generation**: Automatically create tailored proposals based on client needs and agency capabilities.
 - [ ] **Contract Negotiation Simulation**: Use swarm intelligence to simulate and optimize contract terms.
 - [ ] **Market Positioning Automation**: Continuously analyze competitive landscape and adjust agency positioning.
 - [ ] **Revenue Growth Validation**: Define metrics and tests for autonomous business expansion.
