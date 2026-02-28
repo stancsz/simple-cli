@@ -67,7 +67,7 @@ export class RevenueValidation {
         const alerts: string[] = [];
 
         // Defaults if policy is missing
-        const targetMargin = policy?.financials?.target_margin || 0.35;
+        const targetMargin = policy?.parameters?.min_margin || 0.35;
         const minConversionRate = 15; // 15%
         const minAcceptanceRate = 20; // 20%
 
@@ -134,8 +134,8 @@ export function registerRevenueValidationTools(server: McpServer) {
                 "revenue_validation",
                 "Generate validation report",
                 JSON.stringify(report),
-                campaign_id,
-                ["revenue", "validation", "metrics"]
+                ["revenue_validation", "metrics"], // artifacts
+                campaign_id
             );
 
             return {
