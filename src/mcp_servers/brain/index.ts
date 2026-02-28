@@ -22,6 +22,7 @@ export class BrainServer {
   private semantic: SemanticGraph;
   private sopsDir: string;
   private frameworkEngine: FrameworkIngestionEngine;
+  private baseDir: string;
 
   constructor() {
     this.server = new McpServer({
@@ -30,6 +31,7 @@ export class BrainServer {
     });
 
     const baseDir = process.env.JULES_AGENT_DIR ? dirname(process.env.JULES_AGENT_DIR) : process.cwd();
+    this.baseDir = baseDir;
     this.episodic = new EpisodicMemory(baseDir);
     this.semantic = new SemanticGraph(baseDir);
     this.frameworkEngine = new FrameworkIngestionEngine(baseDir);
@@ -66,6 +68,51 @@ export class BrainServer {
                 content: [{ type: "text", text: `Successfully registered framework '${name}' with policy: ${JSON.stringify(result.memoryPolicy)}` }]
             };
         }
+    );
+
+    // Disaster Recovery Tools
+    this.server.tool(
+      "export_memory",
+      "Dumps Vector/Graph DB to a compressed archive.",
+      {},
+      async () => {
+        try {
+          const brainDir = join(this.baseDir, ".agent", "brain");
+          if (!existsSync(brainDir)) {
+            return { content: [{ type: "text", text: "Brain directory not found." }], isError: true };
+          }
+          const archivePath = join(this.baseDir, ".agent", "brain_export.zip");
+          const { exec } = await import("child_process");
+          const { promisify } = await import("util");
+          const execAsync = promisify(exec);
+          await execAsync(`cd ${this.baseDir} && zip -r ${archivePath} .agent/brain/`);
+          return { content: [{ type: "text", text: `Memory exported successfully to ${archivePath}` }] };
+        } catch (e: any) {
+          return { content: [{ type: "text", text: `Export failed: ${e.message}` }], isError: true };
+        }
+      }
+    );
+
+    this.server.tool(
+      "restore_memory",
+      "Restores Vector/Graph DB from a compressed archive.",
+      {
+         archivePath: z.string().describe("Path to the brain_export.zip file.")
+      },
+      async ({ archivePath }) => {
+        try {
+           if (!existsSync(archivePath)) {
+               return { content: [{ type: "text", text: `Archive not found at ${archivePath}` }], isError: true };
+           }
+           const { exec } = await import("child_process");
+           const { promisify } = await import("util");
+           const execAsync = promisify(exec);
+           await execAsync(`unzip -o ${archivePath} -d ${this.baseDir}`);
+           return { content: [{ type: "text", text: "Memory restored successfully." }] };
+        } catch (e: any) {
+           return { content: [{ type: "text", text: `Restore failed: ${e.message}` }], isError: true };
+        }
+      }
     );
 
     // Episodic Memory Tools

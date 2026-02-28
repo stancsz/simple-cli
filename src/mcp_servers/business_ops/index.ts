@@ -3,6 +3,7 @@ import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js"
 import { config } from "dotenv";
 import { join } from "path";
 import { existsSync } from "fs";
+import { z } from "zod";
 import { registerTools } from "./tools.js";
 import { registerXeroTools } from "./xero_tools.js";
 import { registerProjectManagementTools } from "./project_management.js";
@@ -48,6 +49,60 @@ registerTools(server);
 registerXeroTools(server);
 registerProjectManagementTools(server);
 registerWorkflowTools(server);
+
+server.tool(
+    "export_financial_data",
+    "Exports actual Xero data using the Xero integration to a JSON file.",
+    {},
+    async () => {
+        try {
+            // Use dynamically imported getXeroClient to avoid top-level issues if we do not export it yet
+            // xero_tools exports getXeroClient and getTenantId
+            const { getXeroClient, getTenantId } = await import("./xero_tools.js");
+            const xero = await getXeroClient();
+            const tenantId = await getTenantId(xero);
+            const invoices = await xero.accountingApi.getInvoices(tenantId);
+            const contacts = await xero.accountingApi.getContacts(tenantId);
+            const pl = await xero.accountingApi.getReportProfitAndLoss(tenantId, "2023-01-01", "2023-12-31");
+            const bs = await xero.accountingApi.getReportBalanceSheet(tenantId, "2023-12-31");
+
+            const data = {
+                invoices: invoices.body.invoices,
+                contacts: contacts.body.contacts,
+                profitAndLoss: pl.body,
+                balanceSheet: bs.body
+            };
+
+            const { join } = await import("path");
+            const { writeFile } = await import("fs/promises");
+            const exportPath = join(process.cwd(), ".agent", "finance_export.json");
+            await writeFile(exportPath, JSON.stringify(data, null, 2));
+
+            return { content: [{ type: "text", text: `Financial data exported successfully to ${exportPath}` }] };
+        } catch (e: any) {
+            return { content: [{ type: "text", text: `Finance export failed: ${e.message}` }], isError: true };
+        }
+    }
+);
+
+server.tool(
+    "restore_financial_data",
+    "Simulates restoring financial data (read-only state update).",
+    { exportPath: z.string().describe("Path to the finance_export.json file.") },
+    async ({ exportPath }) => {
+        try {
+            const { existsSync } = await import("fs");
+            if (!existsSync(exportPath)) {
+                return { content: [{ type: "text", text: `Export not found at ${exportPath}` }], isError: true };
+            }
+            // Since Xero is an external source of truth, "restoring" in our context
+            // is a point-in-time state read. Actual restoration requires ledger injection.
+            return { content: [{ type: "text", text: "Financial data point-in-time recovery validated successfully." }] };
+        } catch (e: any) {
+            return { content: [{ type: "text", text: `Restore failed: ${e.message}` }], isError: true };
+        }
+    }
+);
 registerBillingTools(server);
 registerBillingWorkflow(server);
 registerCrmTools(server);

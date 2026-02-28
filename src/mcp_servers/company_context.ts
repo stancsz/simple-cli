@@ -42,6 +42,49 @@ export class CompanyContextServer {
   }
 
   private setupTools() {
+    // Disaster Recovery Tools
+    this.server.tool(
+        "export_tenant_rag",
+        "Exports all tenant RAG data to a compressed archive.",
+        {},
+        async () => {
+          try {
+            const companiesDir = join(process.cwd(), ".agent", "companies");
+            if (!existsSync(companiesDir)) {
+              return { content: [{ type: "text", text: "Companies directory not found." }], isError: true };
+            }
+            const archivePath = join(process.cwd(), ".agent", "companies_export.zip");
+            const { exec } = await import("child_process");
+            const { promisify } = await import("util");
+            const execAsync = promisify(exec);
+            await execAsync(`cd ${process.cwd()} && zip -r ${archivePath} .agent/companies/`);
+            return { content: [{ type: "text", text: `Tenant RAG data exported to ${archivePath}` }] };
+          } catch (e: any) {
+            return { content: [{ type: "text", text: `Export failed: ${e.message}` }], isError: true };
+          }
+        }
+    );
+
+    this.server.tool(
+        "restore_tenant_rag",
+        "Restores tenant RAG data from a compressed archive.",
+        { archivePath: z.string().describe("Path to the companies_export.zip file.") },
+        async ({ archivePath }) => {
+            try {
+                if (!existsSync(archivePath)) {
+                    return { content: [{ type: "text", text: `Archive not found at ${archivePath}` }], isError: true };
+                }
+                const { exec } = await import("child_process");
+                const { promisify } = await import("util");
+                const execAsync = promisify(exec);
+                await execAsync(`unzip -o ${archivePath} -d ${process.cwd()}`);
+                return { content: [{ type: "text", text: "Tenant RAG data restored successfully." }] };
+            } catch (e: any) {
+                return { content: [{ type: "text", text: `Restore failed: ${e.message}` }], isError: true };
+            }
+        }
+    );
+
     this.server.tool(
       "load_company_context",
       "Ingest documents from the company's docs directory into the vector database.",
