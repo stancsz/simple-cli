@@ -2,99 +2,102 @@ import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
 import { EpisodicMemory } from "../../../brain/episodic.js";
 import { CorporatePolicy } from "../../../brain/schemas.js";
-import { OpenCoworkServer } from "../../opencowork/index.js";
 import { createLLM } from "../../../llm.js";
 import { dirname } from "path";
+import { MCP } from "../../../mcp.js";
+import * as crypto from "crypto";
 
 // Initialize Episodic Memory (singleton-ish for this module)
 const baseDir = process.env.JULES_AGENT_DIR ? dirname(process.env.JULES_AGENT_DIR) : process.cwd();
 const episodic = new EpisodicMemory(baseDir);
 
-async function getLatestPolicy(company: string = "default"): Promise<CorporatePolicy | null> {
-    const memories = await episodic.recall("corporate_policy", 10, company, "corporate_policy");
-    if (!memories || memories.length === 0) return null;
-
-    const policies = memories
-        .map(m => {
-            try { return JSON.parse(m.agentResponse) as CorporatePolicy; } catch { return null; }
-        })
-        .filter((p): p is CorporatePolicy => p !== null && p.isActive)
-        .sort((a, b) => b.version - a.version);
-
-    return policies.length > 0 ? policies[0] : null;
-}
-
 export function registerContractNegotiationTools(server: McpServer) {
     server.tool(
-        "simulate_contract_negotiation",
+        "contract_negotiation_simulation",
         "Simulate a contract negotiation using a multi-agent swarm.",
         {
-            proposal_draft: z.string().describe("The draft proposal to negotiate."),
-            client_profile: z.string().describe("The profile of the client, e.g., 'budget-conscious startup' or 'enterprise'."),
-            negotiation_parameters: z.object({
-                max_rounds: z.number().describe("The maximum number of negotiation rounds."),
-                temperature: z.number().describe("The temperature parameter for LLM generations.")
-            }).describe("Parameters governing the simulation.")
+            proposal_summary: z.string().describe("The draft proposal to negotiate."),
+            client_context: z.object({
+                budget: z.number().optional().describe("Client's budget."),
+                industry: z.string().optional().describe("Client's industry."),
+                priorities: z.array(z.string()).optional().describe("Client's priorities.")
+            }).describe("Context about the client including budget, industry, and priorities.")
         },
-        async ({ proposal_draft, client_profile, negotiation_parameters }) => {
+        async ({ proposal_summary, client_context }) => {
             try {
                 await episodic.init();
-                const activePolicy = await getLatestPolicy();
-                const policyStr = activePolicy ? JSON.stringify(activePolicy.parameters) : "None";
 
-                const orchestrator = new OpenCoworkServer();
+                const mcp = new MCP();
+                await mcp.init();
 
-                // Hire the swarm
-                await orchestrator.hireWorker(
-                    "Sales Agent: Maximize Total Contract Value (TCV) and long-term client value. Propose terms that benefit the agency.",
-                    "sales_agent"
-                );
-                await orchestrator.hireWorker(
-                    `Client Proxy Agent: Simulate the client's interests based on this profile: ${client_profile}. Advocate for lower costs, expanded scope, and favorable timelines.`,
-                    "client_proxy_agent"
-                );
-                await orchestrator.hireWorker(
-                    `Legal/Finance Agent: Enforce corporate policy constraints. Current policy parameters: ${policyStr}. Reject terms that drop below minimum margin or violate risk tolerance.`,
-                    "legal_finance_agent"
-                );
+                // Fetch active corporate policy via the get_active_policy tool from the Brain MCP (or business_ops if that's where it runs, but instruction says brain, though it's registered in business_ops. Actually the server doesn't matter much if we have the client. We'll try brain first, fallback to business_ops)
+                let policyStr = "None";
+                try {
+                    const brainClient = mcp.getClient("brain");
+                    if (brainClient) {
+                        const policyRes = await brainClient.callTool({ name: "get_active_policy", arguments: {} });
+                        if (policyRes && policyRes.content && policyRes.content[0].text) {
+                            const parsedPolicy = JSON.parse(policyRes.content[0].text);
+                            policyStr = JSON.stringify(parsedPolicy.parameters || parsedPolicy);
+                        }
+                    }
+                } catch (e) {
+                    // Fallback to business_ops if brain doesn't have it
+                    try {
+                        const opsClient = mcp.getClient("business_ops");
+                        if (opsClient) {
+                            const policyRes = await opsClient.callTool({ name: "get_active_policy", arguments: {} });
+                            if (policyRes && policyRes.content && policyRes.content[0].text) {
+                                const parsedPolicy = JSON.parse(policyRes.content[0].text);
+                                policyStr = JSON.stringify(parsedPolicy.parameters || parsedPolicy);
+                            }
+                        }
+                    } catch (e2) {
+                        console.warn("Failed to fetch active policy:", e2);
+                    }
+                }
 
-                let current_terms = proposal_draft;
+                const clientContextStr = JSON.stringify(client_context);
+
+                // Query Brain for past negotiation patterns
+                const pastPatterns = await episodic.recall("swarm_negotiation_pattern", 3, "default", "negotiation_pattern");
+                let pastPatternsStr = "None";
+                if (pastPatterns && pastPatterns.length > 0) {
+                    pastPatternsStr = pastPatterns.map((p: any) => p.agentResponse).join("\n\n");
+                }
+
+                // Prepare negotiation task description for Swarm orchestrator
+                const taskDescription = `
+                    Simulate a 3-round contract negotiation using specialized sub-agents.
+                    Agents involved:
+                    1. Sales Agent: Maximize Total Contract Value (TCV). Use past patterns for strategy: ${pastPatternsStr}.
+                    2. Client Proxy Agent: Advocate for lower costs based on profile: ${clientContextStr}.
+                    3. Legal/Finance Agent: Enforce policy constraints: ${policyStr}.
+
+                    Current Draft:
+                    ${proposal_summary}
+
+                    Execute a multi-turn dialogue where Sales pitches, Client Proxy counters, and Legal/Finance reviews.
+                    Return the full transcript and the final terms.
+                `;
+
+                // Use the existing swarm.negotiate_task interface
+                const swarmClient = mcp.getClient("swarm");
+                if (!swarmClient) {
+                    throw new Error("Swarm MCP client not found.");
+                }
+
+                const negotiateRes = await swarmClient.callTool({
+                    name: "negotiate_task",
+                    arguments: {
+                        task_description: taskDescription,
+                        simulation_mode: true
+                    }
+                });
+
                 let negotiation_history = "Negotiation History:\n\n";
-                let consensus = false;
-
-                const rounds = Math.min(negotiation_parameters.max_rounds, 5); // Cap at 5 rounds
-
-                for (let i = 1; i <= rounds; i++) {
-                    negotiation_history += `--- ROUND ${i} ---\n`;
-
-                    // 1. Sales Agent pitches/adjusts terms
-                    const salesTask = `Review the current terms: \n${current_terms}\n\nPitch these to the client or adjust them to maximize TCV while remaining reasonable. Output your pitch and the proposed terms.`;
-                    const salesRes = await orchestrator.delegateTask("sales_agent", salesTask);
-                    const salesMsg = salesRes.content[0].text;
-                    negotiation_history += `SALES: ${salesMsg}\n\n`;
-                    current_terms = salesMsg;
-
-                    // 2. Client Proxy responds
-                    const clientTask = `The sales agent has proposed the following: \n${salesMsg}\n\nAs the client proxy (${client_profile}), evaluate this. If acceptable, say 'I ACCEPT'. If not, propose a counter-offer.`;
-                    const clientRes = await orchestrator.delegateTask("client_proxy_agent", clientTask);
-                    const clientMsg = clientRes.content[0].text;
-                    negotiation_history += `CLIENT PROXY: ${clientMsg}\n\n`;
-
-                    if (clientMsg.includes("I ACCEPT")) {
-                        consensus = true;
-                        break;
-                    }
-                    current_terms = clientMsg;
-
-                    // 3. Legal/Finance reviews counter
-                    const legalTask = `The client has countered with: \n${clientMsg}\n\nEvaluate this against policy (${policyStr}). If it violates policy, reject it and state the required correction. If it is acceptable, say 'APPROVED'.`;
-                    const legalRes = await orchestrator.delegateTask("legal_finance_agent", legalTask);
-                    const legalMsg = legalRes.content[0].text;
-                    negotiation_history += `LEGAL/FINANCE: ${legalMsg}\n\n`;
-
-                    if (legalMsg.includes("reject") || legalMsg.includes("violation") || !legalMsg.includes("APPROVED")) {
-                        current_terms = legalMsg; // Sales must adjust based on this next round
-                    }
+                if (negotiateRes && negotiateRes.content && negotiateRes.content[0].text) {
+                    negotiation_history += negotiateRes.content[0].text;
                 }
 
                 // Synthesis Step
@@ -104,17 +107,21 @@ export function registerContractNegotiationTools(server: McpServer) {
                 NEGOTIATION HISTORY:
                 ${negotiation_history}
 
-                PROPOSAL DRAFT (Original):
-                ${proposal_draft}
+                PROPOSAL SUMMARY (Original):
+                ${proposal_summary}
 
                 Synthesize the final negotiated outcome. If consensus was not reached, output the best final position of the agency.
-                Return ONLY a JSON object with the following structure:
+                Return ONLY a JSON object with the exact following structure:
                 {
-                    "pricing_structure": "...",
-                    "scope_adjustments": "...",
-                    "timeline": "...",
-                    "key_risks": "...",
-                    "approval_confidence_score": 0.0 to 1.0 (number)
+                    "optimized_terms": {
+                        "pricing": "...",
+                        "scope": "...",
+                        "timeline": "...",
+                        "liability": "..."
+                    },
+                    "simulation_transcript": "...",
+                    "confidence_score": 0.0 to 1.0,
+                    "policy_compliance_check": "..."
                 }`;
 
                 const genResponse = await llm.generate(synthesisPrompt, []);
@@ -133,17 +140,22 @@ export function registerContractNegotiationTools(server: McpServer) {
                 }
 
                 const final_output = {
-                    status: consensus ? "Consensus Reached" : "Max Rounds Exceeded",
-                    negotiated_terms: genData,
-                    history_preview: negotiation_history.substring(0, 500) + "..."
+                    optimized_terms: genData.optimized_terms || {},
+                    simulation_transcript: negotiation_history,
+                    confidence_score: genData.confidence_score || 0,
+                    policy_compliance_check: genData.policy_compliance_check || "Failed"
                 };
+
+                // Idempotency: deterministic hash for storage key
+                const hashInput = proposal_summary + JSON.stringify(client_context);
+                const deterministicId = crypto.createHash("sha256").update(hashInput).digest("hex");
 
                 // Store in Brain
                 await episodic.store(
-                    `negotiation_${Date.now()}`,
-                    `Negotiated contract terms for client profile: ${client_profile}`,
+                    `negotiation_${deterministicId}`,
+                    `Negotiated contract terms for client profile: ${clientContextStr}`,
                     JSON.stringify(final_output),
-                    ["negotiation_pattern", "contract", "phase_26"],
+                    ["negotiation_pattern", "contract", "phase_26", "swarm_negotiation_pattern"],
                     "default",
                     undefined,
                     false,

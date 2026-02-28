@@ -1,36 +1,38 @@
-# Contract Negotiation SOP
+# SOP: Autonomous Contract Negotiation Simulation
 
-## Purpose
-To outline the autonomous, swarm-based contract negotiation simulation process within the Business Operations MCP. This ensures that proposals and contract terms are optimized for maximum agency value while ensuring high client satisfaction and strict adherence to corporate policies.
+## Overview
+This Standard Operating Procedure details the `contract_negotiation_simulation` process executed by the `business_ops` MCP server. This tool leverages the Hive Mind multi-agent orchestration to simulate contract negotiations prior to client presentation.
 
-## Scope
-This process covers the simulation and generation of negotiated terms starting from an initial proposal draft and concluding with a formalized set of optimized terms ready for final client review.
+## Pipeline Integration
+1. **Proposal Generation**: The `generate_client_proposal` tool creates a tailored proposal document based on corporate strategy and client needs.
+2. **Negotiation Simulation (This SOP)**: The proposal and client context are fed into a simulated swarm environment to battle-test the terms and identify optimal pricing and scope boundaries.
+3. **Client Presentation**: The optimized terms and confidence scores guide the final human/agent presentation to the client.
 
-## Architecture & Swarm Orchestration
-The simulation uses `OpenCoworkServer` to instantiate a multi-agent swarm with three specialized personas:
+## Simulation Process
 
-1.  **Sales Agent**: Goal: Maximize Total Contract Value (TCV) and long-term client value.
-2.  **Client Proxy Agent**: Goal: Simulate the client's interests by advocating for lower costs, expanded scope, and favorable timelines based on industry data.
-3.  **Legal/Finance Agent**: Goal: Enforce corporate policy constraints (e.g., minimum margin, liability caps, risk tolerance).
+The simulation runs for a fixed number of rounds (typically 3) involving the following specialized sub-agents:
 
-## Workflow
+### 1. Sales Agent
+* **Objective**: Maximize Total Contract Value (TCV) and foster long-term client relationships.
+* **Input**: Original proposal summary, past successful negotiation patterns (`swarm_negotiation_pattern` from Brain).
+* **Role**: Pitches the terms and adjusts offers based on client pushback.
 
-1.  **Initialization**:
-    *   The `simulate_contract_negotiation` tool is triggered with a `proposal_draft`, a `client_profile`, and `negotiation_parameters` (e.g., max rounds, temperature).
-    *   The active `CorporatePolicy` is fetched from Episodic Memory to inform the Legal/Finance agent's constraints.
-2.  **Swarm Setup**:
-    *   The internal OpenCowork orchestrator hires the three specialized agents, initializing them with their specific goals and context.
-3.  **Negotiation Loop (3-5 Rounds)**:
-    *   **Round Start**: The Sales Agent reviews the current draft and proposes terms or adjustments.
-    *   **Client Response**: The Client Proxy Agent evaluates the proposed terms against the client profile and counters.
-    *   **Policy Check**: The Legal/Finance Agent reviews the counter-offer to ensure it meets minimum margins and risk constraints.
-    *   *Consensus Check*: The loop repeats until consensus is reached or the maximum number of rounds is exhausted.
-4.  **Outcome Synthesis**:
-    *   A final synthesis step generates a structured JSON output (`negotiated_terms`) containing:
-        *   `pricing_structure`
-        *   `scope_adjustments`
-        *   `timeline`
-        *   `key_risks`
-        *   `approval_confidence_score`
-5.  **Memory Storage**:
-    *   The outcome is stored in Episodic Memory under the type `negotiation_pattern` for future recall and meta-learning.
+### 2. Client Proxy Agent
+* **Objective**: Represent the client's interests and financial constraints.
+* **Input**: Client profile/context (Budget, Industry, Priorities).
+* **Role**: Evaluates the Sales Agent's pitch, pushes for lower costs/better scope, and submits counter-offers.
+
+### 3. Legal/Finance Agent
+* **Objective**: Enforce the `CorporatePolicy` (from the Federated Policy Engine).
+* **Input**: Active Corporate Policy parameters (e.g., minimum margin, maximum liability).
+* **Role**: Vetoes any counter-offers that violate internal policy constraints, forcing the Sales Agent to formulate a new strategy.
+
+## Synthesis & Output
+After the simulation concludes, an LLM synthesizes the transcript into a structured outcome:
+* `optimized_terms`: The final agreed-upon (or best fallback) terms encompassing pricing, scope, timeline, and liability.
+* `simulation_transcript`: The dialogue history for human review.
+* `confidence_score`: A probability score (0.0 to 1.0) of the client accepting these terms.
+* `policy_compliance_check`: Verification that the final terms adhere to corporate policy.
+
+## Episodic Memory Storage
+The results of the negotiation simulation are stored back into the Brain (Episodic Memory) under the `swarm_negotiation_pattern` tag. This creates a recursive feedback loop, allowing future Sales Agents to learn from past successful and failed negotiation strategies.
