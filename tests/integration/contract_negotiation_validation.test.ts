@@ -79,25 +79,24 @@ describe('Contract Negotiation Validation (Phase 26)', () => {
         // Mock Final Synthesis LLM
         mocks.mockGenerate.mockResolvedValueOnce({
             message: JSON.stringify({
-                pricing_structure: "$30,000 MVP",
-                scope_adjustments: "Reduced scope to meet budget",
-                timeline: "2 months",
-                key_risks: "None",
-                approval_confidence_score: 0.95
+                pre_approved_terms: "$30,000 MVP",
+                simulated_concessions: "Reduced scope to meet budget",
+                final_margin: 0.4,
+                policy_compliance_status: "Compliant"
             })
         });
 
         const result = await simulateContractNegotiation({
-            proposal_draft: "Initial draft: $50,000 full scope.",
-            client_profile: "budget-conscious startup",
-            negotiation_parameters: { max_rounds: 3, temperature: 0.7 }
+            proposal_summary: "Initial draft: $50,000 full scope.",
+            client_context: "budget-conscious startup",
+            deal_value: 50000
         });
 
         expect(result.isError).toBeUndefined();
 
         const finalOutput = JSON.parse(result.content[0].text);
         expect(finalOutput.status).toBe("Consensus Reached");
-        expect(finalOutput.negotiated_terms.pricing_structure).toBe("$30,000 MVP");
+        expect(finalOutput.negotiated_terms.pre_approved_terms).toBe("$30,000 MVP");
 
         // Verify swarm orchestration
         expect(mocks.mockHireWorker).toHaveBeenCalledTimes(3);
@@ -130,27 +129,26 @@ describe('Contract Negotiation Validation (Phase 26)', () => {
         // Mock Final Synthesis LLM
         mocks.mockGenerate.mockResolvedValueOnce({
             message: JSON.stringify({
-                pricing_structure: "Standard",
-                scope_adjustments: "None",
-                timeline: "Unknown",
-                key_risks: "Client insists on unlimited liability, unacceptable.",
-                approval_confidence_score: 0.1
+                pre_approved_terms: "Standard",
+                simulated_concessions: "None",
+                final_margin: 0.5,
+                policy_compliance_status: "Violated"
             })
         });
 
         const result = await simulateContractNegotiation({
-            proposal_draft: "Standard terms.",
-            client_profile: "enterprise heavyweight",
-            negotiation_parameters: { max_rounds: 2, temperature: 0.7 }
+            proposal_summary: "Standard terms.",
+            client_context: "enterprise heavyweight",
+            deal_value: 100000
         });
 
         expect(result.isError).toBeUndefined();
 
         const finalOutput = JSON.parse(result.content[0].text);
         expect(finalOutput.status).toBe("Max Rounds Exceeded");
-        expect(finalOutput.negotiated_terms.approval_confidence_score).toBe(0.1);
+        expect(finalOutput.negotiated_terms.policy_compliance_status).toBe("Violated");
 
-        // Verify swarm orchestration (2 rounds * 3 agents = 6 delegations)
-        expect(mocks.mockDelegateTask).toHaveBeenCalledTimes(6);
+        // Verify swarm orchestration (3 rounds * 3 agents = 9 delegations)
+        expect(mocks.mockDelegateTask).toHaveBeenCalledTimes(9);
     });
 });
