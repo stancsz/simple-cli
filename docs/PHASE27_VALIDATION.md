@@ -9,7 +9,7 @@ This document outlines the comprehensive validation procedures for the Enterpris
 **Tool**: `simulate_regional_outage` (Security Monitor MCP)
 **Procedure**:
 1. Execute the tool with parameters: `region: "us-east-1"`, `failure_type: "node"`, `duration_seconds: 60`.
-2. The tool utilizes a mock Kubernetes client to simulate a control plane response representing pod eviction and service restart.
+2. The tool uses `@kubernetes/client-node` to directly interact with the cluster, cordoning nodes or deleting pods to simulate the outage.
 3. Validate that the recovery time metric falls within the 1-hour SLA.
 4. Verify that an episodic memory of type `resilience_event` is logged, confirming the system is tracking failover metrics for later analysis in health reports.
 
@@ -18,7 +18,7 @@ This document outlines the comprehensive validation procedures for the Enterpris
 **Tool**: `run_penetration_test` (Security Monitor MCP)
 **Procedure**:
 1. Execute the tool with parameters: `target_url: "https://api.agency.com"`, `attack_vectors: ["sqli", "xss", "credential_stuffing"]`.
-2. The tool systematically injects synthetic anomalous payloads mimicking these attacks and passes them directly to the anomaly detection thresholds defined in `.agent/security_policy.json`.
+2. The tool systematically injects synthetic anomalous payloads mimicking these attacks by sending real HTTP requests via `axios` against the endpoints (or `INTERNAL_API_BASE`).
 3. Validate that the anomaly flags trigger (e.g., error rate > 5%, high latency events).
 4. Verify an automated compliance report is generated indicating whether the monitoring system correctly registered the intrusion attempts.
 

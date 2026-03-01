@@ -67,3 +67,16 @@ The Security Monitor is registered in `mcp.json` and can be invoked autonomously
 - **Corporate Brain**: Security events are stored as `security_event` types in the Episodic Memory, allowing the C-Suite personas and other swarms to recall and react to security incidents during Board Meetings or strategic planning.
 - **Metrics Logging**: Integrates with the `logMetric` utility to feed data into the Health Monitor and Dashboard.
 - **GitHub**: Integrates with the GitHub CLI (`gh`) to create PRs, leveraging the existing authentication setup.
+
+### 5. `simulate_regional_outage`
+Simulates a regional failure in our multi-region Kubernetes setup.
+- **Inputs**: Requires `region` (e.g., 'us-east-1'), `failure_type` ('network', 'node', 'zone'), and `duration_seconds`.
+- **Behavior**: Uses the Kubernetes client (`@kubernetes/client-node`) to cordon nodes or delete pods, tracking recovery time and logging failover metrics.
+- **Side-effects**: Logs metrics to the system (`regional_failover_recovery_time`) and stores an episodic memory event (`resilience_event`).
+
+### 6. `run_penetration_test`
+Simulates common attacks against API endpoints.
+- **Inputs**: Requires `target_url` and `attack_vectors` (e.g., 'sqli', 'xss', 'credential_stuffing').
+- **Behavior**: Uses `axios` to send malicious payloads to our own endpoints (configured via `INTERNAL_API_BASE`). It evaluates responses against thresholds to verify detection capabilities and generates a compliance report via LLM.
+- **Outputs**: Markdown report with detection results and triggered alerts.
+- **Side-effects**: Stores an episodic memory event (`security_event`) and potentially triggers metric alarms.
