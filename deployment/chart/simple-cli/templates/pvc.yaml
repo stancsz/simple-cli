@@ -1,37 +1,56 @@
-{{- if .Values.brain.persistence.enabled }}
+{{- $regions := list "" -}}
+{{- if and .Values.multiRegion.enabled (gt (len .Values.multiRegion.regions) 0) -}}
+  {{- $regions = .Values.multiRegion.regions -}}
+{{- end -}}
+
+{{- range $region := $regions }}
+{{- $regionSuffix := "" -}}
+{{- if $region -}}
+  {{- $regionSuffix = printf "-%s" $region -}}
+{{- end -}}
+
+{{- if $.Values.brain.persistence.enabled }}
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
-  name: {{ .Release.Name }}-brain-pvc
-  namespace: {{ .Release.Namespace }}
+  name: {{ $.Release.Name }}-brain-pvc{{ $regionSuffix }}
+  namespace: {{ $.Release.Namespace }}
   labels:
-    app: {{ .Release.Name }}-brain
+    app: {{ $.Release.Name }}-brain
+    {{- if $region }}
+    region: {{ $region }}
+    {{- end }}
 spec:
   accessModes:
-    - {{ .Values.brain.persistence.accessMode }}
+    - {{ $.Values.brain.persistence.accessMode }}
   resources:
     requests:
-      storage: {{ .Values.brain.persistence.size }}
-  {{- if .Values.brain.persistence.storageClass }}
-  storageClassName: {{ .Values.brain.persistence.storageClass }}
+      storage: {{ $.Values.brain.persistence.size }}
+  {{- if $.Values.brain.persistence.storageClass }}
+  storageClassName: {{ $.Values.brain.persistence.storageClass }}
   {{- end }}
 {{- end }}
 ---
-{{- if .Values.agent.persistence.enabled }}
+{{- if $.Values.agent.persistence.enabled }}
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
-  name: {{ .Release.Name }}-agent-pvc
-  namespace: {{ .Release.Namespace }}
+  name: {{ $.Release.Name }}-agent-pvc{{ $regionSuffix }}
+  namespace: {{ $.Release.Namespace }}
   labels:
-    app: {{ .Release.Name }}-agent
+    app: {{ $.Release.Name }}-agent
+    {{- if $region }}
+    region: {{ $region }}
+    {{- end }}
 spec:
   accessModes:
-    - {{ .Values.agent.persistence.accessMode }}
+    - {{ $.Values.agent.persistence.accessMode }}
   resources:
     requests:
-      storage: {{ .Values.agent.persistence.size }}
-  {{- if .Values.agent.persistence.storageClass }}
-  storageClassName: {{ .Values.agent.persistence.storageClass }}
+      storage: {{ $.Values.agent.persistence.size }}
+  {{- if $.Values.agent.persistence.storageClass }}
+  storageClassName: {{ $.Values.agent.persistence.storageClass }}
   {{- end }}
+{{- end }}
+---
 {{- end }}

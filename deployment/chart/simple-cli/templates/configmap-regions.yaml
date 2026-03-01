@@ -1,0 +1,17 @@
+{{- if and .Values.multiRegion.enabled (gt (len .Values.multiRegion.regions) 0) }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ .Release.Name }}-regions-config
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app: {{ .Release.Name }}
+data:
+  regions.json: |
+    {
+      "enabled": {{ .Values.multiRegion.enabled }},
+      "regions": {{ toJson .Values.multiRegion.regions }},
+      "failoverEnabled": {{ .Values.multiRegion.failover.enabled }},
+      "geoLoadBalancing": {{ .Values.multiRegion.loadBalancing.geo }}
+    }
+{{- end }}

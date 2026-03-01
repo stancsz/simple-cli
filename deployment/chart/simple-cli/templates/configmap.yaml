@@ -1,17 +1,27 @@
+{{- $regions := list "" -}}
+{{- if and .Values.multiRegion.enabled (gt (len .Values.multiRegion.regions) 0) -}}
+  {{- $regions = .Values.multiRegion.regions -}}
+{{- end -}}
+
+{{- range $region := $regions }}
+{{- $regionSuffix := "" -}}
+{{- if $region -}}
+  {{- $regionSuffix = printf "-%s" $region -}}
+{{- end -}}
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: {{ .Release.Name }}-config
-  namespace: {{ .Release.Namespace }}
+  name: {{ $.Release.Name }}-config{{ $regionSuffix }}
+  namespace: {{ $.Release.Namespace }}
 data:
   mcp.json: |
     {
       "mcpServers": {
         "brain": {
-          "url": "http://{{ .Release.Name }}-brain:{{ .Values.brain.service.port }}/sse"
+          "url": "http://{{ $.Release.Name }}-brain{{ $regionSuffix }}:{{ $.Values.brain.service.port }}/sse"
         },
         "health_monitor": {
-          "url": "http://localhost:{{ .Values.healthMonitor.port }}/sse"
+          "url": "http://localhost:{{ $.Values.healthMonitor.port }}/sse"
         },
         "filesystem": {
           "command": "node",
@@ -23,3 +33,5 @@ data:
         }
       }
     }
+---
+{{- end }}

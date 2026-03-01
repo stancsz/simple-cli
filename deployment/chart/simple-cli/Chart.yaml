@@ -2,5 +2,5 @@ apiVersion: v2
 name: simple-cli
 description: A Helm chart for deploying the Simple-CLI Digital Agency
 type: application
-version: 0.1.1
+version: 1.2.0
 appVersion: "1.0.0"

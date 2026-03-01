@@ -28,6 +28,52 @@ The centralized memory system (LanceDB + Semantic Graph).
 *   **Networking:**
     *   Exposes port `3002` (Brain API/SSE).
 
+## Multi-Region High Availability
+
+The chart supports multi-region deployment with automated failover and geographic load balancing to ensure enterprise resilience.
+
+### Architecture
+
+When `multiRegion.enabled` is set to `true`, the deployment automatically scales to a multi-region topology within the cluster (or across a federated cluster).
+
+```mermaid
+graph TD
+    Client[Client Traffic] --> GLB[Global Load Balancer / Route53]
+
+    subgraph Region: us-east-1
+        GLB -->|Primary/Active| IngressEast[Ingress]
+        IngressEast --> ServiceEast[Agent Service]
+        ServiceEast --> AgentEast[Agent StatefulSet]
+        AgentEast --> BrainEast[Brain StatefulSet]
+        AgentEast --> PVCEast[(us-east-1 PVC)]
+    end
+
+    subgraph Region: eu-west-1
+        GLB -->|Failover/Passive| IngressWest[Ingress]
+        IngressWest --> ServiceWest[Agent Service]
+        ServiceWest --> AgentWest[Agent StatefulSet]
+        AgentWest --> BrainWest[Brain StatefulSet]
+        AgentWest --> PVCWest[(eu-west-1 PVC)]
+    end
+```
+
+### Configuration
+
+Enable multi-region in your `values.yaml`:
+
+```yaml
+multiRegion:
+  enabled: true
+  regions: ["us-east-1", "eu-west-1"]
+  failover:
+    enabled: true
+  loadBalancing:
+    geo: false # Set to true for geographic routing, false for active-passive
+```
+
+*   **StatefulSets per Region:** The chart automatically iterates over the `regions` list and generates a dedicated `StatefulSet`, `Service`, and `PVC` per region, using `nodeAffinity` (`topology.kubernetes.io/region`) to schedule pods correctly.
+*   **Global Service:** A global `LoadBalancer` service (`service-global.yaml`) and an `Ingress` (`ingress-multiregion.yaml`) are created. They utilize `external-dns` annotations to configure AWS Route53 (or compatible providers) for either geographic routing or active-passive failover between the regional endpoints.
+
 ## Multi-Tenancy
 
 Multi-tenancy is achieved via Namespace isolation and the `company` parameter.

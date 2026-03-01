@@ -1,56 +1,92 @@
+{{- $regions := list "" -}}
+{{- if and .Values.multiRegion.enabled (gt (len .Values.multiRegion.regions) 0) -}}
+  {{- $regions = .Values.multiRegion.regions -}}
+{{- end -}}
+
+{{- range $region := $regions }}
+{{- $regionSuffix := "" -}}
+{{- if $region -}}
+  {{- $regionSuffix = printf "-%s" $region -}}
+{{- end -}}
 apiVersion: apps/v1
 kind: StatefulSet
 metadata:
-  name: {{ .Release.Name }}-brain
-  namespace: {{ .Release.Namespace }}
+  name: {{ $.Release.Name }}-brain{{ $regionSuffix }}
+  namespace: {{ $.Release.Namespace }}
   labels:
-    app: {{ .Release.Name }}-brain
+    app: {{ $.Release.Name }}-brain
+    {{- if $region }}
+    region: {{ $region }}
+    {{- end }}
 spec:
-  serviceName: {{ .Release.Name }}-brain-headless
+  serviceName: {{ $.Release.Name }}-brain-headless{{ $regionSuffix }}
   replicas: 1
   selector:
     matchLabels:
-      app: {{ .Release.Name }}-brain
+      app: {{ $.Release.Name }}-brain
+      {{- if $region }}
+      region: {{ $region }}
+      {{- end }}
   template:
     metadata:
       labels:
-        app: {{ .Release.Name }}-brain
+        app: {{ $.Release.Name }}-brain
+        {{- if $region }}
+        region: {{ $region }}
+        {{- end }}
     spec:
-      {{- if .Values.serviceAccount.create }}
-      serviceAccountName: {{ .Values.serviceAccount.name | default (printf "%s-sa" .Release.Name) }}
+      {{- if $region }}
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+              - matchExpressions:
+                  - key: topology.kubernetes.io/region
+                    operator: In
+                    values:
+                      - {{ $region }}
+      {{- end }}
+      {{- if $.Values.serviceAccount.create }}
+      serviceAccountName: {{ $.Values.serviceAccount.name | default (printf "%s-sa" $.Release.Name) }}
       {{- end }}
       containers:
         - name: brain
-          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
-          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          image: "{{ $.Values.image.repository }}:{{ $.Values.image.tag }}"
+          imagePullPolicy: {{ $.Values.image.pullPolicy }}
           command: ["node", "dist/mcp_servers/brain/index.js"]
           env:
             - name: PORT
-              value: "{{ .Values.brain.port }}"
+              value: "{{ $.Values.brain.port }}"
+            {{- if $region }}
+            - name: REGION
+              value: "{{ $region }}"
+            {{- end }}
           ports:
-            - containerPort: {{ .Values.brain.port }}
+            - containerPort: {{ $.Values.brain.port }}
           livenessProbe:
             httpGet:
               path: /health
-              port: {{ .Values.brain.port }}
+              port: {{ $.Values.brain.port }}
             initialDelaySeconds: 15
             periodSeconds: 20
           readinessProbe:
             httpGet:
               path: /health
-              port: {{ .Values.brain.port }}
+              port: {{ $.Values.brain.port }}
             initialDelaySeconds: 5
             periodSeconds: 10
           volumeMounts:
             - name: brain-storage
               mountPath: /app/.agent/brain
           resources:
-            {{- toYaml .Values.brain.resources | nindent 12 }}
+            {{- toYaml $.Values.brain.resources | nindent 12 }}
       volumes:
         - name: brain-storage
-        {{- if .Values.brain.persistence.enabled }}
+        {{- if $.Values.brain.persistence.enabled }}
           persistentVolumeClaim:
-            claimName: {{ .Release.Name }}-brain-pvc
+            claimName: {{ $.Release.Name }}-brain-pvc{{ $regionSuffix }}
         {{- else }}
           emptyDir: {}
         {{- end }}
+---
+{{- end }}

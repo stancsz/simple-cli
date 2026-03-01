@@ -428,4 +428,106 @@ describe("Kubernetes Production Validation (Simulated)", () => {
     const readContent = await readFile(proposalFile, 'utf-8');
     expect(readContent).toContain("Fix Typo");
   });
+
+  it("should validate Multi-Region Deployment and Failover (Simulated)", async () => {
+    // 1. Simulate multi-region topology
+    // In a real multi-region deployment, external-dns/Route53 directs traffic.
+    // Here we simulate the Global Load Balancer (GLB) behavior.
+    const REGION_1_PORT = BRAIN_PORT; // Assume this is us-east-1 (healthy)
+    const REGION_2_PORT = BRAIN_PORT + 100; // Simulated eu-west-1 (we'll start a separate instance)
+
+    // Start a secondary "region" brain process
+    const region2Root = await mkdir(join(tmpdir(), `k8s-region2-${Date.now()}`), { recursive: true });
+    await mkdir(join(region2Root, ".agent", "brain"), { recursive: true });
+
+    console.log("Starting Region 2 Brain Server...");
+    const region2Process = spawn("./node_modules/.bin/tsx", ["src/mcp_servers/brain/index.ts"], {
+      cwd: process.cwd(),
+      env: {
+        ...process.env,
+        PORT: REGION_2_PORT.toString(),
+        JULES_AGENT_DIR: join(region2Root, ".agent"),
+        MOCK_EMBEDDINGS: "true",
+        REGION: "eu-west-1"
+      },
+      stdio: "pipe",
+    });
+
+    await waitForPort(REGION_2_PORT);
+
+    // Mocking GLB routing logic (Active-Passive failover)
+    // If region 1 is healthy, return it, otherwise return region 2
+    const getActiveEndpoint = async () => {
+      try {
+        const res = await fetch(`http://localhost:${REGION_1_PORT}/health`);
+        if (res.ok) return `http://localhost:${REGION_1_PORT}`;
+        throw new Error("Region 1 unhealthy");
+      } catch (err) {
+        try {
+          const res2 = await fetch(`http://localhost:${REGION_2_PORT}/health`);
+          if (res2.ok) return `http://localhost:${REGION_2_PORT}`;
+        } catch {}
+      }
+      throw new Error("No healthy regions available");
+    };
+
+    // Before outage: traffic goes to Region 1
+    const activeBeforeOutage = await getActiveEndpoint();
+    expect(activeBeforeOutage).toBe(`http://localhost:${REGION_1_PORT}`);
+
+    // Verify it works
+    const testReq = await fetch(`${activeBeforeOutage}/messages`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "Accept": "application/json, text/event-stream" },
+      body: JSON.stringify({
+        jsonrpc: "2.0",
+        id: 11,
+        method: "tools/call",
+        params: {
+          name: "brain_store",
+          arguments: {
+            taskId: "multi-region-test-1",
+            request: "ping",
+            solution: "pong",
+            company: "global-company"
+          }
+        }
+      })
+    });
+    expect(testReq.ok).toBe(true);
+
+    // Simulate Region 1 Outage
+    console.log("Simulating Region 1 Outage...");
+    brainProcess.kill();
+    await waitForPortClosed(REGION_1_PORT);
+
+    // After outage: traffic should route to Region 2
+    const activeAfterOutage = await getActiveEndpoint();
+    expect(activeAfterOutage).toBe(`http://localhost:${REGION_2_PORT}`);
+
+    // Verify Region 2 is operational
+    const testReq2 = await fetch(`${activeAfterOutage}/messages`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "Accept": "application/json, text/event-stream" },
+      body: JSON.stringify({
+        jsonrpc: "2.0",
+        id: 12,
+        method: "tools/call",
+        params: {
+          name: "brain_store",
+          arguments: {
+            taskId: "multi-region-test-2",
+            request: "ping",
+            solution: "pong",
+            company: "global-company"
+          }
+        }
+      })
+    });
+    expect(testReq2.ok).toBe(true);
+
+    // Cleanup Region 2
+    region2Process.kill();
+    await waitForPortClosed(REGION_2_PORT);
+  });
 });

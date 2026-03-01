@@ -1,6 +1,15 @@
 # Global settings
 company: "default-company"
 
+# Multi-Region High Availability configuration
+multiRegion:
+  enabled: false
+  regions: [] # e.g., ["us-east-1", "eu-west-1"]
+  failover:
+    enabled: false
+  loadBalancing:
+    geo: false
+
 # Main image configuration
 image:
   repository: simple-agency

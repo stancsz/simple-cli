@@ -27,7 +27,11 @@ spec:
             - name: PORT
               value: "{{ .Values.dashboard.port }}"
             - name: HEALTH_MONITOR_URL
+              {{- if and .Values.multiRegion.enabled (gt (len .Values.multiRegion.regions) 0) }}
+              value: "http://{{ .Release.Name }}-agent-global:{{ .Values.healthMonitor.port }}"
+              {{- else }}
               value: "http://{{ .Release.Name }}-agent:{{ .Values.healthMonitor.port }}"
+              {{- end }}
             {{- if .Values.dashboard.env }}
             {{- range $key, $value := .Values.dashboard.env }}
             - name: {{ $key }}

@@ -1,13 +1,20 @@
-{{- if and .Values.ingress.enabled (not .Values.multiRegion.enabled) -}}
+{{- if and .Values.multiRegion.enabled .Values.multiRegion.failover.enabled .Values.ingress.enabled }}
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
-  name: {{ .Release.Name }}-ingress
+  name: {{ .Release.Name }}-ingress-multiregion
   namespace: {{ .Release.Namespace }}
-  {{- with .Values.ingress.annotations }}
   annotations:
+    # AWS Route53 external-dns example annotations for failover/geo
+    {{- if .Values.multiRegion.loadBalancing.geo }}
+    external-dns.alpha.kubernetes.io/aws-geolocation-country-code: "global"
+    {{- else }}
+    external-dns.alpha.kubernetes.io/aws-weight: "100"
+    external-dns.alpha.kubernetes.io/set-identifier: "primary"
+    {{- end }}
+    {{- with .Values.ingress.annotations }}
     {{- toYaml . | nindent 4 }}
-  {{- end }}
+    {{- end }}
 spec:
   {{- if .Values.ingress.className }}
   ingressClassName: {{ .Values.ingress.className }}
@@ -32,9 +39,9 @@ spec:
             pathType: {{ .pathType }}
             backend:
               service:
-                name: {{ $.Release.Name }}-agent
+                name: {{ $.Release.Name }}-agent-global
                 port:
                   number: {{ $.Values.agent.service.port }}
           {{- end }}
     {{- end }}
-{{- end -}}
+{{- end }}

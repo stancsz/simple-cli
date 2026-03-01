@@ -1,0 +1,32 @@
+{{- if and .Values.multiRegion.enabled (gt (len .Values.multiRegion.regions) 0) }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ .Release.Name }}-agent-global
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app: {{ .Release.Name }}-agent
+  annotations:
+    {{- if .Values.multiRegion.loadBalancing.geo }}
+    external-dns.alpha.kubernetes.io/aws-geolocation-country-code: "global"
+    {{- else }}
+    # Active-passive active region annotation example
+    external-dns.alpha.kubernetes.io/set-identifier: "primary"
+    external-dns.alpha.kubernetes.io/aws-weight: "100"
+    {{- end }}
+spec:
+  # Using LoadBalancer to expose the service globally or external-dns
+  type: LoadBalancer
+  ports:
+    - port: {{ .Values.agent.service.port }}
+      targetPort: {{ .Values.agent.service.port }}
+      protocol: TCP
+      name: http
+    - port: {{ .Values.healthMonitor.port }}
+      targetPort: {{ .Values.healthMonitor.port }}
+      protocol: TCP
+      name: health-monitor
+  selector:
+    # Selects all agents regardless of region
+    app: {{ .Release.Name }}-agent
+{{- end }}

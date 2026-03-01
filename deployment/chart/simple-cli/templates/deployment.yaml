@@ -1,34 +1,68 @@
+{{- $regions := list "" -}}
+{{- if and .Values.multiRegion.enabled (gt (len .Values.multiRegion.regions) 0) -}}
+  {{- $regions = .Values.multiRegion.regions -}}
+{{- end -}}
+
+{{- range $region := $regions }}
+{{- $regionSuffix := "" -}}
+{{- if $region -}}
+  {{- $regionSuffix = printf "-%s" $region -}}
+{{- end -}}
 apiVersion: apps/v1
 kind: StatefulSet
 metadata:
-  name: {{ .Release.Name }}-agent
-  namespace: {{ .Release.Namespace }}
+  name: {{ $.Release.Name }}-agent{{ $regionSuffix }}
+  namespace: {{ $.Release.Namespace }}
   labels:
-    app: {{ .Release.Name }}-agent
+    app: {{ $.Release.Name }}-agent
+    {{- if $region }}
+    region: {{ $region }}
+    {{- end }}
 spec:
-  serviceName: {{ .Release.Name }}-agent-headless
-  replicas: {{ .Values.agent.replicas }}
+  serviceName: {{ $.Release.Name }}-agent-headless{{ $regionSuffix }}
+  replicas: {{ $.Values.agent.replicas }}
   selector:
     matchLabels:
-      app: {{ .Release.Name }}-agent
+      app: {{ $.Release.Name }}-agent
+      {{- if $region }}
+      region: {{ $region }}
+      {{- end }}
   template:
     metadata:
       labels:
-        app: {{ .Release.Name }}-agent
+        app: {{ $.Release.Name }}-agent
+        {{- if $region }}
+        region: {{ $region }}
+        {{- end }}
     spec:
-      {{- if .Values.serviceAccount.create }}
-      serviceAccountName: {{ .Values.serviceAccount.name | default (printf "%s-sa" .Release.Name) }}
+      {{- if $region }}
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+              - matchExpressions:
+                  - key: topology.kubernetes.io/region
+                    operator: In
+                    values:
+                      - {{ $region }}
+      {{- end }}
+      {{- if $.Values.serviceAccount.create }}
+      serviceAccountName: {{ $.Values.serviceAccount.name | default (printf "%s-sa" $.Release.Name) }}
       {{- end }}
       containers:
         - name: agent
-          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
-          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          image: "{{ $.Values.image.repository }}:{{ $.Values.image.tag }}"
+          imagePullPolicy: {{ $.Values.image.pullPolicy }}
           command: ["node", "dist/daemon.js"]
           env:
             - name: COMPANY
-              value: "{{ .Values.company }}"
+              value: "{{ $.Values.company }}"
             - name: PORT
-              value: "{{ .Values.agent.service.port }}"
+              value: "{{ $.Values.agent.service.port }}"
+            {{- if $region }}
+            - name: REGION
+              value: "{{ $region }}"
+            {{- end }}
             # Optionally override MCP config path via env if supported, but we mount it
           volumeMounts:
             - name: mcp-config
@@ -39,68 +73,70 @@ spec:
             - name: brain-storage
               mountPath: /app/.agent/brain
           ports:
-            - containerPort: {{ .Values.agent.service.port }}
+            - containerPort: {{ $.Values.agent.service.port }}
           livenessProbe:
             httpGet:
               path: /health
-              port: {{ .Values.agent.service.port }}
+              port: {{ $.Values.agent.service.port }}
             initialDelaySeconds: 30
             periodSeconds: 20
           readinessProbe:
             httpGet:
               path: /health
-              port: {{ .Values.agent.service.port }}
+              port: {{ $.Values.agent.service.port }}
             initialDelaySeconds: 5
             periodSeconds: 10
           resources:
-            {{- toYaml .Values.agent.resources | nindent 12 }}
+            {{- toYaml $.Values.agent.resources | nindent 12 }}
 
         # Sidecar: Health Monitor
         - name: health-monitor
-          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
-          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          image: "{{ $.Values.image.repository }}:{{ $.Values.image.tag }}"
+          imagePullPolicy: {{ $.Values.image.pullPolicy }}
           command: ["node", "dist/mcp_servers/health_monitor/index.js"]
           env:
             - name: PORT
-              value: "{{ .Values.healthMonitor.port }}"
+              value: "{{ $.Values.healthMonitor.port }}"
           ports:
-            - containerPort: {{ .Values.healthMonitor.port }}
+            - containerPort: {{ $.Values.healthMonitor.port }}
           livenessProbe:
             httpGet:
               path: /health
-              port: {{ .Values.healthMonitor.port }}
+              port: {{ $.Values.healthMonitor.port }}
             initialDelaySeconds: 15
             periodSeconds: 20
           readinessProbe:
             httpGet:
               path: /health
-              port: {{ .Values.healthMonitor.port }}
+              port: {{ $.Values.healthMonitor.port }}
             initialDelaySeconds: 5
             periodSeconds: 10
           volumeMounts:
             - name: agent-storage
               mountPath: /app/.agent
           resources:
-            {{- toYaml .Values.healthMonitor.resources | nindent 12 }}
+            {{- toYaml $.Values.healthMonitor.resources | nindent 12 }}
 
       volumes:
         - name: mcp-config
           configMap:
-            name: {{ .Release.Name }}-config
+            name: {{ $.Release.Name }}-config{{ $regionSuffix }}
             items:
               - key: mcp.json
                 path: mcp.json
         - name: agent-storage
-        {{- if .Values.agent.persistence.enabled }}
+        {{- if $.Values.agent.persistence.enabled }}
           persistentVolumeClaim:
-            claimName: {{ .Release.Name }}-agent-pvc
+            claimName: {{ $.Release.Name }}-agent-pvc{{ $regionSuffix }}
         {{- else }}
           emptyDir: {}
         {{- end }}
         - name: brain-storage
-        {{- if .Values.brain.persistence.enabled }}
+        {{- if $.Values.brain.persistence.enabled }}
           persistentVolumeClaim:
-            claimName: {{ .Release.Name }}-brain-pvc
+            claimName: {{ $.Release.Name }}-brain-pvc{{ $regionSuffix }}
         {{- else }}
           emptyDir: {}
         {{- end }}
+---
+{{- end }}

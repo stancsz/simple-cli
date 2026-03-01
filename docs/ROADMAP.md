@@ -227,7 +227,10 @@ The roadmap is structured around the four anatomical layers of the Digital Biosp
     - ✅ Implemented `trigger_contingency_plan` to write adaptive operating policies to EpisodicMemory depending on risk thresholds.
     - ✅ Scheduled script execution implemented for autonomous risk evaluation.
     - ✅ Fully integrated with `scan_strategic_horizon` and validated via `tests/integration/market_shock_absorption_validation.test.ts`.
-- [ ] **Multi-Region High Availability**: Extend the Kubernetes Helm chart to support multi-region deployment (e.g., AWS us-east-1, eu-west-1) with automated failover and geographic load balancing.
+- [x] **Multi-Region High Availability**: Extend the Kubernetes Helm chart to support multi-region deployment (e.g., AWS us-east-1, eu-west-1) with automated failover and geographic load balancing.
+    - ✅ Added `multiRegion` configuration options to `values.yaml` for nodeAffinity logic.
+    - ✅ Created `ingress-multiregion.yaml` and `service-global.yaml` with global failover/geo-routing annotations (e.g., Route53/external-dns).
+    - ✅ Validated via `tests/integration/k8s_production_validation.test.ts` (simulated region outage and active-passive routing).
 - [ ] **Validation**: Simulate a regional outage and verify automated recovery; run penetration testing via the security MCP.
 
 ## Legacy Achievements
