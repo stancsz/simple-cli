@@ -1,23 +1,26 @@
 {{- if and .Values.ingress.enabled .Values.multiRegion.enabled -}}
+{{- range .Values.multiRegion.regions }}
+---
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
-  name: {{ .Release.Name }}-ingress-multiregion
-  namespace: {{ .Release.Namespace }}
+  name: {{ $.Release.Name }}-ingress-multiregion-{{ .name }}
+  namespace: {{ $.Release.Namespace }}
   annotations:
-    # Example annotations for external-dns / AWS Route53 geo routing
-    external-dns.alpha.kubernetes.io/set-identifier: {{ .Release.Name }}-global
-    external-dns.alpha.kubernetes.io/aws-geolocation-country-code: "*"
-    {{- with .Values.ingress.annotations }}
+    # Example annotations for external-dns / AWS Route53 geo/latency routing
+    external-dns.alpha.kubernetes.io/set-identifier: {{ $.Release.Name }}-{{ .name }}
+    external-dns.alpha.kubernetes.io/aws-region: {{ .name }}
+    external-dns.alpha.kubernetes.io/aws-weight: "100"
+    {{- with $.Values.ingress.annotations }}
     {{- toYaml . | nindent 4 }}
     {{- end }}
 spec:
-  {{- if .Values.ingress.className }}
-  ingressClassName: {{ .Values.ingress.className }}
+  {{- if $.Values.ingress.className }}
+  ingressClassName: {{ $.Values.ingress.className }}
   {{- end }}
-  {{- if .Values.ingress.tls }}
+  {{- if $.Values.ingress.tls }}
   tls:
-    {{- range .Values.ingress.tls }}
+    {{- range $.Values.ingress.tls }}
     - hosts:
         {{- range .hosts }}
         - {{ . | quote }}
@@ -26,7 +29,8 @@ spec:
     {{- end }}
   {{- end }}
   rules:
-    {{- range .Values.ingress.hosts }}
+    {{- $regionName := .name }}
+    {{- range $.Values.ingress.hosts }}
     - host: {{ .host | quote }}
       http:
         paths:
@@ -35,9 +39,10 @@ spec:
             pathType: {{ .pathType }}
             backend:
               service:
-                name: {{ $.Release.Name }}-agent-{{ (index $.Values.multiRegion.regions 0).name }} # Default routing for global ingress, typically handled by external load balancer instead
+                name: {{ $.Release.Name }}-agent-{{ $regionName }}
                 port:
                   number: {{ $.Values.agent.service.port }}
           {{- end }}
     {{- end }}
+{{- end }}
 {{- end -}}

@@ -70,6 +70,63 @@ resource "aws_globalaccelerator_endpoint_group" "regional" {
 }
 ```
 
+### VPC Peering
+If your components require direct communication across regions, configure VPC Peering.
+
+```hcl
+resource "aws_vpc_peering_connection" "cross_region" {
+  vpc_id        = aws_vpc.us_east.id
+  peer_vpc_id   = aws_vpc.eu_west.id
+  peer_region   = "eu-west-1"
+  auto_accept   = false
+
+  tags = {
+    Name = "us-east-to-eu-west-peering"
+  }
+}
+
+resource "aws_vpc_peering_connection_accepter" "cross_region_accepter" {
+  provider                  = aws.eu_west
+  vpc_peering_connection_id = aws_vpc_peering_connection.cross_region.id
+  auto_accept               = true
+
+  tags = {
+    Name = "eu-west-accepter"
+  }
+}
+```
+
+### Cross-Region S3 Buckets for Data Sync
+Create buckets for the replication sidecar to sync the `Brain` and `CompanyContext` data securely.
+
+```hcl
+resource "aws_s3_bucket" "multi_region_backup" {
+  bucket = "agency-multi-region-backup"
+}
+
+resource "aws_s3_bucket_versioning" "multi_region_backup_versioning" {
+  bucket = aws_s3_bucket.multi_region_backup.id
+  versioning_configuration {
+    status = "Enabled"
+  }
+}
+
+resource "aws_s3_bucket_replication_configuration" "replication" {
+  role   = aws_iam_role.replication.arn
+  bucket = aws_s3_bucket.multi_region_backup.id
+
+  rule {
+    id     = "SyncBrainAndContext"
+    status = "Enabled"
+
+    destination {
+      bucket        = aws_s3_bucket.multi_region_backup_replica.arn
+      storage_class = "STANDARD"
+    }
+  }
+}
+```
+
 ## Helm Chart Configuration
 
 Once the infrastructure is set up, configure your `values.yaml` for the multi-region helm deployment:
