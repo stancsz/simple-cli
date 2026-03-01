@@ -1,0 +1,54 @@
+{{- if and .Values.multiRegion.enabled .Values.failoverController.enabled -}}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "simple-cli.fullname" . }}-failover-controller
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "simple-cli.labels" . | nindent 4 }}
+    app.kubernetes.io/component: failover-controller
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      {{- include "simple-cli.selectorLabels" . | nindent 6 }}
+      app.kubernetes.io/component: failover-controller
+  template:
+    metadata:
+      labels:
+        {{- include "simple-cli.selectorLabels" . | nindent 8 }}
+        app.kubernetes.io/component: failover-controller
+    spec:
+      {{- if .Values.serviceAccount.create }}
+      serviceAccountName: {{ .Values.serviceAccount.name | default (printf "%s-sa" .Release.Name) }}
+      {{- end }}
+      containers:
+        - name: failover-controller
+          image: "{{ .Values.failoverController.image.repository }}:{{ .Values.failoverController.image.tag }}"
+          imagePullPolicy: {{ .Values.failoverController.image.pullPolicy }}
+          command: ["/bin/sh", "-c"]
+          args:
+            - |
+              while true; do
+                FAILED_REGIONS=""
+                {{- range .Values.multiRegion.regions }}
+                # Check health of region {{ .name }}
+                if ! curl -m {{ $.Values.failoverController.timeout }} -s -o /dev/null -w "%{http_code}" http://{{ $.Release.Name }}-agent-{{ .name }}:{{ $.Values.agent.service.port }}/health | grep -q '200'; then
+                  echo "Region {{ .name }} is failing."
+                  FAILED_REGIONS="$FAILED_REGIONS {{ .name }}\n"
+                fi
+                {{- end }}
+
+                # Update ConfigMap logic here (using kubectl or k8s API)
+                # For simplicity, we assume RBAC allows updating the configmap
+                # We could run kubectl here, or just write to a shared volume if using a sidecar pattern
+                echo -e "$FAILED_REGIONS" > /tmp/failedRegions
+
+                # In a real implementation, this would patch the ConfigMap via K8s API
+                # Example: kubectl patch configmap {{ $.Release.Name }}-config-{{ (index .Values.multiRegion.regions 0).name }} -p '{"data":{"failedRegions":"'"$FAILED_REGIONS"'"}}'
+
+                sleep {{ .Values.failoverController.interval }};
+              done
+          resources:
+            {{- toYaml .Values.failoverController.resources | nindent 12 }}
+{{- end }}

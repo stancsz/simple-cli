@@ -129,7 +129,11 @@ For detailed instructions on validating the deployment (including multi-tenancy 
 
 [Kubernetes Deployment Guide](../docs/K8S_DEPLOYMENT.md)
 
+For multi-region and high-availability configuration guidance, see:
+[Multi-Region Deployment Guide](../docs/K8S_MULTI_REGION.md)
+
 We include a comprehensive integration test suite that simulates the K8s environment:
 ```bash
 npm run test tests/integration/k8s_production_validation.test.ts
+npm run test tests/integration/multi_region_validation.test.ts
 ```

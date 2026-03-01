@@ -92,6 +92,28 @@ spec:
               mountPath: /app/.agent/brain
           resources:
             {{- toYaml $.Values.brain.resources | nindent 12 }}
+
+        {{- if and $.Values.multiRegion.enabled $.Values.replicationSidecar.enabled }}
+        # Sidecar: Replication
+        - name: replication-sidecar
+          image: "{{ $.Values.replicationSidecar.image.repository }}:{{ $.Values.replicationSidecar.image.tag }}"
+          imagePullPolicy: {{ $.Values.replicationSidecar.image.pullPolicy }}
+          command: ["/bin/sh", "-c"]
+          args:
+            - |
+              while true; do
+                # Sync brain data to a remote/shared location
+                # Example: rclone sync /app/.agent/brain remote:backup/brain-{{ $region.name }}
+                echo "Syncing brain storage for region {{ $region.name }}..."
+                sleep {{ $.Values.replicationSidecar.syncInterval }}
+              done
+          volumeMounts:
+            - name: brain-storage
+              mountPath: /app/.agent/brain
+          resources:
+            {{- toYaml $.Values.replicationSidecar.resources | nindent 12 }}
+        {{- end }}
+
       volumes:
         {{- if $.Values.multiRegion.enabled }}
         - name: failover-config

@@ -49,3 +49,13 @@ Selector labels
 app.kubernetes.io/name: {{ include "simple-cli.name" . }}
 app.kubernetes.io/instance: {{ .Release.Name }}
 {{- end }}
+
+{{/*
+Region-aware labels
+*/}}
+{{- define "simple-cli.regionLabels" -}}
+{{- if .region }}
+topology.kubernetes.io/region: {{ .region.name }}
+agency.global/region-role: {{ if .region.active }}active{{ else }}passive{{ end }}
+{{- end }}
+{{- end }}

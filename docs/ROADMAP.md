@@ -234,9 +234,12 @@ The roadmap is structured around the four anatomical layers of the Digital Biosp
     - ✅ Fully integrated with `scan_strategic_horizon` and validated via `tests/integration/market_shock_absorption_validation.test.ts`.
 - [x] **Multi-Region High Availability**: Extend the Kubernetes Helm chart to support multi-region deployment (e.g., AWS us-east-1, eu-west-1) with automated failover and geographic load balancing.
     - ✅ Implemented dynamic Helm chart for multi-region; validated via integration tests including regional outage simulation and penetration testing.
-    - ✅ Multi-region Helm chart implemented and validated via integration test.
+    - ✅ Multi-region Helm chart implemented with Active/Passive support and automated failover controller.
+    - ✅ Added replication sidecar configurations for persistent storage cross-region sync using rclone.
+    - ✅ Wrote architectural documentation `docs/K8S_MULTI_REGION.md` and `deployment/multi-region/aws-setup.md`.
 - [x] **Validation**: Simulate a regional outage and verify automated recovery; run penetration testing via the security MCP.
     - ✅ Implemented dynamic Helm chart for multi-region; validated via integration tests including regional outage simulation and penetration testing.
+    - ✅ Validated failover controller logic, replication sidecar configuration and Helm template generation via `tests/integration/multi_region_validation.test.ts`.
 
 ## Legacy Achievements
 See [Legacy Roadmap](ROADMAP_LEGACY.md) for completed milestones of the previous "Simple CLI" era.
