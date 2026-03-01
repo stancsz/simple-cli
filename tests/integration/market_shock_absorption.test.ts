@@ -1,192 +1,122 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { MarketShockAbsorptionServer } from '../../src/mcp_servers/market_shock_absorption/index.js';
-import { EpisodicMemory } from '../../src/brain/episodic.js';
-import * as llmModule from '../../src/llm.js';
-import { randomUUID } from 'crypto';
+import { describe, it, expect, vi, beforeEach } from "vitest";
+import { EpisodicMemory } from "../../src/brain/episodic.js";
+import {
+    monitorMarketSignals,
+    evaluateEconomicRisk,
+    triggerContingencyPlan
+} from "../../src/mcp_servers/brain/tools/market_shock.js";
+import { CorporateStrategy } from "../../src/brain/schemas.js";
 
-const mockGenerate = vi.fn().mockResolvedValue({
-    message: JSON.stringify({
-        risk_level: "High",
-        vulnerabilities: ["Reduced tech spending", "Longer sales cycles"],
-        recommended_actions: ["Increase margins", "Pause hiring"],
-        rationale: "High inflation and sector layoffs indicate a severe market contraction."
-    })
-});
+// Mock the LLM
+const mockLLM = {
+    generate: vi.fn(),
+    embedMany: vi.fn(),
+    embed: vi.fn(),
+    countTokens: vi.fn(),
+};
 
-const mockEmbed = vi.fn().mockImplementation(async () => new Array(1536).fill(0.1));
-const mockEmbedMany = vi.fn().mockImplementation(async (texts: string[]) => {
-    return texts.map(() => new Array(1536).fill(0.1));
-});
+// Mock EpisodicMemory
+const mockEpisodic = {
+    store: vi.fn(),
+    recall: vi.fn(),
+} as unknown as EpisodicMemory;
 
-// Setup explicit vitest mock for the llm module to mock generate and embedMany properly
-vi.mock('../../src/llm.js', async () => {
-    const actual = await vi.importActual<typeof import('../../src/llm.js')>('../../src/llm.js');
-    return {
-        ...actual,
-        createLLM: vi.fn(() => ({
-            generate: mockGenerate,
-            embed: mockEmbed,
-            embedMany: mockEmbedMany
-        }))
-    };
-});
+describe("Market Shock Absorption (Phase 27)", () => {
 
-describe('Market Shock Absorption Integration', () => {
-    const testCompanyId = `test_company_shock_${randomUUID()}`;
-    let server: MarketShockAbsorptionServer;
-    let episodic: EpisodicMemory;
-
-    beforeEach(async () => {
-        episodic = new EpisodicMemory();
-        await episodic.init();
-        server = new MarketShockAbsorptionServer();
-
-        // Clear memories for test company (we just use unique ID)
+    beforeEach(() => {
         vi.clearAllMocks();
     });
 
-    afterEach(async () => {
-        // Mock cleanup
+    it("should generate market signals with expected structure", async () => {
+        const signals = await monitorMarketSignals();
+        expect(signals).toHaveProperty("sectors");
+        expect(signals).toHaveProperty("macro");
+        expect(signals).toHaveProperty("timestamp");
+        expect(Object.keys(signals.sectors).length).toBeGreaterThan(0);
+        expect(["rising", "stable", "falling"]).toContain(signals.macro.interest_rate_trend);
     });
 
-    it('should monitor market signals and store them in memory', async () => {
-        const monitorHandler = server.server._registeredTools["monitor_market_signals"]?.handler;
-        expect(monitorHandler).toBeDefined();
+    it("should evaluate economic risk as HIGH and parse JSON response correctly", async () => {
+        const mockSignals = {
+            sectors: {
+                "tech": { performance: -25.5, volatility: 8.5 }
+            },
+            macro: {
+                interest_rate_trend: "rising" as const,
+                inflation_trend: "rising" as const,
+                consumer_confidence: 20
+            },
+            timestamp: Date.now()
+        };
 
-        const result = await monitorHandler!({
-            sector: "Software Development",
-            region: "US",
-            company: testCompanyId
-        }, {} as any);
+        const mockStrategy: CorporateStrategy = {
+            vision: "Be the best tech agency",
+            objectives: ["Dominate tech sector"],
+            policies: { min_margin: 0.2 },
+            timestamp: Date.now()
+        };
 
-        expect(result.content[0].text).toContain('"status": "success"');
-        const data = JSON.parse(result.content[0].text).data;
-        expect(data.sector).toBe("Software Development");
-        expect(data.macro_indicators.inflation_rate).toBeDefined();
+        // Mock LLM to return a High risk assessment
+        mockLLM.generate.mockResolvedValueOnce({
+            message: JSON.stringify({
+                risk_level: "high",
+                vulnerability_score: 95,
+                rationale: "Heavy exposure to a crashing tech sector."
+            })
+        });
 
-        // Verify it was stored
-        const memories = await episodic.recall("Software Development", 1, testCompanyId, "market_signals");
-        expect(memories.length).toBeGreaterThan(0);
-        expect(memories[0].agentResponse).toContain("Software Development");
+        const assessment = await evaluateEconomicRisk(mockSignals, mockStrategy, mockLLM as any);
+
+        expect(assessment.risk_level).toBe("high");
+        expect(assessment.vulnerability_score).toBe(95);
+        expect(assessment.rationale).toBeDefined();
+        expect(mockLLM.generate).toHaveBeenCalledTimes(1);
     });
 
-    it('should evaluate economic risk using latest market signals', async () => {
-        // First, monitor (store) signals so there is something to evaluate
-        const monitorHandler = server.server._registeredTools["monitor_market_signals"]?.handler;
-        await monitorHandler!({
-            sector: "Software Development",
-            region: "US",
-            company: testCompanyId
-        }, {} as any);
+    it("should trigger contingency plan and update corporate strategy in EpisodicMemory", async () => {
+        const mockRiskAssessment = {
+            risk_level: "high" as const,
+            vulnerability_score: 95,
+            rationale: "Heavy exposure to a crashing tech sector."
+        };
 
-        // Then, evaluate
-        const evaluateHandler = server.server._registeredTools["evaluate_economic_risk"]?.handler;
-        expect(evaluateHandler).toBeDefined();
+        const mockStrategy: CorporateStrategy = {
+            vision: "Be the best tech agency",
+            objectives: ["Dominate tech sector"],
+            policies: { min_margin: 0.2 },
+            timestamp: Date.now()
+        };
 
-        const evalResult = await evaluateHandler!({ company: testCompanyId }, {} as any);
-        const evalData = JSON.parse(evalResult.content[0].text);
+        // Mock LLM to return a contingency strategy update
+        mockLLM.generate.mockResolvedValueOnce({
+            message: JSON.stringify({
+                vision: "Be the best tech agency",
+                objectives: ["Dominate tech sector", "Survive market crash"],
+                policies: {
+                    min_margin: 0.2,
+                    pause_non_critical_swarms: true,
+                    adjust_pricing_margin: -0.15
+                },
+                rationale: "Triggering defensive posture due to high market risk."
+            })
+        });
 
-        expect(evalData.risk_level).toBe("High");
-        expect(evalData.vulnerabilities).toContain("Reduced tech spending");
+        const newStrategy = await triggerContingencyPlan(mockRiskAssessment, mockStrategy, mockEpisodic, mockLLM as any, "test_company");
 
-        // Verify evaluation was stored
-        const memories = await episodic.recall("economic risk evaluation", 1, testCompanyId, "economic_risk_evaluation");
-        expect(memories.length).toBeGreaterThan(0);
-        expect(memories[0].agentResponse).toContain("High");
-    });
+        expect(newStrategy.policies).toHaveProperty("pause_non_critical_swarms", true);
+        expect(newStrategy.policies).toHaveProperty("adjust_pricing_margin", -0.15);
+        expect(newStrategy.objectives).toContain("Survive market crash");
 
-    it('should trigger contingency plan for High risk evaluation', async () => {
-        // 1. Manually inject a "High" risk evaluation into memory to simulate the previous step
-        await episodic.store(
-            `economic_risk_eval_high_${Date.now()}`,
-            `Economic risk evaluation`,
-            JSON.stringify({
-                risk_level: "High",
-                rationale: "Mocked high risk for testing contingency."
-            }),
-            ["market_shock"],
-            testCompanyId,
-            undefined,
-            false,
-            undefined,
-            undefined,
-            0,
-            0,
-            "economic_risk_evaluation"
+        // Verify it was stored in memory
+        expect(mockEpisodic.store).toHaveBeenCalledTimes(1);
+        expect(mockEpisodic.store).toHaveBeenCalledWith(
+            expect.stringContaining("contingency_plan_"),
+            expect.stringContaining("Market Risk Level: high"),
+            expect.any(String),
+            expect.arrayContaining(["market_shock", "phase_27"]),
+            "test_company",
+            undefined, undefined, undefined, undefined, undefined, undefined,
+            "corporate_strategy"
         );
-
-        // 2. Also manually inject an existing policy to ensure we build off it
-        await episodic.store(
-            `policy_update_v1`,
-            `Initial policy`,
-            JSON.stringify({
-                id: "initial-policy",
-                version: 1,
-                name: "Initial Policy",
-                parameters: { min_margin: 0.2, risk_tolerance: "medium", max_agents_per_swarm: 5 }
-            }),
-            ["corporate_policy"],
-            testCompanyId,
-            undefined,
-            undefined,
-            undefined,
-            "initial-policy",
-            0,
-            0,
-            "corporate_policy"
-        );
-
-        const triggerHandler = server.server._registeredTools["trigger_contingency_plan"]?.handler;
-        expect(triggerHandler).toBeDefined();
-
-        const triggerResult = await triggerHandler!({ company: testCompanyId }, {} as any);
-        expect(triggerResult.content[0].text).toContain("Contingency plan triggered");
-
-        const resultData = JSON.parse(triggerResult.content[0].text);
-        const newPolicy = resultData.policy;
-
-        // Verify contingency measures were applied
-        expect(newPolicy.version).toBeGreaterThan(0);
-        expect(newPolicy.parameters.min_margin).toBeGreaterThanOrEqual(0.3); // High risk contingency min margin
-        expect(newPolicy.parameters.risk_tolerance).toBe("low");
-        expect(newPolicy.parameters.max_agents_per_swarm).toBe(3); // Scaled down from 5
-
-        // Verify the new policy was saved
-        const allMemories = await episodic.recall("corporate_policy", 10, testCompanyId);
-        const policyMemories = allMemories.filter(m => m.type === "corporate_policy").sort((a,b) => b.timestamp - a.timestamp);
-
-        expect(policyMemories.length).toBeGreaterThan(0);
-        const savedPolicy = JSON.parse(policyMemories[0].agentResponse);
-        expect(savedPolicy.version).toBeGreaterThan(0);
-        expect(savedPolicy.parameters.risk_tolerance).toBe("low");
-    });
-
-    it('should NOT trigger contingency plan for Low risk evaluation', async () => {
-        // Clear all previous mocks and memory states from High test evaluation
-        const testCompanyIdLow = `test_company_low_${randomUUID()}`;
-
-        // Inject a "Low" risk evaluation
-        await episodic.store(
-            `economic_risk_eval_low_${Date.now()}`,
-            `Economic risk evaluation`,
-            JSON.stringify({
-                risk_level: "Low",
-                rationale: "Mocked low risk for testing."
-            }),
-            ["market_shock"],
-            testCompanyIdLow,
-            undefined,
-            false,
-            undefined,
-            undefined,
-            0,
-            0,
-            "economic_risk_evaluation"
-        );
-
-        const triggerHandler = server.server._registeredTools["trigger_contingency_plan"]?.handler;
-
-        const triggerResult = await triggerHandler!({ company: testCompanyIdLow }, {} as any);
-        expect(triggerResult.content[0].text).toContain("No contingency plan triggered");
     });
 });

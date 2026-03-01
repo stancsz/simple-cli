@@ -141,6 +141,16 @@
         "tool": "update_roadmap",
         "arguments": {}
       }
+    },
+    {
+      "id": "market-shock-monitor",
+      "name": "Market Shock Monitor",
+      "trigger": "cron",
+      "schedule": "0 8 * * *",
+      "action": "bash.run",
+      "args": {
+        "command": "npx tsx scripts/market_shock_monitor.ts"
+      }
     }
   ]
 }
