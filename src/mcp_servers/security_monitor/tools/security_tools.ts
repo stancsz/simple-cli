@@ -7,7 +7,7 @@ import { logMetric } from "../../../logger.js";
 import { readFile } from "fs/promises";
 import { join } from "path";
 import { createLLM } from "../../../llm.js";
-import { registerValidationTools } from "./validation_tools.js";
+import { registerValidationTools } from "./simulation.js";
 
 import { randomUUID } from "crypto";
 
