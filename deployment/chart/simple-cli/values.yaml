@@ -9,12 +9,45 @@ multiRegion:
   # Example:
   # regions:
   #   - name: "us-east-1"
+  #     active: true
   #     nodeSelector: { "topology.kubernetes.io/region": "us-east-1" }
   #     storageClass: "gp3"
   #   - name: "eu-west-1"
+  #     active: false
   #     nodeSelector: { "topology.kubernetes.io/region": "eu-west-1" }
   #     storageClass: "gp3"
   regions: []
+
+failoverController:
+  enabled: true
+  image:
+    repository: curlimages/curl
+    tag: 8.6.0
+    pullPolicy: IfNotPresent
+  interval: 10
+  timeout: 5
+  resources:
+    limits:
+      cpu: 100m
+      memory: 128Mi
+    requests:
+      cpu: 50m
+      memory: 64Mi
+
+replicationSidecar:
+  enabled: true
+  image:
+    repository: rclone/rclone
+    tag: 1.66
+    pullPolicy: IfNotPresent
+  syncInterval: 60
+  resources:
+    limits:
+      cpu: 200m
+      memory: 256Mi
+    requests:
+      cpu: 100m
+      memory: 128Mi
 
 # Main image configuration
 image:

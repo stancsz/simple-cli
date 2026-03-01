@@ -129,6 +129,27 @@ spec:
           resources:
             {{- toYaml $.Values.healthMonitor.resources | nindent 12 }}
 
+        {{- if and $.Values.multiRegion.enabled $.Values.replicationSidecar.enabled }}
+        # Sidecar: Replication
+        - name: replication-sidecar
+          image: "{{ $.Values.replicationSidecar.image.repository }}:{{ $.Values.replicationSidecar.image.tag }}"
+          imagePullPolicy: {{ $.Values.replicationSidecar.image.pullPolicy }}
+          command: ["/bin/sh", "-c"]
+          args:
+            - |
+              while true; do
+                # Sync agent data to a remote/shared location
+                # Example: rclone sync /app/.agent remote:backup/.agent-{{ $region.name }}
+                echo "Syncing agent storage for region {{ $region.name }}..."
+                sleep {{ $.Values.replicationSidecar.syncInterval }}
+              done
+          volumeMounts:
+            - name: agent-storage
+              mountPath: /app/.agent
+          resources:
+            {{- toYaml $.Values.replicationSidecar.resources | nindent 12 }}
+        {{- end }}
+
       volumes:
         - name: mcp-config
           configMap:
