@@ -10,3 +10,4 @@
 
 # Market Shock Absorption - runs daily at midnight
 0 0 * * * cd /app && npx tsx .github/scripts/market-shock.ts >> /var/log/cron/market-shock.log 2>&1
+0 2 * * * cd /app && npx tsx scripts/backup_scheduler.ts >> /var/log/cron/backup.log 2>&1

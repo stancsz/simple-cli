@@ -1,16 +1,15 @@
-import { createCipheriv, createDecipheriv, randomBytes, createHash } from 'crypto';
-import { createReadStream, createWriteStream, existsSync, readFileSync } from 'fs';
-import { access, mkdir, rm, readFile, writeFile } from 'fs/promises';
+import { createHash } from 'crypto';
+import { createReadStream, existsSync, readFileSync } from 'fs';
+import { access, mkdir, rm, writeFile } from 'fs/promises';
 import { join } from 'path';
-import { pipeline } from 'stream/promises';
 import { parse } from 'dotenv';
 import tar from 'tar';
 import { getXeroClient, getTenantId } from '../business_ops/xero_tools.js';
+import { encryptFile, decryptFile } from '../../lib/crypto.js';
 
 // Configuration
 const AGENT_DIR = process.env.JULES_AGENT_DIR || join(process.cwd(), '.agent');
 const BACKUP_DIR = join(AGENT_DIR, 'backups');
-const ALGORITHM = 'aes-256-cbc';
 
 // Directories to backup
 const BACKUP_TARGETS = [
@@ -41,14 +40,25 @@ async function ensureDir(dir: string) {
 }
 
 function getEncryptionKey(): Buffer {
-    let keyString = process.env.BACKUP_ENCRYPTION_KEY;
+    let keyString = process.env.DISASTER_RECOVERY_ENCRYPTION_KEY;
 
     // Use SecretManager logic: read .env.agent directly to fetch the secret
     const envPath = join(process.cwd(), ".env.agent");
     if (!keyString && existsSync(envPath)) {
         const envConfig = parse(readFileSync(envPath));
-        if (envConfig['BACKUP_ENCRYPTION_KEY']) {
-            keyString = envConfig['BACKUP_ENCRYPTION_KEY'];
+        if (envConfig['DISASTER_RECOVERY_ENCRYPTION_KEY']) {
+            keyString = envConfig['DISASTER_RECOVERY_ENCRYPTION_KEY'];
+        }
+    }
+
+    // Fallback to older key name just in case
+    if (!keyString) {
+        keyString = process.env.BACKUP_ENCRYPTION_KEY;
+        if (!keyString && existsSync(envPath)) {
+            const envConfig = parse(readFileSync(envPath));
+            if (envConfig['BACKUP_ENCRYPTION_KEY']) {
+                keyString = envConfig['BACKUP_ENCRYPTION_KEY'];
+            }
         }
     }
 
@@ -58,10 +68,10 @@ function getEncryptionKey(): Buffer {
     }
 
     if (!keyString) {
-        throw new Error("Missing BACKUP_ENCRYPTION_KEY. Please ensure it is set in .env.agent or environment variables to securely run Disaster Recovery.");
+        throw new Error("Missing DISASTER_RECOVERY_ENCRYPTION_KEY. Please ensure it is set in .env.agent or environment variables to securely run Disaster Recovery.");
     }
 
-    // Hash the key to ensure it's exactly 32 bytes for aes-256-cbc
+    // Hash the key to ensure it's exactly 32 bytes for AES-256
     return createHash('sha256').update(String(keyString)).digest();
 }
 
@@ -156,21 +166,7 @@ export async function createBackup(): Promise<BackupResult> {
         );
 
         // Encrypt the tar.gz file
-        const iv = randomBytes(16);
-        const cipher = createCipheriv(ALGORITHM, key, iv);
-
-        const input = createReadStream(tempTarPath);
-        const output = createWriteStream(finalBackupPath);
-
-        // Prepend IV
-        await new Promise<void>((resolve, reject) => {
-            output.write(iv, (err) => {
-                if (err) reject(err);
-                else resolve();
-            });
-        });
-
-        await pipeline(input, cipher, output);
+        await encryptFile(tempTarPath, finalBackupPath, key);
 
         // Calculate checksum
         const checksum = await calculateChecksum(finalBackupPath);
@@ -191,6 +187,7 @@ export async function createBackup(): Promise<BackupResult> {
         };
 
     } catch (error: any) {
+        console.error("Backup failed with error:", error);
         return {
             success: false,
             error: error.message,
@@ -221,18 +218,8 @@ export async function restoreBackup(backupPath: string, expectedChecksum?: strin
         const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
         tempTarPath = join(BACKUP_DIR, `temp_restore_${timestamp}.tar.gz`);
 
-        // Read IV from the first 16 bytes of the file
-        const ivBuffer = Buffer.alloc(16);
-        const fileContent = await readFile(backupPath);
-        fileContent.copy(ivBuffer, 0, 0, 16);
-
-        const decipher = createDecipheriv(ALGORITHM, key, ivBuffer);
-
-        // The input stream needs to start reading after the first 16 bytes (the IV)
-        const input = createReadStream(backupPath, { start: 16 });
-        const output = createWriteStream(tempTarPath);
-
-        await pipeline(input, decipher, output);
+        // Decrypt the file
+        await decryptFile(backupPath, tempTarPath, key);
 
         // Use absolute root, but make sure paths align
         // The backup maps absolute paths by stripping leading slash
