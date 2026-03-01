@@ -10,7 +10,7 @@ import { getXeroClient, getTenantId } from '../business_ops/xero_tools.js';
 // Configuration
 const AGENT_DIR = process.env.JULES_AGENT_DIR || join(process.cwd(), '.agent');
 const BACKUP_DIR = join(AGENT_DIR, 'backups');
-const ALGORITHM = 'aes-256-cbc';
+const ALGORITHM = 'aes-256-gcm';
 
 // Directories to backup
 const BACKUP_TARGETS = [
@@ -156,7 +156,7 @@ export async function createBackup(): Promise<BackupResult> {
         );
 
         // Encrypt the tar.gz file
-        const iv = randomBytes(16);
+        const iv = randomBytes(16); // 12-16 bytes typically for GCM, 16 is fine
         const cipher = createCipheriv(ALGORITHM, key, iv);
 
         const input = createReadStream(tempTarPath);
@@ -170,7 +170,25 @@ export async function createBackup(): Promise<BackupResult> {
             });
         });
 
-        await pipeline(input, cipher, output);
+        // For AES-GCM, we need to append the Auth Tag at the end.
+        // Pipeline closes the output stream automatically, so we must manage this manually or use pipeline and then append.
+        // Actually, pipeline will close the stream. So we manually pipe and listen for 'end'
+        await new Promise<void>((resolve, reject) => {
+            input.on('error', reject);
+            cipher.on('error', reject);
+            output.on('error', reject);
+
+            input.pipe(cipher);
+
+            cipher.on('data', (chunk) => {
+                output.write(chunk);
+            });
+
+            cipher.on('end', () => {
+                const authTag = cipher.getAuthTag(); // 16 bytes for GCM
+                output.end(authTag, () => resolve());
+            });
+        });
 
         // Calculate checksum
         const checksum = await calculateChecksum(finalBackupPath);
@@ -221,15 +239,26 @@ export async function restoreBackup(backupPath: string, expectedChecksum?: strin
         const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
         tempTarPath = join(BACKUP_DIR, `temp_restore_${timestamp}.tar.gz`);
 
-        // Read IV from the first 16 bytes of the file
-        const ivBuffer = Buffer.alloc(16);
+        // Read IV from the first 16 bytes of the file, and Auth Tag from the last 16 bytes
         const fileContent = await readFile(backupPath);
+        const fileSize = fileContent.length;
+
+        if (fileSize < 32) {
+            throw new Error('Backup file too small to contain IV and Auth Tag');
+        }
+
+        const ivBuffer = Buffer.alloc(16);
         fileContent.copy(ivBuffer, 0, 0, 16);
 
+        const authTagBuffer = Buffer.alloc(16);
+        fileContent.copy(authTagBuffer, 0, fileSize - 16, fileSize);
+
         const decipher = createDecipheriv(ALGORITHM, key, ivBuffer);
+        decipher.setAuthTag(authTagBuffer);
 
         // The input stream needs to start reading after the first 16 bytes (the IV)
-        const input = createReadStream(backupPath, { start: 16 });
+        // and stop 16 bytes before the end (the Auth Tag)
+        const input = createReadStream(backupPath, { start: 16, end: fileSize - 17 });
         const output = createWriteStream(tempTarPath);
 
         await pipeline(input, decipher, output);
