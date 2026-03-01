@@ -2,6 +2,7 @@ import { EpisodicMemory } from "../../../brain/episodic.js";
 import { createLLM } from "../../../llm.js";
 import { readStrategy } from "./strategy.js";
 import { analyzePatterns } from "./pattern_analysis.js";
+import { monitorMarketSignals } from "./market_shock.js";
 
 /**
  * Executes a full Strategic Horizon Scan.
@@ -16,9 +17,10 @@ export const scanStrategicHorizon = async (
 
   // 1. Gather Intelligence
   // Parallel execution for speed
-  const [currentStrategy, patternAnalysis] = await Promise.all([
+  const [currentStrategy, patternAnalysis, marketSignals] = await Promise.all([
     readStrategy(episodic, company),
-    analyzePatterns(episodic, llm, true) // Include external signals
+    analyzePatterns(episodic, llm, true), // Include external signals
+    monitorMarketSignals()
   ]);
 
   // 2. Synthesize Strategic Report
@@ -31,6 +33,9 @@ export const scanStrategicHorizon = async (
 
   PATTERN ANALYSIS (Internal & External):
   ${JSON.stringify(patternAnalysis, null, 2)}
+
+  MARKET SIGNALS:
+  ${JSON.stringify(marketSignals, null, 2)}
 
   TASK:
   Synthesize this information into a forward-looking strategic report.
