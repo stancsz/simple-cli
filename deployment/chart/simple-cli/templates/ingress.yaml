@@ -1,20 +1,33 @@
 {{- if .Values.ingress.enabled -}}
+
+{{- $regions := list "" }}
+{{- if .Values.multiRegion.enabled }}
+{{- $regions = .Values.multiRegion.regions }}
+{{- end }}
+
+{{- range $index, $region := $regions }}
+{{- $regionSuffix := "" }}
+{{- if $region }}
+{{- $regionSuffix = printf "-%s" $region.name }}
+{{- end }}
+
+---
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
-  name: {{ .Release.Name }}-ingress
-  namespace: {{ .Release.Namespace }}
-  {{- with .Values.ingress.annotations }}
+  name: {{ $.Release.Name }}-ingress{{ $regionSuffix }}
+  namespace: {{ $.Release.Namespace }}
+  {{- with $.Values.ingress.annotations }}
   annotations:
     {{- toYaml . | nindent 4 }}
   {{- end }}
 spec:
-  {{- if .Values.ingress.className }}
-  ingressClassName: {{ .Values.ingress.className }}
+  {{- if $.Values.ingress.className }}
+  ingressClassName: {{ $.Values.ingress.className }}
   {{- end }}
-  {{- if .Values.ingress.tls }}
+  {{- if $.Values.ingress.tls }}
   tls:
-    {{- range .Values.ingress.tls }}
+    {{- range $.Values.ingress.tls }}
     - hosts:
         {{- range .hosts }}
         - {{ . | quote }}
@@ -23,7 +36,7 @@ spec:
     {{- end }}
   {{- end }}
   rules:
-    {{- range .Values.ingress.hosts }}
+    {{- range $.Values.ingress.hosts }}
     - host: {{ .host | quote }}
       http:
         paths:
@@ -32,9 +45,10 @@ spec:
             pathType: {{ .pathType }}
             backend:
               service:
-                name: {{ $.Release.Name }}-agent
+                name: {{ $.Release.Name }}-agent{{ $regionSuffix }}
                 port:
                   number: {{ $.Values.agent.service.port }}
           {{- end }}
     {{- end }}
+{{- end }}
 {{- end -}}
