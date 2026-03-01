@@ -227,8 +227,13 @@ The roadmap is structured around the four anatomical layers of the Digital Biosp
     - ✅ Implemented `trigger_contingency_plan` to write adaptive operating policies to EpisodicMemory depending on risk thresholds.
     - ✅ Scheduled script execution implemented for autonomous risk evaluation.
     - ✅ Fully integrated with `scan_strategic_horizon` and validated via `tests/integration/market_shock_absorption_validation.test.ts`.
-- [ ] **Multi-Region High Availability**: Extend the Kubernetes Helm chart to support multi-region deployment (e.g., AWS us-east-1, eu-west-1) with automated failover and geographic load balancing.
-- [ ] **Validation**: Simulate a regional outage and verify automated recovery; run penetration testing via the security MCP.
+- [x] **Multi-Region High Availability**: Extend the Kubernetes Helm chart to support multi-region deployment (e.g., AWS us-east-1, eu-west-1) with automated failover and geographic load balancing.
+    - ✅ Implemented dynamic Helm chart logic for `multiRegion.regions` iteration in `deployment/chart/simple-cli`.
+    - ✅ Validated geographic routing via `ingress-multiregion.yaml` tests.
+- [x] **Validation**: Simulate a regional outage and verify automated recovery; run penetration testing via the security MCP.
+    - ✅ Implemented `simulate_regional_outage` in Security Monitor MCP to test k8s failover responses.
+    - ✅ Implemented `run_penetration_test` in Security Monitor MCP to simulate API attacks (SQLi, XSS) and verify anomaly tracking.
+    - ✅ Documented in `docs/PHASE27_VALIDATION.md` and validated fully via `tests/integration/phase27_validation.test.ts`.
 
 ## Legacy Achievements
 See [Legacy Roadmap](ROADMAP_LEGACY.md) for completed milestones of the previous "Simple CLI" era.
