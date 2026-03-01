@@ -49,3 +49,12 @@ To customize the security constraints, edit the `.agent/security_policy.json` fi
 
 *   **Brain MCP (`EpisodicMemory`)**: All security events, patch applications, and anomalies are saved with the `security_event` type, making them queryable for historical reporting and audit trailing.
 *   **Health Monitor (`logger.js`)**: Real-time alerts are surfaced on the Dashboard via the `logMetric` function, allowing the Operational Persona to react instantly to sudden `api_error_spike` or `vulnerabilities_found` events.
+
+## Cross-Region Security Considerations
+
+In a multi-region deployment (Phase 27 High Availability), the Security Monitor MCP maintains an active presence across all geographic locations:
+
+1. **Regional Audit Isolation:** Vulnerability scans (`npm audit`) occur independently within each regional StatefulSet. This ensures that regional variances in dependencies or rogue node injections are caught locally.
+2. **Distributed Anomaly Detection:** The `monitor_api_activity` tool tracks rate limits and anomalies on a per-region basis. If traffic in `us-east-1` surges with malformed payloads, only the `us-east-1` Health Monitor will register the anomaly, allowing precise geographic incident isolation.
+3. **Failover Security Policies:** During a disaster recovery scenario or simulated regional outage, the `apply_security_patch` process will continue operating seamlessly in the healthy region, ensuring zero downtime for security remediations.
+4. **Encrypted Cross-Region Memory Synchronization:** The Brain (LanceDB/Graph) continuously synchronizes `security_event` memories across regions using AES-256-GCM encryption (via `backup_manager.ts`), preserving audit trails even in the event of total regional data loss.
