@@ -120,6 +120,13 @@
         "tsx",
         "src/mcp_servers/market_shock_absorption/index.ts"
       ]
+    },
+    "security_monitor": {
+      "command": "npx",
+      "args": [
+        "tsx",
+        "src/mcp_servers/security_monitor/index.ts"
+      ]
     }
   },
   "scheduledTasks": [
