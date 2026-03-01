@@ -1,56 +1,111 @@
+{{- $regions := list "" }}
+{{- if .Values.multiRegion.enabled }}
+{{- $regions = .Values.multiRegion.regions }}
+{{- end }}
+
+{{- range $index, $region := $regions }}
+{{- $regionSuffix := "" }}
+{{- if $region }}
+{{- $regionSuffix = printf "-%s" $region.name }}
+{{- end }}
+---
 apiVersion: apps/v1
 kind: StatefulSet
 metadata:
-  name: {{ .Release.Name }}-brain
-  namespace: {{ .Release.Namespace }}
+  name: {{ $.Release.Name }}-brain{{ $regionSuffix }}
+  namespace: {{ $.Release.Namespace }}
   labels:
-    app: {{ .Release.Name }}-brain
+    app: {{ $.Release.Name }}-brain
+    {{- if $region }}
+    topology.kubernetes.io/region: {{ $region.name }}
+    {{- end }}
 spec:
-  serviceName: {{ .Release.Name }}-brain-headless
+  serviceName: {{ $.Release.Name }}-brain-headless{{ $regionSuffix }}
   replicas: 1
   selector:
     matchLabels:
-      app: {{ .Release.Name }}-brain
+      app: {{ $.Release.Name }}-brain
+      {{- if $region }}
+      topology.kubernetes.io/region: {{ $region.name }}
+      {{- end }}
   template:
     metadata:
       labels:
-        app: {{ .Release.Name }}-brain
+        app: {{ $.Release.Name }}-brain
+        {{- if $region }}
+        topology.kubernetes.io/region: {{ $region.name }}
+        {{- end }}
     spec:
-      {{- if .Values.serviceAccount.create }}
-      serviceAccountName: {{ .Values.serviceAccount.name | default (printf "%s-sa" .Release.Name) }}
+      {{- if $.Values.serviceAccount.create }}
+      serviceAccountName: {{ $.Values.serviceAccount.name | default (printf "%s-sa" $.Release.Name) }}
+      {{- end }}
+      {{- if $region }}
+      {{- if $region.nodeSelector }}
+      nodeSelector:
+        {{- toYaml $region.nodeSelector | nindent 8 }}
+      {{- end }}
+      topologySpreadConstraints:
+        - maxSkew: 1
+          topologyKey: topology.kubernetes.io/zone
+          whenUnsatisfiable: ScheduleAnyway
+          labelSelector:
+            matchLabels:
+              app: {{ $.Release.Name }}-brain
+              topology.kubernetes.io/region: {{ $region.name }}
       {{- end }}
       containers:
         - name: brain
-          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
-          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          image: "{{ $.Values.image.repository }}:{{ $.Values.image.tag }}"
+          imagePullPolicy: {{ $.Values.image.pullPolicy }}
           command: ["node", "dist/mcp_servers/brain/index.js"]
           env:
             - name: PORT
-              value: "{{ .Values.brain.port }}"
+              value: "{{ $.Values.brain.port }}"
           ports:
-            - containerPort: {{ .Values.brain.port }}
+            - containerPort: {{ $.Values.brain.port }}
           livenessProbe:
             httpGet:
               path: /health
-              port: {{ .Values.brain.port }}
+              port: {{ $.Values.brain.port }}
             initialDelaySeconds: 15
             periodSeconds: 20
           readinessProbe:
+            {{- if $.Values.multiRegion.enabled }}
+            exec:
+              command:
+                - /bin/sh
+                - -c
+                - "if grep -q {{ $region.name }} /etc/config/failedRegions; then exit 1; else wget -qO- http://localhost:{{ $.Values.brain.port }}/health; fi"
+            {{- else }}
             httpGet:
               path: /health
-              port: {{ .Values.brain.port }}
+              port: {{ $.Values.brain.port }}
+            {{- end }}
             initialDelaySeconds: 5
             periodSeconds: 10
           volumeMounts:
+            {{- if $.Values.multiRegion.enabled }}
+            - name: failover-config
+              mountPath: /etc/config
+            {{- end }}
             - name: brain-storage
               mountPath: /app/.agent/brain
           resources:
-            {{- toYaml .Values.brain.resources | nindent 12 }}
+            {{- toYaml $.Values.brain.resources | nindent 12 }}
       volumes:
+        {{- if $.Values.multiRegion.enabled }}
+        - name: failover-config
+          configMap:
+            name: {{ $.Release.Name }}-config{{ $regionSuffix }}
+            items:
+              - key: failedRegions
+                path: failedRegions
+        {{- end }}
         - name: brain-storage
-        {{- if .Values.brain.persistence.enabled }}
+        {{- if $.Values.brain.persistence.enabled }}
           persistentVolumeClaim:
-            claimName: {{ .Release.Name }}-brain-pvc
+            claimName: {{ $.Release.Name }}-brain-pvc{{ $regionSuffix }}
         {{- else }}
           emptyDir: {}
         {{- end }}
+{{- end }}

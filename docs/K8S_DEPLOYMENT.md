@@ -28,6 +28,31 @@ The centralized memory system (LanceDB + Semantic Graph).
 *   **Networking:**
     *   Exposes port `3002` (Brain API/SSE).
 
+## Multi-Region Deployment
+
+For high availability and disaster recovery, the Helm chart supports multi-region deployments. This mode deploys separate, isolated instances (StatefulSets, Services, PVCs) per region, while maintaining a global entry point via a multi-region Ingress.
+
+To enable multi-region deployment, define the regions in your `values.yaml`:
+
+```yaml
+multiRegion:
+  enabled: true
+  regions:
+    - name: "us-east-1"
+      nodeSelector:
+        topology.kubernetes.io/region: us-east-1
+      storageClass: "gp3-us-east"
+    - name: "eu-west-1"
+      nodeSelector:
+        topology.kubernetes.io/region: eu-west-1
+      storageClass: "gp3-eu-west"
+```
+
+### Failover and Geographic Routing
+- **Topology Constraints:** Pods are spread across zones using `topologySpreadConstraints`.
+- **Geographic Routing:** Services use `externalTrafficPolicy: Local` when applicable to route traffic efficiently. The chart includes a `ingress-multiregion.yaml` configurable with annotations (e.g., for AWS Route53/external-dns) to enable DNS-level failover.
+- **Failover Simulation:** Each pod includes a custom `exec` readiness probe that checks `/etc/config/failedRegions` (populated by a ConfigMap). You can trigger a failover simulation by updating the `failedRegions` key in the ConfigMap via the `simulate_regional_outage` MCP tool.
+
 ## Multi-Tenancy
 
 Multi-tenancy is achieved via Namespace isolation and the `company` parameter.

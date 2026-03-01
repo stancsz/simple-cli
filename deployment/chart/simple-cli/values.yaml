@@ -1,6 +1,21 @@
 # Global settings
 company: "default-company"
 
+# Multi-Region Deployment
+multiRegion:
+  enabled: false
+  # If enabled, specify regions here.
+  # Each region can override specific settings like nodeSelectors or storageClasses.
+  # Example:
+  # regions:
+  #   - name: "us-east-1"
+  #     nodeSelector: { "topology.kubernetes.io/region": "us-east-1" }
+  #     storageClass: "gp3"
+  #   - name: "eu-west-1"
+  #     nodeSelector: { "topology.kubernetes.io/region": "eu-west-1" }
+  #     storageClass: "gp3"
+  regions: []
+
 # Main image configuration
 image:
   repository: simple-agency

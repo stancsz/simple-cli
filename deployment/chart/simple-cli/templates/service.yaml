@@ -1,77 +1,107 @@
+{{- $regions := list "" }}
+{{- if .Values.multiRegion.enabled }}
+{{- $regions = .Values.multiRegion.regions }}
+{{- end }}
+
+{{- range $index, $region := $regions }}
+{{- $regionSuffix := "" }}
+{{- if $region }}
+{{- $regionSuffix = printf "-%s" $region.name }}
+{{- end }}
+---
 apiVersion: v1
 kind: Service
 metadata:
-  name: {{ .Release.Name }}-brain
-  namespace: {{ .Release.Namespace }}
+  name: {{ $.Release.Name }}-brain{{ $regionSuffix }}
+  namespace: {{ $.Release.Namespace }}
   labels:
-    app: {{ .Release.Name }}-brain
+    app: {{ $.Release.Name }}-brain
 spec:
-  type: {{ .Values.brain.service.type }}
+  type: {{ $.Values.brain.service.type }}
+  {{- if and $.Values.multiRegion.enabled (eq $.Values.brain.service.type "LoadBalancer") }}
+  externalTrafficPolicy: Local
+  {{- end }}
   ports:
-    - port: {{ .Values.brain.service.port }}
-      targetPort: {{ .Values.brain.port }}
+    - port: {{ $.Values.brain.service.port }}
+      targetPort: {{ $.Values.brain.port }}
       protocol: TCP
       name: http
   selector:
-    app: {{ .Release.Name }}-brain
+    app: {{ $.Release.Name }}-brain
+    {{- if $region }}
+    topology.kubernetes.io/region: {{ $region.name }}
+    {{- end }}
 
 ---
 apiVersion: v1
 kind: Service
 metadata:
-  name: {{ .Release.Name }}-brain-headless
-  namespace: {{ .Release.Namespace }}
+  name: {{ $.Release.Name }}-brain-headless{{ $regionSuffix }}
+  namespace: {{ $.Release.Namespace }}
   labels:
-    app: {{ .Release.Name }}-brain
+    app: {{ $.Release.Name }}-brain
 spec:
   clusterIP: None
   ports:
-    - port: {{ .Values.brain.service.port }}
-      targetPort: {{ .Values.brain.port }}
+    - port: {{ $.Values.brain.service.port }}
+      targetPort: {{ $.Values.brain.port }}
       protocol: TCP
       name: http
   selector:
-    app: {{ .Release.Name }}-brain
+    app: {{ $.Release.Name }}-brain
+    {{- if $region }}
+    topology.kubernetes.io/region: {{ $region.name }}
+    {{- end }}
 
 ---
 apiVersion: v1
 kind: Service
 metadata:
-  name: {{ .Release.Name }}-agent
-  namespace: {{ .Release.Namespace }}
+  name: {{ $.Release.Name }}-agent{{ $regionSuffix }}
+  namespace: {{ $.Release.Namespace }}
   labels:
-    app: {{ .Release.Name }}-agent
+    app: {{ $.Release.Name }}-agent
 spec:
-  type: {{ .Values.agent.service.type }}
+  type: {{ $.Values.agent.service.type }}
+  {{- if and $.Values.multiRegion.enabled (eq $.Values.agent.service.type "LoadBalancer") }}
+  externalTrafficPolicy: Local
+  {{- end }}
   ports:
-    - port: {{ .Values.agent.service.port }}
-      targetPort: {{ .Values.agent.service.port }}
+    - port: {{ $.Values.agent.service.port }}
+      targetPort: {{ $.Values.agent.service.port }}
       protocol: TCP
       name: http
-    - port: {{ .Values.healthMonitor.port }}
-      targetPort: {{ .Values.healthMonitor.port }}
+    - port: {{ $.Values.healthMonitor.port }}
+      targetPort: {{ $.Values.healthMonitor.port }}
       protocol: TCP
       name: health-monitor
   selector:
-    app: {{ .Release.Name }}-agent
+    app: {{ $.Release.Name }}-agent
+    {{- if $region }}
+    topology.kubernetes.io/region: {{ $region.name }}
+    {{- end }}
 
 ---
 apiVersion: v1
 kind: Service
 metadata:
-  name: {{ .Release.Name }}-agent-headless
-  namespace: {{ .Release.Namespace }}
+  name: {{ $.Release.Name }}-agent-headless{{ $regionSuffix }}
+  namespace: {{ $.Release.Namespace }}
   labels:
-    app: {{ .Release.Name }}-agent
+    app: {{ $.Release.Name }}-agent
 spec:
   clusterIP: None
   ports:
-    - port: {{ .Values.agent.service.port }}
-      targetPort: {{ .Values.agent.service.port }}
+    - port: {{ $.Values.agent.service.port }}
+      targetPort: {{ $.Values.agent.service.port }}
       protocol: TCP
       name: http
   selector:
-    app: {{ .Release.Name }}-agent
+    app: {{ $.Release.Name }}-agent
+    {{- if $region }}
+    topology.kubernetes.io/region: {{ $region.name }}
+    {{- end }}
+{{- end }}
 
 {{- if .Values.redis.enabled }}
 ---

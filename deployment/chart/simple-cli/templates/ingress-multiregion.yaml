@@ -1,0 +1,43 @@
+{{- if and .Values.ingress.enabled .Values.multiRegion.enabled -}}
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: {{ .Release.Name }}-ingress-multiregion
+  namespace: {{ .Release.Namespace }}
+  annotations:
+    # Example annotations for external-dns / AWS Route53 geo routing
+    external-dns.alpha.kubernetes.io/set-identifier: {{ .Release.Name }}-global
+    external-dns.alpha.kubernetes.io/aws-geolocation-country-code: "*"
+    {{- with .Values.ingress.annotations }}
+    {{- toYaml . | nindent 4 }}
+    {{- end }}
+spec:
+  {{- if .Values.ingress.className }}
+  ingressClassName: {{ .Values.ingress.className }}
+  {{- end }}
+  {{- if .Values.ingress.tls }}
+  tls:
+    {{- range .Values.ingress.tls }}
+    - hosts:
+        {{- range .hosts }}
+        - {{ . | quote }}
+        {{- end }}
+      secretName: {{ .secretName }}
+    {{- end }}
+  {{- end }}
+  rules:
+    {{- range .Values.ingress.hosts }}
+    - host: {{ .host | quote }}
+      http:
+        paths:
+          {{- range .paths }}
+          - path: {{ .path }}
+            pathType: {{ .pathType }}
+            backend:
+              service:
+                name: {{ $.Release.Name }}-agent-{{ (index $.Values.multiRegion.regions 0).name }} # Default routing for global ingress, typically handled by external load balancer instead
+                port:
+                  number: {{ $.Values.agent.service.port }}
+          {{- end }}
+    {{- end }}
+{{- end -}}
