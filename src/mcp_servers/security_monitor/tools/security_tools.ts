@@ -7,11 +7,17 @@ import { logMetric } from "../../../logger.js";
 import { readFile } from "fs/promises";
 import { join } from "path";
 import { createLLM } from "../../../llm.js";
+import { registerRegionalOutageTool } from "./regional_outage.js";
+import { registerPenetrationTestTool } from "./penetration_test.js";
+
 import { randomUUID } from "crypto";
 
 const execFileAsync = promisify(execFile);
 
 export function registerSecurityTools(server: McpServer) {
+    registerRegionalOutageTool(server);
+    registerPenetrationTestTool(server);
+
     server.tool(
         "scan_dependencies",
         "Scans dependencies for vulnerabilities using npm audit.",
