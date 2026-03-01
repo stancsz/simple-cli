@@ -7,16 +7,14 @@ import { logMetric } from "../../../logger.js";
 import { readFile } from "fs/promises";
 import { join } from "path";
 import { createLLM } from "../../../llm.js";
-import { registerRegionalOutageTool } from "./regional_outage.js";
-import { registerPenetrationTestTool } from "./penetration_test.js";
+import { registerValidationTools } from "./validation_tools.js";
 
 import { randomUUID } from "crypto";
 
 const execFileAsync = promisify(execFile);
 
 export function registerSecurityTools(server: McpServer) {
-    registerRegionalOutageTool(server);
-    registerPenetrationTestTool(server);
+    registerValidationTools(server);
 
     server.tool(
         "scan_dependencies",
