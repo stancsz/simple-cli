@@ -219,8 +219,8 @@ The roadmap is structured around the four anatomical layers of the Digital Biosp
     - ✅ Implemented `scan_dependencies` parsing `npm audit` for critical CVEs.
     - ✅ Implemented `monitor_api_activity` for anomaly detection based on configurable thresholds.
     - ✅ Implemented `apply_security_patch` for autonomous PR creation.
-    - ✅ Validated via `tests/integration/security_monitor_validation.test.ts`.
-    - ✅ Implementation documented in `docs/security_monitor.md`. Security Monitor MCP is now operational.
+    - ✅ Validated via `tests/integration/security_monitor_validation.test.ts` and new E2E test `tests/integration/security_monitor_e2e.test.ts`.
+    - ✅ Implementation documented in `docs/security_monitor.md` and `docs/SECURITY_HARDENING_MCP.md`. Security Monitor MCP is now operational.
 - [x] **Market Shock Absorption**: Enhance the Strategic Horizon Scanner to detect economic downturns or sudden opportunities (via market data APIs) and trigger pre-defined contingency plans (e.g., adjust pricing, pause non-critical swarms).
     - ✅ Implemented `monitor_market_signals` to capture sector and macro indicators.
     - ✅ Implemented `evaluate_economic_risk` to calculate market vulnerability utilizing Brain and Strategy context.

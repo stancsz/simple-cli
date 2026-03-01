@@ -205,18 +205,21 @@ export function registerSecurityTools(server: McpServer) {
                     try {
                         const prResult = await execFileAsync("gh", ["pr", "create", "--title", commitMessage, "--body", `Automated security patch for ${package_name}.\n\nCVE: ${cve_id || 'N/A'}`]);
                         prUrl = prResult.stdout.trim();
-                    } catch (ghError) {
-                        console.warn("GitHub CLI not available or failed to create PR:", ghError);
+                    } catch (ghError: any) {
+                        console.warn("GitHub CLI not available or failed to create PR:", ghError.message);
                         prUrl = `Branch pushed: ${branchName}. Create PR manually.`;
                     }
-                } catch (pushError) {
-                    console.warn("Could not push branch to remote:", pushError);
+                } catch (pushError: any) {
+                    console.warn("Could not push branch to remote:", pushError.message);
+                    throw new Error(`Failed to push branch to remote: ${pushError.message}`);
+                } finally {
+                    // Checkout main/master again (best effort cleanup)
+                    try {
+                        await execFileAsync("git", ["checkout", "-"]);
+                    } catch (e) {
+                        console.warn("Failed to checkout previous branch during cleanup");
+                    }
                 }
-
-                // Checkout main/master again (best effort cleanup)
-                try {
-                    await execFileAsync("git", ["checkout", "-"]);
-                } catch (e) {}
 
                 const memory = new EpisodicMemory();
                 await memory.init();
@@ -246,7 +249,14 @@ export function registerSecurityTools(server: McpServer) {
                 // Attempt to cleanup branch if failed
                 try {
                     await execFileAsync("git", ["checkout", "-"]);
-                } catch(e) {}
+                } catch(e) {
+                    console.warn("Failed to cleanup branch on error");
+                }
+
+                await logMetric("security_monitor", "security_patch_failed", 1, {
+                    package: package_name,
+                    error: error.message
+                });
 
                 return {
                     content: [{ type: "text", text: `Error applying security patch: ${error.message}` }],
