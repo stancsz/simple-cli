@@ -28,30 +28,30 @@ async function simulateK8sOutage(region: string, failureType: string, durationSe
     try {
         if (failureType === 'node') {
             // Find nodes in region
-            const nodes = await k8sApi.listNode(undefined, undefined, undefined, undefined, `topology.kubernetes.io/region=${region}`);
-            if (nodes.body.items.length > 0) {
+            const nodes = await k8sApi.listNode({ labelSelector: `topology.kubernetes.io/region=${region}` });
+            if (nodes.items && nodes.items.length > 0) {
                 // Cordon the first node
-                const nodeName = nodes.body.items[0].metadata?.name;
+                const nodeName = nodes.items[0].metadata?.name;
                 if (nodeName) {
-                    await k8sApi.patchNode(nodeName, [{ op: 'add', path: '/spec/unschedulable', value: true }], undefined, undefined, undefined, undefined, { headers: { "Content-Type": "application/json-patch+json" } });
+                    await k8sApi.patchNode({ name: nodeName, body: [{ op: 'add', path: '/spec/unschedulable', value: true }] }, { headers: { "Content-Type": "application/json-patch+json" } } as any);
                     metrics.nodes_cordoned++;
 
                     // Simulate wait and uncordon
                     setTimeout(async () => {
                         try {
-                            await k8sApi.patchNode(nodeName, [{ op: 'remove', path: '/spec/unschedulable' }], undefined, undefined, undefined, undefined, { headers: { "Content-Type": "application/json-patch+json" } });
+                            await k8sApi.patchNode({ name: nodeName, body: [{ op: 'remove', path: '/spec/unschedulable' }] }, { headers: { "Content-Type": "application/json-patch+json" } } as any);
                         } catch(e) {}
                     }, durationSeconds * 1000);
                 }
             }
         } else if (failureType === 'pod') {
             // Find pods in namespace
-            const pods = await k8sApi.listPodForAllNamespaces(undefined, undefined, undefined, `topology.kubernetes.io/region=${region}`);
-            if (pods.body.items.length > 0) {
-                const podName = pods.body.items[0].metadata?.name;
-                const podNamespace = pods.body.items[0].metadata?.namespace;
+            const pods = await k8sApi.listPodForAllNamespaces({ labelSelector: `topology.kubernetes.io/region=${region}` });
+            if (pods.items && pods.items.length > 0) {
+                const podName = pods.items[0].metadata?.name;
+                const podNamespace = pods.items[0].metadata?.namespace;
                 if (podName && podNamespace) {
-                    await k8sApi.deleteNamespacedPod(podName, podNamespace);
+                    await k8sApi.deleteNamespacedPod({ name: podName, namespace: podNamespace });
                     metrics.pods_evicted++;
                 }
             }
