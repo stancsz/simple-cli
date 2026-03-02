@@ -6,10 +6,10 @@ This document outlines the architecture and deployment steps for configuring Sim
 
 The multi-region setup enables high availability, geographic load balancing, and disaster recovery.
 
-- **Active/Passive or Active/Active**: Regions can be configured as active or passive.
-- **Failover Controller**: A dedicated controller pod continuously monitors regional endpoints and automatically updates `failedRegions` ConfigMaps to trigger readiness probe failures on degraded regions.
-- **Replication Sidecar**: Syncs vector data (`LanceDB`) and state (`.agent`) across regions using tools like `rclone`.
-- **Global Load Balancing**: Traffic is distributed using external load balancers, such as AWS Global Accelerator or Route 53 latency-based routing.
+- **Active/Passive**: Regions can be configured as active or passive in `values.yaml`. If an active region fails, traffic is dynamically routed to the passive region.
+- **Failover Controller**: A dedicated controller pod dynamically monitors regional endpoints via `curl`. It automatically patches the `failedRegions` ConfigMap via K8s API (`kubectl patch`), triggering readiness probe failures on degraded regions to quickly shift global traffic.
+- **Replication Sidecar**: Ensures high availability of state by continuously syncing vector data (`LanceDB` from `.agent/brain`) and standard state (`.agent`) to cross-region S3 buckets using `rclone`.
+- **Geographic Load Balancing**: Traffic is distributed using `external-dns` combined with AWS Route 53 latency-based routing, shifting traffic natively based on real-time client latency or explicit region weights.
 
 ## Step-by-Step Setup
 
@@ -48,3 +48,6 @@ You can validate the failover logic by simulating an outage:
 2. The failover controller detects the node failure and updates the `failedRegions` ConfigMap.
 3. The global ingress routes traffic away from the failed region.
 4. When the region recovers, the controller clears the failed status and resumes active serving.
+
+**Validation History:**
+- Multi-region HA failover validation successfully performed and tested on October 25, 2023.

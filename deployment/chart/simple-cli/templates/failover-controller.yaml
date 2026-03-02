@@ -31,21 +31,26 @@ spec:
             - |
               while true; do
                 FAILED_REGIONS=""
+                ACTIVE_FAILED=false
                 {{- range .Values.multiRegion.regions }}
-                # Check health of region {{ .name }}
+                # Check health of region {{ .name }} (Active: {{ .active }})
                 if ! curl -m {{ $.Values.failoverController.timeout }} -s -o /dev/null -w "%{http_code}" http://{{ $.Release.Name }}-agent-{{ .name }}:{{ $.Values.agent.service.port }}/health | grep -q '200'; then
                   echo "Region {{ .name }} is failing."
                   FAILED_REGIONS="$FAILED_REGIONS {{ .name }}\n"
+                  {{- if .active }}
+                  ACTIVE_FAILED=true
+                  {{- end }}
                 fi
                 {{- end }}
 
-                # Update ConfigMap logic here (using kubectl or k8s API)
-                # For simplicity, we assume RBAC allows updating the configmap
-                # We could run kubectl here, or just write to a shared volume if using a sidecar pattern
+                # Failover logic: If active regions fail, passive regions should be made active or we track failure
+                # Write to shared volume or ConfigMap
                 echo -e "$FAILED_REGIONS" > /tmp/failedRegions
 
-                # In a real implementation, this would patch the ConfigMap via K8s API
-                # Example: kubectl patch configmap {{ $.Release.Name }}-config-{{ (index .Values.multiRegion.regions 0).name }} -p '{"data":{"failedRegions":"'"$FAILED_REGIONS"'"}}'
+                # Dynamically patch the configmap via K8s API if RBAC allows
+                {{- range .Values.multiRegion.regions }}
+                kubectl patch configmap {{ $.Release.Name }}-config-{{ .name }} -p "{\"data\":{\"failedRegions\":\"$FAILED_REGIONS\"}}" || true
+                {{- end }}
 
                 sleep {{ .Values.failoverController.interval }};
               done

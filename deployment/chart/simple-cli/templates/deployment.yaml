@@ -138,9 +138,8 @@ spec:
           args:
             - |
               while true; do
-                # Sync agent data to a remote/shared location
-                # Example: rclone sync /app/.agent remote:backup/.agent-{{ $region.name }}
                 echo "Syncing agent storage for region {{ $region.name }}..."
+                rclone sync /app/.agent remote:backup/.agent-{{ $region.name }} || true
                 sleep {{ $.Values.replicationSidecar.syncInterval }}
               done
           volumeMounts:
