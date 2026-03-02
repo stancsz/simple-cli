@@ -1,5 +1,5 @@
 import { EpisodicMemory } from "../../../brain/episodic.js";
-import { createLLM } from "../../../llm/index.js";
+import { createLLM } from "../../../llm.js";
 import { scanStrategicHorizon } from "./scan_strategic_horizon.js";
 import { BoardMeetingMinutes } from "../../../brain/schemas.js";
 import { BOARD_PERSONAS, BOARD_MODERATOR_PROMPT } from "../board_prompts.js";

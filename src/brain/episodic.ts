@@ -2,7 +2,7 @@ import * as lancedb from "@lancedb/lancedb";
 import { join, dirname } from "path";
 import { mkdirSync, existsSync } from "fs";
 import { randomUUID } from "crypto";
-import { createLLM } from "../llm/index.js";
+import { createLLM } from "../llm.js";
 import { LanceConnector } from "../mcp_servers/brain/lance_connector.js";
 
 export interface PastEpisode {

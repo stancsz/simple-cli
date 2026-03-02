@@ -10,7 +10,7 @@ import {
 } from "botbuilder";
 import express from "express";
 import { Engine, Context, Registry } from "../engine/orchestrator.js";
-import { createLLM } from "../llm/index.js";
+import { createLLM } from "../llm.js";
 import { MCP } from "../mcp.js";
 import { getActiveSkill } from "../skills.js";
 import { WorkflowEngine } from "../workflows/workflow_engine.js";

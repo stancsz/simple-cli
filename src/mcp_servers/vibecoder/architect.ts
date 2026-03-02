@@ -1,4 +1,4 @@
-import { createLLM, LLM } from "../../llm/index.js";
+import { createLLM, LLM } from "../../llm.js";
 
 export class Architect {
   private llm: LLM;

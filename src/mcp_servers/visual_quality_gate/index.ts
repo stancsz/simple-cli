@@ -4,7 +4,7 @@ import { z } from "zod";
 import { readFile } from "fs/promises";
 import { existsSync } from "fs";
 import { resolve } from "path";
-import { LLM } from "../../llm/index.js";
+import { LLM } from "../../llm.js";
 import { loadCompanyProfile } from "../../context/company-profile.js";
 import { ASSESS_DESIGN_PROMPT } from "./prompts.js";
 

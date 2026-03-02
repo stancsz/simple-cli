@@ -1,8 +1,8 @@
 import { createHash } from "crypto";
 import { promises as fs, existsSync } from "fs";
 import { join } from "path";
-import { createClient, RedisClientType } from "redis";
-import type { LLMResponse } from "./index.js";
+import { createClient } from "redis";
+import type { LLMResponse } from "../llm.js";
 
 export interface LLMCache {
   get(prompt: string, model: string): Promise<LLMResponse | null>;

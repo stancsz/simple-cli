@@ -1,5 +1,5 @@
 import { PersonaConfig, PersonaEngine } from "../persona.js";
-import { createLLM, LLM } from "../llm/index.js";
+import { createLLM, LLM } from "../llm.js";
 
 export class PersonaMiddleware {
   private personaEngine: PersonaEngine;

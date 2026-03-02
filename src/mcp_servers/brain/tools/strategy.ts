@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { EpisodicMemory } from "../../../brain/episodic.js";
-import { LLM } from "../../../llm/index.js";
+import { LLM } from "../../../llm.js";
 
 // Define the schema interface here or import it if you have it in schemas.ts
 // Assuming schemas.ts exists based on the plan, let's import it.

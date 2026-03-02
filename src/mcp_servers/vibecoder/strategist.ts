@@ -1,4 +1,4 @@
-import { createLLM, LLM } from "../../llm/index.js";
+import { createLLM, LLM } from "../../llm.js";
 import { readdirSync, statSync, readFileSync } from "fs";
 import { join } from "path";
 

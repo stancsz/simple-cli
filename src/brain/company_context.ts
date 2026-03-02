@@ -1,5 +1,5 @@
 import * as lancedb from "@lancedb/lancedb";
-import { LLM } from "../llm/index.js";
+import { LLM } from "../llm.js";
 import { join } from "path";
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "fs";
 import { writeFile, unlink, stat, readdir } from "fs/promises";

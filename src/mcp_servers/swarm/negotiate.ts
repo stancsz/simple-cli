@@ -1,4 +1,4 @@
-import { createLLM } from "../../llm/index.js";
+import { createLLM } from "../../llm.js";
 import { MCP } from "../../mcp.js";
 import { DelegateRouter } from "./delegate_router.js";
 

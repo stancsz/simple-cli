@@ -1,6 +1,6 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
-import { createLLM } from "../../../llm/index.js";
+import { createLLM } from "../../../llm.js";
 import { getXeroClient, getTenantId } from "../xero_tools.js";
 import { getLinearClient } from "../linear_service.js";
 import { getHubSpotClient } from "../crm.js";

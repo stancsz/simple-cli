@@ -1,4 +1,4 @@
-import { LLM } from "../../llm/index.js";
+import { LLM } from "../../llm.js";
 import { logMetric } from "../../logger.js";
 
 const ASSESS_DESIGN_PROMPT = `You are a Senior Visual Design Critic and UI/UX Expert. Your role is to evaluate the aesthetic quality of user interface screenshots.

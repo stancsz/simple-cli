@@ -1,6 +1,6 @@
 import { intro, outro, text, isCancel, cancel } from "@clack/prompts";
 import { MCP } from "../mcp.js";
-import { createLLM } from "../llm/index.js";
+import { createLLM } from "../llm.js";
 import { SOPExecutor } from "../mcp_servers/sop_engine/executor.js";
 import { join } from "path";
 import { readFile } from "fs/promises";

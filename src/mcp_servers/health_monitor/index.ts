@@ -319,7 +319,9 @@ async function aggregateCompanyMetrics() {
                 for (const file of files) {
                     const allMetrics = await readNdjson(file);
                     for (const m of allMetrics) {
-                        if (m.agent === company || !m.agent) { // Fallback if no agent is specified
+                        // The LLM writes metrics with agent='llm'. We assign to company if possible
+                        // Health metrics natively attributes it to the current running agent, but since LLM is low-level, we aggregate globally or fallback.
+                        if (m.agent === company || m.agent === 'llm' || !m.agent) {
                             if (m.metric === 'llm_cache_hit') cacheHits += m.value;
                             if (m.metric === 'llm_cache_miss') cacheMisses += m.value;
                             if (m.metric === 'llm_tokens_total_cached') cachedTokens += m.value;

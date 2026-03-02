@@ -5,7 +5,7 @@ import { writeFile, rm, mkdir } from "fs/promises";
 import { existsSync } from "fs";
 
 // Mock dependencies
-vi.mock("../../../llm/index.js", () => {
+vi.mock("../../../llm.js", () => {
   return {
     createLLM: () => ({
       generate: vi.fn().mockResolvedValue({

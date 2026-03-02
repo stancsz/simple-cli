@@ -1,5 +1,5 @@
 import { EpisodicMemory } from "../../../brain/episodic.js";
-import { createLLM } from "../../../llm/index.js";
+import { createLLM } from "../../../llm.js";
 import { readStrategy } from "./strategy.js";
 import { analyzePatterns } from "./pattern_analysis.js";
 import { monitorMarketSignals } from "./market_shock.js";

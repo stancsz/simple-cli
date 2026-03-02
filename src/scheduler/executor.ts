@@ -2,7 +2,7 @@ import "dotenv/config";
 import { fileURLToPath } from "url";
 import { Context, Registry } from "../engine/orchestrator.js";
 import { MCP } from "../mcp.js";
-import { createLLM } from "../llm/index.js";
+import { createLLM } from "../llm.js";
 import { TaskDefinition } from "../interfaces/daemon.js";
 import { join, dirname } from "path";
 import { existsSync } from "fs";

@@ -1,5 +1,5 @@
 import { Registry } from "../engine/orchestrator.js";
-import { LLM } from "../llm/index.js";
+import { LLM } from "../llm.js";
 import { SOPRegistry } from "../workflows/sop_registry.js";
 import { MCP } from "../mcp.js";
 import { z } from "zod";

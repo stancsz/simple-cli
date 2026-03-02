@@ -3,7 +3,7 @@ import { readFile, writeFile, mkdir, copyFile } from "fs/promises";
 import { join, basename } from "path";
 import { existsSync } from "fs";
 import { createPatch, applyPatch, createTwoFilesPatch } from "diff";
-import { createLLM } from "../../llm/index.js";
+import { createLLM } from "../../llm.js";
 import { EpisodicMemory } from "../../brain/episodic.js";
 import { SafetyProtocol } from "./safety.js";
 import { analyzeCodeSmellPrompt, proposalPrompt } from "./prompts.js";

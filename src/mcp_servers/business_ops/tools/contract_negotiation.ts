@@ -3,7 +3,7 @@ import { z } from "zod";
 import { EpisodicMemory } from "../../../brain/episodic.js";
 import { CorporatePolicy } from "../../../brain/schemas.js";
 import { OpenCoworkServer } from "../../opencowork/index.js";
-import { createLLM } from "../../../llm/index.js";
+import { createLLM } from "../../../llm.js";
 import { dirname } from "path";
 
 // Initialize Episodic Memory (singleton-ish for this module)

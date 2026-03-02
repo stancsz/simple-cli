@@ -2,7 +2,7 @@ import { z } from "zod";
 import { readFile } from "fs/promises";
 import { existsSync } from "fs";
 import { join } from "path";
-import { LLMResponse } from "./llm/index.js";
+import { LLMResponse } from "./llm.js";
 
 const DEFAULT_EMOJIS = ["😊", "👍", "🚀", "🤖", "💻", "✨", "💡", "🔥"];
 

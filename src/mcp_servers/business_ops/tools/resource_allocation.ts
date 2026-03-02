@@ -1,7 +1,7 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
 import { MCP } from "../../../mcp.js";
-import { createLLM } from "../../../llm/index.js";
+import { createLLM } from "../../../llm.js";
 import { getFleetStatusLogic } from "./swarm_fleet_management.js";
 import { collectPerformanceMetrics } from "./performance_analytics.js";
 import { scaleSwarmLogic } from "../../scaling_engine/scaling_orchestrator.js";

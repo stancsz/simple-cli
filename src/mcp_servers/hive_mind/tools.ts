@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { Engine, Registry, Context } from "../../engine/orchestrator.js";
-import { createLLM, LLM } from "../../llm/index.js";
+import { createLLM, LLM } from "../../llm.js";
 import { MCP } from "../../mcp.js";
 import { Agent, Task, Bid } from "./types.js";
 import { builtinSkills, Skill } from "../../skills.js";

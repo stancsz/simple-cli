@@ -3,7 +3,7 @@ import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js"
 import { z } from "zod";
 import { fileURLToPath } from "url";
 import { V0DevClient } from "./client.js";
-import { createLLM } from "../../llm/index.js";
+import { createLLM } from "../../llm.js";
 import { MCP } from "../../mcp.js";
 
 export class V0DevServer {

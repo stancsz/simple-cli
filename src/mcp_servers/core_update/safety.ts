@@ -1,4 +1,4 @@
-import { createLLM } from "../../llm/index.js";
+import { createLLM } from "../../llm.js";
 import { supervisorPrompt } from "./prompts.js";
 import { join, isAbsolute, relative } from "path";
 

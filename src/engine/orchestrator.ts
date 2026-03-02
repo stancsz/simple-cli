@@ -8,7 +8,7 @@ import { pathToFileURL } from "url";
 import { relative, join } from "path";
 import { MCP } from "../mcp.js";
 import { Skill } from "../skills.js";
-import { LLM } from "../llm/index.js";
+import { LLM } from "../llm.js";
 import { loadCompanyProfile, CompanyProfile } from "../context/company-profile.js";
 import { ContextManager } from "../context/ContextManager.js";
 import { logMetric } from "../logger.js";

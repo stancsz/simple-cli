@@ -2,7 +2,7 @@ import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { z } from "zod";
 import { fileURLToPath } from "url";
-import { createLLM } from "../../llm/index.js";
+import { createLLM } from "../../llm.js";
 import { EpisodicMemory } from "../../brain/episodic.js";
 import { MCP } from "../../mcp.js";
 import { healShowcase } from "./healer.js";

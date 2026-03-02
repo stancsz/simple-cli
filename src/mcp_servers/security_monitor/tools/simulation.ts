@@ -2,7 +2,7 @@ import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
 import { logMetric } from "../../../logger.js";
 import { EpisodicMemory } from "../../../brain/episodic.js";
-import { createLLM } from "../../../llm/index.js";
+import { createLLM } from "../../../llm.js";
 import { readFile } from "fs/promises";
 import { join } from "path";
 import * as k8s from '@kubernetes/client-node';

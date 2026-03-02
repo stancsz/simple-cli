@@ -1,6 +1,6 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
-import { createLLM } from "../../../llm/index.js";
+import { createLLM } from "../../../llm.js";
 import { EpisodicMemory } from "../../../brain/episodic.js";
 import { readStrategy } from "../../brain/tools/strategy.js";
 import { CorporatePolicy } from "../../../brain/schemas.js";

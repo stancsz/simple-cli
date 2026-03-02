@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { LLM } from '../../src/llm/index.js';
+import { LLM } from '../../src/llm.js';
 import * as configModule from '../../src/config.js';
 import * as aiModule from 'ai';
 

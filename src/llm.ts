@@ -4,10 +4,10 @@ import { createAnthropic } from "@ai-sdk/anthropic";
 import { createGoogleGenerativeAI } from "@ai-sdk/google";
 import { jsonrepair } from "jsonrepair";
 import chalk from "chalk";
-import { PersonaEngine } from "../persona.js";
-import { logMetric } from "../logger.js";
-import { createLLMCache, LLMCache } from "./cache.js";
-import { loadConfig } from "../config.js";
+import { PersonaEngine } from "./persona.js";
+import { logMetric } from "./logger.js";
+import { createLLMCache, LLMCache } from "./llm/cache.js";
+import { loadConfig } from "./config.js";
 
 export interface LLMResponse {
   thought: string;
@@ -110,7 +110,7 @@ export class LLM {
     const lastUserMessage =
       history.filter((m) => m.role === "user").pop()?.content || "";
 
-    // We compute a cache key combining system prompt and user history.
+    // Compute cache key combining system prompt and user history.
     const cachePrompt = systemWithPersona + "\n" + JSON.stringify(history);
 
     for (const config of this.configs) {
@@ -126,7 +126,7 @@ export class LLM {
         const cached = await this.cache.get(cachePrompt, modelName);
         if (cached) {
           logMetric('llm', 'llm_cache_hit', 1, { model: modelName, provider: providerName });
-          // If usage tokens are cached, let's keep them, or default to 0
+          // If usage tokens are cached, log them
           if (cached.usage) {
              const totalTokens = cached.usage.totalTokens ?? 0;
              logMetric('llm', 'llm_tokens_total_cached', totalTokens, { model: modelName, provider: providerName });
