@@ -82,3 +82,22 @@ This document outlines standard deployment scenarios for validating Business MCP
 *   P&L report retrieved successfully.
 *   Deal created in the correct pipeline stage.
 *   Project issues listed and accessible for planning.
+
+---
+
+## Scenario 4: Routine Strategic Scans (Cost Savings)
+
+**Objective:** Validate token and cost reductions using Batch Prompt Consolidation (Phase 28).
+
+**Workflow:**
+1.  **Multiple Scans Triggered:**
+    *   `strategic_scan`, `performance_metrics`, and `market_analysis` are scheduled concurrently.
+2.  **Batch Execution:**
+    *   The `BatchExecutor` intercepts and consolidates them into a single context window.
+    *   The LLM processes all three tasks and returns a combined JSON response.
+3.  **Metrics Verified:**
+    *   Dashboard reflects an increase in `batched_calls_count` and significant `tokens_saved_via_batching`.
+
+**Performance Impact:**
+*   **Without Batching:** 3 API calls, 3x system prompt tokens, 3x context overhead.
+*   **With Batching:** 1 API call, 1x system prompt tokens, independent task processing. Typical token savings: **40-60%**.

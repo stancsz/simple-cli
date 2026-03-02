@@ -6,6 +6,7 @@ import { join, dirname } from "path";
 import { readFile, writeFile, mkdir } from "fs/promises";
 import { existsSync } from "fs";
 import lockfile from "proper-lockfile";
+import { globalBatchExecutor } from "../../scheduler/batch_executor.js";
 
 export class SchedulerServer {
   private server: McpServer;
@@ -126,6 +127,24 @@ export class SchedulerServer {
         } catch (e: any) {
             return {
                 content: [{ type: "text", text: `Error adding task: ${e.message}` }],
+                isError: true
+            };
+        }
+      }
+    );
+
+    this.server.tool(
+      "scheduler_run_batch",
+      "Manually trigger execution of pending batched strategic tasks.",
+      {},
+      async () => {
+        try {
+            // Force processing right away bypassing the timer
+            await globalBatchExecutor.forceProcess();
+            return { content: [{ type: "text", text: "Batch execution triggered." }] };
+        } catch (e: any) {
+            return {
+                content: [{ type: "text", text: `Error triggering batch: ${e.message}` }],
                 isError: true
             };
         }

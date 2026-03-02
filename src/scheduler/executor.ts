@@ -366,6 +366,27 @@ export async function executeTask(taskDef: TaskDefinition) {
 // Script Entry Point
 if (import.meta.url ===  "file://" + process.argv[1] || process.argv[1].endsWith("executor.ts") || process.argv[1].endsWith("executor.js")) {
     const main = async () => {
+        const batchDefStr = process.env.JULES_BATCH_DEF;
+        if (batchDefStr) {
+            let tasks: TaskDefinition[] = [];
+            try {
+                tasks = JSON.parse(batchDefStr);
+            } catch (e) {
+                console.error("Failed to parse JULES_BATCH_DEF:", e);
+                process.exit(1);
+            }
+            try {
+                // Execute all tasks concurrently in this process.
+                // The underlying LLM layer will intercept concurrent calls and batch them.
+                await Promise.allSettled(tasks.map(t => executeTask(t)));
+                process.exit(0);
+            } catch (e) {
+                console.error("Batch execution failed:", e);
+                process.exit(1);
+            }
+            return;
+        }
+
         const taskDefStr = process.env.JULES_TASK_DEF;
         if (!taskDefStr) {
           console.error("No task definition provided (JULES_TASK_DEF).");
