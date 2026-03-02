@@ -4,8 +4,10 @@ import { createAnthropic } from "@ai-sdk/anthropic";
 import { createGoogleGenerativeAI } from "@ai-sdk/google";
 import { jsonrepair } from "jsonrepair";
 import chalk from "chalk";
-import { PersonaEngine } from "./persona.js";
-import { logMetric } from "./logger.js";
+import { PersonaEngine } from "../persona.js";
+import { logMetric } from "../logger.js";
+import { createLLMCache, LLMCache } from "./cache.js";
+import { loadConfig } from "../config.js";
 
 export interface LLMResponse {
   thought: string;
@@ -26,10 +28,25 @@ export type LLMConfig = { provider: string; model: string; apiKey?: string };
 export class LLM {
   private configs: LLMConfig[];
   public personaEngine: PersonaEngine;
+  private cache: LLMCache | null = null;
+  private isCacheInitialized = false;
 
   constructor(config: LLMConfig | LLMConfig[]) {
     this.configs = Array.isArray(config) ? config : [config];
     this.personaEngine = new PersonaEngine();
+  }
+
+  private async initializeCache() {
+    if (this.isCacheInitialized) return;
+    try {
+      const config = await loadConfig();
+      if (config.llmCache) {
+        this.cache = createLLMCache(config.llmCache);
+      }
+    } catch (e) {
+      console.warn(`[LLM] Failed to initialize cache: ${e}`);
+    }
+    this.isCacheInitialized = true;
   }
 
   async embed(text: string): Promise<number[]> {
@@ -87,14 +104,40 @@ export class LLM {
     // Ensure Persona is loaded and applied to System Prompt (Voice Consistency)
     await this.personaEngine.loadConfig();
     const systemWithPersona = this.personaEngine.injectPersonality(system);
+    await this.initializeCache();
 
     let lastError: Error | null = null;
     const lastUserMessage =
       history.filter((m) => m.role === "user").pop()?.content || "";
 
+    // We compute a cache key combining system prompt and user history.
+    const cachePrompt = systemWithPersona + "\n" + JSON.stringify(history);
+
     for (const config of this.configs) {
       const providerName = config.provider.toLowerCase();
       const modelName = config.model;
+
+      // Load config to check YOLO mode
+      const sysConfig = await loadConfig();
+
+      // Check Cache First
+      // Bypass cache if streaming is requested or YOLO mode
+      if (this.cache && !onTyping && !sysConfig.yoloMode) {
+        const cached = await this.cache.get(cachePrompt, modelName);
+        if (cached) {
+          logMetric('llm', 'llm_cache_hit', 1, { model: modelName, provider: providerName });
+          // If usage tokens are cached, let's keep them, or default to 0
+          if (cached.usage) {
+             const totalTokens = cached.usage.totalTokens ?? 0;
+             logMetric('llm', 'llm_tokens_total_cached', totalTokens, { model: modelName, provider: providerName });
+          }
+          return await this.personaEngine.transformResponse(cached, onTyping);
+        }
+      }
+      if (!sysConfig.yoloMode) {
+        logMetric('llm', 'llm_cache_miss', 1, { model: modelName, provider: providerName });
+      }
+
       try {
         if (signal?.aborted) throw new Error("Aborted by user");
 
@@ -165,6 +208,11 @@ export class LLM {
         }
 
         const parsed = this.parse(text, usage as any);
+
+        if (this.cache && !onTyping && !sysConfig.yoloMode) {
+           await this.cache.set(cachePrompt, modelName, parsed);
+        }
+
         // Apply Persona Formatting (Catchphrases, Emojis, Typing Delay)
         return await this.personaEngine.transformResponse(parsed, onTyping);
       } catch (e: any) {

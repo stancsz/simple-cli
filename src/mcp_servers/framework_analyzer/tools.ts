@@ -1,4 +1,4 @@
-import { createLLM } from "../../llm.js";
+import { createLLM } from "../../llm/index.js";
 import { execFile, exec } from "child_process";
 import { promisify } from "util";
 import { join, basename } from "path";

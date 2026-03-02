@@ -3,7 +3,7 @@ import { StagehandDriver } from "./drivers/StagehandDriver.js";
 import { AnthropicComputerUseDriver } from "./drivers/AnthropicComputerUseDriver.js";
 import { OpenAIOperatorDriver } from "./drivers/OpenAIOperatorDriver.js";
 import { SkyvernDriver } from "./drivers/SkyvernDriver.js";
-import { createLLM } from "../../llm.js";
+import { createLLM } from "../../llm/index.js";
 import { logMetric } from "../../logger.js";
 
 export class DesktopRouter {

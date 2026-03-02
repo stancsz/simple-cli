@@ -1,5 +1,5 @@
 import { PersonaEngine } from '../../persona.js';
-import { LLMResponse } from '../../llm.js';
+import { LLMResponse } from '../../llm/index.js';
 
 export class PersonaFormatter {
   private engine: PersonaEngine;

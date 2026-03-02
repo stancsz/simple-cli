@@ -310,12 +310,37 @@ async function aggregateCompanyMetrics() {
             const successRate = count > 0 ? (successCount / count) * 100 : 0;
             const estimatedCost = (totalTokens / 1_000_000) * 5.00; // $5 per 1M tokens assumption
 
+            // Fetch caching metrics
+            let cacheHits = 0;
+            let cacheMisses = 0;
+            let cachedTokens = 0;
+            try {
+                const files = await getMetricFiles(7);
+                for (const file of files) {
+                    const allMetrics = await readNdjson(file);
+                    for (const m of allMetrics) {
+                        if (m.agent === company || !m.agent) { // Fallback if no agent is specified
+                            if (m.metric === 'llm_cache_hit') cacheHits += m.value;
+                            if (m.metric === 'llm_cache_miss') cacheMisses += m.value;
+                            if (m.metric === 'llm_tokens_total_cached') cachedTokens += m.value;
+                        }
+                    }
+                }
+            } catch (e) {
+                console.warn(`[Health Monitor] Error reading cache metrics: ${e}`);
+            }
+
+            const estimatedSavings = (cachedTokens / 1_000_000) * 5.00;
+
             metrics[company] = {
                 total_tokens: totalTokens,
                 avg_duration_ms: Math.round(avgDuration),
                 success_rate: Math.round(successRate),
                 task_count: count,
-                estimated_cost_usd: parseFloat(estimatedCost.toFixed(4))
+                estimated_cost_usd: parseFloat(estimatedCost.toFixed(4)),
+                llm_cache_hits: cacheHits,
+                llm_cache_misses: cacheMisses,
+                estimated_savings_usd: parseFloat(estimatedSavings.toFixed(4))
             };
         } catch (e) {
             console.error(`Failed to get metrics for ${company}:`, e);

@@ -1,5 +1,5 @@
 import { EpisodicMemory } from "../../../brain/episodic.js";
-import { LLM } from "../../../llm.js";
+import { LLM } from "../../../llm/index.js";
 
 /**
  * Fetches external market signals (mocked for now).

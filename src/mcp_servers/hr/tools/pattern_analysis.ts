@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { EpisodicMemory } from "../../../brain/episodic.js";
-import { createLLM } from "../../../llm.js";
+import { createLLM } from "../../../llm/index.js";
 import { analyzeCrossSwarmPatternsPrompt } from "../prompts.js";
 
 export const analyzeCrossSwarmPatterns = async (

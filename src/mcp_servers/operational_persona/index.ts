@@ -9,7 +9,7 @@ import { join } from "path";
 import { existsSync } from "fs";
 import { StatusGenerator } from "./status_generator.js";
 import { PersonaFormatter } from "./persona_formatter.js";
-import { createLLM } from "../../llm.js";
+import { createLLM } from "../../llm/index.js";
 
 const server = new McpServer({
   name: "operational_persona",

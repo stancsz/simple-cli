@@ -1,4 +1,4 @@
-import { LLM } from "./llm.js";
+import { LLM } from "./llm/index.js";
 import { MCP } from "./mcp.js";
 import { join } from "path";
 import { writeFile, mkdir, unlink } from "fs/promises";

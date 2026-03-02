@@ -1,6 +1,6 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
-import { createLLM } from "../../../llm.js";
+import { createLLM } from "../../../llm/index.js";
 import { EpisodicMemory } from "../../../brain/episodic.js";
 import { getMarketData, analyzeCompetitorPricingInternal } from "./market_analysis.js";
 import { syncContactToHubSpot, syncCompanyToHubSpot } from "../crm.js";

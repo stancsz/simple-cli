@@ -1,5 +1,5 @@
 import "dotenv/config";
-import { createLLM } from "../llm.js";
+import { createLLM } from "../llm/index.js";
 import { MCP } from "../mcp.js";
 import { Registry, Context } from "../engine/orchestrator.js";
 import { AutonomousOrchestrator } from "../engine/autonomous.js";

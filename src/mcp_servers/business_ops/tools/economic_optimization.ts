@@ -1,6 +1,6 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
-import { createLLM } from "../../../llm.js";
+import { createLLM } from "../../../llm/index.js";
 
 export function registerEconomicOptimizationTools(server: McpServer) {
     // 5. Generate Business Insights

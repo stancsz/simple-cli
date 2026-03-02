@@ -1,7 +1,7 @@
 import { join, dirname } from "path";
 import { writeFile, mkdir } from "fs/promises";
 import { existsSync } from "fs";
-import { createLLM } from "../../../llm.js";
+import { createLLM } from "../../../llm/index.js";
 import { generateSOPPrompt } from "../prompts.js";
 
 export const generateSOPFromPatterns = async (

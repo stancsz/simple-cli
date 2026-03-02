@@ -1,4 +1,4 @@
-import { createLLM } from "../../llm.js";
+import { createLLM } from "../../llm/index.js";
 import { EpisodicMemory } from "../../brain/episodic.js";
 
 export interface HealDeps {

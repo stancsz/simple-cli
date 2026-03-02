@@ -4,7 +4,7 @@ import { z } from "zod";
 import { join } from "path";
 import { readdir, readFile, writeFile } from "fs/promises";
 import { existsSync, mkdirSync } from "fs";
-import { createLLM } from "../../llm.js";
+import { createLLM } from "../../llm/index.js";
 import { MCP } from "../../mcp.js";
 import { parseSOP } from "./sop_parser.js";
 import { SOPExecutor } from "./executor.js";

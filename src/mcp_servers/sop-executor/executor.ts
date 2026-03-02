@@ -1,7 +1,7 @@
 import { SOPParser } from "./parser.js";
 import { SopExecutorClient } from "./client.js";
 import { SOP, SOPProgress, StepLog } from "./types.js";
-import { createLLM, LLM } from "../../llm.js";
+import { createLLM, LLM } from "../../llm/index.js";
 import { join } from "path";
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "fs";
 

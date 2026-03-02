@@ -6,7 +6,7 @@ import * as lancedb from "@lancedb/lancedb";
 import { join } from "path";
 import { readFile, readdir, mkdir } from "fs/promises";
 import { existsSync } from "fs";
-import { createLLM } from "../llm.js";
+import { createLLM } from "../llm/index.js";
 
 export class CompanyContextServer {
   private server: McpServer;

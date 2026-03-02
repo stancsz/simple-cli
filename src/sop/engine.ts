@@ -2,7 +2,7 @@ import { join } from "path";
 import { existsSync } from "fs";
 import { SOPParser, SOP, SOPStep } from "./sop_parser.js";
 import { SopMcpClient } from "./SopMcpClient.js";
-import { createLLM, LLM } from "../llm.js";
+import { createLLM, LLM } from "../llm/index.js";
 
 export interface ExecutionLog {
   step: string;

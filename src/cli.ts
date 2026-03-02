@@ -2,7 +2,7 @@
 import "dotenv/config";
 import { statSync } from "fs";
 import { Engine, Context, Registry } from "./engine/orchestrator.js";
-import { createLLM } from "./llm.js";
+import { createLLM } from "./llm/index.js";
 import { MCP } from "./mcp.js";
 import { getActiveSkill } from "./skills.js";
 import { showBanner } from "./tui.js";

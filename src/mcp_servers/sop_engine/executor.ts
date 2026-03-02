@@ -1,4 +1,4 @@
-import { LLM } from '../../llm.js';
+import { LLM } from '../../llm/index.js';
 import { MCP } from '../../mcp.js';
 import { SOP } from './sop_parser.js';
 import { writeFile, mkdir, readFile } from 'fs/promises';

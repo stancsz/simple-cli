@@ -7,7 +7,7 @@ import { readFile, readdir, open } from "fs/promises";
 import { existsSync, statSync } from "fs";
 import { randomUUID } from "crypto";
 
-import { createLLM, LLMResponse } from "../../llm.js";
+import { createLLM, LLMResponse } from "../../llm/index.js";
 import { EpisodicMemory } from "../../brain/episodic.js";
 import { ProposalManager } from "./proposal_manager.js";
 import { analyzePerformancePrompt } from "./prompts.js";

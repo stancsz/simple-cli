@@ -10,7 +10,7 @@ import { join, dirname } from "path";
 import { readFile, readdir } from "fs/promises";
 import { existsSync } from "fs";
 import { FrameworkIngestionEngine } from "../../framework_ingestion/ingest.js";
-import { createLLM } from "../../llm.js";
+import { createLLM } from "../../llm/index.js";
 import { readStrategy, proposeStrategicPivot } from "./tools/strategy.js";
 import { scanStrategicHorizon } from "./tools/scan_strategic_horizon.js";
 import { conveneBoardMeeting } from "./tools/convene_board_meeting.js";

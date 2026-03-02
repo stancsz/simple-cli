@@ -3,7 +3,7 @@ import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js"
 import { z } from "zod";
 import { Engine, Context, Registry } from "../../engine/orchestrator.js";
 import { MCP } from "../../mcp.js";
-import { createLLM } from "../../llm.js";
+import { createLLM } from "../../llm/index.js";
 import { builtinSkills } from "../../skills.js";
 import { fileURLToPath } from "url";
 

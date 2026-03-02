@@ -6,7 +6,7 @@ import { EpisodicMemory } from "../../../brain/episodic.js";
 import { logMetric } from "../../../logger.js";
 import { readFile } from "fs/promises";
 import { join } from "path";
-import { createLLM } from "../../../llm.js";
+import { createLLM } from "../../../llm/index.js";
 import { registerValidationTools } from "./simulation.js";
 
 import { randomUUID } from "crypto";
