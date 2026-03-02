@@ -88,8 +88,11 @@ describe('LLM Caching System End-to-End Validation', () => {
         llmCache: { enabled: true, backend: "file" }
       });
 
-      // 1. Initial Call (Miss)
-      const response1 = await llm.generate('System prompt', [{ role: 'user', content: 'Test integration' }]);
+      const uniqueRunId = Date.now() + Math.random().toString();
+      const prompt = `System prompt for validation ${uniqueRunId}`;
+
+      // 1. Initial Call (Miss) - Using a unique prompt to avoid conflicting with other test files
+      const response1 = await llm.generate(prompt, [{ role: 'user', content: 'Test validation integration' }]);
       expect(response1.message).toBe('Success');
       expect(aiModule.generateText).toHaveBeenCalledTimes(1);
 
@@ -100,7 +103,7 @@ describe('LLM Caching System End-to-End Validation', () => {
       await new Promise(r => setTimeout(r, 100));
 
       // 2. Second Call (Hit)
-      const response2 = await llm.generate('System prompt', [{ role: 'user', content: 'Test integration' }]);
+      const response2 = await llm.generate(prompt, [{ role: 'user', content: 'Test validation integration' }]);
       expect(response2.message).toBe('Success');
 
       // generateText should NOT be called again
@@ -132,13 +135,16 @@ describe('LLM Caching System End-to-End Validation', () => {
         return JSON.stringify({ thought: "Cached Redis", message: "Redis Hit", usage: { totalTokens: 150 } });
       });
 
+      const uniqueRunId = Date.now() + Math.random().toString();
+      const prompt = `System prompt ${uniqueRunId}`;
+
       // 1. Initial Call (Miss)
-      await llm.generate('System prompt', [{ role: 'user', content: 'Redis test' }]);
+      await llm.generate(prompt, [{ role: 'user', content: 'Redis test' }]);
       expect(aiModule.generateText).toHaveBeenCalledTimes(1);
       expect(redisInstance.set).toHaveBeenCalled(); // Ensure the miss resulted in a SET
 
       // 2. Second Call (Hit)
-      const response2 = await llm.generate('System prompt', [{ role: 'user', content: 'Redis test' }]);
+      const response2 = await llm.generate(prompt, [{ role: 'user', content: 'Redis test' }]);
       expect(response2.message).toBe('Redis Hit');
       expect(aiModule.generateText).toHaveBeenCalledTimes(1); // Not called again
 
@@ -154,7 +160,10 @@ describe('LLM Caching System End-to-End Validation', () => {
             llmCache: { enabled: true, backend: "file" }
         });
 
-        await llm.generate('System prompt', [{ role: 'user', content: 'Metrics test' }]);
+        const uniqueRunId = Date.now() + Math.random().toString();
+        const prompt = `System prompt unique metrics ${uniqueRunId}`;
+
+        await llm.generate(prompt, [{ role: 'user', content: 'Metrics test' }]);
 
         // Should log size
         expect(loggerModule.logMetric).toHaveBeenCalledWith(
@@ -178,9 +187,12 @@ describe('LLM Caching System End-to-End Validation', () => {
             llmCache: { enabled: true, backend: "file" }
         });
 
+        const uniqueRunId = Date.now() + Math.random().toString();
+        const prompt = `Benchmark prompt unique ${uniqueRunId}`;
+
         const loops = 5;
         for(let i = 0; i < loops; i++) {
-            await llm.generate('Benchmark prompt', [{ role: 'user', content: 'Repeated task' }]);
+            await llm.generate(prompt, [{ role: 'user', content: 'Repeated task' }]);
         }
 
         // We only expect 1 API call despite 5 requests
