@@ -24,6 +24,7 @@ describe('LLM Cache Integration', () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
+    process.env.OPENAI_API_KEY = "test-key";
 
     // Enable cache in mock config
     vi.mocked(configModule.loadConfig).mockResolvedValue({
