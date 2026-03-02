@@ -316,6 +316,10 @@ async function aggregateCompanyMetrics() {
             let cachedTokens = 0;
             let cacheTotalSizeBytes = 0;
 
+            // Phase 28: Batching Metrics
+            let batchedCalls = 0;
+            let tokensSavedBatched = 0;
+
             try {
                 const files = await getMetricFiles(7);
                 for (const file of files) {
@@ -328,6 +332,8 @@ async function aggregateCompanyMetrics() {
                             if (m.metric === 'llm_cache_miss') cacheMisses += m.value;
                             if (m.metric === 'llm_tokens_total_cached') cachedTokens += m.value;
                             if (m.metric === 'llm_cache_size') cacheTotalSizeBytes += m.value;
+                            if (m.metric === 'batched_calls_count') batchedCalls += m.value;
+                            if (m.metric === 'tokens_saved_via_batching') tokensSavedBatched += m.value;
                         }
                     }
                 }
@@ -335,7 +341,8 @@ async function aggregateCompanyMetrics() {
                 console.warn(`[Health Monitor] Error reading cache metrics: ${e}`);
             }
 
-            const estimatedSavings = (cachedTokens / 1_000_000) * 5.00;
+            // Estimate total savings from cache + batching
+            const estimatedSavings = ((cachedTokens + tokensSavedBatched) / 1_000_000) * 5.00;
 
             metrics[company] = {
                 total_tokens: totalTokens,
@@ -346,6 +353,8 @@ async function aggregateCompanyMetrics() {
                 llm_cache_hits: cacheHits,
                 llm_cache_misses: cacheMisses,
                 llm_cache_size_bytes: cacheTotalSizeBytes,
+                batched_calls_count: batchedCalls,
+                tokens_saved_via_batching: tokensSavedBatched,
                 estimated_savings_usd: parseFloat(estimatedSavings.toFixed(4))
             };
         } catch (e) {

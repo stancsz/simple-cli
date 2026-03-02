@@ -8,6 +8,7 @@ import { fileURLToPath } from 'url';
 import { createServer } from 'http';
 import { ScheduleConfig, TaskDefinition } from './interfaces/daemon.js';
 import { DEFAULT_TASKS } from './scheduler/config.js';
+import { globalBatchExecutor } from './scheduler/batch_executor.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -95,6 +96,17 @@ export async function loadSchedule(): Promise<ScheduleConfig> {
 
 async function runTask(task: TaskDefinition) {
   await log(`Triggering task: ${task.name} (${task.id})`);
+
+  if (globalBatchExecutor.isBatchable(task)) {
+      await log(`Task ${task.id} is batchable. Enqueueing to BatchExecutor...`);
+      try {
+          // This will enqueue and eventually spawn a batched Executor process for these tasks
+          globalBatchExecutor.enqueue(task).catch(e => log(`Batch error: ${e}`));
+      } catch (e: any) {
+          await log(`Batched task ${task.id} execution failed: ${e.message}`);
+      }
+      return;
+  }
 
   const env: NodeJS.ProcessEnv = {
     ...process.env,

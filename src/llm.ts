@@ -8,6 +8,7 @@ import { PersonaEngine } from "./persona.js";
 import { logMetric } from "./logger.js";
 import { createLLMCache, LLMCache } from "./llm/cache.js";
 import { loadConfig } from "./config.js";
+import { BatchPromptBuilder, BatchTaskInput, BatchTaskResult } from "./llm/batch_prompt_builder.js";
 
 export interface LLMResponse {
   thought: string;
@@ -95,7 +96,117 @@ export class LLM {
     throw new Error("Failed to generate embedding: No suitable provider found.");
   }
 
+  // Global queue for cross-instance request batching within the same Node.js process
+  private static generateQueue: {
+    id: string;
+    system: string;
+    history: any[];
+    resolve: (res: LLMResponse) => void;
+    reject: (err: any) => void;
+  }[] = [];
+  private static generateTimer: NodeJS.Timeout | null = null;
+  private static readonly BATCH_WINDOW_MS = 50; // Tiny window to catch concurrent requests
+
   async generate(
+    system: string,
+    history: any[],
+    signal?: AbortSignal,
+    onTyping?: () => void,
+  ): Promise<LLMResponse> {
+    // Phase 28: Detect if we should batch this concurrent call
+    const sysConfig = await loadConfig();
+    const batchEnabled = sysConfig.batching?.enabled ?? true;
+
+    // Only attempt batching if no streaming is requested and it's a "user" history length that suggests a strategic scan
+    // For simplicity, we only batch requests with similar system prompts if batching is enabled
+    if (batchEnabled && !onTyping && !sysConfig.yoloMode) {
+      return new Promise((resolve, reject) => {
+        const reqId = require('crypto').randomUUID();
+        LLM.generateQueue.push({ id: reqId, system, history, resolve, reject });
+
+        if (LLM.generateQueue.length >= (sysConfig.batching?.maxBatchSize || 5)) {
+            if (LLM.generateTimer) clearTimeout(LLM.generateTimer);
+            LLM.processGenerateQueue(this);
+        } else if (!LLM.generateTimer) {
+            LLM.generateTimer = setTimeout(() => {
+                LLM.processGenerateQueue(this);
+            }, LLM.BATCH_WINDOW_MS);
+        }
+      });
+    }
+
+    return this.internalGenerate(system, history, signal, onTyping);
+  }
+
+  private static async processGenerateQueue(llmInstance: LLM) {
+    LLM.generateTimer = null;
+    const queue = [...LLM.generateQueue];
+    LLM.generateQueue = [];
+
+    if (queue.length === 0) return;
+
+    if (queue.length === 1) {
+        // Just process normally
+        const req = queue[0];
+        try {
+            const res = await llmInstance.internalGenerate(req.system, req.history);
+            req.resolve(res);
+        } catch (e) {
+            req.reject(e);
+        }
+        return;
+    }
+
+    // Group by system prompt roughly (to ensure same persona/company context)
+    const groups = new Map<string, typeof queue>();
+    for (const req of queue) {
+        if (!groups.has(req.system)) groups.set(req.system, []);
+        groups.get(req.system)!.push(req);
+    }
+
+    for (const [system, reqs] of groups.entries()) {
+        if (reqs.length === 1) {
+             const req = reqs[0];
+             llmInstance.internalGenerate(req.system, req.history).then(req.resolve).catch(req.reject);
+             continue;
+        }
+
+        console.log(`[LLM Batch] Processing batch of ${reqs.length} concurrent requests.`);
+        const tasks: BatchTaskInput[] = reqs.map(req => ({
+            id: req.id,
+            // Construct a single prompt string from history
+            prompt: req.history.map(h => `${h.role}: ${h.content}`).join("\n")
+        }));
+
+        try {
+            const batchResults = await llmInstance.generateBatched(system, tasks);
+
+            for (const req of reqs) {
+                const result = batchResults.find(r => r.id === req.id);
+                if (result && result.status === 'success') {
+                    req.resolve({
+                        thought: result.thought || "",
+                        tool: result.tool || "none",
+                        args: result.args || {},
+                        message: result.message || "",
+                        raw: JSON.stringify(result)
+                    });
+                } else {
+                    // Fallback to individual request if parsing failed
+                    llmInstance.internalGenerate(req.system, req.history).then(req.resolve).catch(req.reject);
+                }
+            }
+        } catch (e) {
+            console.error(`[LLM Batch] Failed to batch generate: ${e}`);
+            // Fallback all
+            for (const req of reqs) {
+                llmInstance.internalGenerate(req.system, req.history).then(req.resolve).catch(req.reject);
+            }
+        }
+    }
+  }
+
+  private async internalGenerate(
     system: string,
     history: any[],
     signal?: AbortSignal,
@@ -234,6 +345,56 @@ export class LLM {
     throw new Error(
       `All LLM providers failed. Last error: ${lastError?.message}`,
     );
+  }
+
+  async generateBatched(
+    system: string,
+    tasks: BatchTaskInput[],
+    signal?: AbortSignal
+  ): Promise<BatchTaskResult[]> {
+    await this.personaEngine.loadConfig();
+    const systemWithPersona = this.personaEngine.injectPersonality(system);
+    const metaPrompt = BatchPromptBuilder.buildPrompt(tasks, systemWithPersona);
+
+    // To record cost savings properly, calculate independent call costs roughly vs the batched cost
+    const batchedCallCount = tasks.length;
+    let totalPromptTokens = 0;
+
+    try {
+      // Use the generic generate implementation but treat the meta-prompt as the user history
+      const response = await this.generate(
+         metaPrompt,
+         [{ role: "user", content: "Execute the batch tasks according to the instructions above." }],
+         signal
+      );
+
+      const parsedResults = BatchPromptBuilder.parseResponse(response.raw || "", tasks.map(t => t.id));
+
+      // Calculate token savings (Rough approximation: 1 system prompt instead of N)
+      if (response.usage && batchedCallCount > 1) {
+          totalPromptTokens = response.usage.promptTokens ?? 0;
+
+          // Estimate single request size = (totalPrompt / N) + overhead
+          const estimatedSinglePromptTokens = Math.floor(totalPromptTokens / batchedCallCount) * batchedCallCount;
+          // In reality, independent calls would send the base system prompt each time.
+          // Say the base system prompt is ~500 tokens.
+          const baseSystemPromptTokens = 500;
+          const tokensSaved = (baseSystemPromptTokens * (batchedCallCount - 1));
+
+          logMetric('llm', 'batched_calls_count', batchedCallCount, { batch_size: batchedCallCount.toString() });
+          logMetric('llm', 'tokens_saved_via_batching', tokensSaved, { batch_size: batchedCallCount.toString() });
+          console.log(`[LLM Batch] Processed ${batchedCallCount} tasks in a single call. Estimated tokens saved: ${tokensSaved}`);
+      }
+
+      return parsedResults;
+    } catch (e: any) {
+      console.error(`[LLM Batch] Failed to execute batch: ${e.message}`);
+      return tasks.map(t => ({
+         id: t.id,
+         status: 'failed',
+         error: e.message
+      }));
+    }
   }
 
   private getEnvKey(providerName: string): string | undefined {

@@ -1,10 +1,10 @@
 {
-  "timestamp": "2026-03-02T03:38:09.937Z",
+  "timestamp": "2026-03-02T05:30:50.170Z",
   "results": [
     {
       "task": "integration_speed",
       "framework": "Simple-CLI",
-      "duration_ms": 208495,
+      "duration_ms": 128904,
       "success": false,
       "details": "Validation failed.",
       "tokens": 0
@@ -12,7 +12,7 @@
     {
       "task": "code_editing",
       "framework": "Direct Usage (Aider-like)",
-      "duration_ms": 154,
+      "duration_ms": 155,
       "tokens": 5100,
       "cost": 0.051
     },

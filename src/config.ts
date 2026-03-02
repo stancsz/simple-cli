@@ -14,6 +14,12 @@ export interface Config {
     ttl?: number;
     backend?: "file" | "redis";
   };
+  batching?: {
+    enabled?: boolean;
+    windowMs?: number;
+    maxBatchSize?: number;
+    supportedTypes?: string[];
+  };
 }
 
 export async function loadConfig(cwd: string = process.cwd()): Promise<Config> {
