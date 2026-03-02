@@ -211,6 +211,10 @@ export class LLM {
 
         if (this.cache && !onTyping && !sysConfig.yoloMode) {
            await this.cache.set(cachePrompt, modelName, parsed);
+
+           // Calculate cache size (rough estimate based on JSON stringification)
+           const sizeBytes = Buffer.byteLength(JSON.stringify(parsed), 'utf8');
+           logMetric('llm', 'llm_cache_size', sizeBytes, { model: modelName, provider: providerName });
         }
 
         // Apply Persona Formatting (Catchphrases, Emojis, Typing Delay)
