@@ -57,8 +57,11 @@ describe('LLM Cache Integration', () => {
   });
 
   it('should call generateText on first call and hit cache on second call', async () => {
+    const uniqueRunId = Date.now() + Math.random().toString();
+    const prompt = `System prompt integration unique cache ${uniqueRunId}`;
+
     // First call (cache miss)
-    const response1 = await llm.generate('System prompt', [{ role: 'user', content: 'Test integration' }]);
+    const response1 = await llm.generate(prompt, [{ role: 'user', content: 'Test integration' }]);
 
     expect(response1.message).toBe('Success');
     expect(aiModule.generateText).toHaveBeenCalledTimes(1);
@@ -67,7 +70,7 @@ describe('LLM Cache Integration', () => {
     await new Promise((resolve) => setTimeout(resolve, 50));
 
     // Second call (cache hit)
-    const response2 = await llm.generate('System prompt', [{ role: 'user', content: 'Test integration' }]);
+    const response2 = await llm.generate(prompt, [{ role: 'user', content: 'Test integration' }]);
 
     expect(response2.message).toBe('Success');
     // API should not be called again
@@ -83,11 +86,14 @@ describe('LLM Cache Integration', () => {
         }
      });
 
-    const response1 = await llm.generate('System prompt', [{ role: 'user', content: 'Test YOLO' }]);
+    const uniqueRunId = Date.now() + Math.random().toString();
+    const prompt = `System prompt yolo unique ${uniqueRunId}`;
+
+    const response1 = await llm.generate(prompt, [{ role: 'user', content: 'Test YOLO' }]);
     expect(response1.message).toBe('Success');
     expect(aiModule.generateText).toHaveBeenCalledTimes(1);
 
-    const response2 = await llm.generate('System prompt', [{ role: 'user', content: 'Test YOLO' }]);
+    const response2 = await llm.generate(prompt, [{ role: 'user', content: 'Test YOLO' }]);
     expect(response2.message).toBe('Success');
     // API SHOULD be called again
     expect(aiModule.generateText).toHaveBeenCalledTimes(2);

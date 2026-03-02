@@ -1,7 +1,7 @@
 import { createHash } from "crypto";
 import { promises as fs, existsSync } from "fs";
 import { join } from "path";
-import { createClient } from "redis";
+import Redis from "ioredis";
 import type { LLMResponse } from "../llm.js";
 
 export interface LLMCache {
@@ -64,19 +64,18 @@ export class FileCache implements LLMCache {
 }
 
 export class RedisCache implements LLMCache {
-  private client: any;
+  private client: Redis;
   private ttlSeconds: number;
+  private readonly CACHE_VERSION = "v1";
 
   constructor(ttlSeconds: number = 86400, url?: string) {
     this.ttlSeconds = ttlSeconds;
-    this.client = createClient({ url: url || process.env.REDIS_URL });
+    const redisUrl = url || process.env.REDIS_URL || "redis://localhost:6379";
+    this.client = new Redis(redisUrl, {
+      lazyConnect: true,
+      maxRetriesPerRequest: 3,
+    });
     this.client.on("error", (err: any) => console.warn(`[LLMCache] Redis Error: ${err}`));
-  }
-
-  private async ensureConnected() {
-    if (!this.client.isOpen) {
-      await this.client.connect();
-    }
   }
 
   private getHash(prompt: string, model: string): string {
@@ -85,9 +84,11 @@ export class RedisCache implements LLMCache {
 
   async get(prompt: string, model: string): Promise<LLMResponse | null> {
     try {
-      await this.ensureConnected();
+      if (this.client.status !== 'ready' && this.client.status !== 'connecting') {
+        await this.client.connect().catch(() => {});
+      }
       const hash = this.getHash(prompt, model);
-      const data = await this.client.get(`llm:cache:${hash}`);
+      const data = await this.client.get(`llm:cache:${this.CACHE_VERSION}:${hash}`);
       if (!data) return null;
       return JSON.parse(data) as LLMResponse;
     } catch (e) {
@@ -98,18 +99,18 @@ export class RedisCache implements LLMCache {
 
   async set(prompt: string, model: string, response: LLMResponse): Promise<void> {
     try {
-      await this.ensureConnected();
+      if (this.client.status !== 'ready' && this.client.status !== 'connecting') {
+        await this.client.connect().catch(() => {});
+      }
       const hash = this.getHash(prompt, model);
-      await this.client.setEx(`llm:cache:${hash}`, this.ttlSeconds, JSON.stringify(response));
+      await this.client.set(`llm:cache:${this.CACHE_VERSION}:${hash}`, JSON.stringify(response), 'EX', this.ttlSeconds);
     } catch (e) {
       console.warn(`[LLMCache] Redis set failed: ${e}`);
     }
   }
 
   async disconnect() {
-    if (this.client.isOpen) {
-      await this.client.quit();
-    }
+    this.client.disconnect();
   }
 }
 

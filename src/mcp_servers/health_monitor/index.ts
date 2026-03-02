@@ -314,6 +314,8 @@ async function aggregateCompanyMetrics() {
             let cacheHits = 0;
             let cacheMisses = 0;
             let cachedTokens = 0;
+            let cacheTotalSizeBytes = 0;
+
             try {
                 const files = await getMetricFiles(7);
                 for (const file of files) {
@@ -325,6 +327,7 @@ async function aggregateCompanyMetrics() {
                             if (m.metric === 'llm_cache_hit') cacheHits += m.value;
                             if (m.metric === 'llm_cache_miss') cacheMisses += m.value;
                             if (m.metric === 'llm_tokens_total_cached') cachedTokens += m.value;
+                            if (m.metric === 'llm_cache_size') cacheTotalSizeBytes += m.value;
                         }
                     }
                 }
@@ -342,6 +345,7 @@ async function aggregateCompanyMetrics() {
                 estimated_cost_usd: parseFloat(estimatedCost.toFixed(4)),
                 llm_cache_hits: cacheHits,
                 llm_cache_misses: cacheMisses,
+                llm_cache_size_bytes: cacheTotalSizeBytes,
                 estimated_savings_usd: parseFloat(estimatedSavings.toFixed(4))
             };
         } catch (e) {
