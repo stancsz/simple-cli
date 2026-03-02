@@ -12,6 +12,7 @@ export interface TaskDefinition {
   company?: string; // Company context isolation
   yoloMode?: boolean; // Whether to run without confirmation (defaults to true for daemon)
   autoDecisionTimeout?: number; // Timeout in milliseconds for auto-decision
+  batchingGroup?: string; // Optional group ID for prompt batching
 }
 
 export interface ScheduleConfig {

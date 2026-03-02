@@ -1,7 +1,8 @@
 import { spawn, ChildProcess } from 'child_process';
 import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
-import { TaskDefinition } from '../daemon/task_definitions.js';
+import { TaskDefinition } from '../interfaces/daemon.js';
+import { PromptBatcher } from '../llm/batching.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -13,6 +14,18 @@ const activeChildren = new Set<ChildProcess>();
 
 export async function handleTaskTrigger(task: TaskDefinition): Promise<{ exitCode: number | null }> {
   console.log(`Triggering task: ${task.name} (${task.id})`);
+
+  if (task.batchingGroup && !task.action && task.prompt) {
+    console.log(`[Batcher] Queuing task ${task.id} into group: ${task.batchingGroup}`);
+    try {
+      const response = await PromptBatcher.getInstance().scheduleBatch(task.batchingGroup, task);
+      console.log(`[Batcher] Task ${task.id} completed. Response: ${response.substring(0, 100)}...`);
+      return { exitCode: 0 };
+    } catch (e: any) {
+      console.error(`[Batcher] Task ${task.id} failed: ${e.message}`);
+      return { exitCode: 1 };
+    }
+  }
 
   const env: NodeJS.ProcessEnv = {
     ...process.env,

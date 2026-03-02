@@ -310,11 +310,13 @@ async function aggregateCompanyMetrics() {
             const successRate = count > 0 ? (successCount / count) * 100 : 0;
             const estimatedCost = (totalTokens / 1_000_000) * 5.00; // $5 per 1M tokens assumption
 
-            // Fetch caching metrics
+            // Fetch caching and batching metrics
             let cacheHits = 0;
             let cacheMisses = 0;
             let cachedTokens = 0;
             let cacheTotalSizeBytes = 0;
+            let batchedPromptsTotal = 0;
+            let tokensSavedViaBatching = 0;
 
             try {
                 const files = await getMetricFiles(7);
@@ -323,19 +325,22 @@ async function aggregateCompanyMetrics() {
                     for (const m of allMetrics) {
                         // The LLM writes metrics with agent='llm'. We assign to company if possible
                         // Health metrics natively attributes it to the current running agent, but since LLM is low-level, we aggregate globally or fallback.
-                        if (m.agent === company || m.agent === 'llm' || !m.agent) {
+                        if (m.agent === company || m.agent === 'llm' || m.agent === 'llm_batcher' || !m.agent) {
                             if (m.metric === 'llm_cache_hit') cacheHits += m.value;
                             if (m.metric === 'llm_cache_miss') cacheMisses += m.value;
                             if (m.metric === 'llm_tokens_total_cached') cachedTokens += m.value;
                             if (m.metric === 'llm_cache_size') cacheTotalSizeBytes += m.value;
+                            if (m.metric === 'batched_prompts_total') batchedPromptsTotal += m.value;
+                            if (m.metric === 'tokens_saved_via_batching') tokensSavedViaBatching += m.value;
                         }
                     }
                 }
             } catch (e) {
-                console.warn(`[Health Monitor] Error reading cache metrics: ${e}`);
+                console.warn(`[Health Monitor] Error reading metrics: ${e}`);
             }
 
-            const estimatedSavings = (cachedTokens / 1_000_000) * 5.00;
+            const estimatedCacheSavings = (cachedTokens / 1_000_000) * 5.00;
+            const estimatedBatchSavings = (tokensSavedViaBatching / 1_000_000) * 5.00;
 
             metrics[company] = {
                 total_tokens: totalTokens,
@@ -346,7 +351,9 @@ async function aggregateCompanyMetrics() {
                 llm_cache_hits: cacheHits,
                 llm_cache_misses: cacheMisses,
                 llm_cache_size_bytes: cacheTotalSizeBytes,
-                estimated_savings_usd: parseFloat(estimatedSavings.toFixed(4))
+                estimated_savings_usd: parseFloat((estimatedCacheSavings + estimatedBatchSavings).toFixed(4)),
+                batched_prompts_total: batchedPromptsTotal,
+                tokens_saved_via_batching: tokensSavedViaBatching
             };
         } catch (e) {
             console.error(`Failed to get metrics for ${company}:`, e);

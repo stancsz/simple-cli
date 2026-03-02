@@ -151,6 +151,22 @@
       "args": {
         "command": "npx tsx scripts/market_shock_monitor.ts"
       }
+    },
+    {
+      "id": "morning-strategic-scan",
+      "name": "Morning Strategic Scan",
+      "trigger": "cron",
+      "schedule": "0 9 * * *",
+      "prompt": "Review recent strategic developments in the AI industry and summarize key opportunities.",
+      "batchingGroup": "morning_strategic_scans"
+    },
+    {
+      "id": "morning-competitor-scan",
+      "name": "Morning Competitor Scan",
+      "trigger": "cron",
+      "schedule": "0 9 * * *",
+      "prompt": "Identify any new competitor products launched in the past 24 hours.",
+      "batchingGroup": "morning_strategic_scans"
     }
   ]
 }

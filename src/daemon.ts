@@ -8,6 +8,7 @@ import { fileURLToPath } from 'url';
 import { createServer } from 'http';
 import { ScheduleConfig, TaskDefinition } from './interfaces/daemon.js';
 import { DEFAULT_TASKS } from './scheduler/config.js';
+import { PromptBatcher } from './llm/batching.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -95,6 +96,17 @@ export async function loadSchedule(): Promise<ScheduleConfig> {
 
 async function runTask(task: TaskDefinition) {
   await log(`Triggering task: ${task.name} (${task.id})`);
+
+  if (task.batchingGroup && !task.action && task.prompt) {
+    await log(`[Batcher] Queuing task ${task.id} into group: ${task.batchingGroup}`);
+    try {
+      const response = await PromptBatcher.getInstance().scheduleBatch(task.batchingGroup, task);
+      await log(`[Batcher] Task ${task.id} completed. Response: ${response.substring(0, 100)}...`);
+    } catch (e: any) {
+      await log(`[Batcher] Task ${task.id} failed: ${e.message}`);
+    }
+    return;
+  }
 
   const env: NodeJS.ProcessEnv = {
     ...process.env,
