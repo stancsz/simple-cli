@@ -9,6 +9,11 @@ export interface Config {
   companies?: string[];
   active_company?: string;
   archived_companies?: string[];
+  llmCache?: {
+    enabled: boolean;
+    ttl?: number;
+    backend?: "file" | "redis";
+  };
 }
 
 export async function loadConfig(cwd: string = process.cwd()): Promise<Config> {
