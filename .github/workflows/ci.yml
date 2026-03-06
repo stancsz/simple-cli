@@ -22,6 +22,9 @@ jobs:
         node-version: ${{ matrix.node-version }}
         cache: 'npm'
 
+    - name: Install Helm
+      uses: azure/setup-helm@v4
+
     - run: npm ci
     - run: npm run build --if-present
     - run: npm test
@@ -37,6 +40,9 @@ jobs:
       with:
         node-version: 22.x
         cache: 'npm'
+
+    - name: Install Helm
+      uses: azure/setup-helm@v4
 
     - run: npm ci
     - name: Run K8s Validation Tests

@@ -21,6 +21,9 @@ jobs:
           node-version: "22"
           cache: "npm"
 
+      - name: Install Helm
+        uses: azure/setup-helm@v4
+
       - name: Install Dependencies
         run: npm ci
 
