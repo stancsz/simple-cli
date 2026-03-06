@@ -6,7 +6,7 @@ import { join, dirname } from "path";
 import { readFile, writeFile, mkdir } from "fs/promises";
 import { existsSync } from "fs";
 import lockfile from "proper-lockfile";
-import { globalBatchExecutor } from "../../scheduler/batch_executor.js";
+import { globalBatchExecutor } from "../../batch/batch_orchestrator.js";
 
 export class SchedulerServer {
   private server: McpServer;
@@ -70,6 +70,8 @@ export class SchedulerServer {
         path: z.string().optional().describe("File path to watch (required for file-watch trigger)."),
         prompt: z.string().describe("The prompt/instruction for the task to execute."),
         yoloMode: z.boolean().optional().describe("If true, executes without confirmation."),
+        is_routine: z.boolean().optional().describe("Whether this is a routine batchable task."),
+        frequency: z.enum(["hourly", "daily"]).optional().describe("Frequency of the routine task."),
       },
       async (task) => {
         // Validate inputs

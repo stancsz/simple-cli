@@ -16,6 +16,7 @@ import { scanStrategicHorizon } from "./tools/scan_strategic_horizon.js";
 import { conveneBoardMeeting } from "./tools/convene_board_meeting.js";
 import { getGrowthTargets } from "./tools/strategic_growth.js";
 import { monitorMarketSignals, evaluateEconomicRisk, triggerContingencyPlan } from "./tools/market_shock.js";
+import { executeBatchRoutines } from "./tools/efficiency.js";
 
 export class BrainServer {
   private server: McpServer;
@@ -336,6 +337,27 @@ export class BrainServer {
         } catch (e: any) {
             return {
                 content: [{ type: "text", text: `Failed to convene board meeting: ${e.message}` }],
+                isError: true
+            };
+        }
+      }
+    );
+
+    this.server.tool(
+      "execute_batch_routines",
+      "Executes scheduled routine strategic tasks in a single batched LLM request to maximize token efficiency.",
+      {
+        company: z.string().optional().describe("The company/client identifier for namespacing."),
+      },
+      async ({ company }) => {
+        try {
+            const result = await executeBatchRoutines(this.episodic, company);
+            return {
+                content: [{ type: "text", text: JSON.stringify(result, null, 2) }],
+            };
+        } catch (e: any) {
+            return {
+                content: [{ type: "text", text: `Failed to execute batch routines: ${e.message}` }],
                 isError: true
             };
         }

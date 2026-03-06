@@ -1,6 +1,6 @@
 import { TaskDefinition } from "../interfaces/daemon.js";
 import { createLLM } from "../llm.js";
-import { BatchTaskInput, BatchTaskResult } from "../llm/batch_prompt_builder.js";
+import { BatchTaskInput, BatchTaskResult } from "./batch_prompt_builder.js";
 import { loadConfig } from "../config.js";
 
 interface BatchQueueItem {

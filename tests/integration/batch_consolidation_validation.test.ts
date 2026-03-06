@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { BatchExecutor } from '../../src/scheduler/batch_executor';
-import { BatchPromptBuilder } from '../../src/llm/batch_prompt_builder';
+import { BatchExecutor } from '../../src/batch/batch_orchestrator';
+import { BatchPromptBuilder } from '../../src/batch/batch_prompt_builder';
 import { TaskDefinition } from '../../src/interfaces/daemon';
 
 // Mock dependencies

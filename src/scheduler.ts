@@ -6,6 +6,7 @@ import { existsSync } from 'fs';
 import { join } from 'path';
 import { ScheduleConfig, TaskDefinition } from './daemon/task_definitions.js';
 import { JobDelegator } from './scheduler/job_delegator.js';
+import { globalBatchExecutor } from './batch/batch_orchestrator.js';
 
 interface SchedulerState {
   pendingTasks: TaskDefinition[];
@@ -87,7 +88,9 @@ export class Scheduler extends EventEmitter {
           trigger: "cron",
           schedule: "0 3 * * *", // Daily at 03:00 UTC
           prompt: "Run the Daily HR Review using the 'analyze_logs' tool to analyze recent performance.",
-          yoloMode: true
+          yoloMode: true,
+          is_routine: true,
+          frequency: "daily"
       });
       try {
           await writeFile(this.scheduleFile, JSON.stringify(config, null, 2));
@@ -120,7 +123,9 @@ export class Scheduler extends EventEmitter {
           trigger: "cron",
           schedule: "0 9 * * *", // Daily at 9 AM
           prompt: "Run the Morning Standup review using the 'generate_daily_standup' tool with post=true.",
-          yoloMode: true
+          yoloMode: true,
+          is_routine: true,
+          frequency: "daily"
       });
       try {
           await writeFile(this.scheduleFile, JSON.stringify(config, null, 2));
@@ -153,7 +158,8 @@ export class Scheduler extends EventEmitter {
           trigger: "cron",
           schedule: "0 0 * * 0", // Weekly at Sunday midnight
           prompt: "Run the Weekly HR Review using the 'perform_weekly_review' tool to analyze long-term patterns.",
-          yoloMode: true
+          yoloMode: true,
+          is_routine: true
       });
       try {
           await writeFile(this.scheduleFile, JSON.stringify(config, null, 2));
@@ -165,6 +171,17 @@ export class Scheduler extends EventEmitter {
 
   private async runTask(task: TaskDefinition) {
       console.log(`Running task: ${task.name}`);
+
+      // If it's a routine batchable task, push to orchestrator instead of running individually
+      if (task.is_routine && globalBatchExecutor.isBatchable(task)) {
+          console.log(`Task ${task.name} is routine and batchable. Enqueueing to BatchExecutor.`);
+          globalBatchExecutor.enqueue(task).catch(e => {
+              console.error(`Failed to batch task ${task.name}:`, e);
+          });
+          this.emit('task-triggered', task);
+          return;
+      }
+
       this.pendingTasks.set(task.id, task);
       await this.saveState();
 

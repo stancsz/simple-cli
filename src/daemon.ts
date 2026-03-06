@@ -8,7 +8,7 @@ import { fileURLToPath } from 'url';
 import { createServer } from 'http';
 import { ScheduleConfig, TaskDefinition } from './interfaces/daemon.js';
 import { DEFAULT_TASKS } from './scheduler/config.js';
-import { globalBatchExecutor } from './scheduler/batch_executor.js';
+import { globalBatchExecutor } from './batch/batch_orchestrator.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);

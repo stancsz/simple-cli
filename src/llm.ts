@@ -8,7 +8,7 @@ import { PersonaEngine } from "./persona.js";
 import { logMetric } from "./logger.js";
 import { createLLMCache, LLMCache } from "./llm/cache.js";
 import { loadConfig } from "./config.js";
-import { BatchPromptBuilder, BatchTaskInput, BatchTaskResult } from "./llm/batch_prompt_builder.js";
+import { BatchPromptBuilder, BatchTaskInput, BatchTaskResult } from "./batch/batch_prompt_builder.js";
 
 export interface LLMResponse {
   thought: string;
@@ -345,6 +345,15 @@ export class LLM {
     throw new Error(
       `All LLM providers failed. Last error: ${lastError?.message}`,
     );
+  }
+
+  // Alias for generateBatched to fulfill interface requirements where needed
+  async batchCompletion(
+    system: string,
+    tasks: BatchTaskInput[],
+    signal?: AbortSignal
+  ): Promise<BatchTaskResult[]> {
+    return this.generateBatched(system, tasks, signal);
   }
 
   async generateBatched(
