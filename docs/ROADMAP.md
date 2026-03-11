@@ -244,7 +244,6 @@ The roadmap is structured around the four anatomical layers of the Digital Biosp
 ## Phase 28: Operational Efficiency & Cost Optimization
 *Status: Completed*
 *Current Focus: Infrastructure optimization to reduce token spend and compute costs across the Digital Biosphere.*
-*Validation: ✅ Validated via 24h simulation showing successful interception of duplicate LLM calls and effective cost reduction via token batching and dynamic model routing.*
 - [x] **LLM Call Caching**: Implement a caching layer (`src/llm/cache.ts`) using a file-based or Redis backend to intercept identical LLM prompts and serve cached responses, thus avoiding redundant API calls. Integrate metrics (`llm_cache_hit`, `llm_cache_miss`) into the Health Monitor.
     - ✅ Completed: Fully implemented both file and Redis (via `ioredis`) backends supporting versioned invalidation.
     - ✅ Completed: Integrated `llm_cache_hit`, `llm_cache_miss`, and `llm_cache_size` into the Health Monitor.
@@ -259,9 +258,6 @@ The roadmap is structured around the four anatomical layers of the Digital Biosp
     - ✅ Created `AdaptiveRouter` class in `src/llm/router.ts` to transparently route requests based on configuration and cached evaluation scores.
     - ✅ Extended `Health Monitor` metrics to track `llm_router_model_selected`, `llm_router_complexity_score`, and `llm_cost_savings_estimated`.
     - ✅ Validated via `tests/integration/adaptive_routing_validation.test.ts`.
-- [x] **Validation**: End-to-end integration of efficiency protocols.
-    - ✅ Validated full Phase 28 integration via `tests/integration/phase28_operational_efficiency_validation.test.ts`.
-    - ✅ Dashboard updated with `OperationalEfficiencyPanel` for real-time visualization of cost savings, batch metrics, and dynamic routing breakdowns.
 
 ## Legacy Achievements
 See [Legacy Roadmap](ROADMAP_LEGACY.md) for completed milestones of the previous "Simple CLI" era.

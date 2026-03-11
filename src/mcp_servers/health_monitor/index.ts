@@ -320,11 +320,6 @@ async function aggregateCompanyMetrics() {
             let batchedCalls = 0;
             let tokensSavedBatched = 0;
 
-            // Phase 28: Adaptive Routing Metrics
-            let routerComplexityScores: number[] = [];
-            let routerModelSelected: Record<string, number> = {};
-            let routerEstimatedSavings = 0;
-
             try {
                 const files = await getMetricFiles(7);
                 for (const file of files) {
@@ -339,15 +334,6 @@ async function aggregateCompanyMetrics() {
                             if (m.metric === 'llm_cache_size') cacheTotalSizeBytes += m.value;
                             if (m.metric === 'batched_calls_count') batchedCalls += m.value;
                             if (m.metric === 'tokens_saved_via_batching') tokensSavedBatched += m.value;
-
-                            if (m.metric === 'llm_router_complexity_score') routerComplexityScores.push(m.value);
-                            if (m.metric === 'llm_router_model_selected') {
-                                const modelName = m.tags?.model || 'unknown';
-                                routerModelSelected[modelName] = (routerModelSelected[modelName] || 0) + 1;
-                            }
-                            if (m.metric === 'llm_cost_savings_estimated') {
-                                routerEstimatedSavings += m.value;
-                            }
                         }
                     }
                 }
@@ -355,11 +341,8 @@ async function aggregateCompanyMetrics() {
                 console.warn(`[Health Monitor] Error reading cache metrics: ${e}`);
             }
 
-            // Estimate total savings from cache + batching (baseline $5 per 1M tokens approx) + explicitly calculated router savings
-            const estimatedSavings = (((cachedTokens + tokensSavedBatched) / 1_000_000) * 5.00) + routerEstimatedSavings;
-            const avgComplexity = routerComplexityScores.length > 0
-                ? routerComplexityScores.reduce((a,b)=>a+b, 0) / routerComplexityScores.length
-                : 0;
+            // Estimate total savings from cache + batching
+            const estimatedSavings = ((cachedTokens + tokensSavedBatched) / 1_000_000) * 5.00;
 
             metrics[company] = {
                 total_tokens: totalTokens,
@@ -372,8 +355,6 @@ async function aggregateCompanyMetrics() {
                 llm_cache_size_bytes: cacheTotalSizeBytes,
                 batched_calls_count: batchedCalls,
                 tokens_saved_via_batching: tokensSavedBatched,
-                llm_router_avg_complexity: parseFloat(avgComplexity.toFixed(2)),
-                llm_router_model_breakdown: routerModelSelected,
                 estimated_savings_usd: parseFloat(estimatedSavings.toFixed(4))
             };
         } catch (e) {
@@ -774,23 +755,7 @@ export async function main() {
                      uptime: 3600,
                      alerts: 1,
                      active_alerts: [{ message: "High CPU usage", timestamp: new Date().toISOString() }],
-                     metrics: {
-                         "Mock Company A": {
-                             total_tokens: 150000,
-                             avg_duration_ms: 1200,
-                             success_rate: 98,
-                             task_count: 50,
-                             estimated_cost_usd: 0.75,
-                             llm_cache_hits: 120,
-                             llm_cache_misses: 30,
-                             llm_cache_size_bytes: 450000,
-                             batched_calls_count: 5,
-                             tokens_saved_via_batching: 25000,
-                             llm_router_avg_complexity: 4.5,
-                             llm_router_model_breakdown: { "claude-3-haiku": 12, "claude-3-opus": 3 },
-                             estimated_savings_usd: 0.15
-                         }
-                     },
+                     metrics: {},
                      last_showcase_success: true
                  }
              });
