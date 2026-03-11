@@ -14,6 +14,10 @@
         <SwarmFleetPanel :fleetData="fleetData" />
     </div>
 
+    <div class="grid-full">
+        <ArchitecturePanel />
+    </div>
+
     <div class="grid">
         <div class="panel">
             <h3>Task Completion & Success Rate</h3>
@@ -62,9 +66,10 @@ import { Bar, Doughnut } from 'vue-chartjs'
 import SwarmFleetPanel from '../components/SwarmFleetPanel.vue'
 import FinancialKPIsPanel from '../components/FinancialKPIsPanel.vue'
 import SystemHealthPanel from '../components/SystemHealthPanel.vue'
+import ArchitecturePanel from '../components/ArchitecturePanel.vue'
 
 export default {
-    components: { Bar, Doughnut, SwarmFleetPanel, FinancialKPIsPanel, SystemHealthPanel },
+    components: { Bar, Doughnut, SwarmFleetPanel, FinancialKPIsPanel, SystemHealthPanel, ArchitecturePanel },
     data() {
         return {
             metrics: {},

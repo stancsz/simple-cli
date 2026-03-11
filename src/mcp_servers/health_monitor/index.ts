@@ -16,9 +16,13 @@ import { detectAnomalies, predictMetrics } from "./anomaly_detector.js";
 import { correlateAlerts, Alert } from "./alert_correlator.js";
 import { sendAlert } from "./alerting.js";
 import { saveShowcaseRun, getShowcaseRuns, ShowcaseRun } from "./showcase_reporter.js";
+import { analyzeArchitecture, ArchitectureReport } from "./architectural_metrics.js";
 import { randomUUID } from "crypto";
 
 const ALERT_RULES_FILE = join(process.cwd(), 'scripts', 'dashboard', 'alert_rules.json');
+
+// Cache architecture report for 24 hours
+let cachedArchitectureReport: { data: ArchitectureReport, timestamp: number } | null = null;
 
 let activeRules: any[] = [];
 async function loadRules() {
@@ -72,6 +76,34 @@ server.tool(
     }
 
     return { content: [{ type: "text", text: `Metric ${metric} tracked.` }] };
+  }
+);
+
+server.tool(
+  "analyze_architecture",
+  "Analyzes the TypeScript codebase to compute architectural metrics (complexity, coupling, file size) and highlights top refactoring candidates.",
+  {},
+  async () => {
+    const now = Date.now();
+    const CACHE_TTL = 24 * 60 * 60 * 1000; // 24 hours
+
+    if (cachedArchitectureReport && (now - cachedArchitectureReport.timestamp) < CACHE_TTL) {
+        return { content: [{ type: "text", text: JSON.stringify(cachedArchitectureReport.data, null, 2) }] };
+    }
+
+    try {
+        const report = await analyzeArchitecture('src');
+        cachedArchitectureReport = { data: report, timestamp: now };
+
+        // Log basic metrics to Brain's episodic memory via track_metric (simulate calling the tool manually)
+        await logMetric('health_monitor', 'architecture_total_files', report.totalFiles, {});
+        await logMetric('health_monitor', 'architecture_avg_complexity', report.averageComplexity, {});
+        await logMetric('health_monitor', 'architecture_total_loc', report.totalLinesOfCode, {});
+
+        return { content: [{ type: "text", text: JSON.stringify(report, null, 2) }] };
+    } catch (e: any) {
+        return { content: [{ type: "text", text: `Error analyzing architecture: ${e.message}` }], isError: true };
+    }
   }
 );
 
@@ -680,6 +712,21 @@ export async function main() {
         try {
             const runs = await getShowcaseRuns();
             res.json(runs);
+        } catch (e) {
+            res.status(500).json({ error: (e as Error).message });
+        }
+    });
+
+    app.get("/api/dashboard/architecture", async (req, res) => {
+        try {
+            const now = Date.now();
+            const CACHE_TTL = 24 * 60 * 60 * 1000; // 24 hours
+            if (cachedArchitectureReport && (now - cachedArchitectureReport.timestamp) < CACHE_TTL) {
+                return res.json(cachedArchitectureReport.data);
+            }
+            const report = await analyzeArchitecture('src');
+            cachedArchitectureReport = { data: report, timestamp: now };
+            res.json(report);
         } catch (e) {
             res.status(500).json({ error: (e as Error).message });
         }

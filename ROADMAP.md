@@ -13,7 +13,15 @@ This document outlines the high-level roadmap and current status of the Simple-C
 
 ## Upcoming Phases
 
-- **Phase 29: Autonomous Business Scaling & Commercialization**: In Progress 🚧
+- **Phase 29: Autonomous Self-Improvement & Architectural Evolution**: In Progress 🚧
+  - **Mission**: Enable the agency to analyze its own architecture, identify technical debt/optimization opportunities, and autonomously propose/implement architectural improvements.
+  - **Key Objectives**:
+    - **a. Architectural Health Monitor**: Extend Health Monitor MCP to track architectural metrics (complexity, coupling, file size, dependency health).
+    - **b. Self-Refactoring Engine**: Enhance HR loop to propose and implement architectural refactors.
+    - **c. Architectural Decision Records (ADR)**: Automate creation/maintenance of ADRs for significant changes.
+    - **d. Continuous Architecture Review**: Integrate with Dreaming for regular architecture simulations.
+
+- **Phase 30: Autonomous Business Scaling & Commercialization**: Planned
   - **Mission**: Establish Simple-CLI as a profitable, self-sustaining Digital Agency platform
   - **Key Objectives**:
     - **a. Automated Client Acquisition Pipeline**: Implement end-to-end lead-to-client conversion
