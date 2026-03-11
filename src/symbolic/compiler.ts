@@ -82,7 +82,7 @@ ${JSON.stringify(episodes, null, 2)}
             const response = await llm.generate("You are an expert systems architect compiling probabilistic behavior into deterministic symbolic task graphs.", [{ role: 'user', content: prompt }]);
 
             // Extract JSON from response
-            const text = response.message;
+            const text = response.message || "";
             const jsonMatch = text.match(/```json\n([\s\S]*?)\n```/) || text.match(/\{[\s\S]*\}/);
 
             if (jsonMatch) {
@@ -155,7 +155,7 @@ ${JSON.stringify(episodes, null, 2)}
                  context[transformNode.outputKey] = val; // naive transform
                  currentNodeId = transformNode.next as string;
             } else {
-                console.warn(`[SymbolicEngine] Unknown node type: ${node.type}`);
+                console.warn(`[SymbolicEngine] Unknown node type: ${(node as any).type}`);
                 break;
             }
         }
