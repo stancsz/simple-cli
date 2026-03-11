@@ -20,6 +20,12 @@ export interface Config {
     maxBatchSize?: number;
     supportedTypes?: string[];
   };
+  routing?: {
+    enabled?: boolean;
+    defaultModel?: string;
+    modelMap?: Record<string, string>;
+    costProfiles?: Record<string, number>;
+  };
 }
 
 export async function loadConfig(cwd: string = process.cwd()): Promise<Config> {
