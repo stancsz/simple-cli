@@ -23,6 +23,13 @@
         "src/mcp_servers/brain/index.ts"
       ]
     },
+    "forecasting": {
+      "command": "npx",
+      "args": [
+        "tsx",
+        "src/mcp_servers/forecasting/index.ts"
+      ]
+    },
     "health_monitor": {
       "command": "npx",
       "args": [

@@ -20,6 +20,7 @@ This document outlines the high-level roadmap and current status of the Simple-C
     - **b. Self-Refactoring Engine**: Enhance HR loop to propose and implement architectural refactors.
     - **c. Architectural Decision Records (ADR)**: Automate creation/maintenance of ADRs for significant changes.
     - **d. Continuous Architecture Review**: Integrate with Dreaming for regular architecture simulations.
+    - **e. Advanced Planning & Forecasting**: Completed ✅. Developed Forecasting MCP server with tools for scenario simulation using market multipliers and narrative report generation using LLMs.
 
 - **Phase 30: Autonomous Business Scaling & Commercialization**: Planned
   - **Mission**: Establish Simple-CLI as a profitable, self-sustaining Digital Agency platform
