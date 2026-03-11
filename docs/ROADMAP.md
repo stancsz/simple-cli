@@ -258,6 +258,8 @@ The roadmap is structured around the four anatomical layers of the Digital Biosp
     - ✅ Created `AdaptiveRouter` class in `src/llm/router.ts` to transparently route requests based on configuration and cached evaluation scores.
     - ✅ Extended `Health Monitor` metrics to track `llm_router_model_selected`, `llm_router_complexity_score`, and `llm_cost_savings_estimated`.
     - ✅ Validated via `tests/integration/adaptive_routing_validation.test.ts`.
+- [x] **Validation: Integrated Efficiency Simulation**: Simulated a production workload combining caching, batching, and adaptive routing to validate aggregate cost savings and duplicate call reduction.
+    - ✅ Implemented in `tests/integration/phase28_efficiency_validation.test.ts` on March 11, 2026.
 
 ## Legacy Achievements
 See [Legacy Roadmap](ROADMAP_LEGACY.md) for completed milestones of the previous "Simple CLI" era.
