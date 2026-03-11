@@ -5,6 +5,7 @@ import { registerPerformanceAnalyticsTools } from "../../src/mcp_servers/busines
 import { registerPricingOptimizationTools } from "../../src/mcp_servers/business_ops/tools/pricing_optimization.js";
 import { registerServiceAdjustmentTools } from "../../src/mcp_servers/business_ops/tools/service_adjustment.js";
 import { registerResourceAllocationTools } from "../../src/mcp_servers/business_ops/tools/resource_allocation.js";
+import { registerRevenueForecastingTools } from "../../src/mcp_servers/commerce/revenue_forecasting.js";
 
 // --- Mocks Setup ---
 
@@ -97,6 +98,7 @@ describe("Economic Engine: Quarterly Simulation (Phase 24 Validation)", () => {
         registerPricingOptimizationTools(server);
         registerServiceAdjustmentTools(server);
         registerResourceAllocationTools(server);
+        registerRevenueForecastingTools(server);
     });
 
     afterEach(() => {
@@ -129,8 +131,8 @@ describe("Economic Engine: Quarterly Simulation (Phase 24 Validation)", () => {
         console.log("✅ Market Data Collected:", marketContent.market_growth_rate);
 
 
-        // --- Step 2: Performance Analytics ---
-        console.log("Step 2: Analyzing Performance Metrics...");
+        // --- Step 2: Performance Analytics & Revenue Forecasting ---
+        console.log("Step 2: Analyzing Performance Metrics & Forecasting Revenue...");
 
         // Mock Xero (Revenue)
         mockXeroClient.accountingApi.getInvoices.mockResolvedValue({
@@ -141,6 +143,24 @@ describe("Economic Engine: Quarterly Simulation (Phase 24 Validation)", () => {
                 ]
             }
         });
+
+        // Mock LLM for Forecasting
+        mockLLM.generate.mockResolvedValueOnce({
+            message: JSON.stringify({
+                predicted_revenue: 180000,
+                confidence_interval: "$160k - $200k",
+                key_drivers: ["High market demand in Software Development"]
+            })
+        });
+
+        const forecastData = await registeredTools["revenue_forecasting"]({
+            forecast_period_days: 90
+        });
+
+        const forecastContent = JSON.parse(forecastData.content[0].text);
+        expect(forecastContent.forecast.predicted_revenue).toBeGreaterThan(150000);
+        console.log("✅ Revenue Forecasted for next quarter:", forecastContent.forecast.predicted_revenue);
+
 
         // Mock Linear (Efficiency)
         mockLinearClient.issues.mockResolvedValue({

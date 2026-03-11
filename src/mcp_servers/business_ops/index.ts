@@ -31,6 +31,9 @@ import { registerContractNegotiationTools } from "./tools/contract_negotiation.j
 import { registerMarketPositioningTools } from "./tools/market_positioning.js";
 import { registerRevenueValidationTools } from "./tools/revenue_validation.js";
 import { registerAdaptiveRoutingTools } from "./tools/adaptive_routing.js";
+import { registerAutomatedBiddingTools } from "../commerce/automated_bidding.js";
+import { registerRevenueForecastingTools } from "../commerce/revenue_forecasting.js";
+import { registerServicePackagerTools } from "../commerce/service_packager.js";
 
 // Load secrets from .env.agent
 const envPath = join(process.cwd(), ".env.agent");
@@ -72,6 +75,9 @@ registerProposalGenerationTools(server);
 registerContractNegotiationTools(server);
 registerMarketPositioningTools(server);
 registerAdaptiveRoutingTools(server);
+registerAutomatedBiddingTools(server);
+registerRevenueForecastingTools(server);
+registerServicePackagerTools(server);
 
 // Start Server
 async function main() {

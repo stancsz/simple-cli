@@ -107,7 +107,7 @@
     "@types/diff": "^5.2.3",
     "@types/fast-levenshtein": "^0.0.4",
     "@types/ioredis": "^4.28.10",
-    "@types/node": "^22.19.11",
+    "@types/node": "^22.19.15",
     "@types/node-cron": "^3.0.11",
     "@types/proper-lockfile": "^4.1.4",
     "@types/redis": "^4.0.10",
