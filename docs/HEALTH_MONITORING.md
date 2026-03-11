@@ -17,6 +17,7 @@ Located in `src/mcp_servers/health_monitor/`, this server exposes tools to:
 - `get_health_report`: aggregated stats (min, max, avg).
 - `check_alerts`: Check configured thresholds.
 - `alert_on_threshold`: Configure new alerts.
+- `analyze_architecture`: Analyzes the TypeScript codebase (`src/` directory) to compute architectural metrics such as cyclomatic complexity, file size (lines of code), import coupling, and dependency count. It highlights the top refactoring candidates based on a calculated complexity score and automatically caches results for 24 hours while logging basic stats to the Brain's episodic memory.
 
 ### Dashboard
 Located in `scripts/dashboard/`, run with `node scripts/dashboard/server.js`.
