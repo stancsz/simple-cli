@@ -6,6 +6,7 @@ import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { StdioClientTransport } from "@modelcontextprotocol/sdk/client/stdio.js";
 import { join } from "path";
 import { existsSync } from "fs";
+import { globalSymbolicEngine } from "../symbolic/compiler.js";
 
 export class AdaptiveRouter extends LLM {
   private routerCache: LLMCache | null = null;
@@ -128,6 +129,43 @@ export class AdaptiveRouter extends LLM {
 
       const lastUserMessage = history.filter((m) => m.role === "user").pop()?.content || "";
       const fullPrompt = system + "\n" + lastUserMessage;
+
+      // Check Symbolic Engine First (Phase 29 Zero-Token Ops)
+      try {
+          // Attempt to match intent
+          const matchedGraph = globalSymbolicEngine.getGraphByIntent(lastUserMessage);
+          if (matchedGraph) {
+              console.log(`[AdaptiveRouter] Symbolic Graph matched: ${matchedGraph.name}. Executing deterministically.`);
+
+              // Mock a tool execution client for the symbolic engine (normally it would connect via MCP)
+              // For demonstration/local execution, we pass a basic executor
+              const client = await this.connectToBusinessOps();
+              const toolFn = async (name: string, args: any) => {
+                  if (client) {
+                      return await client.callTool({ name, arguments: args });
+                  }
+                  throw new Error("No client available for tool execution");
+              };
+
+              const initialContext = {
+                  original_prompt: lastUserMessage
+              };
+
+              const resultContext = await globalSymbolicEngine.execute(matchedGraph, initialContext, toolFn);
+
+              logMetric('llm', 'llm_requests_avoided', 1, { reason: 'symbolic_execution' });
+
+              return {
+                  message: JSON.stringify(resultContext),
+                  tool: 'none',
+                  args: {},
+                  thought: `Executed symbolically via graph: ${matchedGraph.name}`,
+                  raw: JSON.stringify(resultContext)
+              };
+          }
+      } catch (e) {
+          console.warn(`[AdaptiveRouter] Symbolic execution failed, falling back to LLM:`, e);
+      }
 
       let decision: { score: number, recommended_model: string, reasoning: string } | null = null;
       const cacheKey = `router_${Buffer.from(fullPrompt).toString('base64').substring(0, 64)}`;

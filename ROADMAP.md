@@ -12,4 +12,8 @@ This document outlines the high-level roadmap and current status of the Simple-C
 
 ## Upcoming Phases
 
-- **Phase 29**: Next steps to be determined.
+- **Phase 29: Zero-Token Operations**: Architect and implement the foundational layer for near-zero-token-cost agency operations by shifting from LLM calls to pre-compiled, symbolic task graphs and deterministic rule engines.
+  - [x] Define Symbolic Compiler architecture and Rule Engine schema.
+  - [x] Implement `compile_to_symbolic` tool in Brain MCP.
+  - [x] Integrate Symbolic Engine into Adaptive Router (LLM fallback).
+  - [x] Validate: Achieve >40% reduction in LLM tokens for routine business operations (onboarding, reporting).

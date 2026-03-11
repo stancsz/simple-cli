@@ -264,6 +264,10 @@ To transition from a "Wrapper" to a true "Universal AI Integration Platform," th
 
 ### Phase 19: Autonomous Business Operations & Exponential Scaling (In Progress)
 **Goal:** Transition from a technical "Digital Agency" to a fully autonomous business entity capable of managing end-to-end operational workflows.
+
+### Phase 29: Zero-Token Operations (In Progress)
+**Goal:** Architect and implement the foundational layer for near-zero-token-cost agency operations by shifting from LLM calls to pre-compiled, symbolic task graphs and deterministic rule engines.
+- **Reference:** See `ROADMAP.md` and `docs/PHASE29_ZERO_TOKEN_ARCHITECTURE.md` for current progress.
 - **Concept:** Simple-CLI will evolve beyond software engineering to handle the administrative, financial, and strategic aspects of running a business. By integrating with accounting software, CRMs, and project management tools, the agent becomes a comprehensive "Business OS."
 - **Status:** In Progress (Started 2025-03-01).
 - **Mechanism:**

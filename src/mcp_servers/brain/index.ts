@@ -17,6 +17,7 @@ import { conveneBoardMeeting } from "./tools/convene_board_meeting.js";
 import { getGrowthTargets } from "./tools/strategic_growth.js";
 import { monitorMarketSignals, evaluateEconomicRisk, triggerContingencyPlan } from "./tools/market_shock.js";
 import { executeBatchRoutines } from "./tools/efficiency.js";
+import { globalSymbolicEngine } from "../../symbolic/compiler.js";
 
 export class BrainServer {
   private server: McpServer;
@@ -337,6 +338,44 @@ export class BrainServer {
         } catch (e: any) {
             return {
                 content: [{ type: "text", text: `Failed to convene board meeting: ${e.message}` }],
+                isError: true
+            };
+        }
+      }
+    );
+
+    this.server.tool(
+      "compile_to_symbolic",
+      "Compiles successful past episodes into a deterministic, zero-token TaskGraph for future execution.",
+      {
+        intent_name: z.string().describe("The name/trigger pattern for this workflow."),
+        episode_ids: z.array(z.string()).describe("List of episode IDs that represent successful executions of this intent."),
+      },
+      async ({ intent_name, episode_ids }) => {
+        try {
+            const llm = createLLM("claude-3-haiku-20240307");
+            const graph = await globalSymbolicEngine.compile(intent_name, episode_ids, this.episodic, llm);
+
+            if (graph) {
+                // Store the compiled graph in semantic memory or specialized storage
+                await this.semantic.addNode(
+                    `taskgraph_${graph.id || graph.name.replace(/\s+/g, '_')}`,
+                    "task_graph",
+                    { schema: JSON.stringify(graph) }
+                );
+
+                return {
+                    content: [{ type: "text", text: `Successfully compiled TaskGraph '${graph.name}'.\n\n${JSON.stringify(graph, null, 2)}` }],
+                };
+            } else {
+                return {
+                    content: [{ type: "text", text: "Failed to compile TaskGraph from provided episodes." }],
+                    isError: true
+                };
+            }
+        } catch (e: any) {
+            return {
+                content: [{ type: "text", text: `Error compiling to symbolic: ${e.message}` }],
                 isError: true
             };
         }
