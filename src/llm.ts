@@ -530,6 +530,10 @@ export class LLM {
 }
 
 export const createLLM = (model?: string) => {
+  return createLLMInstance(model);
+};
+
+export const createLLMInstance = (model?: string) => {
   // Primary model
   const m = model || process.env.MODEL || "deepseek:deepseek-reasoner";
   let [p, n] = m.includes(":") ? m.split(":") : ["openai", m];
