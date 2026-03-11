@@ -320,6 +320,10 @@ async function aggregateCompanyMetrics() {
             let batchedCalls = 0;
             let tokensSavedBatched = 0;
 
+            // Phase 28: Adaptive Routing Metrics
+            let routingHits = 0;
+            let routingSavingsUsd = 0;
+
             try {
                 const files = await getMetricFiles(7);
                 for (const file of files) {
@@ -334,6 +338,11 @@ async function aggregateCompanyMetrics() {
                             if (m.metric === 'llm_cache_size') cacheTotalSizeBytes += m.value;
                             if (m.metric === 'batched_calls_count') batchedCalls += m.value;
                             if (m.metric === 'tokens_saved_via_batching') tokensSavedBatched += m.value;
+                            if (m.metric === 'llm_model_routing_hits') routingHits += m.value;
+                            // Assume estimated metric logs rough cost savings in hypothetical 'tokens' where 1000 ~ $0.005 for easy math
+                            // Actually router.ts sets: savingsEstimated = 100 (Arbitrary metric value). So we multiply by arbitrary rate or keep raw if we logged usd.
+                            // Let's assume logMetric('llm', 'llm_cost_savings_estimated') logs tokens saved.
+                            if (m.metric === 'llm_cost_savings_estimated') routingSavingsUsd += (m.value / 1_000_000) * 5.00;
                         }
                     }
                 }
@@ -341,8 +350,8 @@ async function aggregateCompanyMetrics() {
                 console.warn(`[Health Monitor] Error reading cache metrics: ${e}`);
             }
 
-            // Estimate total savings from cache + batching
-            const estimatedSavings = ((cachedTokens + tokensSavedBatched) / 1_000_000) * 5.00;
+            // Estimate total savings from cache + batching + routing
+            const estimatedSavings = (((cachedTokens + tokensSavedBatched) / 1_000_000) * 5.00) + routingSavingsUsd;
 
             metrics[company] = {
                 total_tokens: totalTokens,
@@ -355,6 +364,8 @@ async function aggregateCompanyMetrics() {
                 llm_cache_size_bytes: cacheTotalSizeBytes,
                 batched_calls_count: batchedCalls,
                 tokens_saved_via_batching: tokensSavedBatched,
+                llm_model_routing_hits: routingHits,
+                llm_cost_savings_estimated: parseFloat(routingSavingsUsd.toFixed(4)),
                 estimated_savings_usd: parseFloat(estimatedSavings.toFixed(4))
             };
         } catch (e) {

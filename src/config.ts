@@ -20,6 +20,15 @@ export interface Config {
     maxBatchSize?: number;
     supportedTypes?: string[];
   };
+  modelRouting?: {
+    enabled: boolean;
+    defaultTier: "low" | "medium" | "high";
+    tiers: {
+      low: string;
+      medium: string;
+      high: string;
+    };
+  };
 }
 
 export async function loadConfig(cwd: string = process.cwd()): Promise<Config> {

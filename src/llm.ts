@@ -9,6 +9,7 @@ import { logMetric } from "./logger.js";
 import { createLLMCache, LLMCache } from "./llm/cache.js";
 import { loadConfig } from "./config.js";
 import { BatchPromptBuilder, BatchTaskInput, BatchTaskResult } from "./batch/batch_prompt_builder.js";
+import { ModelRouter } from "./llm/router.js";
 
 export interface LLMResponse {
   thought: string;
@@ -31,6 +32,8 @@ export class LLM {
   public personaEngine: PersonaEngine;
   private cache: LLMCache | null = null;
   private isCacheInitialized = false;
+  private router: ModelRouter | null = null;
+  public disableRouting: boolean = false;
 
   constructor(config: LLMConfig | LLMConfig[]) {
     this.configs = Array.isArray(config) ? config : [config];
@@ -44,8 +47,11 @@ export class LLM {
       if (config.llmCache) {
         this.cache = createLLMCache(config.llmCache);
       }
+      if (config.modelRouting?.enabled) {
+        this.router = new ModelRouter(config.modelRouting, this.cache);
+      }
     } catch (e) {
-      console.warn(`[LLM] Failed to initialize cache: ${e}`);
+      console.warn(`[LLM] Failed to initialize cache/router: ${e}`);
     }
     this.isCacheInitialized = true;
   }
@@ -225,12 +231,26 @@ export class LLM {
     // Compute cache key combining system prompt and user history.
     const cachePrompt = systemWithPersona + "\n" + JSON.stringify(history);
 
-    for (const config of this.configs) {
+    // Load config to check YOLO mode
+    const sysConfig = await loadConfig();
+
+    // Determine target configs (route dynamically if enabled)
+    let targetConfigs = this.configs;
+
+    // Check if we should route (skip routing if streaming requested or YOLO mode)
+    if (this.router && !onTyping && !sysConfig.yoloMode && !this.disableRouting) {
+      try {
+        const routedConfig = await this.router.routeTask(systemWithPersona, history);
+        // Put the routed config first, but keep fallbacks
+        targetConfigs = [routedConfig, ...this.configs.filter(c => c.provider !== routedConfig.provider || c.model !== routedConfig.model)];
+      } catch (e) {
+        console.warn(`[LLM] Routing failed, falling back to static config: ${e}`);
+      }
+    }
+
+    for (const config of targetConfigs) {
       const providerName = config.provider.toLowerCase();
       const modelName = config.model;
-
-      // Load config to check YOLO mode
-      const sysConfig = await loadConfig();
 
       // Check Cache First
       // Bypass cache if streaming is requested or YOLO mode
