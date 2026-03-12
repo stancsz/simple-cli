@@ -49,5 +49,14 @@ You can validate the failover logic by simulating an outage:
 3. The global ingress routes traffic away from the failed region.
 4. When the region recovers, the controller clears the failed status and resumes active serving.
 
+## Multi-Agency Deployment Considerations
+
+When deploying multiple autonomous agencies (Phase 31 Federation) across a Kubernetes multi-region architecture:
+
+- **Namespace Isolation:** Deploy each agency instance into its own dedicated Kubernetes namespace (e.g., `agency-alpha`, `agency-beta`).
+- **Shared Storage:** For Collective Learning and Federation Protocol, agencies need access to a shared namespace in the `EpisodicMemory` (e.g., `federation_shared`). In K8s, this can be achieved by mounting a shared `ReadWriteMany` Persistent Volume (PV), such as Amazon EFS or an NFS share, mounted to `.agent/brain/federation_shared/` across all agency pods.
+- **Ledger Persistence:** Ensure that the Distributed Ledger data (`ledger_entries`) is persisted reliably. The shared PV approach guarantees that cross-agency revenue settlements and balance queries reflect globally consistent state.
+- **Service Discovery:** Use Kubernetes `Service` DNS names (e.g., `agency-beta.agency-beta.svc.cluster.local`) as the MCP HTTP endpoints for cross-agency RPC and task delegation via the `federation` MCP server.
+
 **Validation History:**
 - Multi-region HA failover validation successfully performed and tested on October 25, 2023.

@@ -258,13 +258,13 @@ The roadmap is structured around the four anatomical layers of the Digital Biosp
 - [x] ✅ Comprehensive validation suite added (`phase30_strategic_decision_validation.test.ts`) covering capacity shortage, market opportunity, and conflicting forecast scenarios.
 
 ## Phase 31: Autonomous Multi-Agency Federation & Collective Intelligence
-*Status: Planned*
+*Status: Completed*
 *Current Focus: Enabling multiple Simple-CLI agency instances to collaborate, share resources, and form a collective intelligence network.*
 - [x] **Federation Protocol**: Define a secure protocol for cross-agency communication, capability discovery, and task delegation using the MCP.
 - [x] **Distributed Ledger**: Implement a lightweight ledger mechanism for tracking inter-agency contributions, resource usage, and revenue sharing. Integrated with Policy Engine.
 - [x] **Meta-Orchestrator**: Create a high-level orchestration engine capable of coordinating multiple distinct agencies (Swarms) for large-scale, complex projects.
-- [ ] **Collective Learning**: Develop mechanisms to synchronize successful patterns, SOPs, and strategies between agencies via Brain MCP integration.
-- [ ] **Validation**: Successfully run a multi-agency simulation where a lead agency delegates tasks to specialized partner agencies, shares contextual memory, and successfully settles shared revenue.
+- [x] **Collective Learning**: Develop mechanisms to synchronize successful patterns, SOPs, and strategies between agencies via Brain MCP integration.
+- [x] **Validation**: Successfully run a multi-agency simulation where a lead agency delegates tasks to specialized partner agencies, shares contextual memory, and successfully settles shared revenue.
 
 ## Legacy Achievements
 See [Legacy Roadmap](ROADMAP_LEGACY.md) for completed milestones of the previous "Simple CLI" era.
