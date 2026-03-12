@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { ForecastingServer } from "../../src/mcp_servers/forecasting/index.js";
 import { simulateScenario, generateForecastReport } from "../../src/mcp_servers/forecasting/forecasting_engine.js";
 import { record_metric, forecast_metric, getDb, _resetDb } from "../../src/mcp_servers/forecasting/models.js";
+import { evaluate_forecast_accuracy, simulate_historical_decisions } from "../../src/mcp_servers/forecasting/validation.js";
 import { existsSync, unlinkSync } from "fs";
 import { join } from "path";
 
@@ -45,7 +46,27 @@ vi.mock("../../src/llm/index.js", () => {
     createLLM: vi.fn().mockImplementation(() => ({
       generate: vi.fn().mockResolvedValue({
         message: "This is a mocked narrative forecast report. Strategic Recommendation: Proceed with the plan."
-      })
+      }),
+      embed: vi.fn().mockResolvedValue(new Array(1536).fill(0.1))
+    }))
+  };
+});
+
+vi.mock("../../src/llm.js", () => {
+  return {
+    LLM: class {
+      async generate() {
+        return { message: "Mocked" };
+      }
+      async embed() {
+        return new Array(1536).fill(0.1);
+      }
+    },
+    createLLM: vi.fn().mockImplementation(() => ({
+      generate: vi.fn().mockResolvedValue({
+        message: "This is a mocked narrative forecast report. Strategic Recommendation: Proceed with the plan."
+      }),
+      embed: vi.fn().mockResolvedValue(new Array(1536).fill(0.1))
     }))
   };
 });
@@ -209,5 +230,75 @@ describe("Phase 29: Time-Series Forecasting Tools Validation", () => {
 
      expect(Math.round(resultA.forecast[0].predicted_value)).toBe(150);
      expect(Math.round(resultB.forecast[0].predicted_value)).toBe(50);
+  });
+});
+
+describe("Phase 29: Forecasting Validation Metrics", () => {
+  const testCompany = "test-tenant-1";
+  const testMetric = "token_usage";
+
+  beforeEach(() => {
+    _resetDb();
+    const dbPath = join(process.cwd(), '.agent', 'data', 'forecasting.db');
+    if (existsSync(dbPath)) {
+       unlinkSync(dbPath);
+    }
+  });
+
+  it("should evaluate forecast accuracy and meet error margins (MAE < 10%, MAPE < 15%)", () => {
+    const baseDateMs = new Date("2023-01-01T00:00:00Z").getTime();
+    const msPerDay = 1000 * 60 * 60 * 24;
+
+    // Generate 90 days of mock token usage with a mostly linear trend and some minor noise
+    for (let i = 0; i < 90; i++) {
+        const noise = (Math.random() - 0.5) * 5; // +/- 2.5
+        const value = 100 + (2 * i) + noise;
+        record_metric(testMetric, value, new Date(baseDateMs + (i * msPerDay)).toISOString(), testCompany);
+    }
+
+    // Use 75 days for training, 15 days for testing
+    const result = evaluate_forecast_accuracy(testMetric, 75, 15, testCompany);
+
+    expect(result).toBeDefined();
+    expect(result.metric_name).toBe(testMetric);
+    expect(result.metrics.mae).toBeDefined();
+    expect(result.metrics.mape).toBeDefined();
+
+    // Convert MAP error ratio to percentage for assertion
+    const mapePercentage = result.metrics.mape * 100;
+
+    console.log(`Forecast Evaluation Metrics:\nMAE: ${result.metrics.mae}\nMAPE: ${mapePercentage.toFixed(2)}%`);
+
+    // For a simple linear progression with minor noise, our linear regression model should easily be within 10%
+    // Assuming mean value is around 100 + 2*80 = 260. 10% of 260 is 26.
+    expect(result.metrics.mae).toBeLessThan(26);
+    expect(mapePercentage).toBeLessThan(15);
+  });
+
+  it("should simulate historical decisions and demonstrate quality improvement", async () => {
+    const baseDateMs = new Date("2023-01-01T00:00:00Z").getTime();
+    const msPerDay = 1000 * 60 * 60 * 24;
+
+    // Generate 90 days of mock token usage with an upward trend
+    for (let i = 0; i < 90; i++) {
+        // Upward trend: y = 5x + 1000
+        const value = 1000 + (5 * i);
+        record_metric(testMetric, value, new Date(baseDateMs + (i * msPerDay)).toISOString(), testCompany);
+    }
+
+    const result = await simulate_historical_decisions(testMetric, 75, 15, testCompany);
+
+    expect(result).toBeDefined();
+    expect(result.metric_name).toBe(testMetric);
+    expect(result.decisions).toBeDefined();
+    expect(result.quality_improvement).toBeDefined();
+
+    // In an upward trend, the naive allocation (max of past) will underprovision compared to the optimal allocation (actual future).
+    // The forecast allocation should predict the future trend and reduce underprovisioning.
+
+    console.log(`Decision Simulation Results:\nNaive Allocation: ${result.decisions.naive_allocation}\nForecast Allocation: ${result.decisions.forecast_allocation}\nOptimal Allocation: ${result.decisions.optimal_allocation}`);
+    console.log(`Quality Improvement:\nUnderprovisioning Reduction: ${result.quality_improvement.underprovisioning_reduction}\nOverprovisioning Reduction: ${result.quality_improvement.overprovisioning_reduction}`);
+
+    expect(result.quality_improvement.underprovisioning_reduction).toBeGreaterThan(0);
   });
 });

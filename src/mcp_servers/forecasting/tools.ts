@@ -2,8 +2,10 @@ import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
 import { simulateScenario, generateForecastReport } from "./forecasting_engine.js";
 import { record_metric, forecast_metric } from "./models.js";
+import { registerValidationTools } from "./validation.js";
 
 export function registerTools(server: McpServer) {
+  registerValidationTools(server);
   server.tool(
     "record_metric",
     "Records a historical metric value (token usage, API costs, infrastructure load) for time-series forecasting.",
