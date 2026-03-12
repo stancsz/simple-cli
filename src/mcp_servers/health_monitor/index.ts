@@ -53,6 +53,39 @@ server.tool(
   async ({ agent, metric, value, tags }) => {
     await logMetric(agent, metric, value, tags || {});
 
+    // Phase 29: Dispatch relevant metrics to the forecasting MCP server
+    if (metric === "latency" || metric === "token_usage" || metric === "api_costs" || metric === "error_count") {
+      try {
+        const forecastingSrc = join(process.cwd(), "src", "mcp_servers", "forecasting", "index.ts");
+        const forecastingDist = join(process.cwd(), "dist", "mcp_servers", "forecasting", "index.js");
+
+        let cmd = "node";
+        let clientArgs = [forecastingDist];
+        if (existsSync(forecastingSrc) && !existsSync(forecastingDist)) {
+           cmd = "npx";
+           clientArgs = ["tsx", forecastingSrc];
+        }
+
+        const transport = new StdioClientTransport({ command: cmd, args: clientArgs });
+        const forecastClient = new Client({ name: "health-monitor-forecaster", version: "1.0.0" }, { capabilities: {} });
+        await forecastClient.connect(transport);
+
+        await forecastClient.callTool({
+           name: "record_metric",
+           arguments: {
+              metric_name: `${agent}_${metric}`,
+              value: value,
+              timestamp: new Date().toISOString(),
+              company: tags?.company || "system"
+           }
+        });
+        await forecastClient.close();
+      } catch (err) {
+        // Silently fail forecasting integration to not block core health monitoring
+        console.warn(`[HealthMonitor] Failed to dispatch metric to forecasting server: ${err}`);
+      }
+    }
+
     // Real-time alert check
     for (const rule of activeRules) {
         if (rule.metric === metric || rule.metric === `${agent}:${metric}`) {
