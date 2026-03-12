@@ -55,7 +55,7 @@ export function registerTools(server: McpServer) {
         try {
             const db = getDb();
             const stmt = db.prepare("SELECT value FROM metrics WHERE metric_name = ? AND company = ? ORDER BY timestamp ASC");
-            const rows = stmt.all(metric_name, company);
+            const rows = stmt.all(metric_name, company) as any[];
 
             if (rows.length >= horizon_days * 2) {
                 // simple split for validation
