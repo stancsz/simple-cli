@@ -31,7 +31,23 @@ vi.mock("../../src/mcp.js", () => {
     return {
         MCP: class {
             async init() {}
-            async getTools() { return []; }
+            async getTools() {
+                return [
+                    {
+                        name: "generate_strategic_initiatives",
+                        execute: async () => ({
+                            content: [{
+                                text: JSON.stringify({
+                                    rationale: "Aligning with new strategic pivot.",
+                                    initiatives_created: [
+                                        { title: "Optimize Fleet", status: "created", url: "https://linear.app/issue/1" }
+                                    ]
+                                })
+                            }]
+                        })
+                    }
+                ];
+            }
         }
     };
 });
