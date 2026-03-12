@@ -260,6 +260,7 @@ The roadmap is structured around the four anatomical layers of the Digital Biosp
 ## Phase 31: Autonomous Multi-Agency Federation & Collective Intelligence
 *Status: Completed*
 *Current Focus: Enabling multiple Simple-CLI agency instances to collaborate, share resources, and form a collective intelligence network.*
+*Validation: ✅ Validated via `tests/integration/phase31_multi_agency_federation_validation.test.ts`*
 - [x] **Federation Protocol**: Define a secure protocol for cross-agency communication, capability discovery, and task delegation using the MCP.
 - [x] **Distributed Ledger**: Implement a lightweight ledger mechanism for tracking inter-agency contributions, resource usage, and revenue sharing. Integrated with Policy Engine.
 - [x] **Meta-Orchestrator**: Create a high-level orchestration engine capable of coordinating multiple distinct agencies (Swarms) for large-scale, complex projects.
