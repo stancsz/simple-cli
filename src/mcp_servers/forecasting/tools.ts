@@ -3,6 +3,8 @@ import { z } from "zod";
 import { simulateScenario, generateForecastReport } from "./forecasting_engine.js";
 import { record_metric, forecast_metric } from "./models.js";
 import { registerValidationTools } from "./validation.js";
+import { evaluate_forecast_accuracy } from "../validation_metrics/tools.js";
+import { getDb } from "./models.js";
 
 export function registerTools(server: McpServer) {
   registerValidationTools(server);
@@ -48,6 +50,23 @@ export function registerTools(server: McpServer) {
     async ({ metric_name, horizon_days, company }) => {
       try {
         const result = forecast_metric(metric_name, horizon_days, company);
+
+        // Evaluate forecast accuracy if historical data is available
+        try {
+            const db = getDb();
+            const stmt = db.prepare("SELECT value FROM metrics WHERE metric_name = ? AND company = ? ORDER BY timestamp ASC");
+            const rows = stmt.all(metric_name, company);
+
+            if (rows.length >= horizon_days * 2) {
+                // simple split for validation
+                const actual_values = rows.slice(rows.length - horizon_days).map(r => r.value);
+                const forecasted_values = result.forecast.map(f => f.predicted_value);
+                // Call validation metrics evaluate_forecast_accuracy
+                evaluate_forecast_accuracy(metric_name, forecasted_values, actual_values, company);
+            }
+        } catch (err) {
+            console.error("Non-fatal error running post-forecast accuracy validation:", err);
+        }
         return {
           content: [{ type: "text", text: JSON.stringify(result, null, 2) }],
         };
