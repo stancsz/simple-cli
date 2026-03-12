@@ -80,7 +80,7 @@ async function fetchK8sNodes(): Promise<{ count: number, totalCpu: number, total
 
         let totalCpu = 0;
         let totalMemory = 0; // In bytes
-        const nodeItems = nodes.body.items || nodes.items;
+        const nodeItems = (nodes as any).body?.items || nodes.items;
 
         for (const node of nodeItems) {
             if (node.status && node.status.capacity) {
@@ -199,8 +199,12 @@ export function registerCapacityPlanningTools(server: McpServer) {
             let parsedRecommendations: any[] = [];
             try {
                 const response = await llm.generate(prompt, []);
-                const rawText = response.message.replace(/```json/g, '').replace(/```/g, '').trim();
-                parsedRecommendations = JSON.parse(rawText);
+                if (response.message) {
+                    const rawText = response.message.replace(/```json/g, '').replace(/```/g, '').trim();
+                    parsedRecommendations = JSON.parse(rawText);
+                } else {
+                    throw new Error("LLM response message is undefined");
+                }
             } catch (e) {
                 console.error("Failed to generate/parse LLM recommendations", e);
                 parsedRecommendations = [
