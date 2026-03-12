@@ -1,36 +1,36 @@
-# Standard Operating Procedure: Strategic Execution Loop
+# Strategic Execution Workflow (Phase 25.5)
 
-## 1. Purpose
-The Strategic Execution Engine bridges the gap between high-level autonomous corporate strategy (formulated by the C-Suite personas) and ground-level execution (handled by agency swarms). It ensures that the operational KPIs, active fleet status, and strategic goals are continuously aligned by generating actionable, prioritized Linear issues.
+## Overview
+The **Strategic Execution Engine** automates the translation of high-level Corporate Strategy (stored in the Corporate Brain) into actionable ground-level tasks tracked in Linear. It bridges the gap between boardroom decisions and autonomous swarm execution.
 
-## 2. Overview
-This SOP outlines the workflow for translating abstract strategic shifts into concrete tasks. The `generate_strategic_initiatives` tool in the `business_ops` MCP server continuously (or on-demand) queries the overarching vision, analyzes the current performance and fleet state, and outputs new initiatives to close strategic gaps.
+## Trigger Conditions
+- **Periodic Execution:** Scheduled via `crontab` to run periodically (e.g., weekly) as part of routine system operations.
+- **Manual Trigger:** Initiated via the `generate_strategic_initiatives` MCP tool on demand.
 
-## 3. Workflow Steps
-### Step 1: Trigger Mechanism
-- The execution engine can be invoked automatically after a successful Board Meeting (Phase 25), or run manually on a periodic basis (e.g., weekly).
+## Tools & Context Used
+- **`generate_strategic_initiatives` (Brain MCP):** Analyzes current KPIs against the Corporate Strategy to identify strategic gaps and auto-generates corresponding initiatives.
 
-### Step 2: Information Gathering
-The `generate_strategic_initiatives` tool orchestrates data fetching:
-- **Corporate Strategy:** Retrieves the latest `CorporateStrategy` object via the `brain` MCP server (`read_strategy`).
-- **Performance Metrics:** Fetches recent revenue, efficiency, and client health scores using `analyze_performance_metrics` (Xero, Linear, HubSpot integrations).
-- **Fleet Status:** Gathers the current operational capacity and active projects using `getFleetStatusLogic`.
+## Step-by-Step Procedure
 
-### Step 3: LLM Gap Analysis
-- An LLM (acting as the Chief Operating Officer) is prompted with the gathered data.
-- The LLM identifies the largest delta between the strategic objectives and the current operational reality.
-- It outputs exactly 3 top actionable initiatives tailored to close these gaps.
+1. **Context Retrieval**
+   - **Corporate Strategy:** Reads the current, active strategy from the Brain's Episodic Memory via the `read_strategy` tool.
+   - **Performance Metrics:** Retrieves efficiency, financial, and overall business performance via the `business_ops.analyze_performance_metrics` tool.
+   - **System Health:** Fetches technical and infrastructure health via the `health_monitor.get_metrics` tool.
+   - **Fleet Status:** Retrieves the utilization and status of the current agent swarm via the `business_ops.get_fleet_status` tool.
 
-### Step 4: Execution Automation
-- For each initiative, the tool verifies the existence of a "Strategic Initiatives" project in Linear (or creates one).
-- It generates a detailed Linear issue for each initiative, complete with titles, descriptions linking back to the strategy, and appropriate priority levels.
+2. **Gap Analysis (LLM Processing)**
+   - The engine uses an LLM acting as the Chief Operating Officer (COO).
+   - It compares the current operational KPIs with the strategic objectives.
+   - It outputs the top 3 actionable initiatives prioritized to close the largest strategic gaps.
 
-### Step 5: Logging and Auditing
-- The outcomes (issue URLs and the LLM's rationale) are stored in the Episodic Memory as a `strategic_execution_log`. This enables future strategic horizons to reference past executed initiatives.
+3. **Initiative Creation (Linear Integration)**
+   - **Project Verification:** Creates or ensures the existence of a "Strategic Initiatives" project in Linear via `business_ops.create_linear_project`.
+   - **Issue Generation:** For each identified initiative, creates a Linear issue via `business_ops.create_linear_issue` detailing the specific actionable objective, description, and priority level.
 
-## 4. Error Handling
-- If the Brain cannot locate a `CorporateStrategy`, the workflow safely aborts.
-- If Linear API calls fail, the workflow tracks the failures and returns a partial success summary with error details.
+4. **Auditing and Logging**
+   - Logs the rationale and the generated initiative details as a `strategic_execution_log` entry in Episodic Memory for future context and transparency.
 
-## 5. Maintenance
-Ensure the integrations to Xero, HubSpot, and Linear maintain correct authentication keys. The underlying prompt in `strategic_execution.ts` should be updated if the corporate taxonomy changes.
+## Error Handling
+- **Missing Strategy:** Fails fast if no Corporate Strategy exists.
+- **Unavailable Metrics:** Reverts to a graceful failure mode for missing metrics (`status: "unavailable"`) and still generates initiatives based on whatever context is available.
+- **Linear Integration Failures:** Continues processing the remaining initiatives even if one fails to post, logging all errors in the response output.

@@ -55,3 +55,14 @@ Phase 30 introduces an autonomous strategic decision loop, elevating the system 
 
 ### Integration with the 4 Pillars
 - **Recursive Optimization**: By combining Time-Series Forecasting (Phase 29) with the Strategic Decision Engine (Phase 30), the agent continuously aligns its resource allocation, pricing models, and operational footprint with predicted market realties, reducing latency in C-suite decision-making to near-zero.
+
+## 20. Strategic Execution Engine (Phase 25.5)
+The **Strategic Execution Engine** translates boardroom-level Corporate Strategy directly into ground-level execution tasks using Linear.
+
+### Core Components
+1. **`generate_strategic_initiatives` (Brain MCP)**:
+   - Evaluates the current Corporate Strategy against operational KPIs (System Health, Fleet Status, and Financial Performance).
+   - Generates actionable initiatives to bridge identified gaps.
+   - Automatically creates and prioritizes tasks within a "Strategic Initiatives" project in Linear.
+2. **Execution Loop**:
+   - The Scheduler periodically invokes this tool to ensure swarm objectives remain tightly aligned with high-level corporate goals.

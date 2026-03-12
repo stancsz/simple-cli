@@ -2,9 +2,6 @@ import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
 import { createLLM } from "../../../llm.js";
 import { EpisodicMemory } from "../../../brain/episodic.js";
-import { createProject, createIssue } from "../linear_service.js";
-
-// Import MCP directly to call other tools safely across server boundaries
 import { MCP } from "../../../mcp.js";
 
 interface StrategicInitiative {
@@ -13,10 +10,7 @@ interface StrategicInitiative {
     priority: number; // 1=Urgent, 2=High, 3=Normal, 4=Low
 }
 
-export async function generateStrategicInitiativesLogic(mcp: MCP, company?: string) {
-    const memory = new EpisodicMemory();
-    await memory.init();
-
+export async function generateStrategicInitiativesLogic(mcp: MCP, memory: EpisodicMemory, company?: string) {
     // Ensure all servers are initialized in the mcp instance
     await mcp.init();
 
@@ -41,7 +35,7 @@ export async function generateStrategicInitiativesLogic(mcp: MCP, company?: stri
         return result; // Fallback
     };
 
-    // 1. Fetch Corporate Strategy via tool instead of direct import
+    // 1. Fetch Corporate Strategy via tool
     let strategy;
     try {
         strategy = await executeTool("read_strategy", { company });
@@ -49,29 +43,40 @@ export async function generateStrategicInitiativesLogic(mcp: MCP, company?: stri
          throw new Error(`Failed to fetch Corporate Strategy via MCP: ${e.message}`);
     }
 
-    if (!strategy) {
+    if (!strategy || (typeof strategy === "string" && strategy.includes("No corporate strategy found"))) {
         throw new Error("No active Corporate Strategy found. Cannot generate initiatives.");
     }
 
-    // 2. Fetch Performance Metrics via tool
+    // 2. Fetch Performance Metrics via Business Ops tool
     let performanceMetrics;
     try {
         performanceMetrics = await executeTool("analyze_performance_metrics", { timeframe: "last_30_days", clientId: company });
     } catch (e: any) {
-        throw new Error(`Failed to fetch Performance Metrics via MCP: ${e.message}`);
+        console.warn(`Failed to fetch Performance Metrics via MCP: ${e.message}`);
+        performanceMetrics = { status: "unavailable" };
     }
 
-    // 3. Fetch Fleet Status via tool
+    // 3. Fetch System Health via Health Monitor tool
+    let systemHealth;
+    try {
+        systemHealth = await executeTool("get_metrics", {});
+    } catch (e: any) {
+        console.warn(`Failed to fetch System Health via MCP: ${e.message}`);
+        systemHealth = { status: "unavailable" };
+    }
+
+    // 4. Fetch Fleet Status via Business Ops tool
     let fleetStatus;
     try {
         fleetStatus = await executeTool("get_fleet_status", {});
     } catch (e: any) {
-         throw new Error(`Failed to fetch Fleet Status via MCP: ${e.message}`);
+         console.warn(`Failed to fetch Fleet Status via MCP: ${e.message}`);
+         fleetStatus = { status: "unavailable" };
     }
 
-    const companyFleetStatus = company ? (Array.isArray(fleetStatus) ? fleetStatus.filter((f: any) => f.company === company) : fleetStatus) : fleetStatus;
+    const companyFleetStatus = company && Array.isArray(fleetStatus) ? fleetStatus.filter((f: any) => f.company === company) : fleetStatus;
 
-    // 4. LLM Analysis
+    // 5. LLM Analysis
     const llm = createLLM();
     const prompt = `You are the Chief Operating Officer (COO) translating high-level strategy into execution.
 
@@ -80,6 +85,9 @@ ${JSON.stringify(strategy, null, 2)}
 
 CURRENT PERFORMANCE METRICS:
 ${JSON.stringify(performanceMetrics, null, 2)}
+
+SYSTEM HEALTH METRICS:
+${JSON.stringify(systemHealth, null, 2)}
 
 CURRENT FLEET STATUS:
 ${JSON.stringify(companyFleetStatus, null, 2)}
@@ -118,43 +126,71 @@ Return ONLY a valid JSON object matching this schema:
          throw new Error("LLM response did not contain an 'initiatives' array.");
     }
 
-    // 5. Create Linear Issues
+    // 6. Create Linear Issues using MCP tools
     const results = [];
 
-    // Ensure we have a "Strategic Initiatives" project or create one
+    // Ensure we have a "Strategic Initiatives" project or create one via MCP
     const projectName = company ? `Strategic Initiatives: ${company}` : "Global Strategic Initiatives";
     let projectId;
     try {
-        const projectResult = await createProject(company || "global", projectName, "Auto-generated project for tracking high-level strategic initiatives.");
+        const projectResult = await executeTool("create_linear_project", {
+            dealId: company || "global",
+            projectName: projectName,
+            description: "Auto-generated project for tracking high-level strategic initiatives."
+        });
         projectId = projectResult.id;
-    } catch (e) {
-        throw new Error(`Failed to initialize Strategic Initiatives project in Linear: ${(e as Error).message}`);
+    } catch (e: any) {
+        throw new Error(`Failed to initialize Strategic Initiatives project in Linear via MCP: ${e.message}`);
+    }
+
+    // Fetch existing issues to ensure idempotency
+    let existingIssues: any[] = [];
+    try {
+        const issuesResult = await executeTool("get_linear_project_issues", { projectId });
+        existingIssues = Array.isArray(issuesResult) ? issuesResult : [];
+    } catch (e: any) {
+        console.warn(`Failed to fetch existing Linear issues for idempotency check: ${e.message}`);
     }
 
     for (const init of parsedResponse.initiatives as StrategicInitiative[]) {
+        // Check if an issue with a similar title already exists
+        const isDuplicate = existingIssues.some(issue =>
+            issue.title.toLowerCase() === init.title.toLowerCase()
+        );
+
+        if (isDuplicate) {
+            results.push({
+                title: init.title,
+                status: "skipped",
+                reason: "Duplicate issue already exists."
+            });
+            continue;
+        }
+
         try {
-            const issueResult = await createIssue(
-                projectId,
-                init.title,
-                `${init.description}\n\n*Auto-generated from Strategic Execution Engine.*`,
-                init.priority
-            );
+            const issueResult = await executeTool("create_linear_issue", {
+                projectId: projectId,
+                title: init.title,
+                description: `${init.description}\n\n*Auto-generated from Strategic Execution Engine.*`,
+                priority: init.priority
+            });
+
             results.push({
                 title: init.title,
                 url: issueResult.url,
                 identifier: issueResult.identifier,
                 status: "created"
             });
-        } catch (e) {
+        } catch (e: any) {
             results.push({
                 title: init.title,
                 status: "failed",
-                error: (e as Error).message
+                error: e.message
             });
         }
     }
 
-    // 6. Store in Episodic Memory for auditing
+    // 7. Store in Episodic Memory for auditing
     try {
          await memory.store(
              `strategic_execution_${Date.now()}`,
@@ -175,7 +211,7 @@ Return ONLY a valid JSON object matching this schema:
     };
 }
 
-export function registerStrategicExecutionTools(server: McpServer, mcpClient?: MCP) {
+export function registerStrategicExecutionTools(server: McpServer, memory: EpisodicMemory, mcpClient?: MCP) {
     const mcp = mcpClient || new MCP();
 
     server.tool(
@@ -186,7 +222,7 @@ export function registerStrategicExecutionTools(server: McpServer, mcpClient?: M
         },
         async ({ company }) => {
             try {
-                const results = await generateStrategicInitiativesLogic(mcp, company);
+                const results = await generateStrategicInitiativesLogic(mcp, memory, company);
                 return {
                     content: [{
                         type: "text",

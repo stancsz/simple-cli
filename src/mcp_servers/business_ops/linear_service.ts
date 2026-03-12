@@ -121,6 +121,21 @@ export async function createIssue(
     };
 }
 
+export async function getProjectIssues(projectId: string) {
+    const client = getLinearClient();
+
+    // Fetch existing issues for the project to ensure idempotency
+    const project = await client.project(projectId);
+    const issues = await project.issues();
+
+    return issues.nodes.map(issue => ({
+        id: issue.id,
+        title: issue.title,
+        identifier: issue.identifier,
+        url: issue.url
+    }));
+}
+
 export async function syncDeal(
     dealId: string,
     dealName: string,

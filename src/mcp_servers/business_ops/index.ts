@@ -24,7 +24,6 @@ import { registerPricingOptimizationTools } from "./tools/pricing_optimization.j
 import { registerServiceAdjustmentTools } from "./tools/service_adjustment.js";
 import { registerResourceAllocationTools } from "./tools/resource_allocation.js";
 import { registerPolicyEngineTools } from "./tools/policy_engine.js";
-import { registerStrategicExecutionTools } from "./tools/strategic_execution.js";
 import { registerEnhancedLeadGenerationTools } from "./tools/enhanced_lead_generation.js";
 import { registerProposalGenerationTools } from "./tools/proposal_generation.js";
 import { registerContractNegotiationTools } from "./tools/contract_negotiation.js";
@@ -72,7 +71,6 @@ registerPricingOptimizationTools(server);
 registerServiceAdjustmentTools(server);
 registerResourceAllocationTools(server);
 registerPolicyEngineTools(server);
-registerStrategicExecutionTools(server);
 registerEnhancedLeadGenerationTools(server);
 registerProposalGenerationTools(server);
 registerContractNegotiationTools(server);

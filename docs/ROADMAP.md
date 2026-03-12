@@ -61,7 +61,7 @@ The roadmap is structured around the four anatomical layers of the Digital Biosp
 *Status: Completed*
 *Current Focus: Translating High-Level Strategy to Executable Tasks*
 - [x] **Strategic Execution Engine**: Automatically translate C-Suite strategy into actionable ground-level task implementation.
-    - [x] Implement `generate_strategic_initiatives` tool in `business_ops` MCP to compare operations KPIs (metrics, fleet status) against current Corporate Strategy.
+    - [x] Implement `generate_strategic_initiatives` tool in `brain` MCP to compare operations KPIs (metrics, fleet status) against current Corporate Strategy.
     - [x] Automatically create prioritized issues in designated Linear projects to assign actionable swarm objectives.
     - ✅ Implemented tool logic and mapped workflow in `sops/strategic_execution_workflow.md`. Validated via `tests/integration/strategic_execution_validation.test.ts`.
 

@@ -1,8 +1,35 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
-import { createIssue } from "../linear_service.js";
+import { createIssue, getProjectIssues } from "../linear_service.js";
 
 export function registerCreateIssue(server: McpServer) {
+    server.tool(
+        "get_linear_project_issues",
+        "Fetch existing issues within a Linear project.",
+        {
+            projectId: z.string().describe("The Linear Project ID.")
+        },
+        async ({ projectId }) => {
+            try {
+                const result = await getProjectIssues(projectId);
+                return {
+                    content: [{
+                        type: "text",
+                        text: JSON.stringify(result, null, 2)
+                    }]
+                };
+            } catch (e: any) {
+                return {
+                    content: [{
+                        type: "text",
+                        text: `Error fetching issues: ${e.message}`
+                    }],
+                    isError: true
+                };
+            }
+        }
+    );
+
     server.tool(
         "create_linear_issue",
         "Create a Linear issue (task) within a project.",
