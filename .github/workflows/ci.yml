@@ -23,7 +23,7 @@ jobs:
         cache: 'npm'
 
     - name: Install Helm
-      uses: azure/setup-helm@v4
+      run: curl -fsSL -o get_helm.sh https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3 && chmod 700 get_helm.sh && ./get_helm.sh
 
     - run: npm ci
     - run: npm run build --if-present
@@ -42,7 +42,7 @@ jobs:
         cache: 'npm'
 
     - name: Install Helm
-      uses: azure/setup-helm@v4
+      run: curl -fsSL -o get_helm.sh https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3 && chmod 700 get_helm.sh && ./get_helm.sh
 
     - run: npm ci
     - name: Run K8s Validation Tests
