@@ -337,9 +337,10 @@
 - [x] **Adaptive Model Routing**: Dynamically route LLM requests based on complexity.
 - [x] **Validation**: Validate efficiency improvements and cost reductions.
 
-## Phase 29: Advanced Planning & Forecasting (In Progress)
+## Phase 29: Advanced Planning & Forecasting (✅ Completed)
 - [x] Time-Series Forecasting: Implement MCP server with `record_metric` and `forecast_metric` using `simple-statistics` and `better-sqlite3`. Integrated with `business_ops` for `forecast_resource_demand`.
 - [x] **Time-Series Forecasting**: Build models to predict resource consumption. (See PR #640)
 - [x] **Capacity Planning**: Automate token budget and node scaling. (See PR #640)
 - [x] **Demand Prediction**: Integrate `simple-statistics` for dynamic financial modeling. (See PR #640)
 - [x] **Validation Metrics**: Demonstrate accurate forecasting based on historical simulation. Implemented MAE, RMSE, MAPE metrics and decision quality simulation. Validated via `tests/integration/forecasting_validation.test.ts` (MAPE < 15%) on Date: [Insert current date].
+- [x] **Brain & Business Ops Integration**: Added `store_forecast` to save strategic forecasts to the Brain. Updated `allocate_resources_optimally` to use recent forecasts, and introduced `apply_forecast_to_strategy` to recursively adjust Corporate Strategy based on predicted metrics.

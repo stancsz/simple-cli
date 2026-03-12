@@ -91,8 +91,10 @@ export class BrainServer {
         duration: z.number().optional().describe("Duration of the task in milliseconds."),
         type: z.string().optional().describe("The type of memory (e.g., 'task' or 'swarm_negotiation_pattern')."),
         related_episode_id: z.string().optional().describe("ID of a related episode (e.g., the failure episode for a negotiation pattern)."),
+        forecast_horizon: z.number().optional().describe("Horizon length if storing a forecast."),
+        error_margin: z.number().optional().describe("Expected error margin if storing a forecast."),
       },
-      async ({ taskId, request, solution, artifacts, company, simulation_attempts, resolved_via_dreaming, dreaming_outcomes, id, tokens, duration, type, related_episode_id }) => {
+      async ({ taskId, request, solution, artifacts, company, simulation_attempts, resolved_via_dreaming, dreaming_outcomes, id, tokens, duration, type, related_episode_id, forecast_horizon, error_margin }) => {
         let artifactList: string[] = [];
         if (artifacts) {
           try {
@@ -111,7 +113,7 @@ export class BrainServer {
                 simAttempts = undefined;
             }
         }
-        await this.episodic.store(taskId, request, solution, artifactList, company, simAttempts, resolved_via_dreaming, dreaming_outcomes, id, tokens, duration, type, related_episode_id);
+        await this.episodic.store(taskId, request, solution, artifactList, company, simAttempts, resolved_via_dreaming, dreaming_outcomes, id, tokens, duration, type, related_episode_id, forecast_horizon, error_margin);
         return {
           content: [{ type: "text", text: "Memory stored successfully." }],
         };

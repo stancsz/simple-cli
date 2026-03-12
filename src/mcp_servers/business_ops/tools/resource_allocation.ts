@@ -5,6 +5,10 @@ import { createLLM } from "../../../llm.js";
 import { getFleetStatusLogic } from "./swarm_fleet_management.js";
 import { collectPerformanceMetrics } from "./performance_analytics.js";
 import { scaleSwarmLogic } from "../../scaling_engine/scaling_orchestrator.js";
+import { Client } from "@modelcontextprotocol/sdk/client/index.js";
+import { StdioClientTransport } from "@modelcontextprotocol/sdk/client/stdio.js";
+import { join } from "path";
+import { existsSync } from "fs";
 
 interface AllocationRecommendation {
     clientId: string;
@@ -57,7 +61,54 @@ export function registerResourceAllocationTools(server: McpServer, mcpClient?: M
                 fleetStatus = fleetStatus.filter(s => focus_clients.includes(s.company) || focus_clients.includes(s.projectId));
             }
 
-            // 2. Analyze each client context
+            // 2. Fetch Strategic Forecasts from Brain
+            let recentForecasts: any[] = [];
+            let brainClient: Client | null = null;
+            try {
+                const srcPath = join(process.cwd(), "src", "mcp_servers", "brain", "index.ts");
+                const distPath = join(process.cwd(), "dist", "mcp_servers", "brain", "index.js");
+
+                let command = "node";
+                let args = [distPath];
+
+                if (existsSync(srcPath) && !existsSync(distPath)) {
+                  command = "npx";
+                  args = ["tsx", srcPath];
+                } else if (!existsSync(distPath)) {
+                  throw new Error(`Brain MCP Server not found at ${srcPath} or ${distPath}`);
+                }
+
+                const transport = new StdioClientTransport({ command, args });
+                brainClient = new Client({ name: "business_ops-brain-client", version: "1.0.0" }, { capabilities: {} });
+                await brainClient.connect(transport);
+
+                const forecastQuery: any = await brainClient.callTool({
+                    name: "brain_query",
+                    arguments: {
+                        query: "Strategic Forecast",
+                        limit: 5,
+                        format: "json",
+                        type: "strategic_forecast"
+                    }
+                });
+
+                if (!forecastQuery.isError && forecastQuery.content && forecastQuery.content.length > 0) {
+                    try {
+                        const parsed = JSON.parse(forecastQuery.content[0].text);
+                        // Filter recent forecasts (last 7 days approx)
+                        const sevenDaysAgo = Date.now() - (7 * 24 * 60 * 60 * 1000);
+                        recentForecasts = parsed.filter((p: any) => p.timestamp >= sevenDaysAgo);
+                    } catch(e) {}
+                }
+            } catch (e) {
+                console.warn(`Failed to retrieve strategic forecasts: ${e}`);
+            } finally {
+                if (brainClient) {
+                    try { await brainClient.close(); } catch {}
+                }
+            }
+
+            // 3. Analyze each client context
             for (const status of fleetStatus) {
                 // Collect detailed metrics
                 let metrics;
@@ -68,12 +119,21 @@ export function registerResourceAllocationTools(server: McpServer, mcpClient?: M
                     // Continue with partial data
                 }
 
+                // Map relevant forecasts to this client if any
+                // The strategic forecast might be namespaced or contain the company name in the request/solution
+                const clientForecasts = recentForecasts.filter(f =>
+                    (f.company && f.company === status.company) ||
+                    (f.userPrompt && f.userPrompt.includes(status.company)) ||
+                    (f.agentResponse && f.agentResponse.includes(status.company))
+                );
+
                 // Construct Analysis Prompt
                 const context = {
                     client: status.company,
                     fleet_status: status,
                     performance_metrics: metrics,
-                    market_context: "Assuming standard market growth and seasonal stability." // Placeholder or fetch from market tool
+                    market_context: "Assuming standard market growth and seasonal stability.", // Placeholder or fetch from market tool
+                    strategic_forecasts: clientForecasts
                 };
 
                 const prompt = `

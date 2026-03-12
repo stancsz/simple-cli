@@ -21,6 +21,8 @@ export interface PastEpisode {
   _distance?: number;
   type?: string | null;
   related_episode_id?: string | null;
+  forecast_horizon?: number | null;
+  error_margin?: number | null;
 }
 
 export class EpisodicMemory {
@@ -106,7 +108,9 @@ export class EpisodicMemory {
       tokens?: number,
       duration?: number,
       type?: string,
-      related_episode_id?: string
+      related_episode_id?: string,
+      forecast_horizon?: number,
+      error_margin?: number
   ): Promise<void> {
     const textToEmbed = `Task: ${taskId}\nRequest: ${request}\nSolution: ${solution}`;
     const embedding = await this.getEmbedding(textToEmbed);
@@ -129,7 +133,9 @@ export class EpisodicMemory {
       tokens: tokens || 0,
       duration: duration || 0,
       type: type || "task",
-      related_episode_id: related_episode_id || ""
+      related_episode_id: related_episode_id || "",
+      forecast_horizon: forecast_horizon || 0,
+      error_margin: error_margin || 0
     };
 
     const connector = await this.getConnector(company);
