@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { ForecastingServer } from "../../src/mcp_servers/forecasting/index.js";
 import { simulateScenario, generateForecastReport } from "../../src/mcp_servers/forecasting/forecasting_engine.js";
 import { record_metric, forecast_metric, getDb, _resetDb } from "../../src/mcp_servers/forecasting/models.js";
-import { evaluate_forecast_accuracy, simulate_historical_decisions } from "../../src/mcp_servers/forecasting/validation.js";
+import { evaluate_forecast_accuracy_legacy, simulate_historical_decisions } from "../../src/mcp_servers/forecasting/validation.js";
 import { existsSync, unlinkSync } from "fs";
 import { join } from "path";
 
@@ -257,7 +257,7 @@ describe("Phase 29: Forecasting Validation Metrics", () => {
     }
 
     // Use 75 days for training, 15 days for testing
-    const result = evaluate_forecast_accuracy(testMetric, 75, 15, testCompany);
+    const result = evaluate_forecast_accuracy_legacy(testMetric, 75, 15, testCompany);
 
     expect(result).toBeDefined();
     expect(result.metric_name).toBe(testMetric);

@@ -8,7 +8,7 @@ import * as ss from 'simple-statistics';
 const baseDir = process.env.JULES_AGENT_DIR ? dirname(process.env.JULES_AGENT_DIR) : process.cwd();
 const episodic = new EpisodicMemory(baseDir);
 
-export function evaluate_forecast_accuracy(metric_name: string, historical_days: number, horizon_days: number, company: string): any {
+export function evaluate_forecast_accuracy_legacy(metric_name: string, historical_days: number, horizon_days: number, company: string): any {
     const database = getDb();
 
     // Fetch historical data
@@ -171,7 +171,7 @@ export function registerValidationTools(server: McpServer) {
         },
         async ({ metric_name, historical_days, horizon_days, company }) => {
             try {
-                const result = evaluate_forecast_accuracy(metric_name, historical_days, horizon_days, company);
+                const result = evaluate_forecast_accuracy_legacy(metric_name, historical_days, horizon_days, company);
                 return {
                     content: [{ type: "text", text: JSON.stringify(result, null, 2) }],
                 };

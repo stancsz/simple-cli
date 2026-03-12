@@ -134,6 +134,13 @@
         "tsx",
         "src/mcp_servers/security_monitor/index.ts"
       ]
+    },
+    "validation_metrics": {
+      "command": "npx",
+      "args": [
+        "tsx",
+        "src/mcp_servers/validation_metrics/index.ts"
+      ]
     }
   },
   "scheduledTasks": [
