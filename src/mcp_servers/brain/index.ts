@@ -17,6 +17,7 @@ import { conveneBoardMeeting } from "./tools/convene_board_meeting.js";
 import { getGrowthTargets } from "./tools/strategic_growth.js";
 import { monitorMarketSignals, evaluateEconomicRisk, triggerContingencyPlan } from "./tools/market_shock.js";
 import { executeBatchRoutines } from "./tools/efficiency.js";
+import { recordStrategicMetric, queryForecastingInsights } from "./tools/forecasting_integration.js";
 import { globalSymbolicEngine } from "../../symbolic/compiler.js";
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { StdioClientTransport } from "@modelcontextprotocol/sdk/client/stdio.js";
@@ -441,6 +442,57 @@ export class BrainServer {
                 content: [{ type: "text", text: `Failed to execute batch routines: ${e.message}` }],
                 isError: true
             };
+        }
+      }
+    );
+
+
+    // Forecasting Integration Tools
+    this.server.tool(
+      "record_strategic_metric",
+      "Stores a forecasting metric in EpisodicMemory with type 'strategic_metric'.",
+      {
+        metric_name: z.string().describe("The name of the metric (e.g., 'api_cost_trend')."),
+        value: z.number().describe("The recorded value of the metric."),
+        timestamp: z.string().describe("ISO 8601 timestamp of when the metric was recorded."),
+        source: z.string().describe("The source of the metric (e.g., 'forecasting_mcp')."),
+        confidence: z.number().describe("Confidence score (0.0 to 1.0) of the metric."),
+        company: z.string().optional().describe("The company/client identifier for namespacing context."),
+      },
+      async ({ metric_name, value, timestamp, source, confidence, company }) => {
+        try {
+          const result = await recordStrategicMetric(this.episodic, metric_name, value, timestamp, source, confidence, company);
+          return {
+            content: [{ type: "text", text: `Successfully recorded strategic metric '${metric_name}' (Task ID: ${result.taskId}).` }]
+          };
+        } catch (e: any) {
+          return {
+            content: [{ type: "text", text: `Error recording strategic metric: ${e.message}` }],
+            isError: true
+          };
+        }
+      }
+    );
+
+    this.server.tool(
+      "query_forecasting_insights",
+      "Retrieves and synthesizes forecasts for strategic planning, correlating them with the active Corporate Strategy.",
+      {
+        metrics: z.array(z.string()).describe("List of metric names to forecast and synthesize."),
+        horizon_days: z.number().describe("Number of days into the future to forecast."),
+        company: z.string().optional().describe("The company/client identifier for context."),
+      },
+      async ({ metrics, horizon_days, company }) => {
+        try {
+          const insights = await queryForecastingInsights(this.episodic, metrics, horizon_days, company);
+          return {
+            content: [{ type: "text", text: JSON.stringify(insights, null, 2) }]
+          };
+        } catch (e: any) {
+          return {
+            content: [{ type: "text", text: `Error querying forecasting insights: ${e.message}` }],
+            isError: true
+          };
         }
       }
     );
