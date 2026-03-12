@@ -18,6 +18,8 @@ import { getGrowthTargets } from "./tools/strategic_growth.js";
 import { monitorMarketSignals, evaluateEconomicRisk, triggerContingencyPlan } from "./tools/market_shock.js";
 import { executeBatchRoutines } from "./tools/efficiency.js";
 import { globalSymbolicEngine } from "../../symbolic/compiler.js";
+import { Client } from "@modelcontextprotocol/sdk/client/index.js";
+import { StdioClientTransport } from "@modelcontextprotocol/sdk/client/stdio.js";
 
 export class BrainServer {
   private server: McpServer;
@@ -379,6 +381,46 @@ export class BrainServer {
                 isError: true
             };
         }
+      }
+    );
+
+    // Tool: Retrieve Historical Patterns (Phase 29 Integration)
+    this.server.tool(
+      "retrieve_historical_patterns",
+      "Retrieves past resource usage and performance metrics via the forecasting server to inform strategic planning.",
+      {
+         metric: z.string().describe("The metric to retrieve (e.g., 'llm_token_usage')"),
+         horizon_days: z.number().describe("Days to forecast based on historical pattern"),
+         company: z.string().describe("Company context namespace")
+      },
+      async ({ metric, horizon_days, company }) => {
+         try {
+           const forecastingSrc = join(process.cwd(), "src", "mcp_servers", "forecasting", "index.ts");
+           const forecastingDist = join(process.cwd(), "dist", "mcp_servers", "forecasting", "index.js");
+           let cmd = "node";
+           let clientArgs = [forecastingDist];
+           if (existsSync(forecastingSrc) && !existsSync(forecastingDist)) {
+              cmd = "npx";
+              clientArgs = ["tsx", forecastingSrc];
+           }
+
+           const transport = new StdioClientTransport({ command: cmd, args: clientArgs });
+           const forecastClient = new Client({ name: "brain-forecaster", version: "1.0.0" }, { capabilities: {} });
+           await forecastClient.connect(transport);
+
+           const result: any = await forecastClient.callTool({
+              name: "forecast_metric",
+              arguments: { metric_name: metric, horizon_days, company }
+           });
+           await forecastClient.close();
+
+           if (result.isError) {
+             return { content: [{ type: "text", text: `Error retrieving historical patterns: ${JSON.stringify(result.content)}` }], isError: true };
+           }
+           return { content: [{ type: "text", text: result.content[0].text as string }] };
+         } catch (e: any) {
+           return { content: [{ type: "text", text: `Failed to retrieve historical patterns: ${e.message}` }], isError: true };
+         }
       }
     );
 

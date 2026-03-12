@@ -27,6 +27,14 @@ Phase 29 introduces the Symbolic Engine, transitioning the system from token-hea
    - **Rule Engine**: Evaluates business logic and conditionals (e.g., `if deal_amount > 10000`) deterministically.
    - **Symbolic Compiler**: Ingests successful past episodes from the Brain, extracts invariants using a lightweight LLM, and compiles them into a `TaskGraph`.
 
+## 18. Time-Series Forecasting Architecture (Phase 29)
+Phase 29 introduces a dedicated `forecasting` MCP server designed to ingest historical metric data and provide future predictions to support capacity planning, node scaling, and budget management.
+
+### Core Components
+1. **Time-Series Storage**: Uses `better-sqlite3` within the `.agent/data/forecasting.db` directory. Data is stored in a structured `metrics` table with strict multi-tenant isolation via a `company` index.
+2. **Statistical Modeling Engine**: Uses `simple-statistics` to run linear regressions on historical data points. It outputs predicted values over a specified horizon (in days) and includes expanding confidence bounds and R-squared confidence scoring.
+3. **Integration**: The `business_ops` MCP uses the `forecast_resource_demand` tool to act as a client to the `forecasting` server, tying strategic modeling directly into the operational resource planning pipeline.
+
 ### Integration with the 4 Pillars
 - **Brain Integration**: The `compile_to_symbolic` tool allows the HR Loop or Supervisor to permanently "bake" highly successful patterns into zero-token graphs.
 - **Adaptive Router**: The `AdaptiveRouter` intercepts `generate` calls. If a compiled `TaskGraph` matches the intent, it executes deterministically, logging an `llm_requests_avoided` metric and reducing token costs by >40% for routine operations.

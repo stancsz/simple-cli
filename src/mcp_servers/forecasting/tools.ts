@@ -1,8 +1,62 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
 import { simulateScenario, generateForecastReport } from "./forecasting_engine.js";
+import { record_metric, forecast_metric } from "./models.js";
 
 export function registerTools(server: McpServer) {
+  server.tool(
+    "record_metric",
+    "Records a historical metric value (token usage, API costs, infrastructure load) for time-series forecasting.",
+    {
+      metric_name: z.string().describe("The name of the metric (e.g., 'llm_token_usage', 'api_latency')."),
+      value: z.number().describe("The recorded value of the metric."),
+      timestamp: z.string().describe("ISO 8601 timestamp of when the metric was recorded."),
+      company: z.string().describe("The company/client identifier for namespacing context."),
+    },
+    async ({ metric_name, value, timestamp, company }) => {
+      try {
+        const success = record_metric(metric_name, value, timestamp, company);
+        if (success) {
+          return {
+            content: [{ type: "text", text: `Successfully recorded metric '${metric_name}' with value ${value}.` }],
+          };
+        } else {
+          return {
+            content: [{ type: "text", text: `Failed to record metric '${metric_name}'.` }],
+            isError: true,
+          };
+        }
+      } catch (error: any) {
+        return {
+          content: [{ type: "text", text: `Error recording metric: ${error.message}` }],
+          isError: true,
+        };
+      }
+    }
+  );
+
+  server.tool(
+    "forecast_metric",
+    "Forecasts a resource consumption metric (e.g., token usage, API costs) for a given number of days into the future.",
+    {
+      metric_name: z.string().describe("The name of the metric to forecast."),
+      horizon_days: z.number().min(1).max(365).describe("Number of days into the future to forecast."),
+      company: z.string().describe("The company/client identifier for context."),
+    },
+    async ({ metric_name, horizon_days, company }) => {
+      try {
+        const result = forecast_metric(metric_name, horizon_days, company);
+        return {
+          content: [{ type: "text", text: JSON.stringify(result, null, 2) }],
+        };
+      } catch (error: any) {
+        return {
+          content: [{ type: "text", text: `Error forecasting metric: ${error.message}` }],
+          isError: true,
+        };
+      }
+    }
+  );
   server.tool(
     "simulate_scenario",
     "Runs a deterministic forecasting simulation using current strategy and historical metrics, adjusting them via provided levers.",
