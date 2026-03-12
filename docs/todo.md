@@ -341,5 +341,5 @@
 - [x] Time-Series Forecasting: Implement MCP server with `record_metric` and `forecast_metric` using `simple-statistics` and `better-sqlite3`. Integrated with `business_ops` for `forecast_resource_demand`.
 - [ ] **Time-Series Forecasting**: Build models to predict resource consumption. (See PR #640)
 - [x] **Capacity Planning**: Automate token budget and node scaling. (See PR #640)
-- [ ] **Demand Prediction**: Integrate `simple-statistics` for dynamic financial modeling. (See PR #640)
+- [x] **Demand Prediction**: Integrate `simple-statistics` for dynamic financial modeling. (See PR #640)
 - [ ] **Validation Metrics**: Demonstrate accurate forecasting based on historical simulation. (See PR #640)
