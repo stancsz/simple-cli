@@ -344,3 +344,18 @@
 - [x] **Demand Prediction**: Integrate `simple-statistics` for dynamic financial modeling. (See PR #640)
 - [x] **Validation Metrics**: Demonstrate accurate forecasting based on historical simulation. Implemented MAE, RMSE, MAPE metrics and decision quality simulation. Validated via `tests/integration/forecasting_validation.test.ts` (MAPE < 15%) on Date: [Insert current date].
 - [x] **Brain & Business Ops Integration**: Added `store_forecast` to save strategic forecasts to the Brain. Updated `allocate_resources_optimally` to use recent forecasts, and introduced `apply_forecast_to_strategy` to recursively adjust Corporate Strategy based on predicted metrics.
+
+## Phase 30: Autonomous Strategic Decision Making
+*Status: Complete*
+*Current Focus: Extending forecasting capabilities into an autonomous decision engine capable of executing strategic pivots based on predictive models.*
+- [x] ✅ Core decision tools implemented (`make_strategic_decision`, `execute_strategic_initiative`).
+- [x] ✅ Comprehensive validation suite added (`phase30_strategic_decision_validation.test.ts`) covering capacity shortage, market opportunity, and conflicting forecast scenarios.
+
+## Phase 31: Autonomous Multi-Agency Federation & Collective Intelligence
+*Status: Planned*
+*Current Focus: Extending Simple-CLI from isolated autonomous agencies to a collaborative, multi-agency collective intelligence network.*
+- [ ] **Federation Protocol**: Create cross-agency RPC and capability discovery via MCP.
+- [ ] **Distributed Ledger**: Implement decentralized ledger for inter-agency resource tracking and revenue sharing.
+- [ ] **Meta-Orchestrator**: Develop high-level coordination engine for cross-agency complex projects.
+- [ ] **Collective Learning**: Build patterns and SOP synchronization between connected agencies via Brain MCP.
+- [ ] **Validation**: E2E simulation of multiple agencies collaborating on a shared project and revenue split.
