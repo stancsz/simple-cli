@@ -5,6 +5,17 @@ import { randomUUID } from "crypto";
 import { createLLM } from "../llm.js";
 import { LanceConnector } from "../mcp_servers/brain/lance_connector.js";
 
+export interface LedgerEntry {
+  id: string;
+  timestamp: number;
+  from_agency: string;
+  to_agency: string;
+  resource_type: string;
+  quantity: number;
+  value: number;
+  status: "pending" | "settled";
+}
+
 export interface PastEpisode {
   id: string;
   taskId: string;
@@ -30,6 +41,7 @@ export class EpisodicMemory {
   private connectors: Map<string, LanceConnector> = new Map();
   private llm: ReturnType<typeof createLLM>;
   private defaultTableName = "episodic_memories";
+  private ledgerTableName = "ledger_entries";
 
   constructor(baseDir: string = process.cwd(), llm?: ReturnType<typeof createLLM>) {
     this.baseDir = baseDir;
@@ -208,5 +220,64 @@ export class EpisodicMemory {
 
     return (results as unknown as PastEpisode[])
         .sort((a, b) => b.timestamp - a.timestamp);
+  }
+
+  async storeLedgerEntry(entry: LedgerEntry, company?: string): Promise<void> {
+    const connector = await this.getConnector(company);
+    await connector.withLock(company, async () => {
+        let table = await connector.getTable(this.ledgerTableName);
+
+        // Ensure id is provided or generate one
+        const dataToInsert = { ...entry, id: entry.id || randomUUID() };
+
+        // We embed a dummy vector to satisfy LanceDB if required by schema in a shared connector,
+        // though LanceDB supports non-vector tables now. We'll include a vector just in case for consistency.
+        const vector = new Array(1536).fill(0);
+        const dataWithVector = { ...dataToInsert, vector };
+
+        if (!table) {
+          try {
+            table = await connector.createTable(this.ledgerTableName, [dataWithVector as any]);
+          } catch (e) {
+            table = await connector.getTable(this.ledgerTableName);
+            if (table) {
+              await table.add([dataWithVector as any]);
+            } else {
+              throw e;
+            }
+          }
+        } else {
+          await table.add([dataWithVector as any]);
+        }
+    });
+  }
+
+  async getLedgerEntries(company?: string): Promise<LedgerEntry[]> {
+    const connector = await this.getConnector(company);
+    const table = await connector.getTable(this.ledgerTableName);
+    if (!table) return [];
+
+    const results = await table.query().toArray();
+    return (results as unknown as LedgerEntry[]).sort((a, b) => b.timestamp - a.timestamp);
+  }
+
+  async updateLedgerEntry(id: string, updates: Partial<LedgerEntry>, company?: string): Promise<void> {
+    // LanceDB doesn't have a direct UPDATE statement in all versions for node yet,
+    // so we delete and re-insert or use table.update if available.
+    // We will do a read, modify, delete, insert.
+    const connector = await this.getConnector(company);
+    await connector.withLock(company, async () => {
+        const table = await connector.getTable(this.ledgerTableName);
+        if (!table) return;
+
+        const results = await table.query().where(`id = '${id}'`).toArray();
+        if (results.length === 0) return;
+
+        const entry = results[0] as unknown as LedgerEntry & { vector: number[] };
+        const updatedEntry = { ...entry, ...updates };
+
+        await table.delete(`id = '${id}'`);
+        await table.add([updatedEntry as any]);
+    });
   }
 }

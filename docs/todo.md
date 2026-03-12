@@ -355,7 +355,7 @@
 *Status: Planned*
 *Current Focus: Extending Simple-CLI from isolated autonomous agencies to a collaborative, multi-agency collective intelligence network.*
 - [x] **Federation Protocol**: Create cross-agency RPC and capability discovery via MCP.
-- [ ] **Distributed Ledger**: Implement decentralized ledger for inter-agency resource tracking and revenue sharing.
+- [x] **Distributed Ledger**: Implement decentralized ledger for inter-agency resource tracking and revenue sharing. Integrated with Policy Engine.
 - [ ] **Meta-Orchestrator**: Develop high-level coordination engine for cross-agency complex projects.
 - [ ] **Collective Learning**: Build patterns and SOP synchronization between connected agencies via Brain MCP.
 - [ ] **Validation**: E2E simulation of multiple agencies collaborating on a shared project and revenue split.
