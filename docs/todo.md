@@ -365,3 +365,4 @@
 - [x] **Meta-Orchestrator**: Develop high-level coordination engine for cross-agency complex projects.
 - [x] **Collective Learning**: Build patterns and SOP synchronization between connected agencies via Brain MCP.
 - [x] **Validation**: E2E simulation of multiple agencies collaborating on a shared project and revenue split via `tests/integration/phase31_multi_agency_federation_validation.test.ts`.
+\n## Phase 34: Ecosystem Intelligence & Meta-Learning\n*Status: Completed*\n*Current Focus: Enable the root agency to perform meta-learning across the entire ecosystem of child agencies, optimizing global policies, resource allocation, and strategic initiatives based on collective performance data.*\n- [x] Implement `analyze_ecosystem_patterns` Tool in Brain MCP.\n- [x] Implement `propose_ecosystem_policy_update` Tool in Brain MCP.\n- [x] Integrate with the Scheduler & Health Monitor.\n- [x] Write robust integration tests for Phase 34 functionality.\n
