@@ -64,7 +64,8 @@ The roadmap is structured around the four anatomical layers of the Digital Biosp
 *Status: Planned*
 *Current Focus: Translate ecosystem-wide meta-learning into actionable, automated optimizations across all spawned agencies.*
 - [ ] Implement `apply_ecosystem_insights` tool to automatically adjust swarm parameters based on meta-learning.
-- [ ] Enhance the Scheduler to use ecosystem patterns for predictive task assignment.
+- [x] Enhance the Scheduler to use ecosystem patterns for predictive task assignment.
+      ✅ Enhanced Scheduler MCP to query Brain's ecosystem patterns for predictive agency assignment via `agency_orchestrator`. Validated via integration tests.
 - [ ] Integrate meta-learning findings into Company Contexts for personalized client optimization.
 - [ ] Validate via a multi-agency simulation demonstrating improved efficiency.
 

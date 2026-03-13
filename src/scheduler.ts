@@ -7,6 +7,7 @@ import { join } from 'path';
 import { ScheduleConfig, TaskDefinition } from './daemon/task_definitions.js';
 import { JobDelegator } from './scheduler/job_delegator.js';
 import { globalBatchExecutor } from './batch/batch_orchestrator.js';
+import { MCP } from './mcp.js';
 
 interface SchedulerState {
   pendingTasks: TaskDefinition[];
@@ -20,12 +21,92 @@ export class Scheduler extends EventEmitter {
   private stateFile: string;
   private delegator: JobDelegator;
   private pendingTasks: Map<string, TaskDefinition> = new Map();
+  private mcp: any; // We'll initialize MCP on demand for routing
 
   constructor(private agentDir: string) {
     super();
     this.scheduleFile = join(agentDir, 'scheduler.json');
     this.stateFile = join(agentDir, 'scheduler_state.json');
     this.delegator = new JobDelegator(agentDir);
+    this.mcp = new MCP();
+  }
+
+  /**
+   * Predicts the best child agency (or root) to handle a task based on ecosystem patterns.
+   * Returns "local" if the task should be handled by the root agency.
+   */
+  public async predictBestAgency(task: TaskDefinition): Promise<string> {
+    if (task.use_ecosystem_patterns === false) {
+      return "local";
+    }
+
+    try {
+      await this.mcp.init();
+
+      // Ensure brain is started
+      const servers = this.mcp.listServers();
+      if (servers.find((s: any) => s.name === "brain" && s.status === "stopped")) {
+        await this.mcp.startServer("brain");
+      }
+
+      const brainClient = this.mcp.getClient("brain");
+      if (!brainClient) {
+        console.warn("[Scheduler] Brain MCP unavailable for pattern analysis. Defaulting to local.");
+        return "local";
+      }
+
+      // We call the brain to get ecosystem patterns
+      const result: any = await brainClient.callTool({
+        name: "analyze_ecosystem_patterns",
+        arguments: {}
+      });
+
+      if (!result || !result.content || result.isError) {
+        console.warn("[Scheduler] Failed to retrieve ecosystem patterns. Defaulting to local.");
+        return "local";
+      }
+
+      const patternText = result.content[0].text;
+      let patterns: any;
+      try {
+        patterns = JSON.parse(patternText);
+      } catch {
+        console.warn("[Scheduler] Invalid pattern JSON format. Defaulting to local.");
+        return "local";
+      }
+
+      // Evaluate patterns against task characteristics
+      // Example heuristic: if we have agency performance metrics for similar tasks
+      // For Phase 35, we look at `agency_performance` if it exists.
+      if (patterns.agency_performance && Array.isArray(patterns.agency_performance)) {
+        // Simple heuristic: rank by combined score of success rate and speed (if available)
+        // Note: For simplicity, we just look for an agency with high success rate
+        let bestAgency = "local";
+        let highestScore = -1;
+
+        for (const perf of patterns.agency_performance) {
+           const agencyId = perf.agency_id || "local";
+           const successRate = perf.success_rate || 0;
+           // We might factor in time or resource utilization here.
+           const score = successRate;
+
+           if (score > highestScore && score >= 0.8) { // Minimum threshold to trust
+               highestScore = score;
+               bestAgency = agencyId;
+           }
+        }
+
+        console.log(`[Scheduler] Pattern analysis completed. Best predicted agency for task '${task.name}': ${bestAgency}`);
+        return bestAgency;
+      }
+
+      console.log("[Scheduler] No specific agency recommendations found in patterns. Defaulting to local.");
+      return "local";
+
+    } catch (error) {
+       console.warn(`[Scheduler] Error predicting best agency: ${error}. Defaulting to local.`);
+       return "local";
+    }
   }
 
   async start() {
@@ -186,7 +267,46 @@ export class Scheduler extends EventEmitter {
       await this.saveState();
 
       try {
-          await this.delegator.delegateTask(task);
+          const predictedAgencyId = await this.predictBestAgency(task);
+
+          if (predictedAgencyId !== "local") {
+              console.log(`[Scheduler] Routing task '${task.name}' to predicted child agency: ${predictedAgencyId}`);
+
+              await this.mcp.init();
+              const servers = this.mcp.listServers();
+              if (servers.find((s: any) => s.name === "agency_orchestrator" && s.status === "stopped")) {
+                 await this.mcp.startServer("agency_orchestrator");
+              }
+
+              const orchestratorClient = this.mcp.getClient("agency_orchestrator");
+              if (orchestratorClient) {
+                  const assignmentResult: any = await orchestratorClient.callTool({
+                      name: "assign_agency_to_task",
+                      arguments: {
+                          project_id: `scheduler_${Date.now()}`,
+                          task_id: task.id,
+                          agency_config: {
+                              agency_id: predictedAgencyId,
+                              role: task.name,
+                              initial_context: task.prompt || `Scheduled task: ${task.name}`,
+                              resource_limit: 100000 // Arbitrary safe limit for scheduled task
+                          }
+                      }
+                  });
+
+                  if (assignmentResult.isError) {
+                      console.error(`[Scheduler] Failed to assign task to agency ${predictedAgencyId}: ${assignmentResult.content[0].text}. Falling back to local.`);
+                      await this.delegator.delegateTask(task);
+                  } else {
+                      console.log(`[Scheduler] Task successfully assigned to agency ${predictedAgencyId}.`);
+                  }
+              } else {
+                  console.warn("[Scheduler] Agency Orchestrator MCP unavailable. Falling back to local.");
+                  await this.delegator.delegateTask(task);
+              }
+          } else {
+              await this.delegator.delegateTask(task);
+          }
       } catch (e) {
           console.error(`Task ${task.name} failed:`, e);
       } finally {

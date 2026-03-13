@@ -12,6 +12,7 @@ export interface TaskDefinition {
   autoDecisionTimeout?: number; // Timeout in milliseconds for auto-decision
   is_routine?: boolean; // Flag to indicate if the task is a routine strategic task
   frequency?: "hourly" | "daily"; // Routine frequency
+  use_ecosystem_patterns?: boolean; // Phase 35: Whether to use predictive routing
 }
 
 export interface ScheduleConfig {
