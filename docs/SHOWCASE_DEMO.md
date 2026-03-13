@@ -67,6 +67,15 @@ The agency tracks its own autonomous expansion success rates.
     - **Step 3**: It evaluates simulated contract negotiations against `CorporatePolicy.financials.target_margin`.
 - **Result**: A validated growth metrics report is pushed, showing Lead-to-Proposal conversions, Acceptance Rates, and Margin Threshold Compliance.
 
+### 9. **Multi-Agency Ecosystem (Phase 33)**
+The root agency spawns and delegates to specialized child agencies for complex projects.
+- **Scenario**: The agency receives a complex specification for a "FullStack Dashboard."
+- **Action**: The system invokes the Meta-Orchestrator to:
+    - **Step 1**: Spawn specialized child agencies (Frontend, Backend, DevOps).
+    - **Step 2**: Delegate sub-tasks based on the Federation Protocol.
+    - **Step 3**: Monitor cross-agency blockers and resolve resource constraints dynamically.
+- **Result**: A completed multi-disciplinary project is delivered autonomously, driven by [demos/agency_ecosystem_showcase/](../demos/agency_ecosystem_showcase/README.md).
+
 ---
 
 ## 🚀 Deployment Instructions
