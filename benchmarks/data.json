@@ -1,12 +1,12 @@
 {
-  "timestamp": "2026-02-28T19:02:15.759Z",
+  "timestamp": "2026-03-13T04:32:25.742Z",
   "results": [
     {
       "task": "integration_speed",
       "framework": "Simple-CLI",
-      "duration_ms": 120269,
-      "success": false,
-      "details": "Validation failed.",
+      "duration_ms": 109025,
+      "success": true,
+      "details": "Integration successful",
       "tokens": 0
     },
     {
@@ -26,14 +26,14 @@
     {
       "task": "research",
       "framework": "CrewAI (Direct)",
-      "duration_ms": 304,
+      "duration_ms": 303,
       "tokens": 1870,
       "cost": 0.0187
     },
     {
       "task": "research",
       "framework": "Simple-CLI",
-      "duration_ms": 301,
+      "duration_ms": 302,
       "tokens": 40,
       "cost": 0.0004
     },
