@@ -351,6 +351,12 @@
 - [x] ✅ Core decision tools implemented (`make_strategic_decision`, `execute_strategic_initiative`).
 - [x] ✅ Comprehensive validation suite added (`phase30_strategic_decision_validation.test.ts`) covering capacity shortage, market opportunity, and conflicting forecast scenarios.
 
+## Phase 33: Agency Ecosystem Demonstration (In Progress)
+- [x] Create `demos/agency_ecosystem_showcase/` with project specs and orchestration scripts. Next step is the `agency_orchestrator` MCP server.
+- [ ] Implement `agency_orchestrator` MCP server for multi-agency project management.
+- [ ] Enhance Brain MCP tools for `cross_agency_pattern_recognition`.
+- [ ] Write integration tests in `tests/integration/agency_ecosystem_showcase.test.ts` and validate full meta-orchestration capabilities.
+
 ## Phase 32: Agency Spawning
 *Status: Completed*
 *Current Focus: Enable the main agency to spawn new, independent child agencies with initial context, resources, and autonomous operation.*

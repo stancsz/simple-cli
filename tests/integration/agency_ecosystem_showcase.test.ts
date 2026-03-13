@@ -1,4 +1,6 @@
-import { describe, it, expect, vi, beforeAll } from "vitest";
+import { describe, it, expect, vi, beforeAll, afterAll } from "vitest";
+import fs from "fs";
+import path from "path";
 import { AgencyOrchestratorServer } from "../../src/mcp_servers/agency_orchestrator/index.js";
 import { EpisodicMemory } from "../../src/brain/episodic.js";
 import { crossAgencyPatternRecognition } from "../../src/mcp_servers/brain/tools/pattern_analysis.js";
@@ -126,5 +128,109 @@ describe("Phase 33 Validation: Agency Ecosystem Showcase", () => {
     expect(result.summary).toContain("Identified 2 cross-agency patterns");
     expect(result.details).toHaveLength(2);
     expect(result.details[0].insight).toContain("Mocking API schemas early");
+  });
+
+  describe('Agency Ecosystem Showcase Script Orchestration', () => {
+    let runShowcase: any;
+    let discoverAgencies: any;
+    const baseDir = path.join(process.cwd(), 'demos', 'agency_ecosystem_showcase');
+    const agentDir = path.join(baseDir, '.agent');
+
+    beforeAll(async () => {
+        const orchestrateModule = await import('../../demos/agency_ecosystem_showcase/orchestrate.js');
+        runShowcase = orchestrateModule.runShowcase;
+        const federationTools = await import('../../src/mcp_servers/federation/tools.js');
+        discoverAgencies = federationTools.discoverAgencies;
+        // Clean up any previous runs
+        if (fs.existsSync(agentDir)) {
+            fs.rmSync(agentDir, { recursive: true, force: true });
+        }
+
+        // Mock console.log to avoid cluttering test output, but keep a record of what was logged
+        vi.spyOn(console, 'log').mockImplementation(() => {});
+        vi.spyOn(console, 'warn').mockImplementation(() => {});
+    });
+
+    afterAll(() => {
+        // Restore console
+        vi.restoreAllMocks();
+    });
+
+    it('should successfully execute the full multi-agency orchestration showcase', async () => {
+        // Mock the LLM to avoid real API calls when the federation protocol wraps the local SwarmServer
+        vi.spyOn(await import('../../src/llm.js'), 'createLLM').mockImplementation(() => ({
+            generate: vi.fn().mockResolvedValue('{"action": "delegate", "agency_id": "mock_agency"}'),
+            embed: vi.fn().mockResolvedValue(new Array(1536).fill(0.1))
+        }) as any);
+
+        // We mock the global fetch used by delegateTask to simulate successful HTTP RPC delegation
+        const fetchSpy = vi.spyOn(global, 'fetch').mockImplementation(async (url: any) => {
+            return {
+                ok: true,
+                json: async () => ({ status: 'completed', result: 'Task executed in simulation mock.' })
+            } as Response;
+        });
+
+        // Run the entire showcase orchestration
+        await runShowcase();
+
+        // 1. Verify that the correct number of child agencies were registered via the Federation Protocol
+        const registeredAgencies = await discoverAgencies();
+        expect(registeredAgencies.length).toBeGreaterThanOrEqual(3);
+
+        const names = registeredAgencies.map(a => a.name);
+        expect(names).toContain('Frontend Agency');
+        expect(names).toContain('Backend Agency');
+        expect(names).toContain('Business Ops Agency');
+
+        // The SwarmServer might attempt to make internal fetch calls during its pre-delegation checks,
+        // so we just verify that we successfully completed at least the 3 target RPC delegations
+        expect(fetchSpy.mock.calls.length).toBeGreaterThanOrEqual(3);
+
+        // 2. Verify that the file system structure was created for each agency
+        // Since agency_id is dynamic, we need to map them back based on the policy file written
+        const childAgenciesDir = path.join(agentDir, 'child_agencies');
+        const generatedDirs = fs.readdirSync(childAgenciesDir);
+
+        let foundFrontend = false;
+        let foundBackend = false;
+        let foundBusiness = false;
+
+        for (const dirName of generatedDirs) {
+            const agencyPath = path.join(childAgenciesDir, dirName);
+
+
+            // Should have a policy file copied in
+            const policyPath = path.join(agencyPath, 'policy.json');
+            expect(fs.existsSync(policyPath)).toBe(true);
+
+            const policy = JSON.parse(fs.readFileSync(policyPath, 'utf8'));
+
+            // Should have an artifacts directory
+            const artifactsPath = path.join(agencyPath, 'artifacts');
+            expect(fs.existsSync(artifactsPath)).toBe(true);
+
+            // 3. Verify that the correct mock artifacts were generated
+            const files = fs.readdirSync(artifactsPath);
+
+            const agencyName = policy.name;
+            if (agencyName === 'Frontend Agency') {
+                expect(files).toContain('dashboard.vue');
+                foundFrontend = true;
+            } else if (agencyName === 'Backend Agency') {
+                expect(files).toContain('api.js');
+                foundBackend = true;
+            } else if (agencyName === 'Business Ops Agency') {
+                expect(files).toContain('pricing.md');
+                foundBusiness = true;
+            }
+        }
+
+        expect(foundFrontend).toBe(true);
+        expect(foundBackend).toBe(true);
+        expect(foundBusiness).toBe(true);
+
+        fetchSpy.mockRestore();
+    });
   });
 });
