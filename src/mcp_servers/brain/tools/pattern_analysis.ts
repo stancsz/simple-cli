@@ -89,3 +89,32 @@ export const analyzePatterns = async (
     };
   }
 };
+
+export const crossAgencyPatternRecognition = async (
+  topic: string,
+  agencyNamespaces: string[],
+  memory: EpisodicMemory
+): Promise<any> => {
+  try {
+    let aggregatedPatterns: any[] = [];
+
+    for (const namespace of agencyNamespaces) {
+      const results = await memory.recall(topic, 5, namespace);
+
+      const insights = results.map(r => ({
+        agency: namespace,
+        insight: r.solution || r.agentResponse || "Pattern logged",
+        taskId: r.taskId || r.query
+      }));
+      aggregatedPatterns.push(...insights);
+    }
+
+    const summary = aggregatedPatterns.length > 0
+      ? `Identified ${aggregatedPatterns.length} cross-agency patterns regarding '${topic}'. Recommendation: Standardize the most successful approach.`
+      : `No significant cross-agency patterns found for '${topic}'.`;
+
+    return { summary, details: aggregatedPatterns };
+  } catch (e: any) {
+    throw new Error(`Failed to perform cross-agency pattern recognition: ${e.message}`);
+  }
+};

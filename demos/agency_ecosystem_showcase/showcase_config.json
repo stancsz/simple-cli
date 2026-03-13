@@ -1,0 +1,27 @@
+{
+  "project_id": "proj_ecosystem_demo_01",
+  "project_name": "FullStack App with CI/CD",
+  "agencies": [
+    {
+      "id": "agency_frontend",
+      "niche": "Frontend UI/UX",
+      "mission": "Develop a responsive Vue 3 dashboard to visualize project progress.",
+      "initial_budget_tokens": 500,
+      "capabilities": ["vue3", "tailwind", "ui_ux_design"]
+    },
+    {
+      "id": "agency_backend",
+      "niche": "Backend API",
+      "mission": "Build robust Node.js APIs and LanceDB integration for the platform.",
+      "initial_budget_tokens": 600,
+      "capabilities": ["nodejs", "api_design", "database_lancedb"]
+    },
+    {
+      "id": "agency_devops",
+      "niche": "DevOps & CI/CD",
+      "mission": "Establish Docker environments and deployment playbooks for full-stack apps.",
+      "initial_budget_tokens": 400,
+      "capabilities": ["docker", "github_actions", "ci_cd"]
+    }
+  ]
+}

@@ -2,7 +2,7 @@
 
 **Mission Statement:** [Read the Technical Constitution](../MISSION.md)
 **Last Updated:** February 26, 2026
-**Current Focus:** Phase 32: Agency Spawning Protocol
+**Current Focus:** Phase 33: Agency Ecosystem Demonstration
 
 The roadmap is structured around the four anatomical layers of the Digital Biosphere.
 
@@ -41,6 +41,14 @@ The roadmap is structured around the four anatomical layers of the Digital Biosp
 - [x] Validate Agency Spawning Protocol
     - ✅ Validated via `tests/integration/phase32_agency_spawning_validation.test.ts` on March 12, 2026. Ensured child agency can successfully be spawned, inherit initial context and operate autonomously while maintaining resource isolation. Configurations and constraints documented in `docs/AGENCY_SPAWNING_PROTOCOL.md`.
     - ✅ Ecosystem Stress Test validated on October 25, 2023. Successfully simulated root agency coordinating 3 child agencies through a complex federated project with failure recovery. Test: `tests/integration/agency_ecosystem_stress.test.ts`.
+
+## Phase 33: Agency Ecosystem Demonstration
+*Status: In Progress*
+*Current Focus: Build a production-ready demonstration where the root Simple-CLI agency orchestrates multiple specialized child agencies to autonomously execute a complex project.*
+- [ ] Create `demos/agency_ecosystem_showcase/` with project specs and orchestration scripts.
+- [ ] Implement `agency_orchestrator` MCP server for multi-agency project management.
+- [ ] Enhance Brain MCP tools for `cross_agency_pattern_recognition`.
+- [ ] Write integration tests in `tests/integration/agency_ecosystem_showcase.test.ts` and validate full meta-orchestration capabilities.
 
 ## Phase 25: Autonomous Corporate Consciousness
 *Status: Completed*

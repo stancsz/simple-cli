@@ -19,6 +19,7 @@ import { conveneBoardMeeting } from "./tools/convene_board_meeting.js";
 import { getGrowthTargets } from "./tools/strategic_growth.js";
 import { monitorMarketSignals, evaluateEconomicRisk, triggerContingencyPlan } from "./tools/market_shock.js";
 import { executeBatchRoutines } from "./tools/efficiency.js";
+import { crossAgencyPatternRecognition } from "./tools/pattern_analysis.js";
 import { globalSymbolicEngine } from "../../symbolic/compiler.js";
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { StdioClientTransport } from "@modelcontextprotocol/sdk/client/stdio.js";
@@ -82,6 +83,26 @@ export class BrainServer {
     );
 
     // Episodic Memory Tools
+    this.server.tool(
+      "cross_agency_pattern_recognition",
+      "Queries the shared federation namespaces in EpisodicMemory to identify common bottlenecks or successful solutions across multiple child agencies.",
+      {
+        topic: z.string().describe("The topic or resource constraint to analyze."),
+        agency_namespaces: z.array(z.string()).describe("List of shared agency namespaces to query.")
+      },
+      async ({ topic, agency_namespaces }) => {
+        try {
+          const result = await crossAgencyPatternRecognition(topic, agency_namespaces, this.episodic);
+          return { content: [{ type: "text", text: JSON.stringify(result, null, 2) }] };
+        } catch (e: any) {
+          return {
+            content: [{ type: "text", text: `Failed: ${e.message}` }],
+            isError: true
+          };
+        }
+      }
+    );
+
     this.server.tool(
       "brain_store",
       "Store a new episodic memory (task ID, request, solution, artifacts).",
