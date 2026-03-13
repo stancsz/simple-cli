@@ -139,3 +139,59 @@ Return ONLY a valid JSON object matching this schema:
 
   return newStrategy;
 };
+
+export const proposeEcosystemPolicyUpdate = async (
+  episodic: EpisodicMemory,
+  llm: LLM,
+  ecosystemAnalysis: any
+): Promise<any> => {
+  // 1. Get current strategy for context
+  const currentStrategy = await readStrategy(episodic, "default");
+
+  const prompt = `
+  You are the Ecosystem Intelligence Policy Engine for the root AI agency.
+  Your task is to review the latest Ecosystem Pattern Analysis and draft proposed updates to the global operating policy or corporate strategy.
+
+  ECOSYSTEM ANALYSIS REPORT:
+  ${JSON.stringify(ecosystemAnalysis, null, 2)}
+
+  CURRENT CORPORATE STRATEGY:
+  ${currentStrategy ? JSON.stringify(currentStrategy, null, 2) : "No existing strategy found."}
+
+  Draft a proposed update to the strategy or operating policy intended to be propagated to child agencies (e.g., "All design-focused child agencies should adopt Visual Quality Gate v2").
+  The proposal should be clear, actionable, and address the bottlenecks or scale the success themes identified in the report.
+  The proposal will be passed to the 'proposeStrategicPivot' tool for formal adoption.
+
+  OUTPUT FORMAT:
+  Return ONLY a valid JSON object matching this schema:
+  {
+    "proposal": "A clear, actionable statement of the proposed strategic pivot or policy rule",
+    "rationale": "Brief explanation connecting the proposal directly to the ecosystem analysis",
+    "scope": "ecosystem"
+  }
+  `;
+
+  const response = await llm.generate(prompt, []);
+
+  let proposalData: any;
+  try {
+      let jsonStr = response.message || response.thought || "";
+      jsonStr = jsonStr.replace(/```json/g, "").replace(/```/g, "").trim();
+      const firstBrace = jsonStr.indexOf("{");
+      const lastBrace = jsonStr.lastIndexOf("}");
+      if (firstBrace !== -1 && lastBrace !== -1) {
+          jsonStr = jsonStr.substring(firstBrace, lastBrace + 1);
+      }
+      proposalData = JSON.parse(jsonStr);
+  } catch (e: any) {
+      throw new Error(`Failed to parse LLM response for ecosystem policy update: ${e.message}. Raw response: ${response.message}`);
+  }
+
+  // Submit the proposed update via proposeStrategicPivot to follow standard governance
+  const pivotResult = await proposeStrategicPivot(episodic, llm, proposalData.proposal, "default");
+
+  return {
+      ecosystem_proposal: proposalData,
+      pivot_result: pivotResult
+  };
+};

@@ -42,6 +42,37 @@ const server = new McpServer({
 const episodic = new EpisodicMemory();
 
 server.tool(
+  "get_ecosystem_health",
+  "Retrieves the latest ecosystem health metrics based on cross-agency performance.",
+  {},
+  async () => {
+    try {
+      // In a real implementation, this might aggregate specific operational metrics.
+      // For Phase 34, we retrieve the latest pattern analysis from Brain if available,
+      // or simply construct a basic health snapshot.
+      const memories = await episodic.recall("ecosystem health patterns", 5, "default");
+      const validMemories = memories.filter(m => m.type === "corporate_strategy" && m.agentResponse.includes("ecosystem"));
+
+      return {
+        content: [{
+          type: "text",
+          text: JSON.stringify({
+            status: "healthy",
+            message: "Ecosystem intelligence operational.",
+            recent_insights: validMemories.length > 0 ? validMemories.length : "No recent ecosystem insights generated."
+          }, null, 2)
+        }]
+      };
+    } catch (e: any) {
+       return {
+          content: [{ type: "text", text: `Failed to retrieve ecosystem health: ${e.message}` }],
+          isError: true
+       };
+    }
+  }
+);
+
+server.tool(
   "track_metric",
   "Log a performance metric or operational event.",
   {

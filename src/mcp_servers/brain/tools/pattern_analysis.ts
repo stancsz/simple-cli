@@ -230,3 +230,77 @@ export const analyzeCrossAgencyPatterns = async (
     throw new Error(`Failed to execute analyzeCrossAgencyPatterns: ${e.message}`);
   }
 };
+
+export const analyzeEcosystemPatterns = async (
+  episodic: EpisodicMemory,
+  llm: LLM
+): Promise<any> => {
+  try {
+    // 1. Fetch episodic memories across the ecosystem
+    // We look for memories tagged with 'agency_id' or 'origin_agency'
+    // Since recall only takes specific fields, we query recent memories and filter
+    const recentMemories = await episodic.getRecentEpisodes("default", 100);
+
+    // Filter memories that have an origin_agency or source_agency (from child agencies)
+    const ecosystemMemories = recentMemories.filter(m => m.source_agency && m.source_agency !== "default");
+
+    if (ecosystemMemories.length === 0) {
+      return {
+        summary: "No cross-agency data available for ecosystem analysis.",
+        themes: [],
+        performance_insights: [],
+        bottlenecks: [],
+        recommended_global_actions: []
+      };
+    }
+
+    const context = ecosystemMemories.map(m =>
+      `[Agency: ${m.source_agency}] [Task: ${m.taskId}] Request: ${m.userPrompt.substring(0, 100)}... -> Outcome: ${m.agentResponse.substring(0, 100)}...`
+    ).join("\n");
+
+    const prompt = `
+    You are the Ecosystem Intelligence Engine of the root AI agency.
+    Your task is to analyze performance patterns across multiple child agencies and identify global insights.
+
+    ECOSYSTEM MEMORIES:
+    ${context}
+
+    Analyze the provided data to identify common success patterns, frequent failure modes, and efficiency bottlenecks across different agencies.
+    For example: "Agencies specializing in design tasks have 40% higher client satisfaction" or "Agencies using Strategy X consume 2x more tokens for similar outcomes."
+
+    Return a structured JSON report with EXACTLY these keys:
+    {
+      "summary": "High-level summary of ecosystem health and trends",
+      "themes": ["List of common success/failure themes"],
+      "performance_insights": ["Specific performance insights comparing agencies or strategies"],
+      "bottlenecks": ["Identified bottlenecks or inefficiencies"],
+      "recommended_global_actions": ["Actionable recommendations for ecosystem-wide policy or strategy updates"]
+    }
+    `;
+
+    const response = await llm.generate(prompt, []);
+
+    try {
+      let jsonStr = response.message || response.thought || "";
+      jsonStr = jsonStr.replace(/```json/g, "").replace(/```/g, "").trim();
+      const firstBrace = jsonStr.indexOf("{");
+      const lastBrace = jsonStr.lastIndexOf("}");
+      if (firstBrace !== -1 && lastBrace !== -1) {
+          jsonStr = jsonStr.substring(firstBrace, lastBrace + 1);
+      }
+      return JSON.parse(jsonStr);
+    } catch (e) {
+      console.error("Failed to parse ecosystem pattern analysis JSON", e);
+      return {
+        summary: "Failed to parse analysis.",
+        themes: [],
+        performance_insights: [],
+        bottlenecks: [],
+        recommended_global_actions: []
+      };
+    }
+
+  } catch (e: any) {
+    throw new Error(`Failed to execute analyzeEcosystemPatterns: ${e.message}`);
+  }
+};

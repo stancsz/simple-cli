@@ -51,6 +51,14 @@ The roadmap is structured around the four anatomical layers of the Digital Biosp
 - [x] Write integration tests in `tests/integration/agency_ecosystem_showcase.test.ts` and validate full meta-orchestration capabilities.
 - [x] Create an end-to-end validation script `scripts/validate_agency_ecosystem.ts` that orchestrates a mock project and utilizes pattern recognition, covered by robust integration tests.
 
+## Phase 34: Ecosystem Intelligence & Meta-Learning
+*Status: In Progress*
+*Current Focus: Enable the root agency to perform meta-learning across the entire ecosystem of child agencies, optimizing global policies, resource allocation, and strategic initiatives based on collective performance data.*
+- [ ] Implement `analyze_ecosystem_patterns` Tool in Brain MCP.
+- [ ] Implement `propose_ecosystem_policy_update` Tool in Brain MCP.
+- [ ] Integrate with the Scheduler & Health Monitor.
+- [ ] Write robust integration tests for Phase 34 functionality.
+
 ## Phase 25: Autonomous Corporate Consciousness
 *Status: Completed*
 *Current Focus: Emergent Intelligence & Strategic Autonomy*

@@ -11,7 +11,7 @@ import { readFile, readdir } from "fs/promises";
 import { existsSync } from "fs";
 import { FrameworkIngestionEngine } from "../../framework_ingestion/ingest.js";
 import { createLLM } from "../../llm.js";
-import { readStrategy, proposeStrategicPivot } from "./tools/strategy.js";
+import { readStrategy, proposeStrategicPivot, proposeEcosystemPolicyUpdate } from "./tools/strategy.js";
 import { scanStrategicHorizon } from "./tools/scan_strategic_horizon.js";
 import { registerStrategicDecisionTools } from "./tools/strategic_decisions.js";
 import { registerCollectiveLearningTools } from "./tools/collective_learning.js";
@@ -19,7 +19,7 @@ import { conveneBoardMeeting } from "./tools/convene_board_meeting.js";
 import { getGrowthTargets } from "./tools/strategic_growth.js";
 import { monitorMarketSignals, evaluateEconomicRisk, triggerContingencyPlan } from "./tools/market_shock.js";
 import { executeBatchRoutines } from "./tools/efficiency.js";
-import { crossAgencyPatternRecognition, analyzeCrossAgencyPatterns } from "./tools/pattern_analysis.js";
+import { crossAgencyPatternRecognition, analyzeCrossAgencyPatterns, analyzeEcosystemPatterns } from "./tools/pattern_analysis.js";
 import { globalSymbolicEngine } from "../../symbolic/compiler.js";
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { StdioClientTransport } from "@modelcontextprotocol/sdk/client/stdio.js";
@@ -83,6 +83,50 @@ export class BrainServer {
     );
 
     // Episodic Memory Tools
+    this.server.tool(
+      "analyze_ecosystem_patterns",
+      "Analyzes episodic memory across the entire ecosystem of child agencies to identify common success patterns, failure modes, and efficiency bottlenecks.",
+      {},
+      async () => {
+        try {
+          const llm = createLLM();
+          const result = await analyzeEcosystemPatterns(this.episodic, llm);
+          return { content: [{ type: "text", text: JSON.stringify(result, null, 2) }] };
+        } catch (e: any) {
+          return {
+            content: [{ type: "text", text: `Failed to analyze ecosystem patterns: ${e.message}` }],
+            isError: true
+          };
+        }
+      }
+    );
+
+    this.server.tool(
+      "propose_ecosystem_policy_update",
+      "Takes the output from analyze_ecosystem_patterns and proposes updates to the global operating policy or corporate strategy to be propagated to child agencies.",
+      {
+        ecosystem_analysis: z.string().describe("A JSON string of the ecosystem analysis report.")
+      },
+      async ({ ecosystem_analysis }) => {
+        try {
+          const llm = createLLM();
+          let analysisObj;
+          try {
+            analysisObj = JSON.parse(ecosystem_analysis);
+          } catch {
+            analysisObj = { raw: ecosystem_analysis };
+          }
+          const result = await proposeEcosystemPolicyUpdate(this.episodic, llm, analysisObj);
+          return { content: [{ type: "text", text: JSON.stringify(result, null, 2) }] };
+        } catch (e: any) {
+          return {
+            content: [{ type: "text", text: `Failed to propose ecosystem policy update: ${e.message}` }],
+            isError: true
+          };
+        }
+      }
+    );
+
     this.server.tool(
       "analyze_cross_agency_patterns",
       "Analyzes episodic and semantic memories across child agencies to identify common themes, successful strategies, and potential risks.",
