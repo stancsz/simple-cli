@@ -1,59 +1,269 @@
+import { randomUUID } from "crypto";
+import * as yaml from "yaml";
 import { EpisodicMemory } from "../../../brain/episodic.js";
-import { makeStrategicDecisionLogic } from "../../../mcp_servers/brain/tools/strategic_decisions.js";
+import {
+    ProjectSpec,
+    AgencyConfig,
+    Dependency,
+    Task,
+    ProjectStatus,
+    Project,
+    Assignment
+} from "../types.js";
+import * as fs from "fs/promises";
+import * as path from "path";
 
-interface ProjectSpec {
-  project_id: string;
-  project_name: string;
-  tasks: Array<{ agency_id: string, description: string }>;
+// Helpers to read/write state to EpisodicMemory, removing local memory caching
+
+async function getProjectState(projectId: string, memory: EpisodicMemory): Promise<Project> {
+    const results = await memory.recall(`multi_agency_project_${projectId}`, 1, "project_management");
+    if (!results || results.length === 0) {
+        throw new Error(`Project ${projectId} not found.`);
+    }
+
+    const doc = results.find(r => r.id === `multi_agency_project_${projectId}` || r.id?.includes(projectId));
+    if (!doc) {
+        throw new Error(`Project ${projectId} not found in database.`);
+    }
+
+    // The solution field typically contains the JSON artifact from storing
+    const jsonStr = doc.solution || doc.agentResponse;
+    try {
+        return JSON.parse(jsonStr);
+    } catch (e) {
+        throw new Error(`Failed to parse project state for ${projectId}`);
+    }
 }
 
-export const orchestrateComplexProject = async (spec: ProjectSpec, child_agencies: string[]) => {
-  // Simulates breaking down the spec and assigning tasks via federation
-  const progress: any = { status: "running", milestones: [] };
+async function saveProjectState(project: Project, memory: EpisodicMemory): Promise<void> {
+    project.updated_at = Date.now();
+    await memory.store(
+        `multi_agency_project_${project.project_id}`,
+        `Updated multi-agency project: ${project.name}`,
+        JSON.stringify(project),
+        ["agency_orchestrator", "multi_agency", project.project_id],
+        "project_management"
+    );
+}
 
-  for (const task of spec.tasks) {
-    if (child_agencies.includes(task.agency_id)) {
-      progress.milestones.push({ agency: task.agency_id, status: "assigned", task: task.description });
+export async function createMultiAgencyProject(projectSpecYamlOrJson: string, memory: EpisodicMemory): Promise<string> {
+    let spec: ProjectSpec;
+    try {
+        spec = JSON.parse(projectSpecYamlOrJson);
+    } catch (e) {
+        try {
+            spec = yaml.parse(projectSpecYamlOrJson);
+        } catch (yamlErr) {
+            throw new Error("Invalid project specification format. Must be valid JSON or YAML.");
+        }
     }
-  }
 
-  return progress;
-};
+    if (!spec || !spec.name || !Array.isArray(spec.tasks)) {
+        throw new Error("Invalid ProjectSpec: missing name or tasks array.");
+    }
 
-export const resolveAgencyConflict = async (agencyA: string, agencyB: string, resource: string, context: string, memory: EpisodicMemory) => {
-  // Use Phase 30 Strategic Decision Engine to resolve resource conflicts
-  console.log(`Detecting conflict between ${agencyA} and ${agencyB} for ${resource}...`);
+    const projectId = `proj_${randomUUID()}`;
+    const now = Date.now();
 
-  const forecastContext = [{
-    metric_series: resource,
-    forecast: { trend: "increasing", confidence: 0.9, recommendations: [`Reallocate ${resource} to highest ROI`] }
-  }];
+    const dependencies: Dependency[] = [];
+    spec.tasks.forEach(task => {
+        if (task.dependencies) {
+            task.dependencies.forEach(dep => {
+                dependencies.push({
+                    task_id: task.task_id,
+                    depends_on_task_id: dep,
+                    resolution_status: "unresolved"
+                });
+            });
+        }
+    });
 
-  const strategy = {
-    strategic_pillars: [{ name: "Delivery", weight: 0.8 }],
-    okrs: [],
-    target_markets: [],
-    ideal_customer_profiles: [],
-    financial_targets: { arr_target: 1000000 },
-    competitive_moats: []
-  };
+    const project: Project = {
+        project_id: projectId,
+        name: spec.name,
+        tasks: spec.tasks,
+        assignments: [],
+        dependencies,
+        status: "planning",
+        created_at: now,
+        updated_at: now
+    };
 
-  const decision = await makeStrategicDecisionLogic(memory, JSON.stringify(forecastContext), "yolo");
+    await saveProjectState(project, memory);
 
-  return {
-    conflict_resolved: true,
-    action_taken: decision.analysis?.proposed_pivot?.description || `Reallocated ${resource} based on default strategy.`,
-    confidence: decision.analysis?.confidence_score || 0.95
-  };
-};
+    return projectId;
+}
 
-export const generateProjectDashboard = async (projectId: string, agencyMetrics: Record<string, any>) => {
-  // Aggregates metrics from child agencies into a single dashboard view
-  let dashboard = `# Project Dashboard: ${projectId}\n\n## Global Status\nOverall completion: 100%\n\n## Agency Metrics\n`;
+export async function assignAgencyToTask(projectId: string, taskId: string, agencyConfig: AgencyConfig, memory: EpisodicMemory): Promise<string> {
+    const project = await getProjectState(projectId, memory);
 
-  for (const [agency, metrics] of Object.entries(agencyMetrics)) {
-    dashboard += `- **${agency}**: Cost ${metrics.cost}, Time ${metrics.time}ms, Status: ${metrics.status}\n`;
-  }
+    const task = project.tasks.find(t => t.task_id === taskId);
+    if (!task) throw new Error(`Task ${taskId} not found in project ${projectId}.`);
 
-  return dashboard;
-};
+    // Check if the task already has an active assignment
+    if (project.assignments.some(a => a.task_id === taskId && (a.status === "pending" || a.status === "in_progress" || a.status === "completed"))) {
+        throw new Error(`Task ${taskId} is already assigned.`);
+    }
+
+    let assignedAgencyId = agencyConfig.agency_id;
+
+    if (!assignedAgencyId) {
+        // Spawn simulation (Phase 32 Agency Spawning Protocol logic via fs)
+        assignedAgencyId = `agency_${randomUUID()}`;
+        console.log(`[Agency Spawning] Spawning new child agency ${assignedAgencyId} with role ${agencyConfig.role}`);
+
+        // Simulating the filesystem creation as described by phase32 memory rules
+        const rootDir = process.cwd();
+        const childDir = path.join(rootDir, '.agent', 'child_agencies', assignedAgencyId);
+        await fs.mkdir(childDir, { recursive: true });
+
+        const childMemoryDir = path.join(childDir, 'brain');
+        await fs.mkdir(childMemoryDir, { recursive: true });
+
+        // Seed initial context in child's isolated memory
+        const childMemory = new EpisodicMemory(childMemoryDir);
+        await childMemory.store(
+            "CorporateStrategy",
+            "Initial context injection",
+            JSON.stringify({
+                role: agencyConfig.role,
+                context: agencyConfig.initial_context,
+                constraints: { token_budget: agencyConfig.resource_limit }
+            }),
+            ["context_injection"],
+            "strategy"
+        );
+
+        await memory.store(
+            `spawn_agency_${assignedAgencyId}`,
+            `Spawn child agency for role: ${agencyConfig.role}`,
+            `Context: ${agencyConfig.initial_context}\nResource Limit: ${agencyConfig.resource_limit}`,
+            [assignedAgencyId, "agency_spawning"],
+            "autonomous_decision"
+        );
+    }
+
+    const assignmentId = `assign_${randomUUID()}`;
+    const assignment: Assignment = {
+        task_id: taskId,
+        agency_id: assignedAgencyId,
+        assignment_id: assignmentId,
+        status: "pending"
+    };
+
+    project.assignments.push(assignment);
+    project.status = "in_progress";
+
+    await saveProjectState(project, memory);
+
+    await memory.store(
+        `assignment_${assignmentId}`,
+        `Assign task ${taskId} to ${assignedAgencyId}`,
+        JSON.stringify(assignment),
+        [projectId, assignedAgencyId, "agency_orchestrator"],
+        "project_management"
+    );
+
+    return assignmentId;
+}
+
+export async function monitorProjectStatus(projectId: string, memory: EpisodicMemory): Promise<ProjectStatus> {
+    const project = await getProjectState(projectId, memory);
+
+    const totalTasks = project.tasks.length;
+    let completedTasks = 0;
+    const blockers: string[] = [];
+
+    // Check for dependency deadlocks
+    const inProgressTasks = project.assignments.filter(a => a.status === "in_progress").map(a => a.task_id);
+    const hasDeadlock = project.dependencies.some(dep =>
+        dep.resolution_status === "unresolved" &&
+        inProgressTasks.includes(dep.task_id) &&
+        project.assignments.find(a => a.task_id === dep.depends_on_task_id)?.status === "failed"
+    );
+
+    const tasksStatus = project.tasks.map(task => {
+        const assignment = project.assignments.find(a => a.task_id === task.task_id);
+        const deps = project.dependencies.filter(d => d.task_id === task.task_id);
+
+        let isBlocked = false;
+        deps.forEach(dep => {
+            if (dep.resolution_status === "unresolved") {
+                const blockingAssignment = project.assignments.find(a => a.task_id === dep.depends_on_task_id);
+                if (!blockingAssignment || blockingAssignment.status !== "completed") {
+                    isBlocked = true;
+                    blockers.push(`Task ${task.task_id} is blocked by ${dep.depends_on_task_id}`);
+                }
+            }
+        });
+
+        const status = assignment ? assignment.status : "unassigned";
+        if (status === "completed") completedTasks++;
+        if (status === "failed") {
+            blockers.push(`Task ${task.task_id} failed (${assignment?.agency_id})`);
+        }
+
+        return {
+            task_id: task.task_id,
+            agency_id: assignment ? assignment.agency_id : null,
+            status: isBlocked && status !== "failed" ? "blocked" : status,
+            is_blocked: isBlocked
+        };
+    });
+
+    const progress = totalTasks > 0 ? completedTasks / totalTasks : 0;
+
+    if (hasDeadlock) {
+        project.status = "failed";
+        blockers.push("DEADLOCK DETECTED: A dependency failed, blocking dependent tasks permanently.");
+        await saveProjectState(project, memory);
+    } else if (progress === 1.0) {
+        project.status = "completed";
+        await saveProjectState(project, memory);
+    }
+
+    const statusObj: ProjectStatus = {
+        project_id: projectId,
+        status: project.status,
+        overall_progress: progress,
+        tasks: tasksStatus,
+        blockers
+    };
+
+    return statusObj;
+}
+
+export async function resolveInterAgencyDependency(projectId: string, dependency: Dependency, memory: EpisodicMemory): Promise<void> {
+    const project = await getProjectState(projectId, memory);
+
+    const existingDepIndex = project.dependencies.findIndex(d =>
+        d.task_id === dependency.task_id && d.depends_on_task_id === dependency.depends_on_task_id
+    );
+
+    if (existingDepIndex === -1) {
+        throw new Error(`Dependency between ${dependency.task_id} and ${dependency.depends_on_task_id} not found.`);
+    }
+
+    project.dependencies[existingDepIndex].resolution_status = "resolved";
+
+    await saveProjectState(project, memory);
+
+    await memory.store(
+        `resolve_dependency_${projectId}_${dependency.task_id}_${dependency.depends_on_task_id}`,
+        `Resolved dependency for ${dependency.task_id} on ${dependency.depends_on_task_id}`,
+        `Status: resolved`,
+        [projectId, "agency_orchestrator", "dependency_resolution"],
+        "project_management"
+    );
+}
+
+// System tool to update task status (e.g. from failed/completed signals)
+export async function updateTaskStatus(projectId: string, taskId: string, status: "pending" | "in_progress" | "blocked" | "completed" | "failed", memory: EpisodicMemory): Promise<void> {
+    const project = await getProjectState(projectId, memory);
+    const assignment = project.assignments.find(a => a.task_id === taskId);
+    if (!assignment) {
+        throw new Error(`Assignment for task ${taskId} not found.`);
+    }
+    assignment.status = status;
+    await saveProjectState(project, memory);
+}
