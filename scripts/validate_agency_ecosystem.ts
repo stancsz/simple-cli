@@ -9,6 +9,7 @@ import {
     resolveInterAgencyDependency
 } from "../src/mcp_servers/agency_orchestrator/tools/index.js";
 import { crossAgencyPatternRecognition } from "../src/mcp_servers/brain/tools/pattern_analysis.js";
+import { createLLM } from "../src/llm.js";
 
 export async function runValidation() {
     console.log("Starting Agency Ecosystem Validation Script...\n");
@@ -112,7 +113,8 @@ export async function runValidation() {
         );
     }
 
-    const patterns = await crossAgencyPatternRecognition("frontend-backend integration pattern", ["agency_frontend", "agency_backend"], memory);
+    const llm = createLLM();
+    const patterns = await crossAgencyPatternRecognition("frontend-backend integration pattern", ["agency_frontend", "agency_backend"], memory, llm);
     console.log("    -> Patterns Found:", patterns.summary);
 
     // 6. Generate Report
