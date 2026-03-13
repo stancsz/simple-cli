@@ -351,6 +351,12 @@
 - [x] ✅ Core decision tools implemented (`make_strategic_decision`, `execute_strategic_initiative`).
 - [x] ✅ Comprehensive validation suite added (`phase30_strategic_decision_validation.test.ts`) covering capacity shortage, market opportunity, and conflicting forecast scenarios.
 
+## Phase 32: Agency Spawning
+*Status: In Progress*
+*Current Focus: Enable the main agency to spawn new, independent child agencies with initial context, resources, and autonomous operation.*
+- [ ] Implement Agency Spawning Protocol (PR #664)
+- [ ] Validate Agency Spawning Protocol (In Progress)
+
 ## Phase 31: Autonomous Multi-Agency Federation & Collective Intelligence
 *Status: Completed*
 *Current Focus: Extending Simple-CLI from isolated autonomous agencies to a collaborative, multi-agency collective intelligence network.*

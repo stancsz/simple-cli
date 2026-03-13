@@ -2,7 +2,7 @@
 
 **Mission Statement:** [Read the Technical Constitution](../MISSION.md)
 **Last Updated:** February 26, 2026
-**Current Focus:** Phase 25: Autonomous Corporate Consciousness
+**Current Focus:** Phase 32: Agency Spawning Protocol
 
 The roadmap is structured around the four anatomical layers of the Digital Biosphere.
 
@@ -33,6 +33,12 @@ The roadmap is structured around the four anatomical layers of the Digital Biosp
 - [x] Develop Ribosome Agents for JIT synthesis of binaries (WASM/eBPF).
 - [x] Implement the "Disposable Lifecycle" for code modules.
 - [x] Enable "Homeostatic Repair" (Self-Healing) workflows.
+
+## Phase 32: Agency Spawning
+*Status: In Progress*
+*Current Focus: Enable the main agency to spawn new, independent child agencies with initial context, resources, and autonomous operation.*
+- [ ] Implement Agency Spawning Protocol (PR #664)
+- [ ] Validate Agency Spawning Protocol
 
 ## Phase 25: Autonomous Corporate Consciousness
 *Status: Completed*
