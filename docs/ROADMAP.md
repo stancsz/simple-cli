@@ -40,6 +40,7 @@ The roadmap is structured around the four anatomical layers of the Digital Biosp
 - [x] Implement Agency Spawning Protocol (PR #664)
 - [x] Validate Agency Spawning Protocol
     - ✅ Validated via `tests/integration/phase32_agency_spawning_validation.test.ts` on March 12, 2026. Ensured child agency can successfully be spawned, inherit initial context and operate autonomously while maintaining resource isolation. Configurations and constraints documented in `docs/AGENCY_SPAWNING_PROTOCOL.md`.
+    - ✅ Ecosystem Stress Test validated on October 25, 2023. Successfully simulated root agency coordinating 3 child agencies through a complex federated project with failure recovery. Test: `tests/integration/agency_ecosystem_stress.test.ts`.
 
 ## Phase 25: Autonomous Corporate Consciousness
 *Status: Completed*
