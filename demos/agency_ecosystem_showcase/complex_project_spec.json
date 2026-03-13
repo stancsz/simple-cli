@@ -1,0 +1,29 @@
+{
+    "name": "AI-Powered Metrics Dashboard",
+    "tasks": [
+        {
+            "task_id": "api_schema",
+            "description": "Define API schema for metrics endpoint"
+        },
+        {
+            "task_id": "backend_api",
+            "description": "Create the /api/metrics endpoint",
+            "dependencies": ["api_schema"]
+        },
+        {
+            "task_id": "frontend_ui",
+            "description": "Build DashboardView.vue component",
+            "dependencies": ["api_schema"]
+        },
+        {
+            "task_id": "docker_build",
+            "description": "Create multi-stage Dockerfile",
+            "dependencies": ["backend_api", "frontend_ui"]
+        },
+        {
+            "task_id": "ci_pipeline",
+            "description": "Create GitHub Actions deploy workflow",
+            "dependencies": ["docker_build"]
+        }
+    ]
+}
