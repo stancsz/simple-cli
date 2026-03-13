@@ -115,9 +115,8 @@ export const crossAgencyPatternRecognition = async (
 
     if (aggregatedPatterns.length > 0) {
       const contextStr = aggregatedPatterns.map(p => `- Agency: ${p.agency}, Task: ${p.taskId}, Insight: ${p.insight}`).join('\n');
+      const systemPrompt = "You are a Meta-Orchestrator Brain analyzing patterns across multiple autonomous agencies.";
       const prompt = `
-      You are a Meta-Orchestrator Brain analyzing patterns across multiple autonomous agencies.
-
       TOPIC: ${topic}
 
       AGGREGATED EXPERIENCES:
@@ -135,7 +134,7 @@ export const crossAgencyPatternRecognition = async (
       }
       `;
 
-      const response = await llm.generate(prompt, []);
+      const response = await llm.generate(systemPrompt, [{ role: "user", content: prompt }]);
       let jsonStr = response.message || response.thought || "";
       jsonStr = jsonStr.replace(/```json/g, "").replace(/```/g, "").trim();
       const firstBrace = jsonStr.indexOf("{");
@@ -146,10 +145,10 @@ export const crossAgencyPatternRecognition = async (
 
       try {
         synthesisDetails = JSON.parse(jsonStr);
-        summary = `Identified ${aggregatedPatterns.length} cross-agency experiences. Meta-recommendation generated.`;
+        summary = `Identified ${aggregatedPatterns.length} cross-agency experiences regarding '${topic}'. Meta-recommendation generated.`;
       } catch (parseErr) {
         console.error("Failed to parse cross-agency LLM synthesis", parseErr);
-        summary = `Identified ${aggregatedPatterns.length} cross-agency experiences, but failed to synthesize cleanly.`;
+        summary = `Identified ${aggregatedPatterns.length} cross-agency experiences regarding '${topic}', but failed to synthesize cleanly.`;
       }
 
       // Store the synthesis back into episodic memory as a cross-agency pattern
