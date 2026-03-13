@@ -92,7 +92,8 @@ export class BrainServer {
       },
       async ({ topic, agency_namespaces }) => {
         try {
-          const result = await crossAgencyPatternRecognition(topic, agency_namespaces, this.episodic);
+          const llm = createLLM();
+          const result = await crossAgencyPatternRecognition(topic, agency_namespaces, this.episodic, llm);
           return { content: [{ type: "text", text: JSON.stringify(result, null, 2) }] };
         } catch (e: any) {
           return {
