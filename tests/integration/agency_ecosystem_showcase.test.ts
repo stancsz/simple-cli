@@ -40,6 +40,28 @@ vi.mock("fs/promises", () => {
     };
 });
 
+// Mock LLM so EpisodicMemory.store and pattern_analysis don't try to call OpenAI during validation script execution
+vi.mock("../../src/llm.js", () => {
+    class MockLLM {
+        async generate(systemPrompt: string, history: any[]) {
+            return {
+                message: JSON.stringify({
+                    common_successes: ['Successfully mocked LLM response for showcase'],
+                    recurring_failures: ['None'],
+                    meta_recommendation: 'Use shared typescript interfaces for API schemas to avoid mismatch.'
+                })
+            };
+        }
+        async embed(text: string) {
+            return new Array(1536).fill(0.1);
+        }
+    }
+    return {
+        LLM: MockLLM,
+        createLLM: () => new MockLLM()
+    };
+});
+
 describe("Phase 33 Showcase Validation: Agency Ecosystem Demonstration", () => {
     let server: AgencyOrchestratorServer;
     let config: any;

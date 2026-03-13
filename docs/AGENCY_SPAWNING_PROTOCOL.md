@@ -22,6 +22,7 @@ During validation testing (`tests/integration/phase32_agency_spawning_validation
 
 6. **Task Delegation Failure & Recovery**: During federated projects involving spawned agencies, network latency or timeouts can occur. The parent orchestrator correctly identifies the failure and can gracefully retry task delegation (`delegateTask`), successfully recovering without corrupting the overall federated project state.
 7. **Federated Virtual Ledger**: Spawned agencies can reliably perform work and have their contributions accurately tracked in the multi-agency `distributed_ledger`. Stress tests validate that parent agencies properly record net-negative values as service consumers, while child agencies accumulate correct net-positive values.
+8. **Cross-Agency Pattern Recognition**: The root parent agency can periodically scan the collective experiences of its spawned child agencies using the Brain MCP's `cross_agency_pattern_recognition` tool. This meta-orchestration capability analyzes patterns across all child agency namespaces, uses the LLM to synthesize common successes or recurring failures, and stores the resulting `cross_agency_pattern` back into memory. This continuous collective learning shapes future strategic pivots and improves the success rates of new child agencies.
 
 ## Testing
 To test the Spawning Protocol, run the specific integration tests:

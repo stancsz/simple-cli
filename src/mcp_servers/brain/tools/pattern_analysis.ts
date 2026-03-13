@@ -93,7 +93,8 @@ export const analyzePatterns = async (
 export const crossAgencyPatternRecognition = async (
   topic: string,
   agencyNamespaces: string[],
-  memory: EpisodicMemory
+  memory: EpisodicMemory,
+  llm: LLM
 ): Promise<any> => {
   try {
     let aggregatedPatterns: any[] = [];
@@ -109,11 +110,66 @@ export const crossAgencyPatternRecognition = async (
       aggregatedPatterns.push(...insights);
     }
 
-    const summary = aggregatedPatterns.length > 0
-      ? `Identified ${aggregatedPatterns.length} cross-agency patterns regarding '${topic}'. Recommendation: Standardize the most successful approach.`
-      : `No significant cross-agency patterns found for '${topic}'.`;
+    let summary = `No significant cross-agency patterns found for '${topic}'.`;
+    let synthesisDetails = {};
 
-    return { summary, details: aggregatedPatterns };
+    if (aggregatedPatterns.length > 0) {
+      const contextStr = aggregatedPatterns.map(p => `- Agency: ${p.agency}, Task: ${p.taskId}, Insight: ${p.insight}`).join('\n');
+      const systemPrompt = "You are a Meta-Orchestrator Brain analyzing patterns across multiple autonomous agencies.";
+      const prompt = `
+      TOPIC: ${topic}
+
+      AGGREGATED EXPERIENCES:
+      ${contextStr}
+
+      TASK:
+      Analyze these cross-agency experiences. Identify common successes, recurring failures, or bottlenecks.
+      Synthesize a meta-level recommendation for the root orchestrator.
+
+      OUTPUT FORMAT (JSON):
+      {
+        "common_successes": ["list", "of", "successes"],
+        "recurring_failures": ["list", "of", "failures"],
+        "meta_recommendation": "Overall strategic recommendation"
+      }
+      `;
+
+      const response = await llm.generate(systemPrompt, [{ role: "user", content: prompt }]);
+      let jsonStr = response.message || response.thought || "";
+      jsonStr = jsonStr.replace(/```json/g, "").replace(/```/g, "").trim();
+      const firstBrace = jsonStr.indexOf("{");
+      const lastBrace = jsonStr.lastIndexOf("}");
+      if (firstBrace !== -1 && lastBrace !== -1) {
+          jsonStr = jsonStr.substring(firstBrace, lastBrace + 1);
+      }
+
+      try {
+        synthesisDetails = JSON.parse(jsonStr);
+        summary = `Identified ${aggregatedPatterns.length} cross-agency experiences regarding '${topic}'. Meta-recommendation generated.`;
+      } catch (parseErr) {
+        console.error("Failed to parse cross-agency LLM synthesis", parseErr);
+        summary = `Identified ${aggregatedPatterns.length} cross-agency experiences regarding '${topic}', but failed to synthesize cleanly.`;
+      }
+
+      // Store the synthesis back into episodic memory as a cross-agency pattern
+      const metaTaskId = `meta_analysis_${Date.now()}`;
+      await memory.store(
+        metaTaskId,
+        `Cross-agency pattern analysis for topic: ${topic}`,
+        JSON.stringify(synthesisDetails),
+        [], // no specific artifacts
+        undefined, // no specific company namespace, it's a root level memory
+        undefined,
+        undefined,
+        undefined,
+        undefined,
+        undefined,
+        undefined,
+        "cross_agency_pattern" // explicitly set the requested type
+      );
+    }
+
+    return { summary, synthesis: synthesisDetails, details: aggregatedPatterns };
   } catch (e: any) {
     throw new Error(`Failed to perform cross-agency pattern recognition: ${e.message}`);
   }

@@ -1,0 +1,1338 @@
+diff --git a/.agent/context.json b/.agent/context.json
+index 4f93520..76067f2 100644
+--- a/.agent/context.json
++++ b/.agent/context.json
+@@ -4,5 +4,5 @@
+   "recent_changes": [],
+   "active_tasks": [],
+   "company_context": "## Company Context: client-a\n\n### Brand Voice\nNo specific brand voice defined.",
+-  "last_updated": "2026-03-13T13:09:24.715Z"
++  "last_updated": "2026-03-13T11:07:18.809Z"
+ }
+\ No newline at end of file
+diff --git a/demos/agency_ecosystem_showcase/README.md b/demos/agency_ecosystem_showcase/README.md
+deleted file mode 100644
+index 222fbe9..0000000
+--- a/demos/agency_ecosystem_showcase/README.md
++++ /dev/null
+@@ -1,32 +0,0 @@
+-# Phase 33: Multi-Agency Ecosystem Showcase
+-
+-This directory contains the production-ready demonstration of the Simple-CLI root agency orchestrating multiple specialized child agencies to autonomously execute a complex project.
+-
+-## Overview
+-The demo showcases the `agency_orchestrator` capabilities by coordinating the completion of an "AI-Powered Metrics Dashboard", which involves three distinct domains:
+-
+-- **Frontend**: Vue 3 + Tailwind CSS (`agency_frontend`)
+-- **Backend**: Node.js + Express (`agency_backend`)
+-- **DevOps**: Docker + GitHub Actions (`agency_devops`)
+-
+-## Components
+-
+-1. **`showcase_config.json`**: Defines the child agencies to be spawned, including their IDs, niches, budgets, and capabilities.
+-2. **`complex_project_spec.json`**: The detailed, realistic JSON project specification with tasks and dependencies spanning all three domains.
+-3. **`orchestrate.ts`**: A Node.js orchestration script that acts as the "Meta-Orchestrator". It:
+-   - Reads the project specification.
+-   - Parses the tasks and dependencies.
+-   - Triggers the spawning and assignment of the child agencies based on configuration.
+-   - Monitors execution state, resolves inter-agency dependencies.
+-   - Handles simulated failure recovery (e.g., token budget exceeded).
+-   - Generates the final project dashboard report.
+-
+-## How to Run
+-
+-To run the orchestration script locally (this acts as a comprehensive integration walkthrough and will output state changes to the console):
+-
+-```bash
+-npx tsx demos/agency_ecosystem_showcase/orchestrate.ts
+-```
+-
+-> **Note**: Execution requires a valid `OPENAI_API_KEY` or other supported LLM API key configured in your environment, as it utilizes the `EpisodicMemory` embedding functionality.
+diff --git a/demos/agency_ecosystem_showcase/complex_project_spec.json b/demos/agency_ecosystem_showcase/complex_project_spec.json
+deleted file mode 100644
+index 4f858e9..0000000
+--- a/demos/agency_ecosystem_showcase/complex_project_spec.json
++++ /dev/null
+@@ -1,29 +0,0 @@
+-{
+-    "name": "AI-Powered Metrics Dashboard",
+-    "tasks": [
+-        {
+-            "task_id": "api_schema",
+-            "description": "Define API schema for metrics endpoint"
+-        },
+-        {
+-            "task_id": "backend_api",
+-            "description": "Create the /api/metrics endpoint",
+-            "dependencies": ["api_schema"]
+-        },
+-        {
+-            "task_id": "frontend_ui",
+-            "description": "Build DashboardView.vue component",
+-            "dependencies": ["api_schema"]
+-        },
+-        {
+-            "task_id": "docker_build",
+-            "description": "Create multi-stage Dockerfile",
+-            "dependencies": ["backend_api", "frontend_ui"]
+-        },
+-        {
+-            "task_id": "ci_pipeline",
+-            "description": "Create GitHub Actions deploy workflow",
+-            "dependencies": ["docker_build"]
+-        }
+-    ]
+-}
+diff --git a/demos/agency_ecosystem_showcase/orchestrate.ts b/demos/agency_ecosystem_showcase/orchestrate.ts
+deleted file mode 100644
+index f5acf10..0000000
+--- a/demos/agency_ecosystem_showcase/orchestrate.ts
++++ /dev/null
+@@ -1,144 +0,0 @@
+-import { AgencyOrchestratorServer } from "../../src/mcp_servers/agency_orchestrator/index.js";
+-import { EpisodicMemory } from "../../src/brain/episodic.js";
+-import fs from "fs";
+-import path from "path";
+-
+-// Extract tools logic, since we are using this programmatically for the showcase
+-import {
+-    createMultiAgencyProject,
+-    assignAgencyToTask,
+-    monitorProjectStatus,
+-    resolveInterAgencyDependency,
+-    updateTaskStatus
+-} from "../../src/mcp_servers/agency_orchestrator/tools/index.js";
+-
+-async function main() {
+-    console.log("Starting Phase 33 Agency Ecosystem Showcase...\n");
+-    const configPath = path.join(process.cwd(), "demos/agency_ecosystem_showcase/showcase_config.json");
+-    const specPath = path.join(process.cwd(), "demos/agency_ecosystem_showcase/complex_project_spec.json");
+-
+-    if (!fs.existsSync(configPath) || !fs.existsSync(specPath)) {
+-        console.error("Missing config or spec files.");
+-        process.exit(1);
+-    }
+-
+-    const config = JSON.parse(fs.readFileSync(configPath, 'utf8'));
+-    const spec = fs.readFileSync(specPath, 'utf8');
+-
+-    // Setup an ephemeral memory for the showcase
+-    const memory = new EpisodicMemory(path.join(process.cwd(), ".agent", "showcase_brain"));
+-    await memory.init();
+-
+-    console.log(`--- Project: ${config.project_name} ---`);
+-    console.log(`Loaded specification for ${config.agencies.length} specialized agencies.\n`);
+-
+-    // 1. Create Project
+-    console.log("[1] Orchestrator: Parsing Project Specification...");
+-    const projectId = await createMultiAgencyProject(spec, memory);
+-    console.log(`    Project Created! ID: ${projectId}\n`);
+-
+-    // 2. Spawning & Assignment
+-    console.log("[2] Orchestrator: Spawning Child Agencies & Assigning Tasks...");
+-
+-    // Assign tasks to respective agencies based on config
+-    const assignments: Record<string, string> = {
+-        api_schema: "agency_backend",
+-        backend_api: "agency_backend",
+-        frontend_ui: "agency_frontend",
+-        docker_build: "agency_devops",
+-        ci_pipeline: "agency_devops"
+-    };
+-
+-    for (const [taskId, agencyId] of Object.entries(assignments)) {
+-        const agencyConfig = config.agencies.find((a: any) => a.id === agencyId);
+-        if (agencyConfig) {
+-             console.log(`    -> Spawning & Assigning task '${taskId}' to ${agencyId} [Role: ${agencyConfig.niche}]`);
+-             await assignAgencyToTask(projectId, taskId, {
+-                 agency_id: agencyId, // passing this avoids actual fs spawning in demo, treats as existing
+-                 role: agencyConfig.niche,
+-                 initial_context: agencyConfig.mission,
+-                 resource_limit: agencyConfig.initial_budget_tokens
+-             }, memory);
+-        }
+-    }
+-    console.log("");
+-
+-    // 3. Execution & Monitoring Loop
+-    console.log("[3] Execution Loop: Monitoring Cross-Agency Progress...");
+-
+-    let status = await monitorProjectStatus(projectId, memory);
+-    console.log(`    Initial Status: Progress ${status.overall_progress * 100}%`);
+-
+-    // Simulate Backend completing schema
+-    console.log(`\n    -> [${assignments.api_schema}] working on 'api_schema'... done.`);
+-    await updateTaskStatus(projectId, "api_schema", "completed", memory);
+-
+-    // Resolve dependencies for backend_api and frontend_ui
+-    console.log("    -> Orchestrator resolving inter-agency dependencies on 'api_schema'...");
+-    await resolveInterAgencyDependency(projectId, { task_id: "backend_api", depends_on_task_id: "api_schema", resolution_status: "resolved"}, memory);
+-    await resolveInterAgencyDependency(projectId, { task_id: "frontend_ui", depends_on_task_id: "api_schema", resolution_status: "resolved"}, memory);
+-
+-    status = await monitorProjectStatus(projectId, memory);
+-    console.log(`    Current Status: Progress ${status.overall_progress * 100}%`);
+-
+-    // Simulate parallel completion of backend and frontend
+-    console.log(`\n    -> [${assignments.backend_api}] working on 'backend_api'... done.`);
+-    await updateTaskStatus(projectId, "backend_api", "completed", memory);
+-    console.log(`    -> [${assignments.frontend_ui}] working on 'frontend_ui'... done.`);
+-    await updateTaskStatus(projectId, "frontend_ui", "completed", memory);
+-
+-    // Resolve dependencies for docker_build
+-    console.log("    -> Orchestrator resolving inter-agency dependencies on 'docker_build'...");
+-    await resolveInterAgencyDependency(projectId, { task_id: "docker_build", depends_on_task_id: "backend_api", resolution_status: "resolved"}, memory);
+-    await resolveInterAgencyDependency(projectId, { task_id: "docker_build", depends_on_task_id: "frontend_ui", resolution_status: "resolved"}, memory);
+-
+-    status = await monitorProjectStatus(projectId, memory);
+-    console.log(`    Current Status: Progress ${status.overall_progress * 100}%`);
+-
+-    // Conflict Simulation
+-    console.log("\n[4] Simulating Resource Conflict...");
+-    console.log(`    -> [${assignments.docker_build}] Agency DevOps exceeded token budget during docker build!`);
+-    await updateTaskStatus(projectId, "docker_build", "failed", memory);
+-
+-    status = await monitorProjectStatus(projectId, memory);
+-    console.log("    -> Deadlock detected by Orchestrator!");
+-
+-    console.log("    -> Meta-Orchestrator invokes Strategic Decision Engine... (Simulated)");
+-    console.log("    -> Reallocating budget to DevOps Agency...");
+-    console.log("    -> Conflict resolved. Resuming task...");
+-    await updateTaskStatus(projectId, "docker_build", "completed", memory);
+-
+-    // Resolve final dependency
+-    console.log("    -> Orchestrator resolving inter-agency dependency on 'ci_pipeline'...");
+-    await resolveInterAgencyDependency(projectId, { task_id: "ci_pipeline", depends_on_task_id: "docker_build", resolution_status: "resolved"}, memory);
+-
+-    // Complete final task
+-    console.log(`\n    -> [${assignments.ci_pipeline}] working on 'ci_pipeline'... done.`);
+-    await updateTaskStatus(projectId, "ci_pipeline", "completed", memory);
+-
+-    status = await monitorProjectStatus(projectId, memory);
+-    console.log(`\n    Final Status: ${status.status.toUpperCase()} (Progress ${status.overall_progress * 100}%)`);
+-
+-    // 5. Dashboard Generation
+-    console.log("\n[5] Generating Project Dashboard...");
+-    const dashboard = `# Project Dashboard: ${config.project_name}
+-Status: COMPLETE
+-Final Progress: 100%
+-
+-## Agency Status
+-- **${config.agencies[0].id}** (${config.agencies[0].niche}): Complete
+-- **${config.agencies[1].id}** (${config.agencies[1].niche}): Complete
+-- **${config.agencies[2].id}** (${config.agencies[2].niche}): Complete - *Budget dynamically adjusted during Docker build*
+-
+-## Cross-Agency Patterns Identified
+-- Mocking API schemas early accelerates parallel development between Backend and Frontend agencies.
+-- Multi-stage Docker builds require coordinated delivery of frontend static assets and backend binaries.
+-`;
+-
+-    fs.writeFileSync(path.join(process.cwd(), "demos/agency_ecosystem_showcase/PROJECT_DASHBOARD.md"), dashboard);
+-    console.log("    -> Saved to PROJECT_DASHBOARD.md");
+-
+-    console.log("\nShowcase Completed Successfully!");
+-}
+-
+-main().catch(console.error);
+diff --git a/demos/agency_ecosystem_showcase/showcase_config.json b/demos/agency_ecosystem_showcase/showcase_config.json
+index ee17838..e1d8714 100644
+--- a/demos/agency_ecosystem_showcase/showcase_config.json
++++ b/demos/agency_ecosystem_showcase/showcase_config.json
+@@ -24,4 +24,4 @@
+       "capabilities": ["docker", "github_actions", "ci_cd"]
+     }
+   ]
+-}
+\ No newline at end of file
++}
+diff --git a/demos/agency_ecosystem_showcase/validation_project/project_spec.json b/demos/agency_ecosystem_showcase/validation_project/project_spec.json
+deleted file mode 100644
+index 5a2539e..0000000
+--- a/demos/agency_ecosystem_showcase/validation_project/project_spec.json
++++ /dev/null
+@@ -1,24 +0,0 @@
+-{
+-    "name": "Validation Web App",
+-    "tasks": [
+-        {
+-            "task_id": "api_schema",
+-            "description": "Define API schema"
+-        },
+-        {
+-            "task_id": "backend_api",
+-            "description": "Implement API",
+-            "dependencies": ["api_schema"]
+-        },
+-        {
+-            "task_id": "frontend_ui",
+-            "description": "Create UI components",
+-            "dependencies": ["api_schema"]
+-        },
+-        {
+-            "task_id": "integration",
+-            "description": "Integrate and deploy",
+-            "dependencies": ["backend_api", "frontend_ui"]
+-        }
+-    ]
+-}
+\ No newline at end of file
+diff --git a/demos/agency_ecosystem_showcase/validation_project/showcase_config.json b/demos/agency_ecosystem_showcase/validation_project/showcase_config.json
+deleted file mode 100644
+index 95a202d..0000000
+--- a/demos/agency_ecosystem_showcase/validation_project/showcase_config.json
++++ /dev/null
+@@ -1,27 +0,0 @@
+-{
+-  "project_id": "proj_val_01",
+-  "project_name": "Validation Web App",
+-  "agencies": [
+-    {
+-      "id": "agency_frontend",
+-      "niche": "Frontend Developer",
+-      "mission": "Develop UI components",
+-      "initial_budget_tokens": 500,
+-      "capabilities": ["vue", "react"]
+-    },
+-    {
+-      "id": "agency_backend",
+-      "niche": "Backend Developer",
+-      "mission": "Build robust APIs",
+-      "initial_budget_tokens": 500,
+-      "capabilities": ["nodejs"]
+-    },
+-    {
+-      "id": "agency_devops",
+-      "niche": "UI Designer & Integrator",
+-      "mission": "Integrate and deploy",
+-      "initial_budget_tokens": 500,
+-      "capabilities": ["docker", "ci_cd"]
+-    }
+-  ]
+-}
+\ No newline at end of file
+diff --git a/demos/agency_ecosystem_showcase/validation_project/validation_report.md b/demos/agency_ecosystem_showcase/validation_project/validation_report.md
+deleted file mode 100644
+index c7dd815..0000000
+--- a/demos/agency_ecosystem_showcase/validation_project/validation_report.md
++++ /dev/null
+@@ -1,26 +0,0 @@
+-# Agency Ecosystem Validation Report
+-Date: 2026-03-13T13:05:28.912Z
+-
+-## Project Status
+-- **Project ID**: proj_f49e1adb-869c-464e-a288-da2cc968931e
+-- **Final Status**: completed
+-- **Progress**: 100%
+-- **Tasks Complete**: 4 / 4
+-
+-## Milestones
+-1. **Setup repository**: Complete (api_schema)
+-2. **Implement API**: Complete (backend_api)
+-3. **Create UI components**: Complete (frontend_ui)
+-4. **Integrate and deploy**: Complete (integration)
+-
+-## Coordination Issues
+-- Simulated failure in `integration` due to inter-agency schema mismatch. Successfully recovered.
+-
+-## Cross-Agency Pattern Recognition Insights
+-**Summary:** Identified 2 cross-agency patterns regarding 'frontend-backend integration pattern'. Recommendation: Standardize the most successful approach.
+-
+-**Details:**
+-- **agency_frontend**: Use shared typescript interfaces for API schemas to avoid mismatch.
+-- **agency_backend**: Generate OpenAPI spec from backend controllers, share with frontend.
+-
+-**Validation Result:** PASS
+diff --git a/docs/AGENCY_ECOSYSTEM_DEMONSTRATION.md b/docs/AGENCY_ECOSYSTEM_DEMONSTRATION.md
+deleted file mode 100644
+index eb72f5b..0000000
+--- a/docs/AGENCY_ECOSYSTEM_DEMONSTRATION.md
++++ /dev/null
+@@ -1,45 +0,0 @@
+-# Phase 33: Multi-Agency Ecosystem Showcase
+-
+-The Agency Ecosystem Demonstration showcases the power of the `agency_orchestrator` MCP server working in tandem with the enhanced Brain MCP tools to seamlessly coordinate and execute complex, multi-agency projects.
+-
+-## Overview
+-This demonstration proves that the Simple-CLI root agency can act as a Meta-Orchestrator to:
+-1. Spawn specialized child agencies (e.g., `agency_frontend`, `agency_backend`, `agency_devops`).
+-2. Parse a complex project specification and distribute dependent tasks to the most suitable child agencies.
+-3. Track and monitor progress across all agencies while actively resolving execution deadlocks and inter-agency dependencies.
+-4. Utilize `cross_agency_pattern_recognition` via the Brain MCP to synthesize operational knowledge from the decentralized ecosystem.
+-
+-## Components
+-
+-- **`showcase_config.json`**: Defines the child agencies to be spawned, including their IDs, niches, budgets, and capabilities.
+-- **`complex_project_spec.json`**: The detailed, realistic JSON project specification with tasks and dependencies.
+-- **`orchestrate.ts`**: A Node.js orchestration script that acts as the core demo for task assignment and status monitoring.
+-- **`scripts/validate_agency_ecosystem.ts`**: An end-to-end validation script that orchestrates a full mock project specifically to validate task completion, cross-agency pattern retrieval, and the generation of an operational report.
+-
+-## How to Run the Demonstration Script
+-
+-To run the interactive orchestration demo walkthrough:
+-```bash
+-npx tsx demos/agency_ecosystem_showcase/orchestrate.ts
+-```
+-
+-*(Note: Execution requires a valid `OPENAI_API_KEY` or other supported LLM API key configured in your environment, as it utilizes the `EpisodicMemory` embedding functionality.)*
+-
+-## How to Run the End-to-End Validation Script
+-
+-The validation script runs automatically as part of our integration test suite. However, it can also be triggered manually to simulate an end-to-end project orchestration, failure recovery, and cross-agency pattern recognition report generation:
+-
+-```bash
+-npx tsx scripts/validate_agency_ecosystem.ts
+-```
+-
+-### Interpreting the Validation Results
+-
+-Upon successful execution, the validation script will generate a markdown report (`demos/agency_ecosystem_showcase/validation_project/validation_report.md`).
+-
+-This report includes:
+-- **Project Status**: The final state of all orchestrated tasks.
+-- **Milestones**: A breakdown of the workflow execution flow.
+-- **Coordination Issues**: An overview of simulated deadlocks or failures that the orchestrator automatically recovered from.
+-- **Cross-Agency Pattern Recognition Insights**: Summarized insights synthesized from the memories of the participating child agencies, ensuring continuous learning across the biosphere.
+-- **Validation Result**: Will display `PASS` if the orchestration completed correctly.
+diff --git a/docs/ROADMAP.md b/docs/ROADMAP.md
+index e74c73b..e803935 100644
+--- a/docs/ROADMAP.md
++++ b/docs/ROADMAP.md
+@@ -43,13 +43,12 @@ The roadmap is structured around the four anatomical layers of the Digital Biosp
+     - ✅ Ecosystem Stress Test validated on October 25, 2023. Successfully simulated root agency coordinating 3 child agencies through a complex federated project with failure recovery. Test: `tests/integration/agency_ecosystem_stress.test.ts`.
+
+ ## Phase 33: Agency Ecosystem Demonstration
+-*Status: Completed*
++*Status: In Progress*
+ *Current Focus: Build a production-ready demonstration where the root Simple-CLI agency orchestrates multiple specialized child agencies to autonomously execute a complex project.*
+-- [x] Create `demos/agency_ecosystem_showcase/` with project specs and orchestration scripts.
++- [ ] Create `demos/agency_ecosystem_showcase/` with project specs and orchestration scripts.
+ - [x] Implement `agency_orchestrator` MCP server for multi-agency project management.
+ - [x] Enhance Brain MCP tools for `cross_agency_pattern_recognition`.
+-- [x] Write integration tests in `tests/integration/agency_ecosystem_showcase.test.ts` and validate full meta-orchestration capabilities.
+-- [x] Create an end-to-end validation script `scripts/validate_agency_ecosystem.ts` that orchestrates a mock project and utilizes pattern recognition, covered by robust integration tests.
++- [ ] Write integration tests in `tests/integration/agency_ecosystem_showcase.test.ts` and validate full meta-orchestration capabilities.
+
+ ## Phase 25: Autonomous Corporate Consciousness
+ *Status: Completed*
+diff --git a/docs/SHOWCASE_DEMO.md b/docs/SHOWCASE_DEMO.md
+index 7b93564..3a19ae6 100644
+--- a/docs/SHOWCASE_DEMO.md
++++ b/docs/SHOWCASE_DEMO.md
+@@ -67,15 +67,6 @@ The agency tracks its own autonomous expansion success rates.
+     - **Step 3**: It evaluates simulated contract negotiations against `CorporatePolicy.financials.target_margin`.
+ - **Result**: A validated growth metrics report is pushed, showing Lead-to-Proposal conversions, Acceptance Rates, and Margin Threshold Compliance.
+
+-### 9. **Multi-Agency Ecosystem (Phase 33)**
+-The root agency spawns and delegates to specialized child agencies for complex projects.
+-- **Scenario**: The agency receives a complex specification for a "FullStack Dashboard."
+-- **Action**: The system invokes the Meta-Orchestrator to:
+-    - **Step 1**: Spawn specialized child agencies (Frontend, Backend, DevOps).
+-    - **Step 2**: Delegate sub-tasks based on the Federation Protocol.
+-    - **Step 3**: Monitor cross-agency blockers and resolve resource constraints dynamically.
+-- **Result**: A completed multi-disciplinary project is delivered autonomously, driven by [demos/agency_ecosystem_showcase/](../demos/agency_ecosystem_showcase/README.md).
+-
+ ---
+
+ ## 🚀 Deployment Instructions
+diff --git a/docs/TECHNICAL_SPEC.md b/docs/TECHNICAL_SPEC.md
+index 3edda48..6242b27 100644
+--- a/docs/TECHNICAL_SPEC.md
++++ b/docs/TECHNICAL_SPEC.md
+@@ -15,8 +15,9 @@ Tasks are defined in `scheduler.json`. The `Scheduler` daemon (`src/scheduler.ts
+ - Normal tasks -> `JobDelegator.delegateTask(task)`
+
+ ## Storage
+-- **Episodic Memory**: LanceDB vector database (`.agent/lancedb`) for history and semantic RAG.
++- **Episodic Memory**: LanceDB vector database (`.agent/lancedb`) for history and semantic RAG. Now supports `source_agency` metadata for tracking child agency experiences.
+ - **Semantic Graph**: NetworkX-like graph mapping entities and dependencies.
++- **Cross-Agency Analysis**: The Brain MCP implements `analyze_cross_agency_patterns` to query multiple agency namespaces simultaneously, synthesizing ecosystem-wide insights via the LLM.
+
+ ## 17. Zero-Token Operations Architecture (Phase 29)
+ Phase 29 introduces the Symbolic Engine, transitioning the system from token-heavy LLM deliberations to deterministic, zero-cost task executions.
+diff --git a/scripts/validate_agency_ecosystem.ts b/scripts/validate_agency_ecosystem.ts
+deleted file mode 100644
+index c6d1746..0000000
+--- a/scripts/validate_agency_ecosystem.ts
++++ /dev/null
+@@ -1,161 +0,0 @@
+-import fs from "fs";
+-import path from "path";
+-import { EpisodicMemory } from "../src/brain/episodic.js";
+-import {
+-    createMultiAgencyProject,
+-    assignAgencyToTask,
+-    monitorProjectStatus,
+-    updateTaskStatus,
+-    resolveInterAgencyDependency
+-} from "../src/mcp_servers/agency_orchestrator/tools/index.js";
+-import { crossAgencyPatternRecognition } from "../src/mcp_servers/brain/tools/pattern_analysis.js";
+-
+-export async function runValidation() {
+-    console.log("Starting Agency Ecosystem Validation Script...\n");
+-
+-    const configPath = path.join(process.cwd(), "demos/agency_ecosystem_showcase/validation_project/showcase_config.json");
+-    const specPath = path.join(process.cwd(), "demos/agency_ecosystem_showcase/validation_project/project_spec.json");
+-    const reportPath = path.join(process.cwd(), "demos/agency_ecosystem_showcase/validation_project/validation_report.md");
+-
+-    if (!fs.existsSync(configPath) || !fs.existsSync(specPath)) {
+-        throw new Error("Missing mock project files.");
+-    }
+-
+-    const config = JSON.parse(fs.readFileSync(configPath, 'utf8'));
+-    const spec = fs.readFileSync(specPath, 'utf8');
+-
+-    // 1. Initialize Memory
+-    const memoryDir = path.join(process.cwd(), ".agent", "showcase_validation_brain");
+-    const memory = new EpisodicMemory(memoryDir);
+-    await memory.init();
+-
+-    console.log("[1] Creating Multi-Agency Project from Mock Spec...");
+-    const projectId = await createMultiAgencyProject(spec, memory);
+-    console.log(`    Project Created! ID: ${projectId}`);
+-
+-    // 2. Assign Agencies
+-    console.log("[2] Assigning Child Agencies to Tasks...");
+-    const assignments: Record<string, string> = {
+-        api_schema: "agency_backend",
+-        backend_api: "agency_backend",
+-        frontend_ui: "agency_frontend",
+-        integration: "agency_devops"
+-    };
+-
+-    for (const [taskId, agencyId] of Object.entries(assignments)) {
+-        const agencyConfig = config.agencies.find((a: any) => a.id === agencyId);
+-        if (agencyConfig) {
+-            console.log(`    -> Assigning task '${taskId}' to ${agencyId}`);
+-            await assignAgencyToTask(projectId, taskId, {
+-                agency_id: agencyId,
+-                role: agencyConfig.niche,
+-                initial_context: agencyConfig.mission,
+-                resource_limit: agencyConfig.initial_budget_tokens
+-            }, memory);
+-        }
+-    }
+-
+-    // 3. Monitor & Simulate Execution
+-    console.log("\n[3] Simulating Execution and Dependencies...");
+-    let status = await monitorProjectStatus(projectId, memory);
+-    console.log(`    Initial Status: ${status.status} (Progress: ${status.overall_progress * 100}%)`);
+-
+-    // api_schema
+-    await updateTaskStatus(projectId, "api_schema", "completed", memory);
+-    await resolveInterAgencyDependency(projectId, { task_id: "backend_api", depends_on_task_id: "api_schema", resolution_status: "resolved"}, memory);
+-    await resolveInterAgencyDependency(projectId, { task_id: "frontend_ui", depends_on_task_id: "api_schema", resolution_status: "resolved"}, memory);
+-
+-    status = await monitorProjectStatus(projectId, memory);
+-    console.log(`    api_schema complete. Progress: ${status.overall_progress * 100}%`);
+-
+-    // backend_api & frontend_ui
+-    await updateTaskStatus(projectId, "backend_api", "completed", memory);
+-    await updateTaskStatus(projectId, "frontend_ui", "completed", memory);
+-    await resolveInterAgencyDependency(projectId, { task_id: "integration", depends_on_task_id: "backend_api", resolution_status: "resolved"}, memory);
+-    await resolveInterAgencyDependency(projectId, { task_id: "integration", depends_on_task_id: "frontend_ui", resolution_status: "resolved"}, memory);
+-
+-    status = await monitorProjectStatus(projectId, memory);
+-    console.log(`    backend_api & frontend_ui complete. Progress: ${status.overall_progress * 100}%`);
+-
+-    // Simulate Inter-Agency Coordination Issue & Recovery
+-    console.log("\n[4] Simulating Coordination Issue...");
+-    await updateTaskStatus(projectId, "integration", "failed", memory);
+-    status = await monitorProjectStatus(projectId, memory);
+-    console.log(`    Task 'integration' failed. Status: ${status.status}`);
+-
+-    console.log("    -> Triggering recovery...");
+-    await updateTaskStatus(projectId, "integration", "completed", memory);
+-    status = await monitorProjectStatus(projectId, memory);
+-    console.log(`    Final Status: ${status.status} (Progress: ${status.overall_progress * 100}%)`);
+-
+-    // 5. Pattern Recognition
+-    console.log("\n[5] Injecting and Retrieving Cross-Agency Patterns...");
+-
+-    // Check if we are in test mode and bypass actual memory.store calls
+-    // because the mocked memory instance in Vitest does not persist across dynamic imports easily
+-    // unless carefully managed, and we already pre-seeded the mock database.
+-    if (!process.env.VITEST) {
+-        // Inject mock patterns to memory. Use IDs that match the search topic so our simplistic test mock finds it too.
+-        await memory.store(
+-            "pattern_mock_1_frontend-backend integration pattern",
+-            "frontend-backend integration pattern",
+-            "Use shared typescript interfaces for API schemas to avoid mismatch.",
+-            ["pattern", "cross_agency", "api_schema"],
+-            "agency_frontend"
+-        );
+-        await memory.store(
+-            "pattern_mock_2_frontend-backend integration pattern",
+-            "frontend-backend integration pattern",
+-            "Generate OpenAPI spec from backend controllers, share with frontend.",
+-            ["pattern", "cross_agency", "api_schema"],
+-            "agency_backend"
+-        );
+-    }
+-
+-    const patterns = await crossAgencyPatternRecognition("frontend-backend integration pattern", ["agency_frontend", "agency_backend"], memory);
+-    console.log("    -> Patterns Found:", patterns.summary);
+-
+-    // 6. Generate Report
+-    console.log("\n[6] Generating Validation Report...");
+-    const reportContent = `# Agency Ecosystem Validation Report
+-Date: ${new Date().toISOString()}
+-
+-## Project Status
+-- **Project ID**: ${projectId}
+-- **Final Status**: ${status.status}
+-- **Progress**: ${status.overall_progress * 100}%
+-- **Tasks Complete**: ${status.tasks.filter(t => t.status === "completed").length} / ${status.tasks.length}
+-
+-## Milestones
+-1. **Setup repository**: Complete (api_schema)
+-2. **Implement API**: Complete (backend_api)
+-3. **Create UI components**: Complete (frontend_ui)
+-4. **Integrate and deploy**: Complete (integration)
+-
+-## Coordination Issues
+-- Simulated failure in \`integration\` due to inter-agency schema mismatch. Successfully recovered.
+-
+-## Cross-Agency Pattern Recognition Insights
+-**Summary:** ${patterns.summary}
+-
+-**Details:**
+-${patterns.details.map((d: any) => `- **${d.agency}**: ${d.insight}`).join('\n')}
+-
+-**Validation Result:** PASS
+-`;
+-
+-    fs.writeFileSync(reportPath, reportContent);
+-    console.log(`    -> Report saved to ${reportPath}`);
+-    console.log("\nValidation Script Completed Successfully!");
+-
+-    return true;
+-}
+-
+-// Allow direct execution
+-import { fileURLToPath } from 'url';
+-if (process.argv[1] && process.argv[1] === fileURLToPath(import.meta.url)) {
+-    runValidation().catch((err) => {
+-        console.error("Validation failed:", err);
+-        process.exit(1);
+-    });
+-}
+\ No newline at end of file
+diff --git a/src/brain/episodic.ts b/src/brain/episodic.ts
+index f209210..4c042d3 100644
+--- a/src/brain/episodic.ts
++++ b/src/brain/episodic.ts
+@@ -34,6 +34,7 @@ export interface PastEpisode {
+   related_episode_id?: string | null;
+   forecast_horizon?: number | null;
+   error_margin?: number | null;
++  source_agency?: string | null;
+ }
+
+ export class EpisodicMemory {
+@@ -122,7 +123,8 @@ export class EpisodicMemory {
+       type?: string,
+       related_episode_id?: string,
+       forecast_horizon?: number,
+-      error_margin?: number
++      error_margin?: number,
++      source_agency?: string
+   ): Promise<void> {
+     const textToEmbed = `Task: ${taskId}\nRequest: ${request}\nSolution: ${solution}`;
+     const embedding = await this.getEmbedding(textToEmbed);
+@@ -147,7 +149,8 @@ export class EpisodicMemory {
+       type: type || "task",
+       related_episode_id: related_episode_id || "",
+       forecast_horizon: forecast_horizon || 0,
+-      error_margin: error_margin || 0
++      error_margin: error_margin || 0,
++      source_agency: source_agency || ""
+     };
+
+     const connector = await this.getConnector(company);
+diff --git a/src/mcp_servers/agency_orchestrator/tools/index.ts b/src/mcp_servers/agency_orchestrator/tools/index.ts
+index 3f4ad91..602ddaf 100644
+--- a/src/mcp_servers/agency_orchestrator/tools/index.ts
++++ b/src/mcp_servers/agency_orchestrator/tools/index.ts
+@@ -27,7 +27,7 @@ async function getProjectState(projectId: string, memory: EpisodicMemory): Promi
+     }
+
+     // The solution field typically contains the JSON artifact from storing
+-    const jsonStr = (doc as any).solution || (doc as any).agentResponse;
++    const jsonStr = (doc as any).solution || doc.agentResponse;
+     try {
+         return JSON.parse(jsonStr);
+     } catch (e) {
+diff --git a/src/mcp_servers/brain/README.md b/src/mcp_servers/brain/README.md
+new file mode 100644
+index 0000000..393f277
+--- /dev/null
++++ b/src/mcp_servers/brain/README.md
+@@ -0,0 +1,24 @@
++# Brain MCP Server
++
++The Brain server acts as the central memory and collective intelligence hub for the agency ecosystem. It manages episodic memories (past actions), semantic knowledge (graphs), and strategic insights.
++
++## Key Capabilities
++
++*   **Episodic Memory**: Stores and retrieves past episodes, allowing agents to learn from historical successes and failures.
++*   **Semantic Graph**: Manages relationships between entities, concepts, and agencies.
++*   **Strategic Horizon Scanning**: Analyzes market signals and internal metrics to identify opportunities.
++*   **Collective Learning**: Syncs standard operating procedures (SOPs) and successful patterns across spawned child agencies.
++*   **Cross-Agency Pattern Recognition**: Analyzes activities and memories from multiple child agencies simultaneously to identify ecosystem-wide trends, bottlenecks, and optimization opportunities.
++
++## New Tools (Phase 33)
++
++### `analyze_cross_agency_patterns`
++This tool queries the episodic and semantic memories of a given list of child agencies (via their namespaces and `source_agency` metadata). It uses the LLM to synthesize this data into a structured JSON report containing:
++*   `summary`: Overall ecosystem health.
++*   `common_themes`: Recurring patterns across agencies.
++*   `top_performers`: Insights into highly effective strategies.
++*   `emerging_risks`: Potential ecosystem-wide issues.
++*   `recommended_actions`: Steps the root agency should take to optimize the swarm.
++
++## Storage Location
++Data is persisted in the `.agent/brain/` directory, using LanceDB for episodic vectors and a JSON-backed graph for semantic data.
+diff --git a/src/mcp_servers/brain/index.ts b/src/mcp_servers/brain/index.ts
+index 27de021..7132280 100644
+--- a/src/mcp_servers/brain/index.ts
++++ b/src/mcp_servers/brain/index.ts
+@@ -19,7 +19,7 @@ import { conveneBoardMeeting } from "./tools/convene_board_meeting.js";
+ import { getGrowthTargets } from "./tools/strategic_growth.js";
+ import { monitorMarketSignals, evaluateEconomicRisk, triggerContingencyPlan } from "./tools/market_shock.js";
+ import { executeBatchRoutines } from "./tools/efficiency.js";
+-import { crossAgencyPatternRecognition } from "./tools/pattern_analysis.js";
++import { crossAgencyPatternRecognition, analyzeCrossAgencyPatterns } from "./tools/pattern_analysis.js";
+ import { globalSymbolicEngine } from "../../symbolic/compiler.js";
+ import { Client } from "@modelcontextprotocol/sdk/client/index.js";
+ import { StdioClientTransport } from "@modelcontextprotocol/sdk/client/stdio.js";
+@@ -83,6 +83,27 @@ export class BrainServer {
+     );
+
+     // Episodic Memory Tools
++    this.server.tool(
++      "analyze_cross_agency_patterns",
++      "Analyzes episodic and semantic memories across child agencies to identify common themes, successful strategies, and potential risks.",
++      {
++        agency_ids: z.array(z.string()).describe("List of child agency IDs to analyze."),
++        query: z.string().optional().describe("Optional query to filter memories.")
++      },
++      async ({ agency_ids, query }) => {
++        try {
++          const llm = createLLM();
++          const result = await analyzeCrossAgencyPatterns(agency_ids, this.episodic, this.semantic, llm, query);
++          return { content: [{ type: "text", text: JSON.stringify(result, null, 2) }] };
++        } catch (e: any) {
++          return {
++            content: [{ type: "text", text: `Failed to analyze cross-agency patterns: ${e.message}` }],
++            isError: true
++          };
++        }
++      }
++    );
++
+     this.server.tool(
+       "cross_agency_pattern_recognition",
+       "Queries the shared federation namespaces in EpisodicMemory to identify common bottlenecks or successful solutions across multiple child agencies.",
+@@ -122,8 +143,9 @@ export class BrainServer {
+         related_episode_id: z.string().optional().describe("ID of a related episode (e.g., the failure episode for a negotiation pattern)."),
+         forecast_horizon: z.number().optional().describe("Horizon length if storing a forecast."),
+         error_margin: z.number().optional().describe("Expected error margin if storing a forecast."),
++        source_agency: z.string().optional().describe("The ID of the child agency that generated this memory (if not root)."),
+       },
+-      async ({ taskId, request, solution, artifacts, company, simulation_attempts, resolved_via_dreaming, dreaming_outcomes, id, tokens, duration, type, related_episode_id, forecast_horizon, error_margin }) => {
++      async ({ taskId, request, solution, artifacts, company, simulation_attempts, resolved_via_dreaming, dreaming_outcomes, id, tokens, duration, type, related_episode_id, forecast_horizon, error_margin, source_agency }) => {
+         let artifactList: string[] = [];
+         if (artifacts) {
+           try {
+@@ -142,7 +164,7 @@ export class BrainServer {
+                 simAttempts = undefined;
+             }
+         }
+-        await this.episodic.store(taskId, request, solution, artifactList, company, simAttempts, resolved_via_dreaming, dreaming_outcomes, id, tokens, duration, type, related_episode_id, forecast_horizon, error_margin);
++        await this.episodic.store(taskId, request, solution, artifactList, company, simAttempts, resolved_via_dreaming, dreaming_outcomes, id, tokens, duration, type, related_episode_id, forecast_horizon, error_margin, source_agency);
+         return {
+           content: [{ type: "text", text: "Memory stored successfully." }],
+         };
+diff --git a/src/mcp_servers/brain/tools/pattern_analysis.ts b/src/mcp_servers/brain/tools/pattern_analysis.ts
+index 03fdc3a..e9430c3 100644
+--- a/src/mcp_servers/brain/tools/pattern_analysis.ts
++++ b/src/mcp_servers/brain/tools/pattern_analysis.ts
+@@ -1,4 +1,5 @@
+-import { EpisodicMemory } from "../../../brain/episodic.js";
++import { EpisodicMemory, PastEpisode } from "../../../brain/episodic.js";
++import { SemanticGraph } from "../../../brain/semantic_graph.js";
+ import { LLM } from "../../../llm.js";
+
+ /**
+@@ -118,3 +119,114 @@ export const crossAgencyPatternRecognition = async (
+     throw new Error(`Failed to perform cross-agency pattern recognition: ${e.message}`);
+   }
+ };
++
++export const analyzeCrossAgencyPatterns = async (
++  agencyIds: string[],
++  episodic: EpisodicMemory,
++  semantic: SemanticGraph,
++  llm: LLM,
++  query?: string
++): Promise<any> => {
++  try {
++    const memoryContexts: string[] = [];
++
++    // Fetch episodic memories for the specified agencies
++    for (const agencyId of agencyIds) {
++      // In this system, agencies are namespaces (company field) or explicit source_agency
++      // We will search across recent episodes in the root/default memory where source_agency matches,
++      // AND we will search within the agency's specific namespace if available.
++      let agencyMemories: PastEpisode[] = [];
++
++      try {
++        if (query) {
++           agencyMemories = await episodic.recall(query, 10, agencyId);
++        } else {
++           agencyMemories = await episodic.getRecentEpisodes(agencyId, 20);
++        }
++      } catch (e) {
++        // Fallback or ignore if namespace does not exist
++      }
++
++      try {
++        let rootMemories: PastEpisode[] = [];
++        if (query) {
++           rootMemories = await episodic.recall(query, 20, "default");
++        } else {
++           rootMemories = await episodic.getRecentEpisodes("default", 50);
++        }
++        const filteredRoot = rootMemories.filter(m => m.source_agency === agencyId);
++        agencyMemories.push(...filteredRoot);
++      } catch (e) {
++        // Ignore errors from root query
++      }
++
++      if (agencyMemories.length > 0) {
++        const context = agencyMemories.map(m =>
++          `[Task: ${m.taskId || 'unknown'}] Prompt: ${m.userPrompt.substring(0, 100)}... -> Response: ${m.agentResponse.substring(0, 100)}...`
++        ).join("\n");
++        memoryContexts.push(`=== Agency: ${agencyId} Episodic Memories ===\n${context}`);
++      }
++    }
++
++    // Fetch semantic graph data
++    let graphContext = "No relevant semantic relationships found.";
++    try {
++        const graphData = await semantic.query(query || "agency", "default");
++        if (graphData && (graphData.nodes.length > 0 || graphData.edges.length > 0)) {
++            const nodeStr = graphData.nodes.map((n: any) => `Node [${n.id}] (${n.type})`).join(", ");
++            const edgeStr = graphData.edges.map((e: any) => `${e.from} -[${e.relation}]-> ${e.to}`).join(", ");
++            graphContext = `Nodes: ${nodeStr}\nEdges: ${edgeStr}`;
++        }
++    } catch (e) {
++        console.warn("Could not fetch semantic graph context for analysis:", e);
++    }
++
++    const fullContext = memoryContexts.length > 0 ? memoryContexts.join("\n\n") : "No episodic memories found for the specified agencies.";
++
++    const prompt = `
++    You are the central Brain's Cross-Agency Pattern Recognition Engine.
++    Your task is to analyze the recent memories and activities of spawned child agencies to identify common themes, successful strategies, operational efficiency patterns, and emerging risks.
++
++    EPISODIC MEMORIES BY AGENCY:
++    ${fullContext}
++
++    SEMANTIC GRAPH CONTEXT:
++    ${graphContext}
++
++    Analyze the above data and synthesize a comprehensive report.
++    Return a structured JSON object with EXACTLY these keys:
++    {
++      "summary": "A high-level summary of all cross-agency activity and overall health.",
++      "common_themes": ["Theme 1", "Theme 2"],
++      "top_performers": ["Insights on which agency/strategy performed best and why"],
++      "emerging_risks": ["Potential risks, bottlenecks, or conflicts observed"],
++      "recommended_actions": ["Actionable recommendations for the root agency to optimize the ecosystem"]
++    }
++    `;
++
++    const response = await llm.generate(prompt, []);
++
++    try {
++      let jsonStr = response.message || response.thought || "";
++      jsonStr = jsonStr.replace(/```json/g, "").replace(/```/g, "").trim();
++      const firstBrace = jsonStr.indexOf("{");
++      const lastBrace = jsonStr.lastIndexOf("}");
++      if (firstBrace !== -1 && lastBrace !== -1) {
++          jsonStr = jsonStr.substring(firstBrace, lastBrace + 1);
++      }
++      return JSON.parse(jsonStr);
++    } catch (e) {
++      console.error("Failed to parse cross-agency pattern analysis JSON", e);
++      return {
++        summary: "Failed to parse analysis.",
++        common_themes: [],
++        top_performers: [],
++        emerging_risks: [],
++        recommended_actions: []
++      };
++    }
++
++  } catch (e: any) {
++    throw new Error(`Failed to execute analyzeCrossAgencyPatterns: ${e.message}`);
++  }
++};
+diff --git a/tests/fixtures/four_pillars/.agent/brain/sop_logs.json b/tests/fixtures/four_pillars/.agent/brain/sop_logs.json
+index 704b858..19c5ed3 100644
+--- a/tests/fixtures/four_pillars/.agent/brain/sop_logs.json
++++ b/tests/fixtures/four_pillars/.agent/brain/sop_logs.json
+@@ -1,55 +1,34 @@
+ [
+   {
+-    "timestamp": "2026-03-13T13:04:46.120Z",
+-    "sop": "Title: Deployment SOP",
+-    "step": 1,
+-    "status": "success",
+-    "details": "Clean"
+-  },
+-  {
+-    "timestamp": "2026-03-13T13:04:46.124Z",
+-    "sop": "Title: Deployment SOP",
+-    "step": 1,
+-    "status": "success",
+-    "details": "Clean"
+-  },
+-  {
+-    "timestamp": "2026-03-13T13:04:46.125Z",
+-    "sop": "Title: Deployment SOP",
+-    "step": 2,
+-    "status": "success",
+-    "details": "Written"
+-  },
+-  {
+-    "timestamp": "2026-03-13T13:04:46.127Z",
++    "timestamp": "2026-03-13T11:02:59.804Z",
+     "sop": "Title: Deployment SOP",
+     "step": 3,
+     "status": "success",
+     "details": "Committed"
+   },
+   {
+-    "timestamp": "2026-03-13T13:04:46.130Z",
++    "timestamp": "2026-03-13T11:02:59.807Z",
+     "sop": "Title: Deployment SOP",
+     "step": 3,
+     "status": "success",
+     "details": "Committed"
+   },
+   {
+-    "timestamp": "2026-03-13T13:04:46.155Z",
++    "timestamp": "2026-03-13T11:02:59.831Z",
+     "sop": "Title: Deployment SOP",
+     "step": 1,
+     "status": "success",
+     "details": "Repository is clean."
+   },
+   {
+-    "timestamp": "2026-03-13T13:04:46.157Z",
++    "timestamp": "2026-03-13T11:02:59.834Z",
+     "sop": "Title: Deployment SOP",
+     "step": 2,
+     "status": "success",
+     "details": "Updated version.txt to v1.0.1"
+   },
+   {
+-    "timestamp": "2026-03-13T13:04:46.159Z",
++    "timestamp": "2026-03-13T11:02:59.835Z",
+     "sop": "Title: Deployment SOP",
+     "step": 3,
+     "status": "success",
+diff --git a/tests/integration/agency_ecosystem_showcase.test.ts b/tests/integration/agency_ecosystem_showcase.test.ts
+deleted file mode 100644
+index b65baa0..0000000
+--- a/tests/integration/agency_ecosystem_showcase.test.ts
++++ /dev/null
+@@ -1,228 +0,0 @@
+-import { describe, it, expect, vi, beforeEach } from "vitest";
+-import { AgencyOrchestratorServer } from "../../src/mcp_servers/agency_orchestrator/index.js";
+-import { updateTaskStatus } from "../../src/mcp_servers/agency_orchestrator/tools/index.js";
+-import { EpisodicMemory } from "../../src/brain/episodic.js";
+-import fs from "fs";
+-import path from "path";
+-
+-// Global mocked memory store map
+-let mockDatabase: Record<string, any> = {};
+-
+-vi.mock("../../src/brain/episodic.js", () => {
+-  return {
+-    EpisodicMemory: class {
+-      constructor() {}
+-
+-      async init() {
+-          return true;
+-      }
+-
+-      async store(id: string, request: string, solution: string, tags: string[], namespace: string) {
+-        mockDatabase[id] = { id, request, solution, tags, namespace };
+-        return true;
+-      }
+-
+-      async recall(topic: string, limit: number, namespace: string) {
+-        // Return matches from mockDatabase that match both topic and namespace
+-        return Object.values(mockDatabase).filter(entry =>
+-            (entry.id.includes(topic) || entry.id === topic) &&
+-            (!namespace || entry.namespace === namespace)
+-        );
+-      }
+-    }
+-  };
+-});
+-
+-// Mock fs to avoid creating actual child agency folders during tests
+-vi.mock("fs/promises", () => {
+-    return {
+-        mkdir: vi.fn().mockResolvedValue(true)
+-    };
+-});
+-
+-describe("Phase 33 Showcase Validation: Agency Ecosystem Demonstration", () => {
+-    let server: AgencyOrchestratorServer;
+-    let config: any;
+-    let spec: string;
+-
+-    beforeEach(() => {
+-        mockDatabase = {}; // Reset state
+-        server = new AgencyOrchestratorServer();
+-
+-        const configPath = path.join(process.cwd(), "demos/agency_ecosystem_showcase/showcase_config.json");
+-        const specPath = path.join(process.cwd(), "demos/agency_ecosystem_showcase/complex_project_spec.json");
+-
+-        config = JSON.parse(fs.readFileSync(configPath, 'utf8'));
+-        spec = fs.readFileSync(specPath, 'utf8');
+-    });
+-
+-    async function callTool(name: string, args: any) {
+-        // Access the registered tools directly to bypass SDK transport complexities in unit testing
+-        // @ts-ignore
+-        const tools = server.server._server?.tools || server.server.registeredTools || server.server.toolMap || server.server.tools;
+-
+-        let handler;
+-        if (tools && typeof tools.get === 'function') {
+-            const t = tools.get(name);
+-            if (t) handler = t.handler || t.callback;
+-        } else if (tools && tools[name]) {
+-            handler = tools[name].handler || tools[name].callback;
+-        } else if (Array.isArray(tools)) {
+-            const t = tools.find(x => x.name === name);
+-            if (t) handler = t.handler || t.callback;
+-        } else {
+-            // Fallback
+-            const mcpTools = await import("../../src/mcp_servers/agency_orchestrator/tools/index.js");
+-            if (name === "create_multi_agency_project") return { content: [{ text: JSON.stringify({ project_id: await mcpTools.createMultiAgencyProject(args.project_spec, server['memory']) }) }] };
+-            if (name === "assign_agency_to_task") return { content: [{ text: JSON.stringify({ assignment_id: await mcpTools.assignAgencyToTask(args.project_id, args.task_id, args.agency_config, server['memory']) }) }] };
+-            if (name === "monitor_project_status") return { content: [{ text: JSON.stringify(await mcpTools.monitorProjectStatus(args.project_id, server['memory'])) }] };
+-            if (name === "resolve_inter_agency_dependency") {
+-                await mcpTools.resolveInterAgencyDependency(args.project_id, args.dependency, server['memory']);
+-                return { content: [{ text: "Dependency successfully resolved." }] };
+-            }
+-        }
+-
+-        if(!handler) throw new Error(`Tool ${name} handler not found`);
+-        return await handler(args);
+-    }
+-
+-    it("should fully orchestrate the showcase multi-agency project", async () => {
+-        // 1. Create Project
+-        const createRes = await callTool("create_multi_agency_project", { project_spec: spec });
+-        expect(createRes.isError).toBeFalsy();
+-        const projectId = JSON.parse(createRes.content[0].text).project_id;
+-        expect(projectId).toBeDefined();
+-
+-        // 2. Assign Tasks
+-        const assignments: Record<string, string> = {
+-            api_schema: "agency_backend",
+-            backend_api: "agency_backend",
+-            frontend_ui: "agency_frontend",
+-            docker_build: "agency_devops",
+-            ci_pipeline: "agency_devops"
+-        };
+-
+-        for (const [taskId, agencyId] of Object.entries(assignments)) {
+-            const agencyConfig = config.agencies.find((a: any) => a.id === agencyId);
+-            const assignRes = await callTool("assign_agency_to_task", {
+-                project_id: projectId,
+-                task_id: taskId,
+-                agency_config: {
+-                    agency_id: agencyId,
+-                    role: agencyConfig.niche,
+-                    initial_context: agencyConfig.mission,
+-                    resource_limit: agencyConfig.initial_budget_tokens
+-                }
+-            });
+-            expect(assignRes.isError).toBeFalsy();
+-        }
+-
+-        // 3. Monitor and Execute
+-        let statusRes = await callTool("monitor_project_status", { project_id: projectId });
+-        let status = JSON.parse(statusRes.content[0].text);
+-        expect(status.overall_progress).toBe(0);
+-
+-        // Assert initial dependencies (backend and frontend blocked by api_schema)
+-        let backendTask = status.tasks.find((t: any) => t.task_id === "backend_api");
+-        expect(backendTask.is_blocked).toBe(true);
+-
+-        // Complete api_schema
+-        await updateTaskStatus(projectId, "api_schema", "completed", server['memory']);
+-
+-        await callTool("resolve_inter_agency_dependency", {
+-            project_id: projectId,
+-            dependency: { task_id: "backend_api", depends_on_task_id: "api_schema", resolution_status: "resolved"}
+-        });
+-        await callTool("resolve_inter_agency_dependency", {
+-            project_id: projectId,
+-            dependency: { task_id: "frontend_ui", depends_on_task_id: "api_schema", resolution_status: "resolved"}
+-        });
+-
+-        statusRes = await callTool("monitor_project_status", { project_id: projectId });
+-        status = JSON.parse(statusRes.content[0].text);
+-        backendTask = status.tasks.find((t: any) => t.task_id === "backend_api");
+-        expect(backendTask.is_blocked).toBe(false);
+-
+-        // Complete parallel tasks
+-        await updateTaskStatus(projectId, "backend_api", "completed", server['memory']);
+-        await updateTaskStatus(projectId, "frontend_ui", "completed", server['memory']);
+-
+-        // Resolve dependencies for docker
+-        await callTool("resolve_inter_agency_dependency", {
+-            project_id: projectId,
+-            dependency: { task_id: "docker_build", depends_on_task_id: "backend_api", resolution_status: "resolved"}
+-        });
+-        await callTool("resolve_inter_agency_dependency", {
+-            project_id: projectId,
+-            dependency: { task_id: "docker_build", depends_on_task_id: "frontend_ui", resolution_status: "resolved"}
+-        });
+-
+-        // Fail docker task to test deadlock handling
+-        // We set docker to failed, and ci_pipeline to in_progress so that the deadlock detection triggers
+-        // Deadlock detection is true if a dependency is unresolved, dependent is "in_progress", and depending is "failed"
+-        await updateTaskStatus(projectId, "docker_build", "failed", server['memory']);
+-        await updateTaskStatus(projectId, "ci_pipeline", "in_progress", server['memory']);
+-
+-        statusRes = await callTool("monitor_project_status", { project_id: projectId });
+-        status = JSON.parse(statusRes.content[0].text);
+-
+-        // Assert failure and deadlock resolution trigger correctly
+-        expect(status.status).toBe("failed");
+-        expect(status.blockers.length).toBeGreaterThan(0);
+-
+-        // Recover docker task
+-        await updateTaskStatus(projectId, "docker_build", "completed", server['memory']);
+-        await callTool("resolve_inter_agency_dependency", {
+-            project_id: projectId,
+-            dependency: { task_id: "ci_pipeline", depends_on_task_id: "docker_build", resolution_status: "resolved"}
+-        });
+-
+-        // Complete final task
+-        await updateTaskStatus(projectId, "ci_pipeline", "completed", server['memory']);
+-
+-        statusRes = await callTool("monitor_project_status", { project_id: projectId });
+-        status = JSON.parse(statusRes.content[0].text);
+-
+-        // Assert full completion
+-        expect(status.status).toBe("completed");
+-        expect(status.overall_progress).toBe(1);
+-    });
+-
+-    it("should run the validation script successfully", async () => {
+-        // Pre-seed mock database so pattern recognition can find the expected patterns
+-        // Note: EpisodicMemory.recall checks if `id` or `query` matches the topic strings. Our mock searches `id.includes(topic) || id === topic`.
+-        // The topic is 'frontend-backend integration pattern'.
+-        mockDatabase['pattern_mock_1_frontend-backend integration pattern'] = {
+-            id: 'pattern_mock_1_frontend-backend integration pattern',
+-            request: 'frontend-backend integration pattern',
+-            solution: 'Use shared typescript interfaces for API schemas to avoid mismatch.',
+-            tags: ["pattern", "cross_agency", "api_schema"],
+-            namespace: 'agency_frontend'
+-        };
+-        mockDatabase['pattern_mock_2_frontend-backend integration pattern'] = {
+-            id: 'pattern_mock_2_frontend-backend integration pattern',
+-            request: 'frontend-backend integration pattern',
+-            solution: 'Generate OpenAPI spec from backend controllers, share with frontend.',
+-            tags: ["pattern", "cross_agency", "api_schema"],
+-            namespace: 'agency_backend'
+-        };
+-
+-        // Mock the LLM so EpisodicMemory.store doesn't try to call OpenAI during validation script execution
+-        const { runValidation } = await import("../../scripts/validate_agency_ecosystem.js");
+-
+-        // Mock console to keep test output clean
+-        const consoleSpy = vi.spyOn(console, "log").mockImplementation(() => {});
+-
+-        const success = await runValidation();
+-        expect(success).toBe(true);
+-
+-        const reportPath = path.join(process.cwd(), "demos/agency_ecosystem_showcase/validation_project/validation_report.md");
+-        expect(fs.existsSync(reportPath)).toBe(true);
+-
+-        const report = fs.readFileSync(reportPath, "utf-8");
+-        expect(report).toContain("**Validation Result:** PASS");
+-        expect(report).toContain("frontend-backend integration pattern");
+-
+-        consoleSpy.mockRestore();
+-    });
+-});
+\ No newline at end of file
+diff --git a/tests/integration/cross_agency_pattern_analysis.test.ts b/tests/integration/cross_agency_pattern_analysis.test.ts
+new file mode 100644
+index 0000000..4319a95
+--- /dev/null
++++ b/tests/integration/cross_agency_pattern_analysis.test.ts
+@@ -0,0 +1,152 @@
++import { describe, it, expect, vi, beforeEach } from "vitest";
++import { EpisodicMemory, PastEpisode } from "../../src/brain/episodic.js";
++import { SemanticGraph } from "../../src/brain/semantic_graph.js";
++import { analyzeCrossAgencyPatterns } from "../../src/mcp_servers/brain/tools/pattern_analysis.js";
++import { createLLM } from "../../src/llm.js";
++
++// Mock the LLM to return a consistent JSON response
++vi.mock("../../src/llm.js", () => {
++  return {
++    createLLM: () => ({
++      embed: vi.fn().mockResolvedValue(new Array(1536).fill(0.1)),
++      generate: vi.fn().mockResolvedValue({
++        message: JSON.stringify({
++          summary: "Ecosystem is healthy with standardized practices.",
++          common_themes: ["Standardized communication", "Efficient task delegation"],
++          top_performers: ["agency-A for speed"],
++          emerging_risks: ["Resource contention in agency-B"],
++          recommended_actions: ["Standardize agency-A approach"]
++        })
++      })
++    })
++  };
++});
++
++// Mock SemanticGraph
++vi.mock("../../src/brain/semantic_graph.js", () => {
++  return {
++    SemanticGraph: vi.fn().mockImplementation(() => {
++      return {
++        query: vi.fn().mockResolvedValue({
++          nodes: [{ id: "agency-A", type: "agency" }, { id: "agency-B", type: "agency" }],
++          edges: [{ from: "agency-A", to: "agency-B", relation: "collaborates_with" }]
++        })
++      };
++    })
++  };
++});
++
++// Mock EpisodicMemory
++vi.mock("../../src/brain/episodic.js", () => {
++  // We use an in-memory array to simulate LanceDB to avoid lock issues
++  const mockMemories: PastEpisode[] = [];
++
++  return {
++    EpisodicMemory: vi.fn().mockImplementation(() => {
++      return {
++        store: vi.fn().mockImplementation(async (
++          taskId, request, solution, artifacts, company, simAttempts, resolved_via_dreaming, dreaming_outcomes, id, tokens, duration, type, related_episode_id, forecast_horizon, error_margin, source_agency
++        ) => {
++          mockMemories.push({
++            id: id || `mock-id-${mockMemories.length}`,
++            taskId,
++            timestamp: Date.now(),
++            userPrompt: request,
++            agentResponse: solution,
++            artifacts: artifacts || [],
++            vector: [],
++            source_agency: source_agency || (company !== "default" ? company : ""),
++            type: type || "task"
++          });
++        }),
++        getRecentEpisodes: vi.fn().mockImplementation(async (company) => {
++          if (company === "default") {
++            // Root memories
++            return mockMemories.filter(m => !m.source_agency || m.source_agency !== company);
++          } else {
++            // Namespaced memories
++            return mockMemories.filter(m => m.source_agency === company);
++          }
++        }),
++        recall: vi.fn().mockImplementation(async (query, limit, company) => {
++           if (company === "default") {
++             return mockMemories; // Simplified for test
++           } else {
++             return mockMemories.filter(m => m.source_agency === company);
++           }
++        }),
++        __getMockMemories: () => mockMemories,
++        __reset: () => { mockMemories.length = 0; }
++      };
++    })
++  };
++});
++
++describe("Cross-Agency Pattern Analysis Integration", () => {
++  let episodic: any;
++  let semantic: any;
++  let llm: any;
++
++  beforeEach(() => {
++    vi.clearAllMocks();
++    episodic = new EpisodicMemory();
++    episodic.__reset();
++    semantic = new SemanticGraph();
++    llm = createLLM();
++  });
++
++  it("should analyze cross-agency patterns successfully using correct metadata", async () => {
++    // 1. Simulate logging distinct episodes from different child agencies
++
++    // Log via root default namespace but with source_agency
++    await episodic.store(
++      "task-1",
++      "Process invoices",
++      "Processed 100 invoices successfully in 5s.",
++      [],
++      "default", // root memory
++      undefined, undefined, undefined, undefined, undefined, undefined, "task", undefined, undefined, undefined,
++      "agency-A" // source agency!
++    );
++
++    // Log via namespaced memory
++    await episodic.store(
++      "task-2",
++      "Analyze logs",
++      "Failed to analyze due to memory limits.",
++      [],
++      "agency-B", // company/namespace
++      undefined, undefined, undefined, undefined, undefined, undefined, "task", undefined, undefined, undefined,
++      "agency-B"
++    );
++
++    // 2. Call the analyze tool logic
++    const agencyIds = ["agency-A", "agency-B"];
++    const result = await analyzeCrossAgencyPatterns(agencyIds, episodic, semantic, llm);
++
++    // 3. Assertions
++    expect(episodic.getRecentEpisodes).toHaveBeenCalledWith("agency-A", 20);
++    expect(episodic.getRecentEpisodes).toHaveBeenCalledWith("agency-B", 20);
++    expect(episodic.getRecentEpisodes).toHaveBeenCalledWith("default", 50);
++
++    expect(semantic.query).toHaveBeenCalledWith("agency", "default");
++
++    expect(llm.generate).toHaveBeenCalled();
++    const llmPromptArg = llm.generate.mock.calls[0][0];
++
++    // Verify prompt context contains our simulated data
++    expect(llmPromptArg).toContain("Agency: agency-A");
++    expect(llmPromptArg).toContain("Process invoices");
++    expect(llmPromptArg).toContain("Agency: agency-B");
++    expect(llmPromptArg).toContain("Analyze logs");
++    expect(llmPromptArg).toContain("collaborates_with"); // from semantic mock
++
++    // Verify structured output parsing
++    expect(result).toHaveProperty("summary");
++    expect(result).toHaveProperty("common_themes");
++    expect(result).toHaveProperty("top_performers");
++    expect(result).toHaveProperty("emerging_risks");
++    expect(result).toHaveProperty("recommended_actions");
++    expect(result.summary).toBe("Ecosystem is healthy with standardized practices.");
++  });
++});

@@ -1,0 +1,440 @@
+diff --git a/.agent/context.json b/.agent/context.json
+index 4f93520..af66bd4 100644
+--- a/.agent/context.json
++++ b/.agent/context.json
+@@ -4,5 +4,5 @@
+   "recent_changes": [],
+   "active_tasks": [],
+   "company_context": "## Company Context: client-a\n\n### Brand Voice\nNo specific brand voice defined.",
+-  "last_updated": "2026-03-13T13:09:24.715Z"
++  "last_updated": "2026-03-13T14:03:10.556Z"
+ }
+\ No newline at end of file
+diff --git a/demos/agency_ecosystem_showcase/validation_project/validation_report.md b/demos/agency_ecosystem_showcase/validation_project/validation_report.md
+index c7dd815..7f11d8c 100644
+--- a/demos/agency_ecosystem_showcase/validation_project/validation_report.md
++++ b/demos/agency_ecosystem_showcase/validation_project/validation_report.md
+@@ -1,8 +1,8 @@
+ # Agency Ecosystem Validation Report
+-Date: 2026-03-13T13:05:28.912Z
++Date: 2026-03-13T14:49:43.813Z
+
+ ## Project Status
+-- **Project ID**: proj_f49e1adb-869c-464e-a288-da2cc968931e
++- **Project ID**: proj_39271254-5d55-46fb-8186-a9bb3af11c85
+ - **Final Status**: completed
+ - **Progress**: 100%
+ - **Tasks Complete**: 4 / 4
+@@ -17,7 +17,7 @@ Date: 2026-03-13T13:05:28.912Z
+ - Simulated failure in `integration` due to inter-agency schema mismatch. Successfully recovered.
+
+ ## Cross-Agency Pattern Recognition Insights
+-**Summary:** Identified 2 cross-agency patterns regarding 'frontend-backend integration pattern'. Recommendation: Standardize the most successful approach.
++**Summary:** Identified 2 cross-agency experiences regarding 'frontend-backend integration pattern'. Meta-recommendation generated.
+
+ **Details:**
+ - **agency_frontend**: Use shared typescript interfaces for API schemas to avoid mismatch.
+diff --git a/docs/AGENCY_SPAWNING_PROTOCOL.md b/docs/AGENCY_SPAWNING_PROTOCOL.md
+index d659e60..c48386f 100644
+--- a/docs/AGENCY_SPAWNING_PROTOCOL.md
++++ b/docs/AGENCY_SPAWNING_PROTOCOL.md
+@@ -22,6 +22,7 @@ During validation testing (`tests/integration/phase32_agency_spawning_validation
+
+ 6. **Task Delegation Failure & Recovery**: During federated projects involving spawned agencies, network latency or timeouts can occur. The parent orchestrator correctly identifies the failure and can gracefully retry task delegation (`delegateTask`), successfully recovering without corrupting the overall federated project state.
+ 7. **Federated Virtual Ledger**: Spawned agencies can reliably perform work and have their contributions accurately tracked in the multi-agency `distributed_ledger`. Stress tests validate that parent agencies properly record net-negative values as service consumers, while child agencies accumulate correct net-positive values.
++8. **Cross-Agency Pattern Recognition**: The root parent agency can periodically scan the collective experiences of its spawned child agencies using the Brain MCP's `cross_agency_pattern_recognition` tool. This meta-orchestration capability analyzes patterns across all child agency namespaces, uses the LLM to synthesize common successes or recurring failures, and stores the resulting `cross_agency_pattern` back into memory. This continuous collective learning shapes future strategic pivots and improves the success rates of new child agencies.
+
+ ## Testing
+ To test the Spawning Protocol, run the specific integration tests:
+diff --git a/docs/ROADMAP.md b/docs/ROADMAP.md
+index e74c73b..918eee9 100644
+--- a/docs/ROADMAP.md
++++ b/docs/ROADMAP.md
+@@ -47,7 +47,7 @@ The roadmap is structured around the four anatomical layers of the Digital Biosp
+ *Current Focus: Build a production-ready demonstration where the root Simple-CLI agency orchestrates multiple specialized child agencies to autonomously execute a complex project.*
+ - [x] Create `demos/agency_ecosystem_showcase/` with project specs and orchestration scripts.
+ - [x] Implement `agency_orchestrator` MCP server for multi-agency project management.
+-- [x] Enhance Brain MCP tools for `cross_agency_pattern_recognition`.
++- [x] Enhanced Brain MCP with cross-agency pattern recognition for meta-orchestration insights.
+ - [x] Write integration tests in `tests/integration/agency_ecosystem_showcase.test.ts` and validate full meta-orchestration capabilities.
+ - [x] Create an end-to-end validation script `scripts/validate_agency_ecosystem.ts` that orchestrates a mock project and utilizes pattern recognition, covered by robust integration tests.
+
+diff --git a/scripts/validate_agency_ecosystem.ts b/scripts/validate_agency_ecosystem.ts
+index c6d1746..a07f4e9 100644
+--- a/scripts/validate_agency_ecosystem.ts
++++ b/scripts/validate_agency_ecosystem.ts
+@@ -9,6 +9,7 @@ import {
+     resolveInterAgencyDependency
+ } from "../src/mcp_servers/agency_orchestrator/tools/index.js";
+ import { crossAgencyPatternRecognition } from "../src/mcp_servers/brain/tools/pattern_analysis.js";
++import { createLLM } from "../src/llm.js";
+
+ export async function runValidation() {
+     console.log("Starting Agency Ecosystem Validation Script...\n");
+@@ -112,7 +113,8 @@ export async function runValidation() {
+         );
+     }
+
+-    const patterns = await crossAgencyPatternRecognition("frontend-backend integration pattern", ["agency_frontend", "agency_backend"], memory);
++    const llm = createLLM();
++    const patterns = await crossAgencyPatternRecognition("frontend-backend integration pattern", ["agency_frontend", "agency_backend"], memory, llm);
+     console.log("    -> Patterns Found:", patterns.summary);
+
+     // 6. Generate Report
+diff --git a/src/mcp_servers/brain/index.ts b/src/mcp_servers/brain/index.ts
+index 27de021..f22060e 100644
+--- a/src/mcp_servers/brain/index.ts
++++ b/src/mcp_servers/brain/index.ts
+@@ -92,7 +92,8 @@ export class BrainServer {
+       },
+       async ({ topic, agency_namespaces }) => {
+         try {
+-          const result = await crossAgencyPatternRecognition(topic, agency_namespaces, this.episodic);
++          const llm = createLLM();
++          const result = await crossAgencyPatternRecognition(topic, agency_namespaces, this.episodic, llm);
+           return { content: [{ type: "text", text: JSON.stringify(result, null, 2) }] };
+         } catch (e: any) {
+           return {
+diff --git a/src/mcp_servers/brain/tools/pattern_analysis.ts b/src/mcp_servers/brain/tools/pattern_analysis.ts
+index 03fdc3a..2c2aeee 100644
+--- a/src/mcp_servers/brain/tools/pattern_analysis.ts
++++ b/src/mcp_servers/brain/tools/pattern_analysis.ts
+@@ -93,7 +93,8 @@ export const analyzePatterns = async (
+ export const crossAgencyPatternRecognition = async (
+   topic: string,
+   agencyNamespaces: string[],
+-  memory: EpisodicMemory
++  memory: EpisodicMemory,
++  llm: LLM
+ ): Promise<any> => {
+   try {
+     let aggregatedPatterns: any[] = [];
+@@ -109,11 +110,66 @@ export const crossAgencyPatternRecognition = async (
+       aggregatedPatterns.push(...insights);
+     }
+
+-    const summary = aggregatedPatterns.length > 0
+-      ? `Identified ${aggregatedPatterns.length} cross-agency patterns regarding '${topic}'. Recommendation: Standardize the most successful approach.`
+-      : `No significant cross-agency patterns found for '${topic}'.`;
++    let summary = `No significant cross-agency patterns found for '${topic}'.`;
++    let synthesisDetails = {};
++
++    if (aggregatedPatterns.length > 0) {
++      const contextStr = aggregatedPatterns.map(p => `- Agency: ${p.agency}, Task: ${p.taskId}, Insight: ${p.insight}`).join('\n');
++      const systemPrompt = "You are a Meta-Orchestrator Brain analyzing patterns across multiple autonomous agencies.";
++      const prompt = `
++      TOPIC: ${topic}
++
++      AGGREGATED EXPERIENCES:
++      ${contextStr}
++
++      TASK:
++      Analyze these cross-agency experiences. Identify common successes, recurring failures, or bottlenecks.
++      Synthesize a meta-level recommendation for the root orchestrator.
++
++      OUTPUT FORMAT (JSON):
++      {
++        "common_successes": ["list", "of", "successes"],
++        "recurring_failures": ["list", "of", "failures"],
++        "meta_recommendation": "Overall strategic recommendation"
++      }
++      `;
++
++      const response = await llm.generate(systemPrompt, [{ role: "user", content: prompt }]);
++      let jsonStr = response.message || response.thought || "";
++      jsonStr = jsonStr.replace(/```json/g, "").replace(/```/g, "").trim();
++      const firstBrace = jsonStr.indexOf("{");
++      const lastBrace = jsonStr.lastIndexOf("}");
++      if (firstBrace !== -1 && lastBrace !== -1) {
++          jsonStr = jsonStr.substring(firstBrace, lastBrace + 1);
++      }
++
++      try {
++        synthesisDetails = JSON.parse(jsonStr);
++        summary = `Identified ${aggregatedPatterns.length} cross-agency experiences regarding '${topic}'. Meta-recommendation generated.`;
++      } catch (parseErr) {
++        console.error("Failed to parse cross-agency LLM synthesis", parseErr);
++        summary = `Identified ${aggregatedPatterns.length} cross-agency experiences regarding '${topic}', but failed to synthesize cleanly.`;
++      }
++
++      // Store the synthesis back into episodic memory as a cross-agency pattern
++      const metaTaskId = `meta_analysis_${Date.now()}`;
++      await memory.store(
++        metaTaskId,
++        `Cross-agency pattern analysis for topic: ${topic}`,
++        JSON.stringify(synthesisDetails),
++        [], // no specific artifacts
++        undefined, // no specific company namespace, it's a root level memory
++        undefined,
++        undefined,
++        undefined,
++        undefined,
++        undefined,
++        undefined,
++        "cross_agency_pattern" // explicitly set the requested type
++      );
++    }
+
+-    return { summary, details: aggregatedPatterns };
++    return { summary, synthesis: synthesisDetails, details: aggregatedPatterns };
+   } catch (e: any) {
+     throw new Error(`Failed to perform cross-agency pattern recognition: ${e.message}`);
+   }
+diff --git a/tests/fixtures/four_pillars/.agent/brain/sop_logs.json b/tests/fixtures/four_pillars/.agent/brain/sop_logs.json
+index 704b858..f132983 100644
+--- a/tests/fixtures/four_pillars/.agent/brain/sop_logs.json
++++ b/tests/fixtures/four_pillars/.agent/brain/sop_logs.json
+@@ -1,55 +1,55 @@
+ [
+   {
+-    "timestamp": "2026-03-13T13:04:46.120Z",
++    "timestamp": "2026-03-13T13:58:42.648Z",
+     "sop": "Title: Deployment SOP",
+     "step": 1,
+     "status": "success",
+     "details": "Clean"
+   },
+   {
+-    "timestamp": "2026-03-13T13:04:46.124Z",
++    "timestamp": "2026-03-13T13:58:42.652Z",
+     "sop": "Title: Deployment SOP",
+     "step": 1,
+     "status": "success",
+     "details": "Clean"
+   },
+   {
+-    "timestamp": "2026-03-13T13:04:46.125Z",
++    "timestamp": "2026-03-13T13:58:42.654Z",
+     "sop": "Title: Deployment SOP",
+     "step": 2,
+     "status": "success",
+     "details": "Written"
+   },
+   {
+-    "timestamp": "2026-03-13T13:04:46.127Z",
++    "timestamp": "2026-03-13T13:58:42.656Z",
+     "sop": "Title: Deployment SOP",
+     "step": 3,
+     "status": "success",
+     "details": "Committed"
+   },
+   {
+-    "timestamp": "2026-03-13T13:04:46.130Z",
++    "timestamp": "2026-03-13T13:58:42.660Z",
+     "sop": "Title: Deployment SOP",
+     "step": 3,
+     "status": "success",
+     "details": "Committed"
+   },
+   {
+-    "timestamp": "2026-03-13T13:04:46.155Z",
++    "timestamp": "2026-03-13T13:58:42.688Z",
+     "sop": "Title: Deployment SOP",
+     "step": 1,
+     "status": "success",
+     "details": "Repository is clean."
+   },
+   {
+-    "timestamp": "2026-03-13T13:04:46.157Z",
++    "timestamp": "2026-03-13T13:58:42.691Z",
+     "sop": "Title: Deployment SOP",
+     "step": 2,
+     "status": "success",
+     "details": "Updated version.txt to v1.0.1"
+   },
+   {
+-    "timestamp": "2026-03-13T13:04:46.159Z",
++    "timestamp": "2026-03-13T13:58:42.692Z",
+     "sop": "Title: Deployment SOP",
+     "step": 3,
+     "status": "success",
+diff --git a/tests/integration/agency_ecosystem_showcase.test.ts b/tests/integration/agency_ecosystem_showcase.test.ts
+index b65baa0..e61d94c 100644
+--- a/tests/integration/agency_ecosystem_showcase.test.ts
++++ b/tests/integration/agency_ecosystem_showcase.test.ts
+@@ -40,6 +40,28 @@ vi.mock("fs/promises", () => {
+     };
+ });
+
++// Mock LLM so EpisodicMemory.store and pattern_analysis don't try to call OpenAI during validation script execution
++vi.mock("../../src/llm.js", () => {
++    class MockLLM {
++        async generate(systemPrompt: string, history: any[]) {
++            return {
++                message: JSON.stringify({
++                    common_successes: ['Successfully mocked LLM response for showcase'],
++                    recurring_failures: ['None'],
++                    meta_recommendation: 'Use shared typescript interfaces for API schemas to avoid mismatch.'
++                })
++            };
++        }
++        async embed(text: string) {
++            return new Array(1536).fill(0.1);
++        }
++    }
++    return {
++        LLM: MockLLM,
++        createLLM: () => new MockLLM()
++    };
++});
++
+ describe("Phase 33 Showcase Validation: Agency Ecosystem Demonstration", () => {
+     let server: AgencyOrchestratorServer;
+     let config: any;
+diff --git a/tests/integration/cross_agency_pattern_analysis.test.ts b/tests/integration/cross_agency_pattern_analysis.test.ts
+new file mode 100644
+index 0000000..122b4fd
+--- /dev/null
++++ b/tests/integration/cross_agency_pattern_analysis.test.ts
+@@ -0,0 +1,151 @@
++import { describe, it, expect, vi, beforeAll, afterAll } from 'vitest';
++import { EpisodicMemory } from '../../src/brain/episodic.js';
++import { BrainServer } from '../../src/mcp_servers/brain/index.js';
++import fs from 'fs';
++import path from 'path';
++
++// Mock LLM so we don't hit the real API in tests
++vi.mock('../../src/llm.js', () => {
++  class MockLLM {
++    async generate(systemPrompt: string, history: any[]) {
++      return {
++        message: JSON.stringify({
++          common_successes: ['Successfully mocked LLM response'],
++          recurring_failures: ['None'],
++          meta_recommendation: 'Use mocks during tests'
++        })
++      };
++    }
++    async embed(text: string) {
++        return new Array(1536).fill(0.1);
++    }
++  }
++  return {
++    LLM: MockLLM,
++    createLLM: () => new MockLLM()
++  };
++});
++
++describe('cross_agency_pattern_analysis integration', () => {
++  let brainServer: any;
++  let episodic: EpisodicMemory;
++  const testDir = path.join(process.cwd(), '.agent', 'test_brain_pattern_analysis');
++
++  beforeAll(async () => {
++    // Create a fresh directory for EpisodicMemory
++    if (!fs.existsSync(testDir)) {
++      fs.mkdirSync(testDir, { recursive: true });
++    }
++
++    // Set JULES_AGENT_DIR so BrainServer uses the test directory
++    process.env.JULES_AGENT_DIR = path.join(testDir, 'agent');
++
++    // Create a standalone instance of EpisodicMemory to seed data directly
++    episodic = new EpisodicMemory(testDir);
++    await episodic.init();
++
++    // Start Brain Server
++    brainServer = new BrainServer();
++  });
++
++  afterAll(async () => {
++    // Cleanup
++    if (fs.existsSync(testDir)) {
++      fs.rmSync(testDir, { recursive: true, force: true });
++    }
++    vi.restoreAllMocks();
++  });
++
++  const callTool = async (name: string, args: any) => {
++    const toolMap = brainServer.server._registeredTools || brainServer.server.tools || brainServer.server._tools;
++    let toolDef;
++    if (toolMap instanceof Map) {
++       toolDef = toolMap.get(name);
++    } else {
++       toolDef = toolMap[name] || Object.values(toolMap).find((t: any) => t.name === name);
++    }
++
++    if (!toolDef) throw new Error(`Tool ${name} not found`);
++
++    if (toolDef.handler) {
++       return toolDef.handler(args, {});
++    }
++    throw new Error(`Tool ${name} has no handler`);
++  };
++
++  it('verifies the cross_agency_pattern_recognition tool is accessible via the Brain MCP server', async () => {
++    const toolMap = brainServer.server._registeredTools || brainServer.server.tools || brainServer.server._tools;
++    let toolDef;
++    if (toolMap instanceof Map) {
++       toolDef = toolMap.get('cross_agency_pattern_recognition');
++    } else {
++       toolDef = toolMap['cross_agency_pattern_recognition'] || Object.values(toolMap).find((t: any) => t.name === 'cross_agency_pattern_recognition');
++    }
++    expect(toolDef).toBeDefined();
++    expect(toolDef.name || 'cross_agency_pattern_recognition').toBe('cross_agency_pattern_recognition');
++  });
++
++  it('aggregates memories across agency namespaces, synthesizes with LLM, and stores meta-analysis', async () => {
++    const topic = "integration_test_pattern";
++
++    episodic.recall = vi.fn().mockImplementation(async (query: string, limit: number, namespace: string) => {
++      if (query !== topic) return [];
++
++      if (namespace === 'test_agency_1') {
++        return [{
++          taskId: 'task_1',
++          query: topic,
++          solution: 'Outcome: success.',
++          agentResponse: 'Success',
++          timestamp: Date.now()
++        }];
++      } else if (namespace === 'test_agency_2') {
++        return [{
++          taskId: 'task_2',
++          query: topic,
++          solution: 'Outcome: failure.',
++          agentResponse: 'Failure',
++          timestamp: Date.now()
++        }];
++      }
++      return [];
++    });
++
++    const storeSpy = vi.spyOn(episodic, 'store');
++
++    brainServer.episodic = episodic;
++
++    // 2. Invoke the tool via the MCP server interface directly
++    const response = await callTool("cross_agency_pattern_recognition", {
++      topic: topic,
++      agency_namespaces: ["test_agency_1", "test_agency_2"]
++    });
++
++    // 3. Validate Tool Output
++    expect(response).toBeDefined();
++    if (response.isError) {
++        console.error("Tool returned error:", response.content);
++    }
++    expect(response.isError).toBeUndefined(); // Some SDK versions don't return isError: false, they just omit it
++
++    const content = JSON.parse(response.content[0].text);
++
++    expect(content.summary).toContain(`Identified 2 cross-agency experiences regarding '${topic}'. Meta-recommendation generated.`);
++    expect(content.synthesis.common_successes).toContain('Successfully mocked LLM response');
++    expect(content.synthesis.meta_recommendation).toBe('Use mocks during tests');
++    expect(content.details.length).toBe(2);
++
++    // 4. Validate that the pattern was stored back into EpisodicMemory
++    expect(storeSpy).toHaveBeenCalledTimes(1);
++    const storeArgs = storeSpy.mock.calls[0];
++
++    expect(storeArgs[0]).toMatch(/^meta_analysis_\d+$/);
++    expect(storeArgs[1]).toBe(`Cross-agency pattern analysis for topic: ${topic}`);
++    expect(storeArgs[11]).toBe("cross_agency_pattern");
++
++    const storedSynthesis = JSON.parse(storeArgs[2] as string);
++    expect(storedSynthesis.common_successes).toContain('Successfully mocked LLM response');
++
++    storeSpy.mockRestore();
++  });
++});
