@@ -365,4 +365,18 @@
 - [x] **Meta-Orchestrator**: Develop high-level coordination engine for cross-agency complex projects.
 - [x] **Collective Learning**: Build patterns and SOP synchronization between connected agencies via Brain MCP.
 - [x] **Validation**: E2E simulation of multiple agencies collaborating on a shared project and revenue split via `tests/integration/phase31_multi_agency_federation_validation.test.ts`.
-\n## Phase 34: Ecosystem Intelligence & Meta-Learning\n*Status: Completed*\n*Current Focus: Enable the root agency to perform meta-learning across the entire ecosystem of child agencies, optimizing global policies, resource allocation, and strategic initiatives based on collective performance data.*\n- [x] Implement `analyze_ecosystem_patterns` Tool in Brain MCP.\n- [x] Implement `propose_ecosystem_policy_update` Tool in Brain MCP.\n- [x] Integrate with the Scheduler & Health Monitor.\n- [x] Write robust integration tests for Phase 34 functionality.\n
+## Phase 34: Ecosystem Intelligence & Meta-Learning
+*Status: Completed*
+*Current Focus: Enable the root agency to perform meta-learning across the entire ecosystem of child agencies, optimizing global policies, resource allocation, and strategic initiatives based on collective performance data.*
+- [x] Implement `analyze_ecosystem_patterns` Tool in Brain MCP.
+- [x] Implement `propose_ecosystem_policy_update` Tool in Brain MCP.
+- [x] Integrate with the Scheduler & Health Monitor.
+- [x] Write robust integration tests for Phase 34 functionality (Validated via `tests/integration/phase34_ecosystem_intelligence.test.ts`).
+
+## Phase 35: Applied Meta-Learning & Ecosystem Optimization
+*Status: Planned*
+*Current Focus: Translate ecosystem-wide meta-learning into actionable, automated optimizations across all spawned agencies.*
+- [ ] Implement `apply_ecosystem_insights` tool to automatically adjust swarm parameters based on meta-learning.
+- [ ] Enhance the Scheduler to use ecosystem patterns for predictive task assignment.
+- [ ] Integrate meta-learning findings into Company Contexts for personalized client optimization.
+- [ ] Validate via a multi-agency simulation demonstrating improved efficiency.
