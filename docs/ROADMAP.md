@@ -35,10 +35,11 @@ The roadmap is structured around the four anatomical layers of the Digital Biosp
 - [x] Enable "Homeostatic Repair" (Self-Healing) workflows.
 
 ## Phase 32: Agency Spawning
-*Status: In Progress*
+*Status: Completed*
 *Current Focus: Enable the main agency to spawn new, independent child agencies with initial context, resources, and autonomous operation.*
-- [ ] Implement Agency Spawning Protocol (PR #664)
-- [ ] Validate Agency Spawning Protocol
+- [x] Implement Agency Spawning Protocol (PR #664)
+- [x] Validate Agency Spawning Protocol
+    - ✅ Validated via `tests/integration/phase32_agency_spawning_validation.test.ts` on March 12, 2026. Ensured child agency can successfully be spawned, inherit initial context and operate autonomously while maintaining resource isolation. Configurations and constraints documented in `docs/AGENCY_SPAWNING_PROTOCOL.md`.
 
 ## Phase 25: Autonomous Corporate Consciousness
 *Status: Completed*
