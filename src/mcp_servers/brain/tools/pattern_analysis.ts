@@ -1,4 +1,5 @@
-import { EpisodicMemory } from "../../../brain/episodic.js";
+import { EpisodicMemory, PastEpisode } from "../../../brain/episodic.js";
+import { SemanticGraph } from "../../../brain/semantic_graph.js";
 import { LLM } from "../../../llm.js";
 
 /**
@@ -116,5 +117,116 @@ export const crossAgencyPatternRecognition = async (
     return { summary, details: aggregatedPatterns };
   } catch (e: any) {
     throw new Error(`Failed to perform cross-agency pattern recognition: ${e.message}`);
+  }
+};
+
+export const analyzeCrossAgencyPatterns = async (
+  agencyIds: string[],
+  episodic: EpisodicMemory,
+  semantic: SemanticGraph,
+  llm: LLM,
+  query?: string
+): Promise<any> => {
+  try {
+    const memoryContexts: string[] = [];
+
+    // Fetch episodic memories for the specified agencies
+    for (const agencyId of agencyIds) {
+      // In this system, agencies are namespaces (company field) or explicit source_agency
+      // We will search across recent episodes in the root/default memory where source_agency matches,
+      // AND we will search within the agency's specific namespace if available.
+      let agencyMemories: PastEpisode[] = [];
+
+      try {
+        if (query) {
+           agencyMemories = await episodic.recall(query, 10, agencyId);
+        } else {
+           agencyMemories = await episodic.getRecentEpisodes(agencyId, 20);
+        }
+      } catch (e) {
+        // Fallback or ignore if namespace does not exist
+      }
+
+      try {
+        let rootMemories: PastEpisode[] = [];
+        if (query) {
+           rootMemories = await episodic.recall(query, 20, "default");
+        } else {
+           rootMemories = await episodic.getRecentEpisodes("default", 50);
+        }
+        const filteredRoot = rootMemories.filter(m => m.source_agency === agencyId);
+        agencyMemories.push(...filteredRoot);
+      } catch (e) {
+        // Ignore errors from root query
+      }
+
+      if (agencyMemories.length > 0) {
+        const context = agencyMemories.map(m =>
+          `[Task: ${m.taskId || 'unknown'}] Prompt: ${m.userPrompt.substring(0, 100)}... -> Response: ${m.agentResponse.substring(0, 100)}...`
+        ).join("\n");
+        memoryContexts.push(`=== Agency: ${agencyId} Episodic Memories ===\n${context}`);
+      }
+    }
+
+    // Fetch semantic graph data
+    let graphContext = "No relevant semantic relationships found.";
+    try {
+        const graphData = await semantic.query(query || "agency", "default");
+        if (graphData && (graphData.nodes.length > 0 || graphData.edges.length > 0)) {
+            const nodeStr = graphData.nodes.map((n: any) => `Node [${n.id}] (${n.type})`).join(", ");
+            const edgeStr = graphData.edges.map((e: any) => `${e.from} -[${e.relation}]-> ${e.to}`).join(", ");
+            graphContext = `Nodes: ${nodeStr}\nEdges: ${edgeStr}`;
+        }
+    } catch (e) {
+        console.warn("Could not fetch semantic graph context for analysis:", e);
+    }
+
+    const fullContext = memoryContexts.length > 0 ? memoryContexts.join("\n\n") : "No episodic memories found for the specified agencies.";
+
+    const prompt = `
+    You are the central Brain's Cross-Agency Pattern Recognition Engine.
+    Your task is to analyze the recent memories and activities of spawned child agencies to identify common themes, successful strategies, operational efficiency patterns, and emerging risks.
+
+    EPISODIC MEMORIES BY AGENCY:
+    ${fullContext}
+
+    SEMANTIC GRAPH CONTEXT:
+    ${graphContext}
+
+    Analyze the above data and synthesize a comprehensive report.
+    Return a structured JSON object with EXACTLY these keys:
+    {
+      "summary": "A high-level summary of all cross-agency activity and overall health.",
+      "common_themes": ["Theme 1", "Theme 2"],
+      "top_performers": ["Insights on which agency/strategy performed best and why"],
+      "emerging_risks": ["Potential risks, bottlenecks, or conflicts observed"],
+      "recommended_actions": ["Actionable recommendations for the root agency to optimize the ecosystem"]
+    }
+    `;
+
+    const response = await llm.generate(prompt, []);
+
+    try {
+      let jsonStr = response.message || response.thought || "";
+      jsonStr = jsonStr.replace(/```json/g, "").replace(/```/g, "").trim();
+      const firstBrace = jsonStr.indexOf("{");
+      const lastBrace = jsonStr.lastIndexOf("}");
+      if (firstBrace !== -1 && lastBrace !== -1) {
+          jsonStr = jsonStr.substring(firstBrace, lastBrace + 1);
+      }
+      return JSON.parse(jsonStr);
+    } catch (e) {
+      console.error("Failed to parse cross-agency pattern analysis JSON", e);
+      return {
+        summary: "Failed to parse analysis.",
+        common_themes: [],
+        top_performers: [],
+        emerging_risks: [],
+        recommended_actions: []
+      };
+    }
+
+  } catch (e: any) {
+    throw new Error(`Failed to execute analyzeCrossAgencyPatterns: ${e.message}`);
   }
 };

@@ -19,7 +19,7 @@ import { conveneBoardMeeting } from "./tools/convene_board_meeting.js";
 import { getGrowthTargets } from "./tools/strategic_growth.js";
 import { monitorMarketSignals, evaluateEconomicRisk, triggerContingencyPlan } from "./tools/market_shock.js";
 import { executeBatchRoutines } from "./tools/efficiency.js";
-import { crossAgencyPatternRecognition } from "./tools/pattern_analysis.js";
+import { crossAgencyPatternRecognition, analyzeCrossAgencyPatterns } from "./tools/pattern_analysis.js";
 import { globalSymbolicEngine } from "../../symbolic/compiler.js";
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { StdioClientTransport } from "@modelcontextprotocol/sdk/client/stdio.js";
@@ -84,6 +84,27 @@ export class BrainServer {
 
     // Episodic Memory Tools
     this.server.tool(
+      "analyze_cross_agency_patterns",
+      "Analyzes episodic and semantic memories across child agencies to identify common themes, successful strategies, and potential risks.",
+      {
+        agency_ids: z.array(z.string()).describe("List of child agency IDs to analyze."),
+        query: z.string().optional().describe("Optional query to filter memories.")
+      },
+      async ({ agency_ids, query }) => {
+        try {
+          const llm = createLLM();
+          const result = await analyzeCrossAgencyPatterns(agency_ids, this.episodic, this.semantic, llm, query);
+          return { content: [{ type: "text", text: JSON.stringify(result, null, 2) }] };
+        } catch (e: any) {
+          return {
+            content: [{ type: "text", text: `Failed to analyze cross-agency patterns: ${e.message}` }],
+            isError: true
+          };
+        }
+      }
+    );
+
+    this.server.tool(
       "cross_agency_pattern_recognition",
       "Queries the shared federation namespaces in EpisodicMemory to identify common bottlenecks or successful solutions across multiple child agencies.",
       {
@@ -122,8 +143,9 @@ export class BrainServer {
         related_episode_id: z.string().optional().describe("ID of a related episode (e.g., the failure episode for a negotiation pattern)."),
         forecast_horizon: z.number().optional().describe("Horizon length if storing a forecast."),
         error_margin: z.number().optional().describe("Expected error margin if storing a forecast."),
+        source_agency: z.string().optional().describe("The ID of the child agency that generated this memory (if not root)."),
       },
-      async ({ taskId, request, solution, artifacts, company, simulation_attempts, resolved_via_dreaming, dreaming_outcomes, id, tokens, duration, type, related_episode_id, forecast_horizon, error_margin }) => {
+      async ({ taskId, request, solution, artifacts, company, simulation_attempts, resolved_via_dreaming, dreaming_outcomes, id, tokens, duration, type, related_episode_id, forecast_horizon, error_margin, source_agency }) => {
         let artifactList: string[] = [];
         if (artifacts) {
           try {
@@ -142,7 +164,7 @@ export class BrainServer {
                 simAttempts = undefined;
             }
         }
-        await this.episodic.store(taskId, request, solution, artifactList, company, simAttempts, resolved_via_dreaming, dreaming_outcomes, id, tokens, duration, type, related_episode_id, forecast_horizon, error_margin);
+        await this.episodic.store(taskId, request, solution, artifactList, company, simAttempts, resolved_via_dreaming, dreaming_outcomes, id, tokens, duration, type, related_episode_id, forecast_horizon, error_margin, source_agency);
         return {
           content: [{ type: "text", text: "Memory stored successfully." }],
         };

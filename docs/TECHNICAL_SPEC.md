@@ -15,8 +15,9 @@ Tasks are defined in `scheduler.json`. The `Scheduler` daemon (`src/scheduler.ts
 - Normal tasks -> `JobDelegator.delegateTask(task)`
 
 ## Storage
-- **Episodic Memory**: LanceDB vector database (`.agent/lancedb`) for history and semantic RAG.
+- **Episodic Memory**: LanceDB vector database (`.agent/lancedb`) for history and semantic RAG. Now supports `source_agency` metadata for tracking child agency experiences.
 - **Semantic Graph**: NetworkX-like graph mapping entities and dependencies.
+- **Cross-Agency Analysis**: The Brain MCP implements `analyze_cross_agency_patterns` to query multiple agency namespaces simultaneously, synthesizing ecosystem-wide insights via the LLM.
 
 ## 17. Zero-Token Operations Architecture (Phase 29)
 Phase 29 introduces the Symbolic Engine, transitioning the system from token-heavy LLM deliberations to deterministic, zero-cost task executions.
