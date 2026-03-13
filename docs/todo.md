@@ -365,4 +365,19 @@
 - [x] **Meta-Orchestrator**: Develop high-level coordination engine for cross-agency complex projects.
 - [x] **Collective Learning**: Build patterns and SOP synchronization between connected agencies via Brain MCP.
 - [x] **Validation**: E2E simulation of multiple agencies collaborating on a shared project and revenue split via `tests/integration/phase31_multi_agency_federation_validation.test.ts`.
-\n## Phase 34: Ecosystem Intelligence & Meta-Learning\n*Status: Completed*\n*Current Focus: Enable the root agency to perform meta-learning across the entire ecosystem of child agencies, optimizing global policies, resource allocation, and strategic initiatives based on collective performance data.*\n- [x] Implement `analyze_ecosystem_patterns` Tool in Brain MCP.\n- [x] Implement `propose_ecosystem_policy_update` Tool in Brain MCP.\n- [x] Integrate with the Scheduler & Health Monitor.\n- [x] Write robust integration tests for Phase 34 functionality.\n
+
+## Phase 34: Ecosystem Intelligence & Meta-Learning
+*Status: Completed*
+*Current Focus: Enable the root agency to perform meta-learning across the entire ecosystem of child agencies, optimizing global policies, resource allocation, and strategic initiatives based on collective performance data.*
+- [x] Implement `analyze_ecosystem_patterns` Tool in Brain MCP.
+- [x] Implement `propose_ecosystem_policy_update` Tool in Brain MCP.
+- [x] Integrate with the Scheduler & Health Monitor.
+- [x] Write robust integration tests for Phase 34 functionality.
+
+## Phase 35: Hierarchical Agency Ecosystems & Collective Problem Solving
+*Status: In Progress*
+*Current Focus: Enable the root agency to spawn and manage a hierarchy of specialized child agencies (e.g., marketing, development, design agencies) that can collaborate on complex, multi-domain projects, with the root agency acting as a meta-orchestrator for delegation and coordination.*
+- [ ] Implement hierarchical agency spawning (nested agencies with parent-child relationships).
+- [ ] Develop inter-agency communication protocols for complex task decomposition and real-time collaboration.
+- [ ] Create a collective problem-solving engine where multiple specialized agencies work together on a single project (e.g., build a website with design, development, and marketing phases).
+- [ ] Validate with an end-to-end simulation test that demonstrates cross-agency coordination and shared context.
