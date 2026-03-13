@@ -22,6 +22,15 @@ This document outlines the high-level roadmap and current status of the Simple-C
     - **d. Continuous Architecture Review**: Integrate with Dreaming for regular architecture simulations.
     - **e. Advanced Planning & Forecasting**: Completed ✅. Developed Forecasting MCP server with tools for scenario simulation using market multipliers and narrative report generation using LLMs. Fully integrated forecasts with Brain's `EpisodicMemory` (`strategic_forecast` type) and Business Ops, enabling recursive optimization via `allocate_resources_optimally` and autonomous strategic pivots via `apply_forecast_to_strategy`.
 
+- **Phase 34: Autonomous Agency Evolution**: Planned
+  - **Mission**: Enable agencies to autonomously evolve their own capabilities through self-modification, genetic algorithms, and strategic adaptation.
+  - **Key Objectives**:
+    - **a. Self-Modification Protocol**: Safe mechanisms for agencies to rewrite their own source code and configs (extending the Core Update MCP).
+    - **b. Evolutionary Algorithms**: Infrastructure to run genetic algorithms across agency parameters (e.g., prompt weights, tool combinations).
+    - **c. Fitness Functions**: Real-world metrics evaluation (e.g., operational efficiency, token utilization, success rates) to score mutations.
+    - **d. Cross-Agency Learning**: Federation protocol updates to share successful "genetic mutations" across the broader agency ecosystem.
+    - **e. Safety Constraints**: Deep integration with the Policy Engine to automatically rollback or veto unsafe mutations before they impact production.
+
 - **Phase 30: Autonomous Business Scaling & Commercialization**: Planned
   - **Mission**: Establish Simple-CLI as a profitable, self-sustaining Digital Agency platform
   - **Key Objectives**:
