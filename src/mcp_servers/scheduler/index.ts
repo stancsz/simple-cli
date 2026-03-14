@@ -7,6 +7,7 @@ import { readFile, writeFile, mkdir } from "fs/promises";
 import { existsSync } from "fs";
 import lockfile from "proper-lockfile";
 import { globalBatchExecutor } from "../../batch/batch_orchestrator.js";
+import { assign_task_with_ecosystem_insights } from "./tools.js";
 
 export class SchedulerServer {
   private server: McpServer;
@@ -147,6 +148,31 @@ export class SchedulerServer {
         } catch (e: any) {
             return {
                 content: [{ type: "text", text: `Error triggering batch: ${e.message}` }],
+                isError: true
+            };
+        }
+      }
+    );
+
+    this.server.tool(
+      "assign_task_with_ecosystem_insights",
+      "Uses ecosystem patterns from the Brain to predict the optimal child agency for a task.",
+      {
+        task_description: z.string().describe("The description of the task to be assigned."),
+        task_requirements: z.string().describe("Specific requirements or skills needed for the task."),
+      },
+      async ({ task_description, task_requirements }) => {
+        try {
+            const result = await assign_task_with_ecosystem_insights(task_description, task_requirements);
+            return {
+                content: [{
+                    type: "text",
+                    text: JSON.stringify(result, null, 2)
+                }]
+            };
+        } catch (e: any) {
+            return {
+                content: [{ type: "text", text: `Error: ${e.message}` }],
                 isError: true
             };
         }

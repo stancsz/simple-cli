@@ -125,4 +125,6 @@ These guarantees are validated by `tests/integration/brain_production.test.ts`, 
 
 ## Meta-Learning Integration
 
-The Company Context integrates meta-learning insights derived from ecosystem patterns. The `update_company_with_ecosystem_insights` tool retrieves company attributes, analyzes ecosystem patterns through the Brain MCP filtered by these attributes, and stores the personalized insights into the company's context (as `meta_learning_insight`). These insights are then automatically included when loading the company context, enabling personalized client optimization that overrides or complements general ecosystem policies.
+The Company Context integrates meta-learning insights derived from ecosystem patterns (Phase 35). The `update_company_with_ecosystem_insights` tool retrieves company attributes, analyzes the latest `ecosystem_policy` from the Brain, and stores personalized insights into the company's LanceDB vector database. These insights are then automatically included when loading the company context or querying the knowledge base, enabling personalized client optimization that translates ecosystem-wide learnings into company-specific strategies.
+
+Furthermore, these meta-learning patterns empower the **Scheduler MCP** to utilize predictive task assignment (`assign_task_with_ecosystem_insights`), routing tasks to the optimal child agency based on historical success rates and ecosystem capabilities.

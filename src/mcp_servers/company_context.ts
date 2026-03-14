@@ -7,7 +7,7 @@ import { join } from "path";
 import { readFile, readdir, mkdir } from "fs/promises";
 import { existsSync } from "fs";
 import { createLLM } from "../llm.js";
-import { update_company_with_ecosystem_insights } from "./company_context/tools/meta_learning_integration.js";
+import { update_company_with_ecosystem_insights } from "./company_context/tools.js";
 
 export class CompanyContextServer {
   private server: McpServer;
