@@ -10,6 +10,12 @@ The Agency Spawning Protocol enables a primary parent agency to autonomously spa
 4. **Context Injection**: The context generated in Step 1 is injected into the child's workspace before starting.
 5. **Federation Registration**: Once active, the child agency registers itself in the Distributed Ledger and the Federation Protocol. The parent agency can then discover its capabilities and delegate tasks.
 
+## Merging and Retiring
+
+As part of the Autonomous Ecosystem Evolution (Phase 36), the root parent agency can dynamically restructure the ecosystem based on utilization metrics and meta-learning insights.
+* **Merging**: If multiple child agencies with the same role are underutilized, the Agency Orchestrator can merge them via the `merge_child_agencies` tool. This archives the source agency's environment and consolidates operations into the target agency.
+* **Retiring**: If a child agency is failing frequently or has critically low token efficiency, it can be shut down via the `retire_child_agency` tool. This safely archives the child agency's memory and frees up resources for the ecosystem.
+
 ## Validation & Constraints
 
 During validation testing (`tests/integration/phase32_agency_spawning_validation.test.ts`), the following configurations and constraints were identified:

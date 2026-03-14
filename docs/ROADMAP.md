@@ -297,6 +297,13 @@ The roadmap is structured around the four anatomical layers of the Digital Biosp
 - [x] ✅ Core decision tools implemented (`make_strategic_decision`, `execute_strategic_initiative`).
 - [x] ✅ Comprehensive validation suite added (`phase30_strategic_decision_validation.test.ts`) covering capacity shortage, market opportunity, and conflicting forecast scenarios.
 
+## Phase 36: Autonomous Ecosystem Evolution
+*Status: Completed*
+*Current Focus: Enable the root agency to dynamically restructure the agency ecosystem based on meta-learning, market signals, and performance metrics, creating a self-improving collective that adapts to changing conditions.*
+- [x] Implement `adjust_ecosystem_morphology` tool in Brain MCP.
+- [x] Integrate with Agency Orchestrator to execute spawn/merge/retire actions.
+- [x] Write robust integration tests for Phase 36 functionality (`tests/integration/phase36_ecosystem_evolution.test.ts`).
+
 ## Phase 31: Autonomous Multi-Agency Federation & Collective Intelligence
 *Status: Completed*
 *Current Focus: Enabling multiple Simple-CLI agency instances to collaborate, share resources, and form a collective intelligence network.*

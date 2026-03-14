@@ -10,13 +10,15 @@ class MockEpisodicMemory {
 }
 
 // Mock @modelcontextprotocol/sdk/client/index.js
+const mockCallTool = vi.fn().mockResolvedValue({
+    content: [{ text: JSON.stringify({ status: "healthy", score: 95 }) }]
+});
+
 vi.mock('@modelcontextprotocol/sdk/client/index.js', () => {
     return {
         Client: vi.fn().mockImplementation(() => ({
             connect: vi.fn().mockResolvedValue(undefined),
-            callTool: vi.fn().mockResolvedValue({
-                content: [{ text: JSON.stringify({ status: "healthy", score: 95 }) }]
-            }),
+            callTool: mockCallTool,
             close: vi.fn().mockResolvedValue(undefined)
         }))
     };
@@ -272,5 +274,101 @@ describe('Phase 36: Autonomous Ecosystem Evolution', () => {
         // Verify that the failing agency isn't also considered for merging
         const failingMergeDecision = decisions.find(d => d.action === 'merge' && d.target_agencies.includes('agency_failing'));
         expect(failingMergeDecision).toBeUndefined();
+    });
+
+    it('should execute spawn action via Agency Orchestrator', async () => {
+        mockCallTool.mockResolvedValueOnce({
+            content: [{ text: JSON.stringify({ agency_id: 'new_agency_123' }) }]
+        });
+
+        const input = {
+            agency_statuses: [
+                {
+                    agency_id: 'agency_bottleneck_1',
+                    role: 'developer',
+                    tasks_assigned: 10,
+                    tasks_failed: 0,
+                    utilization_rate: 0.95,
+                    token_efficiency: 0.9
+                }
+            ]
+        };
+
+        await adjustEcosystemMorphology(input, memory);
+
+        expect(mockCallTool).toHaveBeenCalledWith({
+            name: "spawn_child_agency",
+            arguments: {
+                role: 'developer',
+                initial_context: expect.stringContaining('overloaded'),
+                resource_limit: 50000,
+                swarm_config: {}
+            }
+        });
+    });
+
+    it('should execute merge action via Agency Orchestrator', async () => {
+        mockCallTool.mockResolvedValueOnce({
+            content: [{ text: JSON.stringify({ status: 'merged' }) }]
+        });
+
+        const input = {
+            agency_statuses: [
+                {
+                    agency_id: 'agency_idle_1',
+                    role: 'data_entry',
+                    tasks_assigned: 1,
+                    tasks_failed: 0,
+                    utilization_rate: 0.1,
+                    token_efficiency: 0.9
+                },
+                {
+                    agency_id: 'agency_idle_2',
+                    role: 'data_entry',
+                    tasks_assigned: 2,
+                    tasks_failed: 0,
+                    utilization_rate: 0.15,
+                    token_efficiency: 0.85
+                }
+            ]
+        };
+
+        await adjustEcosystemMorphology(input, memory);
+
+        expect(mockCallTool).toHaveBeenCalledWith({
+            name: "merge_child_agencies",
+            arguments: {
+                source_agency_id: 'agency_idle_2', // Not merge_into
+                target_agency_id: 'agency_idle_1'
+            }
+        });
+    });
+
+    it('should execute retire action via Agency Orchestrator', async () => {
+        mockCallTool.mockResolvedValueOnce({
+            content: [{ text: JSON.stringify({ status: 'retired' }) }]
+        });
+
+        const input = {
+            agency_statuses: [
+                {
+                    agency_id: 'agency_failing_1',
+                    role: 'qa_tester',
+                    tasks_assigned: 10,
+                    tasks_failed: 5,
+                    utilization_rate: 0.15,
+                    token_efficiency: 0.5
+                }
+            ]
+        };
+
+        await adjustEcosystemMorphology(input, memory);
+
+        expect(mockCallTool).toHaveBeenCalledWith({
+            name: "retire_child_agency",
+            arguments: {
+                agency_id: 'agency_failing_1'
+            }
+        });
     });
 });

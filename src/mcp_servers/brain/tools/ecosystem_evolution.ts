@@ -152,11 +152,72 @@ Return ONLY the JSON array, with no markdown formatting or extra text.
     }];
   }
 
-  // 5. Log to EpisodicMemory
+  // 5. Execute structural decisions via Agency Orchestrator MCP
+  const orchestratorPath = join(process.cwd(), "dist/mcp_servers/agency_orchestrator/index.js");
+  const executionResults: any[] = [];
+
+  try {
+    const orchestratorTransport = new StdioClientTransport({
+      command: "node",
+      args: [orchestratorPath],
+    });
+    const orchestratorClient = new Client({ name: "brain-orchestrator-client", version: "1.0.0" }, { capabilities: {} });
+    await orchestratorClient.connect(orchestratorTransport);
+
+    for (const decision of decisions) {
+      if (decision.action === "maintain") continue;
+
+      try {
+        let result;
+        if (decision.action === "spawn" && decision.config?.role && decision.config?.resource_limit) {
+          result = await orchestratorClient.callTool({
+            name: "spawn_child_agency",
+            arguments: {
+              role: decision.config.role,
+              initial_context: `Spawned based on ecosystem evolution: ${decision.rationale}`,
+              resource_limit: decision.config.resource_limit,
+              swarm_config: (decision.config as any).swarm_config || {} // Ensure valid type casting if defined
+            }
+          });
+        } else if (decision.action === "merge" && decision.target_agencies.length >= 1 && decision.config?.merge_into) {
+          const sourceAgencyId = decision.target_agencies.find(id => id !== decision.config?.merge_into) || decision.target_agencies[0];
+          result = await orchestratorClient.callTool({
+            name: "merge_child_agencies",
+            arguments: {
+              source_agency_id: sourceAgencyId,
+              target_agency_id: decision.config.merge_into
+            }
+          });
+        } else if (decision.action === "retire" && decision.target_agencies.length > 0) {
+          for (const target of decision.target_agencies) {
+            const retireResult = await orchestratorClient.callTool({
+              name: "retire_child_agency",
+              arguments: { agency_id: target }
+            });
+            executionResults.push({ action: "retire", target, result: retireResult });
+          }
+          continue; // Handled all targets, skip generic push
+        }
+
+        if (result) {
+          executionResults.push({ action: decision.action, result });
+        }
+      } catch (err: any) {
+        console.warn(`Failed to execute structural decision ${decision.action}:`, err.message);
+        executionResults.push({ action: decision.action, error: err.message });
+      }
+    }
+
+    await orchestratorClient.close();
+  } catch (err: any) {
+    console.warn("Could not connect to Agency Orchestrator MCP to execute structural decisions.", err.message);
+  }
+
+  // 6. Log to EpisodicMemory
   await memory.store(
     `ecosystem_evolution_${Date.now()}`,
     "Adjust ecosystem morphology based on metrics, market signals, and meta-learning",
-    JSON.stringify(decisions),
+    JSON.stringify({ decisions, execution_results: executionResults }),
     ["brain", "ecosystem_evolution", "morphology"],
     "ecosystem_morphology_proposal"
   );

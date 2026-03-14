@@ -268,4 +268,189 @@ export async function updateTaskStatus(projectId: string, taskId: string, status
     await saveProjectState(project, memory);
 }
 
+export async function spawnChildAgency(role: string, initialContext: string, resourceLimit: number, swarmConfig: any, memory: EpisodicMemory): Promise<{ agency_id: string; status: string; role: string }> {
+    const assignedAgencyId = `agency_${randomUUID()}`;
+    console.log(`[Agency Spawning] Spawning new child agency ${assignedAgencyId} with role ${role}`);
+
+    const rootDir = process.cwd();
+    const childDir = path.join(rootDir, '.agent', 'child_agencies', assignedAgencyId);
+    await fs.mkdir(childDir, { recursive: true });
+
+    const childMemoryDir = path.join(childDir, 'brain');
+    await fs.mkdir(childMemoryDir, { recursive: true });
+
+    // Seed initial context in child's isolated memory
+    const childMemory = new EpisodicMemory(childMemoryDir);
+    await childMemory.store(
+        "CorporateStrategy",
+        "Initial context injection",
+        JSON.stringify({
+            role: role,
+            context: initialContext,
+            constraints: { token_budget: resourceLimit },
+            swarm_config: swarmConfig || {}
+        }),
+        ["context_injection"],
+        "strategy"
+    );
+
+    // Record the spawn event in the parent orchestrator's memory
+    await memory.store(
+        `spawn_agency_${assignedAgencyId}`,
+        `Spawned child agency for role: ${role}`,
+        JSON.stringify({
+            agency_id: assignedAgencyId,
+            role,
+            initial_context: initialContext,
+            resource_limit: resourceLimit,
+            swarm_config: swarmConfig
+        }),
+        [assignedAgencyId, "agency_spawning", "ecosystem_morphology"],
+        "autonomous_decision"
+    );
+
+    return { agency_id: assignedAgencyId, status: "spawned", role };
+}
+
+export async function mergeChildAgencies(sourceAgencyId: string, targetAgencyId: string, memory: EpisodicMemory): Promise<{ status: string; merged_from: string; merged_into: string }> {
+    console.log(`[Agency Merging] Merging ${sourceAgencyId} into ${targetAgencyId}`);
+
+    const rootDir = process.cwd();
+    const childAgenciesDir = path.join(rootDir, '.agent', 'child_agencies');
+    const sourceDir = path.join(childAgenciesDir, sourceAgencyId);
+    const targetDir = path.join(childAgenciesDir, targetAgencyId);
+
+    // Ensure the source exists
+    try {
+        await fs.access(sourceDir);
+    } catch {
+        throw new Error(`Cannot merge: Source agency ${sourceAgencyId} not found.`);
+    }
+
+    // Ensure the target exists
+    try {
+        await fs.access(targetDir);
+    } catch {
+        throw new Error(`Cannot merge: Target agency ${targetAgencyId} not found.`);
+    }
+
+    // Open memories to extract/inject resources and contexts
+    const sourceMemoryDir = path.join(sourceDir, 'brain');
+    const targetMemoryDir = path.join(targetDir, 'brain');
+
+    // Safety check - what if the child hasn't set up memory yet? Create it if needed.
+    await fs.mkdir(sourceMemoryDir, { recursive: true });
+    await fs.mkdir(targetMemoryDir, { recursive: true });
+
+    const sourceMemory = new EpisodicMemory(sourceMemoryDir);
+    const targetMemory = new EpisodicMemory(targetMemoryDir);
+
+    // Attempt to pull the source's CorporateStrategy to merge resources
+    let sourceStrategyObj: any = {};
+    try {
+        const sourceStrategyRes = await sourceMemory.recall("CorporateStrategy", 1, "strategy");
+        if (sourceStrategyRes && sourceStrategyRes.length > 0) {
+            const doc = sourceStrategyRes[0];
+            const str = (doc as any).solution || doc.agentResponse;
+            if (str) sourceStrategyObj = JSON.parse(str);
+        }
+    } catch (e) {
+        console.warn(`Could not read source strategy during merge: ${e}`);
+    }
+
+    // Attempt to pull the target's CorporateStrategy
+    let targetStrategyObj: any = {};
+    let targetStrategyId = `merged_strategy_${Date.now()}`;
+    try {
+        const targetStrategyRes = await targetMemory.recall("CorporateStrategy", 1, "strategy");
+        if (targetStrategyRes && targetStrategyRes.length > 0) {
+            const doc = targetStrategyRes[0];
+            targetStrategyId = doc.id || targetStrategyId;
+            const str = (doc as any).solution || doc.agentResponse;
+            if (str) targetStrategyObj = JSON.parse(str);
+        }
+    } catch (e) {
+        console.warn(`Could not read target strategy during merge: ${e}`);
+    }
+
+    // Consolidate constraints/resources
+    const sourceTokens = sourceStrategyObj?.constraints?.token_budget || 0;
+    const targetTokens = targetStrategyObj?.constraints?.token_budget || 0;
+
+    targetStrategyObj.constraints = targetStrategyObj.constraints || {};
+    targetStrategyObj.constraints.token_budget = targetTokens + sourceTokens;
+
+    // Consolidate context
+    const sourceContext = sourceStrategyObj?.context || "";
+    targetStrategyObj.context = `${targetStrategyObj.context || ""}\n[Merged Context from ${sourceAgencyId}]:\n${sourceContext}`;
+
+    // Update target memory
+    await targetMemory.store(
+        targetStrategyId,
+        "Consolidated Corporate Strategy via Merge",
+        JSON.stringify(targetStrategyObj),
+        ["strategy", "merge_consolidation"],
+        "strategy"
+    );
+
+    // Archive the source directory instead of full deletion for safety
+    const archiveDir = path.join(rootDir, '.agent', 'archive');
+    await fs.mkdir(archiveDir, { recursive: true });
+
+    const timestamp = Date.now();
+    const archivedSourceDir = path.join(archiveDir, `${sourceAgencyId}_merged_${timestamp}`);
+
+    await fs.rename(sourceDir, archivedSourceDir);
+
+    // Update the orchestrator's memory
+    await memory.store(
+        `merge_agency_${sourceAgencyId}_into_${targetAgencyId}`,
+        `Merged child agency ${sourceAgencyId} into ${targetAgencyId}`,
+        JSON.stringify({
+            source: sourceAgencyId,
+            target: targetAgencyId,
+            resources_transferred: sourceTokens,
+            archive_path: archivedSourceDir
+        }),
+        [sourceAgencyId, targetAgencyId, "agency_merging", "ecosystem_morphology"],
+        "autonomous_decision"
+    );
+
+    return { status: "merged", merged_from: sourceAgencyId, merged_into: targetAgencyId };
+}
+
+export async function retireChildAgency(agencyId: string, memory: EpisodicMemory): Promise<{ agency_id: string; status: string }> {
+    console.log(`[Agency Retirement] Retiring child agency ${agencyId}`);
+
+    const rootDir = process.cwd();
+    const childAgenciesDir = path.join(rootDir, '.agent', 'child_agencies');
+    const sourceDir = path.join(childAgenciesDir, agencyId);
+
+    try {
+        await fs.access(sourceDir);
+    } catch {
+        throw new Error(`Cannot retire: Agency ${agencyId} not found.`);
+    }
+
+    // Move to archive
+    const archiveDir = path.join(rootDir, '.agent', 'archive');
+    await fs.mkdir(archiveDir, { recursive: true });
+
+    const timestamp = Date.now();
+    const archivedSourceDir = path.join(archiveDir, `${agencyId}_retired_${timestamp}`);
+
+    await fs.rename(sourceDir, archivedSourceDir);
+
+    // Log the retirement
+    await memory.store(
+        `retire_agency_${agencyId}`,
+        `Retired child agency ${agencyId}`,
+        JSON.stringify({ agency_id: agencyId, archive_path: archivedSourceDir }),
+        [agencyId, "agency_retirement", "ecosystem_morphology"],
+        "autonomous_decision"
+    );
+
+    return { agency_id: agencyId, status: "retired" };
+}
+
 export { applyEcosystemInsights } from "./apply_ecosystem_insights.js";

@@ -6,7 +6,10 @@ import {
     assignAgencyToTask,
     monitorProjectStatus,
     resolveInterAgencyDependency,
-    applyEcosystemInsights
+    applyEcosystemInsights,
+    spawnChildAgency,
+    mergeChildAgencies,
+    retireChildAgency
 } from "./tools/index.js";
 import { EpisodicMemory } from "../../brain/episodic.js";
 
@@ -91,6 +94,58 @@ export class AgencyOrchestratorServer {
         try {
             await resolveInterAgencyDependency(project_id, dependency, this.memory);
             return { content: [{ type: "text", text: "Dependency successfully resolved." }] };
+        } catch (error: any) {
+            return { content: [{ type: "text", text: `Error: ${error.message}` }], isError: true };
+        }
+      }
+    );
+
+    this.server.tool(
+      "spawn_child_agency",
+      "Spawns a new child agency with the given role, initial context, and resource limit.",
+      {
+        role: z.string().describe("The specialized role for the new agency."),
+        initial_context: z.string().describe("The initial strategic context or instructions."),
+        resource_limit: z.number().describe("The maximum token/resource budget allocated to this agency."),
+        swarm_config: z.object({}).passthrough().optional().describe("Optional configuration for the swarm (e.g. max_agents, model_routing).")
+      },
+      async ({ role, initial_context, resource_limit, swarm_config }: { role: string; initial_context: string; resource_limit: number; swarm_config?: any }) => {
+        try {
+            const result = await spawnChildAgency(role, initial_context, resource_limit, swarm_config, this.memory);
+            return { content: [{ type: "text", text: JSON.stringify(result, null, 2) }] };
+        } catch (error: any) {
+            return { content: [{ type: "text", text: `Error: ${error.message}` }], isError: true };
+        }
+      }
+    );
+
+    this.server.tool(
+      "merge_child_agencies",
+      "Merges a source child agency into a target child agency, consolidating resources and archiving the source.",
+      {
+        source_agency_id: z.string().describe("The ID of the agency to be merged and archived."),
+        target_agency_id: z.string().describe("The ID of the agency that will absorb the source agency.")
+      },
+      async ({ source_agency_id, target_agency_id }: { source_agency_id: string; target_agency_id: string }) => {
+        try {
+            const result = await mergeChildAgencies(source_agency_id, target_agency_id, this.memory);
+            return { content: [{ type: "text", text: JSON.stringify(result, null, 2) }] };
+        } catch (error: any) {
+            return { content: [{ type: "text", text: `Error: ${error.message}` }], isError: true };
+        }
+      }
+    );
+
+    this.server.tool(
+      "retire_child_agency",
+      "Safely archives a child agency's context and frees its resources.",
+      {
+        agency_id: z.string().describe("The ID of the agency to retire.")
+      },
+      async ({ agency_id }: { agency_id: string }) => {
+        try {
+            const result = await retireChildAgency(agency_id, this.memory);
+            return { content: [{ type: "text", text: JSON.stringify(result, null, 2) }] };
         } catch (error: any) {
             return { content: [{ type: "text", text: `Error: ${error.message}` }], isError: true };
         }
