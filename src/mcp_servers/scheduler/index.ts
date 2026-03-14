@@ -7,6 +7,7 @@ import { readFile, writeFile, mkdir } from "fs/promises";
 import { existsSync } from "fs";
 import lockfile from "proper-lockfile";
 import { globalBatchExecutor } from "../../batch/batch_orchestrator.js";
+import { assignTaskPredictively } from "./tools/task_assignment.js";
 
 export class SchedulerServer {
   private server: McpServer;
@@ -149,6 +150,26 @@ export class SchedulerServer {
                 content: [{ type: "text", text: `Error triggering batch: ${e.message}` }],
                 isError: true
             };
+        }
+      }
+    );
+
+    this.server.tool(
+      "assign_task_predictively",
+      "Uses ecosystem patterns from the Brain and current agency status from Agency Orchestrator to recommend the most suitable child agency for a given task.",
+      {
+        task_description: z.string().describe("Description of the task to be assigned."),
+        priority: z.enum(["low", "normal", "high", "critical"]).optional().describe("Task priority.")
+      },
+      async ({ task_description, priority }) => {
+        try {
+          const result = await assignTaskPredictively(task_description, priority);
+          return { content: [{ type: "text", text: JSON.stringify(result, null, 2) }] };
+        } catch (e: any) {
+          return {
+            content: [{ type: "text", text: `Error assigning task predictively: ${e.message}` }],
+            isError: true
+          };
         }
       }
     );
