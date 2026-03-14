@@ -20,6 +20,7 @@ import { getGrowthTargets } from "./tools/strategic_growth.js";
 import { monitorMarketSignals, evaluateEconomicRisk, triggerContingencyPlan } from "./tools/market_shock.js";
 import { executeBatchRoutines } from "./tools/efficiency.js";
 import { crossAgencyPatternRecognition, analyzeCrossAgencyPatterns, analyzeEcosystemPatterns } from "./tools/pattern_analysis.js";
+import { adjustEcosystemMorphology, adjustEcosystemMorphologySchema } from "./tools/ecosystem_evolution.js";
 import { globalSymbolicEngine } from "../../symbolic/compiler.js";
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { StdioClientTransport } from "@modelcontextprotocol/sdk/client/stdio.js";
@@ -95,6 +96,23 @@ export class BrainServer {
         } catch (e: any) {
           return {
             content: [{ type: "text", text: `Failed to analyze ecosystem patterns: ${e.message}` }],
+            isError: true
+          };
+        }
+      }
+    );
+
+    this.server.tool(
+      "adjust_ecosystem_morphology",
+      "Evaluates child agency metrics and meta-learning insights to decide on structural ecosystem changes (spawn, merge, retire).",
+      adjustEcosystemMorphologySchema.shape,
+      async (input) => {
+        try {
+          const decisions = await adjustEcosystemMorphology(input, this.episodic);
+          return { content: [{ type: "text", text: JSON.stringify(decisions, null, 2) }] };
+        } catch (e: any) {
+          return {
+            content: [{ type: "text", text: `Failed to adjust ecosystem morphology: ${e.message}` }],
             isError: true
           };
         }

@@ -380,3 +380,10 @@
 - [x] Enhance the Scheduler to use ecosystem patterns for predictive task assignment.
 - [x] Integrate meta-learning findings into Company Contexts for personalized client optimization.
 - [x] Validate via a multi-agency simulation demonstrating improved efficiency. (Validated via `tests/integration/phase35_ecosystem_optimization_validation.test.ts` and `demos/phase35_ecosystem_optimization_simulation.ts`)
+
+## Phase 36: Autonomous Ecosystem Evolution
+*Status: Active*
+*Current Focus: Enable the root agency to dynamically restructure the agency ecosystem based on meta-learning, market signals, and performance metrics, creating a self-improving collective that adapts to changing conditions.*
+- [ ] Implement `adjust_ecosystem_morphology` tool in Brain MCP.
+- [ ] Integrate with Agency Orchestrator to execute spawn/merge/retire actions.
+- [ ] Write robust integration tests for Phase 36 functionality (`tests/integration/phase36_ecosystem_evolution.test.ts`).

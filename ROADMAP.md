@@ -40,3 +40,8 @@ This document outlines the high-level roadmap and current status of the Simple-C
     - **d. Service Packaging**: Create tiered service offerings with automated delivery
     - **e. Partnership Network**: Implement affiliate/referral system
     - **f. Validation**: Demonstrate 30-day profitable autonomous operation
+
+- **Phase 36: Autonomous Ecosystem Evolution**: Planned
+  - **Mission**: Enable the root agency to dynamically restructure the agency ecosystem based on meta-learning, market signals, and performance metrics, creating a self-improving collective that adapts to changing conditions.
+  - **Key Objectives**:
+    - **a. Ecosystem Morphology Tool**: Implement `adjust_ecosystem_morphology` to autonomously evaluate and execute structural changes (spawn, merge, retire agencies).
