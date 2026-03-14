@@ -1,10 +1,22 @@
 import { z } from "zod";
 import { EpisodicMemory } from "../../../brain/episodic.js";
 import { LLM } from "../../../llm.js";
-
 // Define the schema interface here or import it if you have it in schemas.ts
 // Assuming schemas.ts exists based on the plan, let's import it.
 import { CorporateStrategy } from "../../../brain/schemas.js";
+import { auditLogger } from "../../ecosystem_auditor/audit_logger.js";
+
+function logAuditEvent(event_type: string, payload: any, source_agency?: string, target_agency?: string, agencies_involved?: string[]) {
+    auditLogger.logEvent({
+        event_type: event_type as any,
+        payload,
+        source_agency,
+        target_agency,
+        agencies_involved: agencies_involved || []
+    }).catch(error => {
+        console.error("Failed to log audit event:", error);
+    });
+}
 
 /**
  * Retrieves the latest corporate strategy from episodic memory.
@@ -215,6 +227,8 @@ export const proposeEcosystemPolicyUpdate = async (
       undefined,
       "ecosystem_policy"
   );
+
+  logAuditEvent("policy_change", { proposal: proposalData.proposal, rationale: proposalData.rationale, strategy: pivotResult }, "root", undefined, ["root"]);
 
   return {
       ecosystem_proposal: proposalData,

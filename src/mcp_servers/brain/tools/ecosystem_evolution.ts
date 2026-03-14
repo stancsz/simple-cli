@@ -6,6 +6,19 @@ import { monitorMarketSignals } from "./market_shock.js";
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { StdioClientTransport } from "@modelcontextprotocol/sdk/client/stdio.js";
 import { join } from "path";
+import { auditLogger } from "../../ecosystem_auditor/audit_logger.js";
+
+function logAuditEvent(event_type: string, payload: any, source_agency?: string, target_agency?: string, agencies_involved?: string[]) {
+    auditLogger.logEvent({
+        event_type: event_type as any,
+        payload,
+        source_agency,
+        target_agency,
+        agencies_involved: agencies_involved || []
+    }).catch(error => {
+        console.error("Failed to log audit event:", error);
+    });
+}
 
 export const adjustEcosystemMorphologySchema = z.object({
   agency_statuses: z.array(z.object({
@@ -221,6 +234,8 @@ Return ONLY the JSON array, with no markdown formatting or extra text.
     ["brain", "ecosystem_evolution", "morphology"],
     "ecosystem_morphology_proposal"
   );
+
+  logAuditEvent("morphology_adjustment", { decisions, execution_results: executionResults }, "root", undefined, ["root"]);
 
   return decisions;
 }

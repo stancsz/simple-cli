@@ -12,8 +12,22 @@ import {
 } from "../types.js";
 import * as fs from "fs/promises";
 import * as path from "path";
+import { auditLogger } from "../../ecosystem_auditor/audit_logger.js";
 
 // Helpers to read/write state to EpisodicMemory, removing local memory caching
+
+function logAuditEvent(event_type: string, payload: any, source_agency?: string, target_agency?: string, agencies_involved?: string[]) {
+    // Fire and forget asynchronous logging to prevent blocking the Orchestrator
+    auditLogger.logEvent({
+        event_type: event_type as any,
+        payload,
+        source_agency,
+        target_agency,
+        agencies_involved: agencies_involved || []
+    }).catch(error => {
+        console.error("Failed to log audit event:", error);
+    });
+}
 
 async function getProjectState(projectId: string, memory: EpisodicMemory): Promise<Project> {
     const results = await memory.recall(`multi_agency_project_${projectId}`, 1, "project_management");
@@ -164,6 +178,8 @@ export async function assignAgencyToTask(projectId: string, taskId: string, agen
         "project_management"
     );
 
+    logAuditEvent("cross_agency_communication", { action: "task_delegation", task_id: taskId, project_id: projectId }, "root", assignedAgencyId, ["root", assignedAgencyId]);
+
     return assignmentId;
 }
 
@@ -255,6 +271,14 @@ export async function resolveInterAgencyDependency(projectId: string, dependency
         [projectId, "agency_orchestrator", "dependency_resolution"],
         "project_management"
     );
+
+    // Identify which agencies were involved in this dependency resolution
+    const assignedAgency = project.assignments.find(a => a.task_id === dependency.task_id)?.agency_id;
+    const blockingAgency = project.assignments.find(a => a.task_id === dependency.depends_on_task_id)?.agency_id;
+
+    if (assignedAgency && blockingAgency) {
+        logAuditEvent("cross_agency_communication", { action: "dependency_resolved", dependent_task: dependency.task_id, blocking_task: dependency.depends_on_task_id }, blockingAgency, assignedAgency, [blockingAgency, assignedAgency]);
+    }
 }
 
 // System tool to update task status (e.g. from failed/completed signals)
@@ -308,6 +332,8 @@ export async function spawnChildAgency(role: string, initialContext: string, res
         [assignedAgencyId, "agency_spawning", "ecosystem_morphology"],
         "autonomous_decision"
     );
+
+    logAuditEvent("morphology_adjustment", { action: "spawn", role, resourceLimit }, "root", assignedAgencyId, ["root", assignedAgencyId]);
 
     return { agency_id: assignedAgencyId, status: "spawned", role };
 }
@@ -416,6 +442,8 @@ export async function mergeChildAgencies(sourceAgencyId: string, targetAgencyId:
         "autonomous_decision"
     );
 
+    logAuditEvent("morphology_adjustment", { action: "merge", resources_transferred: sourceTokens }, sourceAgencyId, targetAgencyId, [sourceAgencyId, targetAgencyId]);
+
     return { status: "merged", merged_from: sourceAgencyId, merged_into: targetAgencyId };
 }
 
@@ -449,6 +477,8 @@ export async function retireChildAgency(agencyId: string, memory: EpisodicMemory
         [agencyId, "agency_retirement", "ecosystem_morphology"],
         "autonomous_decision"
     );
+
+    logAuditEvent("morphology_adjustment", { action: "retire" }, agencyId, undefined, [agencyId]);
 
     return { agency_id: agencyId, status: "retired" };
 }

@@ -6,7 +6,8 @@ import {
   ErrorCode,
   McpError,
 } from "@modelcontextprotocol/sdk/types.js";
-import { generateEcosystemAuditReport, generateEcosystemAuditReportSchema } from "./tools.js";
+import { generateEcosystemAuditReport, generateEcosystemAuditReportSchema, logAuditEventSchema } from "./tools.js";
+import { auditLogger } from "./audit_logger.js";
 
 /**
  * The Ecosystem Auditor MCP Server instance.
@@ -34,9 +35,25 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
           type: "object",
           properties: {
             timeframe: { type: "string", description: "The timeframe to audit, e.g., 'last_24_hours' or 'last_7_days'." },
-            focus_area: { type: "string", enum: ["communications", "policy_changes", "morphology_adjustments", "all"], description: "The specific area to focus the audit on." }
+            focus_area: { type: "string", enum: ["communications", "policy_changes", "morphology_adjustments", "all"], description: "The specific area to focus the audit on." },
+            agency_id: { type: "string", description: "Filter logs to a specific agency." }
           },
           required: ["timeframe"]
+        }
+      },
+      {
+        name: "log_audit_event",
+        description: "Logs a cross-agency communication, policy change, or morphology adjustment event.",
+        inputSchema: {
+          type: "object",
+          properties: {
+            event_type: { type: "string", enum: ["cross_agency_communication", "policy_change", "morphology_adjustment", "resource_allocation", "anomaly_detected", "system_event"] },
+            source_agency: { type: "string" },
+            target_agency: { type: "string" },
+            agencies_involved: { type: "array", items: { type: "string" } },
+            payload: { type: "object", description: "Flexible payload containing event details." }
+          },
+          required: ["event_type", "payload"]
         }
       }
     ]
@@ -49,6 +66,14 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
     const report = await generateEcosystemAuditReport(input);
     return {
       content: [{ type: "text", text: JSON.stringify(report, null, 2) }]
+    };
+  }
+
+  if (request.params.name === "log_audit_event") {
+    const input = logAuditEventSchema.parse(request.params.arguments);
+    const event = await auditLogger.logEvent(input);
+    return {
+      content: [{ type: "text", text: JSON.stringify(event, null, 2) }]
     };
   }
 
