@@ -39,6 +39,15 @@ Phase 29 introduces a dedicated `forecasting` MCP server designed to ingest hist
 - **Brain Integration**: The `compile_to_symbolic` tool allows the HR Loop or Supervisor to permanently "bake" highly successful patterns into zero-token graphs.
 - **Adaptive Router**: The `AdaptiveRouter` intercepts `generate` calls. If a compiled `TaskGraph` matches the intent, it executes deterministically, logging an `llm_requests_avoided` metric and reducing token costs by >40% for routine operations.
 
+## 20. Production Ecosystem Observability & Governance (Phase 37)
+Phase 37 introduces the `EcosystemAuditor` MCP and enhances the Brain MCP to synthesize cross-agency communications, policy changes, and morphology adjustments into actionable audit reports.
+
+### Core Components
+1. **generate_ecosystem_audit_report (Brain MCP)**:
+   - Queries the `EcosystemAuditor` MCP server to fetch recent logs.
+   - Uses the LLM to synthesize raw logs into a structured markdown report detailing Key Decisions, Policy Deviations, Resource Allocation Anomalies, and Recommendations.
+   - Stores the generated report in the Brain's episodic memory for long-term governance and compliance tracking.
+
 ## 19. Corporate Consciousness & Strategic Decision Engine (Phase 30)
 Phase 30 introduces an autonomous strategic decision loop, elevating the system from merely forecasting future states to automatically adjusting corporate strategy, operational policies, and Swarm initiatives.
 

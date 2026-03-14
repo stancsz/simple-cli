@@ -8,7 +8,7 @@ import { EpisodicMemory } from "../../brain/episodic.js";
 import { SemanticGraph } from "../../brain/semantic_graph.js";
 import { join, dirname } from "path";
 import { readFile, readdir } from "fs/promises";
-import { existsSync } from "fs";
+import { existsSync, readFileSync } from "fs";
 import { FrameworkIngestionEngine } from "../../framework_ingestion/ingest.js";
 import { createLLM } from "../../llm.js";
 import { readStrategy, proposeStrategicPivot, proposeEcosystemPolicyUpdate } from "./tools/strategy.js";
@@ -24,6 +24,7 @@ import { adjustEcosystemMorphology, adjustEcosystemMorphologySchema } from "./to
 import { globalSymbolicEngine } from "../../symbolic/compiler.js";
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { StdioClientTransport } from "@modelcontextprotocol/sdk/client/stdio.js";
+import { generateEcosystemAuditReportSchema } from "./tools.js";
 
 export class BrainServer {
   private server: McpServer;
@@ -113,6 +114,109 @@ export class BrainServer {
         } catch (e: any) {
           return {
             content: [{ type: "text", text: `Failed to adjust ecosystem morphology: ${e.message}` }],
+            isError: true
+          };
+        }
+      }
+    );
+
+    this.server.tool(
+      "generate_ecosystem_audit_report",
+      "Synthesizes cross-agency communications, policy changes, and morphology adjustments into an actionable audit report.",
+      generateEcosystemAuditReportSchema.shape,
+      async ({ timeframe, focus_area }) => {
+        try {
+          const llm = createLLM();
+
+          // Call the ecosystem_auditor MCP server to fetch logs via mcp.json config if available
+          let cmd = "node";
+          let clientArgs = [join(process.cwd(), "dist", "mcp_servers", "ecosystem_auditor", "index.js")];
+          let env: Record<string, string> = process.env as Record<string, string>;
+
+          const mcpConfigPath = join(process.cwd(), "mcp.json");
+          if (existsSync(mcpConfigPath)) {
+            try {
+              const mcpConfig = JSON.parse(readFileSync(mcpConfigPath, "utf-8"));
+              if (mcpConfig.mcpServers && mcpConfig.mcpServers["ecosystem_auditor"]) {
+                const auditorConfig = mcpConfig.mcpServers["ecosystem_auditor"];
+                if (auditorConfig.command) cmd = auditorConfig.command;
+                if (auditorConfig.args) clientArgs = auditorConfig.args;
+                if (auditorConfig.env) env = { ...process.env, ...auditorConfig.env };
+              } else {
+                // Fallback to tsx if dist not present and not in mcp.json
+                const auditorSrc = join(process.cwd(), "src", "mcp_servers", "ecosystem_auditor", "index.ts");
+                const auditorDist = join(process.cwd(), "dist", "mcp_servers", "ecosystem_auditor", "index.js");
+                if (existsSync(auditorSrc) && !existsSync(auditorDist)) {
+                  cmd = "npx";
+                  clientArgs = ["tsx", auditorSrc];
+                }
+              }
+            } catch (e) {
+              console.warn("Failed to parse mcp.json, falling back to default ecosystem_auditor path", e);
+            }
+          }
+
+          const transport = new StdioClientTransport({ command: cmd, args: clientArgs, stderr: "ignore" });
+          const auditorClient = new Client({ name: "brain-auditor-client", version: "1.0.0" }, { capabilities: {} });
+          await auditorClient.connect(transport);
+
+          const result: any = await auditorClient.callTool({
+             name: "generate_ecosystem_audit_report",
+             arguments: { timeframe, focus_area }
+          });
+          await auditorClient.close();
+
+          if (result.isError) {
+            return { content: [{ type: "text", text: `Error fetching logs from Ecosystem Auditor: ${JSON.stringify(result.content)}` }], isError: true };
+          }
+
+          if (!result.content || !Array.isArray(result.content) || result.content.length === 0) {
+            return { content: [{ type: "text", text: "No content returned from Ecosystem Auditor." }], isError: true };
+          }
+
+          const rawLogs = result.content[0].text || JSON.stringify(result.content[0]);
+
+          const prompt = `
+          You are the Ecosystem Governance Engine of the central Brain MCP.
+          Your task is to synthesize the following raw ecosystem audit logs into a structured markdown report.
+
+          TIMEFRAME: ${timeframe}
+          FOCUS AREA: ${focus_area}
+
+          RAW LOGS:
+          ${rawLogs}
+
+          Analyze these logs and generate a comprehensive markdown report. Include the following sections:
+          - Key Decisions
+          - Policy Deviations
+          - Resource Allocation Anomalies
+          - Recommendations
+
+          If the raw logs are empty or represent a skeleton (e.g., just returning basic fields without events), explicitly mention that no concrete events were found for this timeframe.
+          `;
+
+          const response = await llm.generate(prompt, []);
+
+          // Store the generated report in episodic memory for future reference
+          await this.episodic.store(
+              `audit-${Date.now()}`,
+              `Generate audit report for ${timeframe} focusing on ${focus_area}`,
+              response.raw || "Failed to generate text",
+              [],
+              "default",
+              undefined,
+              undefined,
+              undefined,
+              undefined,
+              undefined,
+              undefined,
+              "ecosystem_audit_report"
+          );
+
+          return { content: [{ type: "text", text: response.raw || "" }] };
+        } catch (e: any) {
+          return {
+            content: [{ type: "text", text: `Failed to generate ecosystem audit report: ${e.message}` }],
             isError: true
           };
         }
