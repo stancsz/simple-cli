@@ -300,9 +300,17 @@ The roadmap is structured around the four anatomical layers of the Digital Biosp
 ## Phase 36: Autonomous Ecosystem Evolution
 *Status: Completed*
 *Current Focus: Enable the root agency to dynamically restructure the agency ecosystem based on meta-learning, market signals, and performance metrics, creating a self-improving collective that adapts to changing conditions.*
+*Validation: ✅ Validated full dynamic restructuring capabilities via `tests/integration/phase36_ecosystem_evolution.test.ts` on 2024-05-24.*
 - [x] Implement `adjust_ecosystem_morphology` tool in Brain MCP.
 - [x] Integrate with Agency Orchestrator to execute spawn/merge/retire actions.
 - [x] Write robust integration tests for Phase 36 functionality (`tests/integration/phase36_ecosystem_evolution.test.ts`).
+
+## Phase 37: Production Ecosystem Observability & Governance
+*Status: In Progress*
+*Current Focus: Enable the root agency to monitor, audit, and explain the behavior and decisions of the entire ecosystem of child agencies, ensuring transparency, compliance, and debuggability in production.*
+- [ ] Implement an `EcosystemAuditor` MCP server that logs all cross-agency communications, policy changes, and morphology adjustments.
+- [ ] Create a `generate_ecosystem_audit_report` tool that synthesizes these logs into actionable insights.
+- [ ] Integrate with the Health Monitor dashboard to visualize ecosystem topology and decision trails.
 
 ## Phase 31: Autonomous Multi-Agency Federation & Collective Intelligence
 *Status: Completed*

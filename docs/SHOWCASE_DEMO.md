@@ -76,6 +76,15 @@ The root agency spawns and delegates to specialized child agencies for complex p
     - **Step 3**: Monitor cross-agency blockers and resolve resource constraints dynamically.
 - **Result**: A completed multi-disciplinary project is delivered autonomously, driven by [demos/agency_ecosystem_showcase/](../demos/agency_ecosystem_showcase/README.md).
 
+### 10. **Autonomous Ecosystem Evolution (Phase 36)**
+The root agency dynamically restructures the agency ecosystem based on meta-learning, market signals, and performance metrics.
+- **Scenario**: The ecosystem detects underutilized child agencies, high task failure rates, or sudden market shifts.
+- **Action**: The Brain MCP's `adjust_ecosystem_morphology` tool triggers, reasoning over current metrics.
+    - **Step 1**: Identifies an underperforming or bottlenecked area.
+    - **Step 2**: Proposes an action: `spawn` (new role to help load), `merge` (combine underutilized agencies), or `retire` (remove failing agencies).
+    - **Step 3**: The Agency Orchestrator executes these changes dynamically.
+- **Result**: A self-improving collective that adapts to changing conditions, demonstrated via [demos/phase36_ecosystem_evolution_showcase.ts](../demos/phase36_ecosystem_evolution_showcase.ts).
+
 ---
 
 ## 🚀 Deployment Instructions
