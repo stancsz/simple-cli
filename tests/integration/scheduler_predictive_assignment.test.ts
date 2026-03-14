@@ -61,11 +61,17 @@ describe('Phase 35: Scheduler Predictive Task Assignment Validation', () => {
     });
 
     it('should assign a backend task to agency_alpha based on patterns and idle status', async () => {
-        const mockGenerate = vi.fn().mockResolvedValue(JSON.stringify({
-            recommended_agency_id: "agency_alpha",
-            confidence_score: 0.92,
-            reasoning: "agency_alpha specializes in backend tasks with a high success rate (95%) and is currently idle."
-        }));
+        const mockGenerate = vi.fn().mockResolvedValue({
+            raw: JSON.stringify({
+                recommended_agency_id: "agency_alpha",
+                confidence_score: 0.92,
+                reasoning: "agency_alpha specializes in backend tasks with a high success rate (95%) and is currently idle."
+            }),
+            thought: "",
+            tool: "none",
+            args: {},
+            message: ""
+        });
 
         vi.spyOn(llm, 'createLLM').mockReturnValue({
             generate: mockGenerate,
@@ -86,6 +92,9 @@ describe('Phase 35: Scheduler Predictive Task Assignment Validation', () => {
             priority: "high"
         }, {});
 
+        if (result.isError) {
+            console.error("Test error result:", result.content[0].text);
+        }
         expect(result.isError).toBeUndefined();
         const parsed = JSON.parse(result.content[0].text);
         expect(parsed.recommended_agency_id).toBe("agency_alpha");

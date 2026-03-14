@@ -98,13 +98,13 @@ Return ONLY a valid JSON object matching this schema exactly:
 }
 `;
 
-    const responseText = await llm.generate(
+    const response = await llm.generate(
         "You are a helpful JSON-producing assistant.",
         [{ role: "user", content: prompt }]
     );
 
     try {
-        let jsonStr = responseText;
+        let jsonStr = response.raw || "";
         if (jsonStr.includes("```json")) {
             jsonStr = jsonStr.split("```json")[1].split("```")[0].trim();
         } else if (jsonStr.includes("```")) {
@@ -120,6 +120,6 @@ Return ONLY a valid JSON object matching this schema exactly:
 
         return result;
     } catch (e: any) {
-        throw new Error(`Failed to parse LLM response: ${e.message}\nRaw response: ${responseText}`);
+        throw new Error(`Failed to parse LLM response: ${e.message}\nRaw response: ${response.raw || response}`);
     }
 }
