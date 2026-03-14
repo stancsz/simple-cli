@@ -522,6 +522,46 @@ server.tool(
 );
 
 let businessClientGlobal: Client | null = null;
+let auditorClientGlobal: Client | null = null;
+
+// Helper to connect to Ecosystem Auditor
+async function connectToEcosystemAuditor(): Promise<Client | null> {
+    const srcPath = join(process.cwd(), "src", "mcp_servers", "ecosystem_auditor", "index.ts");
+    const distPath = join(process.cwd(), "dist", "mcp_servers", "ecosystem_auditor", "index.js");
+
+    let command = "node";
+    let args = [distPath];
+
+    if (existsSync(srcPath) && !existsSync(distPath)) {
+        command = "npx";
+        args = ["tsx", srcPath];
+    } else if (!existsSync(distPath)) {
+        console.warn("Could not find Ecosystem Auditor server script.");
+        return null;
+    }
+
+    const env: Record<string, string> = { ...process.env } as Record<string, string>;
+    env.MCP_DISABLE_DEPENDENCIES = 'true';
+
+    const transport = new StdioClientTransport({
+        command,
+        args,
+        env
+    });
+
+    const client = new Client(
+        { name: "health-monitor-auditor", version: "1.0.0" },
+        { capabilities: {} }
+    );
+
+    try {
+        await client.connect(transport);
+        return client;
+    } catch (e) {
+        console.error("Failed to connect to Ecosystem Auditor:", e);
+        return null;
+    }
+}
 
 // Helper to connect to Operational Persona
 async function connectToOperationalPersona(): Promise<Client | null> {
@@ -656,6 +696,33 @@ server.tool(
 );
 
 server.tool(
+    "get_ecosystem_audit_logs",
+    "Get ecosystem audit logs from the Ecosystem Auditor.",
+    {
+        timeframe: z.string().describe("The timeframe to audit, e.g., 'last_24_hours' or 'last_7_days'."),
+        focus_area: z.enum(["communications", "policy_changes", "morphology_adjustments", "all"]).optional().default("all")
+    },
+    async ({ timeframe, focus_area }) => {
+        if (!auditorClientGlobal) {
+            return { content: [{ type: "text", text: "Ecosystem Auditor client not connected." }], isError: true };
+        }
+        try {
+            // @ts-ignore
+            const res = await auditorClientGlobal.callTool({
+                name: "generate_ecosystem_audit_report",
+                arguments: { timeframe, focus_area }
+            });
+            return {
+                content: res.content as any,
+                isError: res.isError as boolean | undefined
+            };
+        } catch (e: any) {
+            return { content: [{ type: "text", text: `Error fetching audit logs: ${e.message}` }], isError: true };
+        }
+    }
+);
+
+server.tool(
     "get_system_health_summary",
     "Get system health summary (internal aggregation).",
     {},
@@ -690,6 +757,9 @@ export async function main() {
 
     // Connect to Business Ops Client
     businessClientGlobal = await connectToBusinessOps();
+
+    // Connect to Ecosystem Auditor Client
+    auditorClientGlobal = await connectToEcosystemAuditor();
 
     // Serve Dashboard Static Files
     const dashboardPublic = join(process.cwd(), 'scripts', 'dashboard', 'dist');
@@ -788,6 +858,29 @@ export async function main() {
              const anomalies = detectAnomalies(metrics);
              res.json(anomalies);
         } catch (e) {
+            res.status(500).json({ error: (e as Error).message });
+        }
+    });
+
+    app.get("/api/dashboard/ecosystem-audit", async (req, res) => {
+        if (!auditorClientGlobal) {
+            return res.status(503).json({ error: "Ecosystem Auditor service unavailable" });
+        }
+        try {
+            const timeframe = (req.query.timeframe as string) || "last_24_hours";
+            const focus_area = (req.query.focus_area as string) || "all";
+            const result: any = await auditorClientGlobal.callTool({
+                name: "generate_ecosystem_audit_report",
+                arguments: { timeframe, focus_area }
+            });
+
+            if (result.content && result.content[0] && result.content[0].text) {
+                res.json(JSON.parse(result.content[0].text));
+            } else {
+                res.status(500).json({ error: "Failed to fetch audit logs" });
+            }
+        } catch (e) {
+            console.error("Audit log fetch failed:", e);
             res.status(500).json({ error: (e as Error).message });
         }
     });

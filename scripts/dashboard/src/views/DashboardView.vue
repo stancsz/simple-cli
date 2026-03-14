@@ -18,6 +18,10 @@
         <ArchitecturePanel />
     </div>
 
+    <div class="grid-full">
+        <EcosystemAuditPanel />
+    </div>
+
     <div class="grid">
         <div class="panel">
             <h3>Task Completion & Success Rate</h3>
@@ -67,9 +71,10 @@ import SwarmFleetPanel from '../components/SwarmFleetPanel.vue'
 import FinancialKPIsPanel from '../components/FinancialKPIsPanel.vue'
 import SystemHealthPanel from '../components/SystemHealthPanel.vue'
 import ArchitecturePanel from '../components/ArchitecturePanel.vue'
+import EcosystemAuditPanel from '../components/EcosystemAuditPanel.vue'
 
 export default {
-    components: { Bar, Doughnut, SwarmFleetPanel, FinancialKPIsPanel, SystemHealthPanel, ArchitecturePanel },
+    components: { Bar, Doughnut, SwarmFleetPanel, FinancialKPIsPanel, SystemHealthPanel, ArchitecturePanel, EcosystemAuditPanel },
     data() {
         return {
             metrics: {},
