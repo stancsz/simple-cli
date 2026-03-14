@@ -25,6 +25,41 @@ import { globalSymbolicEngine } from "../../symbolic/compiler.js";
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { StdioClientTransport } from "@modelcontextprotocol/sdk/client/stdio.js";
 
+async function logToAuditor(eventType: string, data: any): Promise<void> {
+    try {
+        const auditorSrc = join(process.cwd(), "src", "mcp_servers", "ecosystem_auditor", "index.ts");
+        const auditorDist = join(process.cwd(), "dist", "mcp_servers", "ecosystem_auditor", "index.js");
+        let cmd = "node";
+        let clientArgs = [auditorDist];
+        try {
+            await readFile(auditorSrc, "utf8");
+            try {
+                await readFile(auditorDist, "utf8");
+            } catch {
+                cmd = "npx";
+                clientArgs = ["tsx", auditorSrc];
+            }
+        } catch {}
+
+        const transport = new StdioClientTransport({ command: cmd, args: clientArgs });
+        const client = new Client({ name: "brain-auditor-client", version: "1.0.0" }, { capabilities: {} });
+        await client.connect(transport);
+
+        await client.callTool({
+            name: "log_audit_event",
+            arguments: {
+                event_type: eventType,
+                source_agency: "brain",
+                data
+            }
+        });
+
+        await client.close();
+    } catch (e) {
+        console.warn(`[Auditor] Failed to log ${eventType} event from Brain:`, e);
+    }
+}
+
 export class BrainServer {
   private server: McpServer;
   private episodic: EpisodicMemory;
@@ -109,6 +144,10 @@ export class BrainServer {
       async (input) => {
         try {
           const decisions = await adjustEcosystemMorphology(input, this.episodic);
+          await logToAuditor("morphology_adjustment", {
+            input,
+            decisions
+          });
           return { content: [{ type: "text", text: JSON.stringify(decisions, null, 2) }] };
         } catch (e: any) {
           return {
@@ -135,6 +174,12 @@ export class BrainServer {
             analysisObj = { raw: ecosystem_analysis };
           }
           const result = await proposeEcosystemPolicyUpdate(this.episodic, llm, analysisObj);
+
+          await logToAuditor("policy_change", {
+            analysis: analysisObj,
+            new_policy: result
+          });
+
           return { content: [{ type: "text", text: JSON.stringify(result, null, 2) }] };
         } catch (e: any) {
           return {

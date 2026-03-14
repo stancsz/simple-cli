@@ -1,6 +1,8 @@
 import { randomUUID } from "crypto";
 import * as yaml from "yaml";
 import { EpisodicMemory } from "../../../brain/episodic.js";
+import { Client } from "@modelcontextprotocol/sdk/client/index.js";
+import { StdioClientTransport } from "@modelcontextprotocol/sdk/client/stdio.js";
 import {
     ProjectSpec,
     AgencyConfig,
@@ -14,6 +16,42 @@ import * as fs from "fs/promises";
 import * as path from "path";
 
 // Helpers to read/write state to EpisodicMemory, removing local memory caching
+
+async function logToAuditor(eventType: string, sourceAgency: string | undefined, targetAgency: string | undefined, data: any): Promise<void> {
+    try {
+        const auditorSrc = path.join(process.cwd(), "src", "mcp_servers", "ecosystem_auditor", "index.ts");
+        const auditorDist = path.join(process.cwd(), "dist", "mcp_servers", "ecosystem_auditor", "index.js");
+        let cmd = "node";
+        let clientArgs = [auditorDist];
+        try {
+            await fs.access(auditorSrc);
+            try {
+                await fs.access(auditorDist);
+            } catch {
+                cmd = "npx";
+                clientArgs = ["tsx", auditorSrc];
+            }
+        } catch {}
+
+        const transport = new StdioClientTransport({ command: cmd, args: clientArgs });
+        const client = new Client({ name: "orchestrator-auditor-client", version: "1.0.0" }, { capabilities: {} });
+        await client.connect(transport);
+
+        await client.callTool({
+            name: "log_audit_event",
+            arguments: {
+                event_type: eventType,
+                source_agency: sourceAgency,
+                target_agency: targetAgency,
+                data
+            }
+        });
+
+        await client.close();
+    } catch (e) {
+        console.warn(`[Auditor] Failed to log ${eventType} event:`, e);
+    }
+}
 
 async function getProjectState(projectId: string, memory: EpisodicMemory): Promise<Project> {
     const results = await memory.recall(`multi_agency_project_${projectId}`, 1, "project_management");
@@ -141,6 +179,11 @@ export async function assignAgencyToTask(projectId: string, taskId: string, agen
             [assignedAgencyId, "agency_spawning"],
             "autonomous_decision"
         );
+
+        await logToAuditor("agency_spawn", "agency_orchestrator", assignedAgencyId, {
+            role: agencyConfig.role,
+            resource_limit: agencyConfig.resource_limit
+        });
     }
 
     const assignmentId = `assign_${randomUUID()}`;
@@ -309,6 +352,12 @@ export async function spawnChildAgency(role: string, initialContext: string, res
         "autonomous_decision"
     );
 
+    await logToAuditor("agency_spawn", "agency_orchestrator", assignedAgencyId, {
+        role,
+        resource_limit: resourceLimit,
+        swarm_config: swarmConfig
+    });
+
     return { agency_id: assignedAgencyId, status: "spawned", role };
 }
 
@@ -416,6 +465,11 @@ export async function mergeChildAgencies(sourceAgencyId: string, targetAgencyId:
         "autonomous_decision"
     );
 
+    await logToAuditor("agency_merge", sourceAgencyId, targetAgencyId, {
+        resources_transferred: sourceTokens,
+        archive_path: archivedSourceDir
+    });
+
     return { status: "merged", merged_from: sourceAgencyId, merged_into: targetAgencyId };
 }
 
@@ -449,6 +503,10 @@ export async function retireChildAgency(agencyId: string, memory: EpisodicMemory
         [agencyId, "agency_retirement", "ecosystem_morphology"],
         "autonomous_decision"
     );
+
+    await logToAuditor("agency_retire", "agency_orchestrator", agencyId, {
+        archive_path: archivedSourceDir
+    });
 
     return { agency_id: agencyId, status: "retired" };
 }

@@ -1,5 +1,41 @@
 import { z } from "zod";
 
+export const logAuditEventSchema = z.object({
+  event_type: z.enum(["agency_spawn", "agency_merge", "agency_retire", "inter_agency_call", "policy_change", "morphology_adjustment"]).describe("The type of event being logged."),
+  source_agency: z.string().optional().describe("The ID of the agency originating the event."),
+  target_agency: z.string().optional().describe("The ID of the target agency, if applicable."),
+  data: z.any().describe("The serialized data payload of the event."),
+  metadata: z.record(z.any()).optional().describe("Additional metadata for the event.")
+});
+
+export type LogAuditEventInput = z.infer<typeof logAuditEventSchema>;
+
+export const queryAuditLogsSchema = z.object({
+  time_range: z.object({
+    start: z.number().optional().describe("Start timestamp (milliseconds since epoch)."),
+    end: z.number().optional().describe("End timestamp (milliseconds since epoch).")
+  }).optional().describe("The time range to query."),
+  event_type: z.enum(["agency_spawn", "agency_merge", "agency_retire", "inter_agency_call", "policy_change", "morphology_adjustment"]).optional().describe("Filter by specific event type."),
+  agency_id: z.string().optional().describe("Filter by source or target agency ID.")
+});
+
+export type QueryAuditLogsInput = z.infer<typeof queryAuditLogsSchema>;
+
+export const exportAuditTrailSchema = z.object({
+  format: z.enum(["json", "csv"]).describe("The format to export the audit trail to.")
+});
+
+export type ExportAuditTrailInput = z.infer<typeof exportAuditTrailSchema>;
+
+export interface AuditEvent {
+  timestamp: number;
+  event_type: string;
+  source_agency?: string;
+  target_agency?: string;
+  data: any;
+  metadata?: Record<string, any>;
+}
+
 /**
  * Input schema for the generate_ecosystem_audit_report tool.
  */
