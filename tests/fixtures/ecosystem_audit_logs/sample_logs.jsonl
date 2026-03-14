@@ -1,0 +1,5 @@
+{"timestamp":"2026-03-14T10:00:00.000Z","event_type":"spawn","source_agency":"root","target_agency":"agency_A","payload":{"mission":"Task 1"}}
+{"timestamp":"2026-03-14T10:05:00.000Z","event_type":"policy_change","source_agency":"root","payload":{"swarm_config":{"scale":2}}}
+{"timestamp":"2026-03-14T10:10:00.000Z","event_type":"communication","source_agency":"agency_A","target_agency":"agency_B","payload":{"message":"Hello from A"}}
+{"timestamp":"2026-03-14T10:15:00.000Z","event_type":"anomaly","source_agency":"agency_A","payload":{"error_rate":0.05,"warning":"High latency"}}
+{"timestamp":"2026-03-14T10:20:00.000Z","event_type":"merge","source_agency":"root","target_agency":"agency_A","payload":{"merged_with":"agency_B"}}
