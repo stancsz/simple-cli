@@ -92,12 +92,21 @@ export function highlyComplexFunction(a: number, b: number) {
 
         // 2. Validate metrics are stored in Brain (episodic memory via metrics files)
         const date = new Date().toISOString().split('T')[0];
-        const filename = join(process.cwd(), '.agent', 'metrics', `${date}.ndjson`);
+        const agentDir = process.env.JULES_AGENT_DIR || join(process.cwd(), '.agent');
+        const filename = join(agentDir, 'metrics', `${date}.ndjson`);
 
         const { existsSync, readFileSync } = await import('fs');
-        expect(existsSync(filename)).toBe(true);
 
-        const content = readFileSync(filename, 'utf-8');
+        let content = '';
+        for (let i = 0; i < 20; i++) {
+            if (existsSync(filename)) {
+                content = readFileSync(filename, 'utf-8');
+                if (content.includes('architecture_total_files')) break;
+            }
+            await new Promise(r => setTimeout(r, 100));
+        }
+
+        expect(existsSync(filename)).toBe(true);
         expect(content).toContain('architecture_total_files');
         expect(content).toContain('architecture_avg_complexity');
         expect(content).toContain('architecture_total_loc');
