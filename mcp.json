@@ -141,6 +141,13 @@
         "tsx",
         "src/mcp_servers/validation_metrics/index.ts"
       ]
+    },
+    "ecosystem_auditor": {
+      "command": "npx",
+      "args": [
+        "tsx",
+        "src/mcp_servers/ecosystem_auditor/index.ts"
+      ]
     }
   },
   "scheduledTasks": [

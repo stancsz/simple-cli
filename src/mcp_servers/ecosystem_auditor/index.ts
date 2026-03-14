@@ -8,6 +8,9 @@ import {
 } from "@modelcontextprotocol/sdk/types.js";
 import { generateEcosystemAuditReport } from "./tools/generate_audit_report.js";
 import { generateEcosystemAuditReportSchema } from "./schemas/generate_audit_report.js";
+import { executeLogEcosystemEvent } from "./tools/log_event.js";
+import { logEcosystemEventSchema } from "./schemas/log_event.js";
+import { zodToJsonSchema } from "zod-to-json-schema";
 
 /**
  * The Ecosystem Auditor MCP Server instance.
@@ -39,12 +42,31 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
           },
           required: ["timeframe"]
         }
+      },
+      {
+        name: "log_ecosystem_event",
+        description: "Logs a significant ecosystem event such as agency spawning, policy changes, or cross-agency communication.",
+        inputSchema: zodToJsonSchema(logEcosystemEventSchema) as any
       }
     ]
   };
 });
 
 server.setRequestHandler(CallToolRequestSchema, async (request) => {
+  if (request.params.name === "log_ecosystem_event") {
+    const input = logEcosystemEventSchema.parse(request.params.arguments);
+    const result = await executeLogEcosystemEvent(input);
+    if (!result.success) {
+      return {
+        content: [{ type: "text", text: result.message }],
+        isError: true
+      };
+    }
+    return {
+      content: [{ type: "text", text: result.message }]
+    };
+  }
+
   if (request.params.name === "generate_ecosystem_audit_report") {
     const input = generateEcosystemAuditReportSchema.parse(request.params.arguments);
     const report = await generateEcosystemAuditReport(input);

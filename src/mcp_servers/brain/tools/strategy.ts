@@ -5,6 +5,7 @@ import { LLM } from "../../../llm.js";
 // Define the schema interface here or import it if you have it in schemas.ts
 // Assuming schemas.ts exists based on the plan, let's import it.
 import { CorporateStrategy } from "../../../brain/schemas.js";
+import { auditLogger } from "../../ecosystem_auditor/logger.js";
 
 /**
  * Retrieves the latest corporate strategy from episodic memory.
@@ -215,6 +216,15 @@ export const proposeEcosystemPolicyUpdate = async (
       undefined,
       "ecosystem_policy"
   );
+
+  // Audit Log the policy update
+  await auditLogger.logEvent({
+      event_type: "policy_change",
+      source_agency: "brain",
+      target_agency: "ecosystem",
+      payload: { proposal: proposalData.proposal, rationale: proposalData.rationale, scope: proposalData.scope },
+      timestamp: new Date().toISOString()
+  });
 
   return {
       ecosystem_proposal: proposalData,

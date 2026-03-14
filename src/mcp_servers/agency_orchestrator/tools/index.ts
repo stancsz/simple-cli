@@ -12,6 +12,7 @@ import {
 } from "../types.js";
 import * as fs from "fs/promises";
 import * as path from "path";
+import { auditLogger } from "../../ecosystem_auditor/logger.js";
 
 // Helpers to read/write state to EpisodicMemory, removing local memory caching
 
@@ -309,6 +310,15 @@ export async function spawnChildAgency(role: string, initialContext: string, res
         "autonomous_decision"
     );
 
+    // Audit Log the morphology adjustment
+    await auditLogger.logEvent({
+        event_type: "spawn",
+        source_agency: "root",
+        target_agency: assignedAgencyId,
+        payload: { role, initial_context: initialContext, resource_limit: resourceLimit, swarm_config: swarmConfig },
+        timestamp: new Date().toISOString()
+    });
+
     return { agency_id: assignedAgencyId, status: "spawned", role };
 }
 
@@ -416,6 +426,15 @@ export async function mergeChildAgencies(sourceAgencyId: string, targetAgencyId:
         "autonomous_decision"
     );
 
+    // Audit Log the morphology adjustment
+    await auditLogger.logEvent({
+        event_type: "merge",
+        source_agency: sourceAgencyId,
+        target_agency: targetAgencyId,
+        payload: { resources_transferred: sourceTokens, archive_path: archivedSourceDir },
+        timestamp: new Date().toISOString()
+    });
+
     return { status: "merged", merged_from: sourceAgencyId, merged_into: targetAgencyId };
 }
 
@@ -449,6 +468,15 @@ export async function retireChildAgency(agencyId: string, memory: EpisodicMemory
         [agencyId, "agency_retirement", "ecosystem_morphology"],
         "autonomous_decision"
     );
+
+    // Audit Log the morphology adjustment
+    await auditLogger.logEvent({
+        event_type: "retire",
+        source_agency: "root",
+        target_agency: agencyId,
+        payload: { archive_path: archivedSourceDir },
+        timestamp: new Date().toISOString()
+    });
 
     return { agency_id: agencyId, status: "retired" };
 }
