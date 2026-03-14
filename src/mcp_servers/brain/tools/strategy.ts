@@ -96,8 +96,12 @@ Return ONLY a valid JSON object matching this schema:
   let newStrategyData: any;
   try {
       // Clean up markdown code blocks if present
-      let jsonStr = response.message || response.thought || "";
-      jsonStr = jsonStr.replace(/```json/g, "").replace(/```/g, "").trim();
+      let jsonStr = response.raw || response.message || response.thought || "";
+      if (jsonStr.includes("```json")) {
+          jsonStr = jsonStr.split("```json")[1].split("```")[0].trim();
+      } else if (jsonStr.includes("```")) {
+          jsonStr = jsonStr.split("```")[1].split("```")[0].trim();
+      }
 
       // Extract JSON object
       const firstBrace = jsonStr.indexOf("{");
@@ -108,7 +112,7 @@ Return ONLY a valid JSON object matching this schema:
 
       newStrategyData = JSON.parse(jsonStr);
   } catch (e: any) {
-      throw new Error(`Failed to parse LLM response for strategy: ${e.message}. Raw response: ${response.message}`);
+      throw new Error(`Failed to parse LLM response for strategy: ${e.message}. Raw response: ${response.raw || response.message}`);
   }
 
   // 4. Construct Final Strategy Object
@@ -175,8 +179,13 @@ export const proposeEcosystemPolicyUpdate = async (
 
   let proposalData: any;
   try {
-      let jsonStr = response.message || response.thought || "";
-      jsonStr = jsonStr.replace(/```json/g, "").replace(/```/g, "").trim();
+      let jsonStr = response.raw || response.message || response.thought || "";
+      if (jsonStr.includes("```json")) {
+          jsonStr = jsonStr.split("```json")[1].split("```")[0].trim();
+      } else if (jsonStr.includes("```")) {
+          jsonStr = jsonStr.split("```")[1].split("```")[0].trim();
+      }
+
       const firstBrace = jsonStr.indexOf("{");
       const lastBrace = jsonStr.lastIndexOf("}");
       if (firstBrace !== -1 && lastBrace !== -1) {
@@ -184,7 +193,7 @@ export const proposeEcosystemPolicyUpdate = async (
       }
       proposalData = JSON.parse(jsonStr);
   } catch (e: any) {
-      throw new Error(`Failed to parse LLM response for ecosystem policy update: ${e.message}. Raw response: ${response.message}`);
+      throw new Error(`Failed to parse LLM response for ecosystem policy update: ${e.message}. Raw response: ${response.raw || response.message}`);
   }
 
   // Submit the proposed update via proposeStrategicPivot to follow standard governance

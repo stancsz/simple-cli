@@ -45,8 +45,12 @@ export async function applyEcosystemInsights(memory: EpisodicMemory): Promise<{ 
     const llmResponse = await llm.generate(prompt, []);
     let parsedPolicy: any;
     try {
-        let jsonStr = llmResponse.message || llmResponse.thought || "";
-        jsonStr = jsonStr.replace(/```json/g, "").replace(/```/g, "").trim();
+        let jsonStr = llmResponse.raw || llmResponse.message || llmResponse.thought || "";
+        if (jsonStr.includes("```json")) {
+            jsonStr = jsonStr.split("```json")[1].split("```")[0].trim();
+        } else if (jsonStr.includes("```")) {
+            jsonStr = jsonStr.split("```")[1].split("```")[0].trim();
+        }
         const firstBrace = jsonStr.indexOf("{");
         const lastBrace = jsonStr.lastIndexOf("}");
         if (firstBrace !== -1 && lastBrace !== -1) {
@@ -54,7 +58,7 @@ export async function applyEcosystemInsights(memory: EpisodicMemory): Promise<{ 
         }
         parsedPolicy = JSON.parse(jsonStr);
     } catch (e: any) {
-        throw new Error(`Failed to parse LLM interpretation of policy: ${e.message}`);
+        throw new Error(`Failed to parse LLM interpretation of policy: ${e.message}. Raw response: ${llmResponse.raw || llmResponse.message}`);
     }
 
     if (!parsedPolicy.target_agencies || !parsedPolicy.parameters || Object.keys(parsedPolicy.parameters).length === 0) {
