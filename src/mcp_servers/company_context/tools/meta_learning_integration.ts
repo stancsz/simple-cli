@@ -13,7 +13,8 @@ export const update_company_with_ecosystem_insights = async (
     try {
         const profileMemories = await memory.recall("company attributes", 1, company_id, "company_profile");
         if (profileMemories && profileMemories.length > 0) {
-            const rawResponse = profileMemories[0].agentResponse || profileMemories[0].solution || "{}";
+            const profile = profileMemories[0] as any;
+            const rawResponse = profile.agentResponse || profile.solution || "{}";
             attributes = JSON.parse(rawResponse);
         }
     } catch (e) {

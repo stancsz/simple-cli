@@ -93,7 +93,7 @@ export class CompanyManager {
       const memory = new EpisodicMemory(process.cwd());
       const results = await memory.recall("meta-learning insights", 1, this.companyId, "meta_learning_insight");
       if (results && results.length > 0) {
-          const latest = results[0];
+          const latest = results[0] as any;
           metaInsights = `\n\n### Meta-Learning Insights\n${latest.agentResponse || latest.solution || ""}`;
       }
     } catch (e) {
