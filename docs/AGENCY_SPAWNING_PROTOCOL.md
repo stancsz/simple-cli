@@ -31,3 +31,8 @@ To test the Spawning Protocol, run the specific integration tests:
 npx vitest run tests/integration/phase32_agency_spawning_validation.test.ts
 npx vitest run tests/integration/agency_ecosystem_stress.test.ts
 ```
+
+
+## Ecosystem Optimization (Meta-Learning)
+
+Child agencies spawned via this protocol benefit from root-level meta-learning optimizations. The `apply_ecosystem_insights` tool in the Agency Orchestrator dynamically retrieves the latest ecosystem-wide insights (`ecosystem_policy`) from the Brain's Episodic Memory. It then updates the `swarm_config:<agency_id>` for the relevant child agencies. Subsequent operations, such as SOP execution, automatically query and inject these optimized parameters (e.g., `max_agents`, `routing_latency_ms`) to ensure peak operational efficiency across the swarm fleet.
