@@ -122,3 +122,7 @@ To support high-concurrency multi-tenant environments (e.g., Kubernetes), the Br
 
 ### Validation
 These guarantees are validated by `tests/integration/brain_production.test.ts`, which simulates 12+ concurrent tenants performing hundreds of parallel reads and writes with zero data loss or cross-contamination.
+
+## Meta-Learning Integration
+
+The Company Context integrates meta-learning insights derived from ecosystem patterns. The `update_company_with_ecosystem_insights` tool retrieves company attributes, analyzes ecosystem patterns through the Brain MCP filtered by these attributes, and stores the personalized insights into the company's context (as `meta_learning_insight`). These insights are then automatically included when loading the company context, enabling personalized client optimization that overrides or complements general ecosystem policies.

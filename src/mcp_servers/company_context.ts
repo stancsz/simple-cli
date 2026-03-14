@@ -7,6 +7,7 @@ import { join } from "path";
 import { readFile, readdir, mkdir } from "fs/promises";
 import { existsSync } from "fs";
 import { createLLM } from "../llm.js";
+import { update_company_with_ecosystem_insights } from "./company_context/tools/meta_learning_integration.js";
 
 export class CompanyContextServer {
   private server: McpServer;
@@ -165,6 +166,22 @@ export class CompanyContextServer {
                 content: [{ type: "text", text: `Error querying database: ${e.message}` }],
                 isError: true
             };
+        }
+      }
+    );
+
+    this.server.tool(
+      "update_company_with_ecosystem_insights",
+      "Retrieve meta-learning insights derived from ecosystem patterns and apply them to a specific company context.",
+      {
+        company_id: z.string().describe("The ID of the company."),
+      },
+      async ({ company_id }) => {
+        try {
+          const result = await update_company_with_ecosystem_insights(company_id);
+          return { content: [{ type: "text", text: result }] };
+        } catch (e: any) {
+          return { content: [{ type: "text", text: `Error updating company with ecosystem insights: ${e.message}` }], isError: true };
         }
       }
     );

@@ -2,6 +2,7 @@ import { readFile, readdir } from "fs/promises";
 import { join } from "path";
 import { existsSync } from "fs";
 import { JsonVectorStore, VectorStore } from "./vector_store.js";
+import { EpisodicMemory } from "../brain/episodic.js";
 
 export interface CompanyConfig {
   name: string;
@@ -87,6 +88,18 @@ export class CompanyManager {
       }
     }
 
-    return `## Company Context: ${this.config?.name || this.companyId}\n\n### Brand Voice\n${voice}${docs}`;
+    let metaInsights = "";
+    try {
+      const memory = new EpisodicMemory(process.cwd());
+      const results = await memory.recall("meta-learning insights", 1, this.companyId, "meta_learning_insight");
+      if (results && results.length > 0) {
+          const latest = results[0];
+          metaInsights = `\n\n### Meta-Learning Insights\n${latest.agentResponse || latest.solution || ""}`;
+      }
+    } catch (e) {
+      console.warn("Could not load meta-learning insights:", e);
+    }
+
+    return `## Company Context: ${this.config?.name || this.companyId}\n\n### Brand Voice\n${voice}${docs}${metaInsights}`;
   }
 }

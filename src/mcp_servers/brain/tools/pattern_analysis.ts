@@ -233,7 +233,8 @@ export const analyzeCrossAgencyPatterns = async (
 
 export const analyzeEcosystemPatterns = async (
   episodic: EpisodicMemory,
-  llm: LLM
+  llm: LLM,
+  company_attributes?: any
 ): Promise<any> => {
   try {
     // 1. Fetch episodic memories across the ecosystem
@@ -258,9 +259,11 @@ export const analyzeEcosystemPatterns = async (
       `[Agency: ${m.source_agency}] [Task: ${m.taskId}] Request: ${m.userPrompt.substring(0, 100)}... -> Outcome: ${m.agentResponse.substring(0, 100)}...`
     ).join("\n");
 
+    const attributeFilter = company_attributes ? `\nFilter and synthesize insights specifically relevant to these company attributes: ${JSON.stringify(company_attributes)}\n` : "";
+
     const prompt = `
     You are the Ecosystem Intelligence Engine of the root AI agency.
-    Your task is to analyze performance patterns across multiple child agencies and identify global insights.
+    Your task is to analyze performance patterns across multiple child agencies and identify global insights.${attributeFilter}
 
     ECOSYSTEM MEMORIES:
     ${context}
