@@ -63,7 +63,8 @@ The roadmap is structured around the four anatomical layers of the Digital Biosp
 ## Phase 35: Applied Meta-Learning & Ecosystem Optimization
 *Status: Planned*
 *Current Focus: Translate ecosystem-wide meta-learning into actionable, automated optimizations across all spawned agencies.*
-- [ ] Implement `apply_ecosystem_insights` tool to automatically adjust swarm parameters based on meta-learning.
+- [x] Implement `apply_ecosystem_insights` tool to automatically adjust swarm parameters based on meta-learning.
+      ✅ Implemented `apply_ecosystem_insights` in `agency_orchestrator` to automatically ingest `ecosystem_policy` memory and update child `swarm_config`. Validated via `tests/integration/apply_ecosystem_insights_validation.test.ts`. (PR #700)
 - [x] Enhance the Scheduler to use ecosystem patterns for predictive task assignment.
       ✅ Enhanced Scheduler MCP to query Brain's ecosystem patterns for predictive agency assignment via `agency_orchestrator`. Validated via integration tests.
 - [ ] Integrate meta-learning findings into Company Contexts for personalized client optimization.

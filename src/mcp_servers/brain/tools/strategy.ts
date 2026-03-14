@@ -190,6 +190,23 @@ export const proposeEcosystemPolicyUpdate = async (
   // Submit the proposed update via proposeStrategicPivot to follow standard governance
   const pivotResult = await proposeStrategicPivot(episodic, llm, proposalData.proposal, "default");
 
+  // Since proposeStrategicPivot stores it as "corporate_strategy", we explicitly
+  // log a secondary memory as "ecosystem_policy" so the orchestrator can target it uniquely.
+  await episodic.store(
+      `ecosystem_policy_${Date.now()}`,
+      `Ecosystem Policy Update: ${proposalData.proposal}`,
+      JSON.stringify(pivotResult),
+      ["ecosystem_policy", "strategy", "phase_35"],
+      "default",
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      "ecosystem_policy"
+  );
+
   return {
       ecosystem_proposal: proposalData,
       pivot_result: pivotResult

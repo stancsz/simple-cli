@@ -5,7 +5,8 @@ import {
     createMultiAgencyProject,
     assignAgencyToTask,
     monitorProjectStatus,
-    resolveInterAgencyDependency
+    resolveInterAgencyDependency,
+    applyEcosystemInsights
 } from "./tools/index.js";
 import { EpisodicMemory } from "../../brain/episodic.js";
 
@@ -90,6 +91,20 @@ export class AgencyOrchestratorServer {
         try {
             await resolveInterAgencyDependency(project_id, dependency, this.memory);
             return { content: [{ type: "text", text: "Dependency successfully resolved." }] };
+        } catch (error: any) {
+            return { content: [{ type: "text", text: `Error: ${error.message}` }], isError: true };
+        }
+      }
+    );
+
+    this.server.tool(
+      "apply_ecosystem_insights",
+      "Automatically adjusts swarm parameters for child agencies based on meta-learning findings in the Brain.",
+      {},
+      async () => {
+        try {
+            const result = await applyEcosystemInsights(this.memory);
+            return { content: [{ type: "text", text: JSON.stringify(result, null, 2) }] };
         } catch (error: any) {
             return { content: [{ type: "text", text: `Error: ${error.message}` }], isError: true };
         }

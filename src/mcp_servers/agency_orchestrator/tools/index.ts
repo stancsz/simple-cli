@@ -267,3 +267,5 @@ export async function updateTaskStatus(projectId: string, taskId: string, status
     assignment.status = status;
     await saveProjectState(project, memory);
 }
+
+export { applyEcosystemInsights } from "./apply_ecosystem_insights.js";
