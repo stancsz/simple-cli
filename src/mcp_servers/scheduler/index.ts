@@ -1,3 +1,5 @@
+import { Client } from "@modelcontextprotocol/sdk/client/index.js";
+import { StdioClientTransport } from "@modelcontextprotocol/sdk/client/stdio.js";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { z } from "zod";
@@ -154,7 +156,131 @@ export class SchedulerServer {
       }
     );
 
+
     this.server.tool(
+      "run_ecosystem_optimization",
+      "Periodically called to trigger a meta-learning ecosystem optimization cycle.",
+      {},
+      async () => {
+        try {
+            // 1. Call Brain's analyze_ecosystem_patterns
+            const brainSrc = join(process.cwd(), "src", "mcp_servers", "brain", "index.ts");
+            const brainDist = join(process.cwd(), "dist", "mcp_servers", "brain", "index.js");
+            let brainCmd = "node";
+            let brainArgs = [brainDist];
+            if (existsSync(brainSrc) && !existsSync(brainDist)) {
+                brainCmd = "npx";
+                brainArgs = ["tsx", brainSrc];
+            }
+
+            const brainTransport = new StdioClientTransport({ command: brainCmd, args: brainArgs });
+            const brainClient = new Client({ name: "scheduler-brain-client", version: "1.0.0" }, { capabilities: {} });
+            await brainClient.connect(brainTransport);
+
+            let analysisResultStr = "";
+            try {
+                const patternsResult: any = await brainClient.callTool({
+                    name: "analyze_ecosystem_patterns",
+                    arguments: {}
+                });
+                if (patternsResult && patternsResult.content && patternsResult.content.length > 0) {
+                    analysisResultStr = patternsResult.content[0].text;
+                }
+            } catch (e: any) {
+                console.warn("Failed to get ecosystem patterns:", e.message);
+            }
+
+            // Also call propose_ecosystem_policy_update (the full pipeline)
+            let policyResultStr = "";
+            if (analysisResultStr) {
+                try {
+                    const policyResult: any = await brainClient.callTool({
+                        name: "propose_ecosystem_policy_update",
+                        arguments: { ecosystem_analysis: analysisResultStr }
+                    });
+                    if (policyResult && policyResult.content && policyResult.content.length > 0) {
+                        policyResultStr = policyResult.content[0].text;
+                    }
+                } catch (e: any) {
+                    console.warn("Failed to propose ecosystem policy update:", e.message);
+                }
+            }
+            await brainClient.close();
+
+            // 2. Call Agency Orchestrator's apply_ecosystem_insights
+            const orchSrc = join(process.cwd(), "src", "mcp_servers", "agency_orchestrator", "index.ts");
+            const orchDist = join(process.cwd(), "dist", "mcp_servers", "agency_orchestrator", "index.js");
+            let orchCmd = "node";
+            let orchArgs = [orchDist];
+            if (existsSync(orchSrc) && !existsSync(orchDist)) {
+                orchCmd = "npx";
+                orchArgs = ["tsx", orchSrc];
+            }
+
+            const orchTransport = new StdioClientTransport({ command: orchCmd, args: orchArgs });
+            const orchClient = new Client({ name: "scheduler-orch-client", version: "1.0.0" }, { capabilities: {} });
+            await orchClient.connect(orchTransport);
+
+            let appliedChanges = 0;
+            try {
+                const applyResult: any = await orchClient.callTool({
+                    name: "apply_ecosystem_insights",
+                    arguments: {}
+                });
+                if (applyResult && applyResult.content && applyResult.content.length > 0) {
+                    const parsedApply = JSON.parse(applyResult.content[0].text);
+                    if (parsedApply.status === "success" && parsedApply.changes) {
+                        appliedChanges = parsedApply.changes.length;
+                    }
+                }
+            } catch (e: any) {
+                console.warn("Failed to apply ecosystem insights:", e.message);
+            } finally {
+                await orchClient.close();
+            }
+
+            // 3. Log to Health Monitor
+            const healthSrc = join(process.cwd(), "src", "mcp_servers", "health_monitor", "index.ts");
+            const healthDist = join(process.cwd(), "dist", "mcp_servers", "health_monitor", "index.js");
+            let healthCmd = "node";
+            let healthArgs = [healthDist];
+            if (existsSync(healthSrc) && !existsSync(healthDist)) {
+                healthCmd = "npx";
+                healthArgs = ["tsx", healthSrc];
+            }
+
+            const healthTransport = new StdioClientTransport({ command: healthCmd, args: healthArgs });
+            const healthClient = new Client({ name: "scheduler-health-client", version: "1.0.0" }, { capabilities: {} });
+            await healthClient.connect(healthTransport);
+
+            try {
+                await healthClient.callTool({
+                    name: "track_metric",
+                    arguments: {
+                        agent: "scheduler",
+                        metric: "ecosystem_insights_applied",
+                        value: appliedChanges
+                    }
+                });
+            } catch (e: any) {
+                console.warn("Failed to track metric in health monitor:", e.message);
+            } finally {
+                await healthClient.close();
+            }
+
+            return {
+                content: [{ type: "text", text: JSON.stringify({ status: "success", appliedChanges }, null, 2) }]
+            };
+        } catch (e: any) {
+            return {
+                content: [{ type: "text", text: `Error running ecosystem optimization: ${e.message}` }],
+                isError: true
+            };
+        }
+      }
+    );
+
+this.server.tool(
       "assign_task_predictively",
       "Uses ecosystem patterns from the Brain and current agency status from Agency Orchestrator to recommend the most suitable child agency for a given task.",
       {

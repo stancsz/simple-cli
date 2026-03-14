@@ -7,6 +7,7 @@ import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 
 describe('Phase 29: Architectural Health Monitor Validation', () => {
 
+    const TEST_AGENT_DIR = join(process.cwd(), '.agent_test_arch_' + Date.now());
     const DUMMY_FILE_PATH = join(process.cwd(), 'src', 'dummy_complex_file.ts');
 
     beforeAll(() => {
@@ -37,10 +38,14 @@ export function highlyComplexFunction(a: number, b: number) {
         writeFileSync(DUMMY_FILE_PATH, complexContent, 'utf-8');
     });
 
-    afterAll(() => {
+    afterAll(async () => {
         // Cleanup dummy file
         try {
             unlinkSync(DUMMY_FILE_PATH);
+        } catch (e) {}
+        try {
+            const { rmSync } = await import('fs');
+            rmSync(TEST_AGENT_DIR, { recursive: true, force: true });
         } catch (e) {}
     });
 
@@ -65,7 +70,8 @@ export function highlyComplexFunction(a: number, b: number) {
         const client = new Client({ name: "test-client", version: "1.0" }, { capabilities: {} });
         const transport = new StdioClientTransport({
             command: "npx",
-            args: ["tsx", "src/mcp_servers/health_monitor/index.ts"]
+            args: ["tsx", "src/mcp_servers/health_monitor/index.ts"],
+            env: { ...process.env, JULES_AGENT_DIR: TEST_AGENT_DIR }
         });
 
         await client.connect(transport);
@@ -92,13 +98,26 @@ export function highlyComplexFunction(a: number, b: number) {
 
         // 2. Validate metrics are stored in Brain (episodic memory via metrics files)
         const date = new Date().toISOString().split('T')[0];
-        const filename = join(process.cwd(), '.agent', 'metrics', `${date}.ndjson`);
+        const filename = join(TEST_AGENT_DIR, 'metrics', `${date}.ndjson`);
 
         const { existsSync, readFileSync } = await import('fs');
         expect(existsSync(filename)).toBe(true);
 
-        const content = readFileSync(filename, 'utf-8');
+
+        // Wait for file flush
+        await new Promise(r => setTimeout(r, 1000));
+
+        let content = '';
+        for (let i=0; i<20; i++) {
+            if (existsSync(filename)) {
+                content = readFileSync(filename, 'utf-8');
+                if (content.includes('architecture_total_files')) break;
+            }
+            await new Promise(r => setTimeout(r, 500));
+        }
+
         expect(content).toContain('architecture_total_files');
+
         expect(content).toContain('architecture_avg_complexity');
         expect(content).toContain('architecture_total_loc');
 
@@ -106,7 +125,7 @@ export function highlyComplexFunction(a: number, b: number) {
         const { spawn } = await import('child_process');
         const hmProcess = spawn('npx', ['tsx', 'src/mcp_servers/health_monitor/index.ts'], {
             stdio: 'pipe',
-            env: { ...process.env, PORT: '3004' }
+            env: { ...process.env, PORT: '3004', JULES_AGENT_DIR: TEST_AGENT_DIR }
         });
 
         let hmStarted = false;

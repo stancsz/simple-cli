@@ -1,3 +1,4 @@
+import { EpisodicMemory } from "../../brain/episodic.js";
 import { LLM } from '../../llm.js';
 import { MCP } from '../../mcp.js';
 import { SOP } from './sop_parser.js';
@@ -72,6 +73,27 @@ export class SOPExecutor {
         console.error(`[SOP] Failed to query brain: ${(e as Error).message}`);
     }
 
+
+    // 1.5 Query Agency Orchestrator's swarm_config from Episodic Memory
+    let swarmConfigContext = "";
+    try {
+        const memory = new EpisodicMemory();
+
+        // We will look for a company name in the input, or default to checking 'all'
+        // For simplicity, we can fetch all recent swarm configs and append them
+        // In a real implementation we'd extract the specific company.
+        const configs = await memory.recall("swarm_config", 5, "default");
+        const validConfigs = configs.filter(c => c.id && c.id.startsWith("swarm_config:"));
+
+        if (validConfigs.length > 0) {
+            swarmConfigContext = validConfigs.map(c => {
+                 return `Config (${c.id}): ${(c as any).solution || c.agentResponse || JSON.stringify(c)}`;
+            }).join("\n");
+        }
+    } catch (e) {
+        console.error(`[SOP] Failed to query swarm_config: ${(e as Error).message}`);
+    }
+
     const context: string[] = []; // Stores summary of completed steps
     let fullHistory: any[] = [];  // Stores conversation history for the current step
 
@@ -118,6 +140,10 @@ Original Input: ${input}
 
 Relevant Past Experiences:
 ${pastContext || "None"}
+
+
+Optimized Swarm Parameters (Apply these to your execution if relevant):
+${swarmConfigContext || "None"}
 
 Current Step: ${step.number}. ${step.name}
 Instructions: ${step.description}
