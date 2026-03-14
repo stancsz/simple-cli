@@ -377,6 +377,6 @@
 *Status: Planned*
 *Current Focus: Translate ecosystem-wide meta-learning into actionable, automated optimizations across all spawned agencies.*
 - [ ] Implement `apply_ecosystem_insights` tool to automatically adjust swarm parameters based on meta-learning.
-- [ ] Enhance the Scheduler to use ecosystem patterns for predictive task assignment.
+- [x] Enhance the Scheduler to use ecosystem patterns for predictive task assignment.
 - [ ] Integrate meta-learning findings into Company Contexts for personalized client optimization.
 - [ ] Validate via a multi-agency simulation demonstrating improved efficiency.
