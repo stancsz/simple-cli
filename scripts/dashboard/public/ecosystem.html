@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ecosystem Observability Dashboard</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: #121212;
+            color: #e0e0e0;
+        }
+        h1, h2 {
+            color: #ffffff;
+        }
+        .container {
+            max-width: 1200px;
+            margin: auto;
+        }
+        .panel {
+            background-color: #1e1e1e;
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 10px;
+        }
+        th, td {
+            border: 1px solid #333;
+            padding: 10px;
+            text-align: left;
+        }
+        th {
+            background-color: #2a2a2a;
+            color: #fff;
+        }
+        tr:nth-child(even) {
+            background-color: #252525;
+        }
+        .controls {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 15px;
+        }
+        select, input {
+            padding: 5px;
+            background-color: #333;
+            color: #fff;
+            border: 1px solid #555;
+            border-radius: 4px;
+        }
+        .topology-graph {
+            width: 100%;
+            min-height: 300px;
+            background-color: #2a2a2a;
+            border-radius: 4px;
+            border: 1px solid #444;
+            padding: 20px;
+            overflow: auto;
+        }
+    </style>
+    <script src="https://cdn.jsdelivr.net/npm/mermaid/dist/mermaid.min.js"></script>
+    <script>
+        mermaid.initialize({ startOnLoad: false, theme: 'dark' });
+    </script>
+</head>
+<body>
+    <div class="container">
+        <h1>Ecosystem Observability</h1>
+        <p>Monitor the agency ecosystem topology and decision trails.</p>
+
+        <div class="panel">
+            <h2>Ecosystem Topology</h2>
+            <div id="topology-container" class="topology-graph">
+                <div id="topology-mermaid" class="mermaid">
+                    graph TD
+                    root[root]
+                </div>
+            </div>
+        </div>
+
+        <div class="panel">
+            <h2>Decision Trails</h2>
+            <div class="controls">
+                <label>Timeframe:
+                    <select id="timeframe-select">
+                        <option value="last_24_hours">Last 24 Hours</option>
+                        <option value="last_7_days" selected>Last 7 Days</option>
+                        <option value="last_30_days">Last 30 Days</option>
+                    </select>
+                </label>
+                <label>Focus Area:
+                    <select id="focus-area-select">
+                        <option value="all">All</option>
+                        <option value="communications">Communications</option>
+                        <option value="policy_changes">Policy Changes</option>
+                        <option value="morphology_adjustments">Morphology Adjustments</option>
+                    </select>
+                </label>
+                <label>Agency ID:
+                    <input type="text" id="agency-id-input" placeholder="Optional">
+                </label>
+            </div>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Timestamp</th>
+                        <th>Type</th>
+                        <th>Source</th>
+                        <th>Target</th>
+                        <th>Description</th>
+                    </tr>
+                </thead>
+                <tbody id="decision-logs-body">
+                    <tr><td colspan="5">Loading...</td></tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+    <script src="/js/ecosystem.js"></script>
+</body>
+</html>
