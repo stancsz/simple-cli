@@ -11,7 +11,30 @@ The Ecosystem Auditor provides tools to securely log critical events across the 
 1. **`log_ecosystem_event`**:
    Accepts structured event logs regarding actions taken by child agencies or the central orchestrator. Events are strictly typed and stored sequentially in a reliable `.jsonl` format.
 2. **`generate_ecosystem_audit_report`**:
-   Reads the recent `.jsonl` logs from the file system and employs an LLM synthesis process to output human-readable Markdown reports categorized by "Key Events", "Policy Changes", "Morphology Adjustments", and "Anomalies".
+   Reads the recent `.jsonl` logs from the file system and employs an LLM synthesis process to output human-readable Markdown reports categorized by "Key Events", "Policy Changes", "Morphology Adjustments", and "Anomalies". It also integrates with the Brain MCP's EpisodicMemory to store historical reports for trend analysis.
+
+   **Parameters**:
+   - `timeframe` (String): The timeframe to audit, e.g., 'last_24_hours', 'last_7_days', or 'last_30_days'.
+   - `focus_area` (Optional String): The specific area to focus the audit on (`communications`, `policy_changes`, `morphology_adjustments`, or `all`). Defaults to `all`.
+
+   **Example JSON Output**:
+   ```json
+   {
+     "report_id": "audit-1715694300000",
+     "timeframe": "last_24_hours",
+     "focus_area": "all",
+     "summary": "## Executive Summary\nEcosystem health is nominal...\n\n## Key Events\n- Agency A communicated with Agency B...",
+     "events": [
+       {
+         "timestamp": "2024-05-14T12:00:00.000Z",
+         "event_type": "communication",
+         "source_agency": "agency_A",
+         "description": "Task delegated",
+         "metadata": {}
+       }
+     ]
+   }
+   ```
 
 ### Logging Schema
 
@@ -37,6 +60,12 @@ The Ecosystem Auditor acts as an active sink for multiple core operations:
   - Emits `policy_change` events whenever an ecosystem-wide strategic pivot is proposed or adopted.
 - **Business Ops (`src/mcp_servers/business_ops/`)**:
   - Emits `policy_change` events during `update_operating_policy` invocations by C-Suite personas.
+
+## Phase 37 Progress
+- ✅ Implemented `EcosystemAuditor` MCP server.
+- ✅ Added `log_ecosystem_event` tool with `.jsonl` logging capabilities.
+- ✅ Added `generate_ecosystem_audit_report` tool with log parsing, LLM synthesis, and Brain MCP trend storage integration.
+- ⬜ Integrate with Health Monitor for ecosystem visualization (coming next).
 
 ## Usage Guidelines
 
