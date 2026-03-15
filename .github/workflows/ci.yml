@@ -26,6 +26,7 @@ jobs:
       uses: azure/setup-helm@v4
 
     - run: npm ci
+    - run: npx playwright install chromium
     - run: npm run build --if-present
     - run: npm test
 
