@@ -1,54 +1,44 @@
 # Ecosystem Auditor MCP Server
 
-## Overview
-The Ecosystem Auditor MCP server implements foundational components of Phase 37: Production Ecosystem Observability & Governance. Its primary purpose is to enable the root agency to monitor, audit, and explain the behaviors and decisions across the entire multi-agency ecosystem.
+The Ecosystem Auditor is an essential MCP server responsible for monitoring, auditing, and explaining the behavior of the multi-agent digital biosphere. It acts as the central logging and reporting hub for Phase 37 (Production Ecosystem Observability & Governance).
 
-This ensures transparency, debuggability, and compliance as the ecosystem autonomously scales, spawns, merges, and retires child agencies.
+## Architecture & Responsibilities
 
-## Architecture
+The Ecosystem Auditor provides tools to securely log critical events across the entire agency ecosystem, ensuring compliance, transparency, and operational debuggability.
 
-The server provides a non-blocking logger (`AuditLogger`) that persists ecosystem events directly to daily rotated JSONL files.
+### Key Tools
 
-For performance reasons, the underlying `AuditLogger` singleton can be directly imported into local processes (like the `agency_orchestrator` and `brain` MCP servers) to log events synchronously without the overhead of spawning child transport processes for every single event.
+1. **`log_ecosystem_event`**:
+   Accepts structured event logs regarding actions taken by child agencies or the central orchestrator. Events are strictly typed and stored sequentially in a reliable `.jsonl` format.
+2. **`generate_ecosystem_audit_report`**:
+   Reads the recent `.jsonl` logs from the file system and employs an LLM synthesis process to output human-readable Markdown reports categorized by "Key Events", "Policy Changes", "Morphology Adjustments", and "Anomalies".
 
-Alternatively, external systems can call the `log_ecosystem_event` tool via the standard MCP interface.
+### Logging Schema
 
-Logs are stored by default in `.agent/ecosystem_audit/logs/ecosystem_logs_YYYY-MM-DD.jsonl`.
+The `log_ecosystem_event` input strictly conforms to the following schema:
+- `event_type` (Enum): Type of event (`communication`, `policy_change`, `morphology_adjustment`).
+- `source_agency` (String): The UUID or string ID of the originating agency (e.g., `root`, `agency_123`).
+- `target_agency` (Optional String): The ID of the target agency, if the event involves cross-agency interaction.
+- `description` (String): A textual, human-readable description of the event.
+- `metadata` (JSON Object): A dynamic record containing specifics about the event (e.g., resources transferred during a merge, parameters changed in a policy update).
+- `timestamp` (Optional String): ISO 8601 string. Automatically populates if omitted.
 
-## Event Schema
+Logs are written asynchronously to:
+`.agent/ecosystem_logs/ecosystem_logs_<YYYY-MM-DD>.jsonl`
 
-Events conform to the `EcosystemAuditLogEntry` interface:
+## Integration Points
 
-```typescript
-export interface EcosystemAuditLogEntry {
-    timestamp: string; // ISO 8601 string
-    event_type: 'communication' | 'policy_change' | 'morphology_adjustment' | 'anomaly' | 'spawn' | 'merge' | 'retire' | string;
-    source_agency: string;
-    target_agency?: string;
-    payload: any; // Context-specific details
-}
-```
+The Ecosystem Auditor acts as an active sink for multiple core operations:
 
-## Available Tools
+- **Agency Orchestrator (`src/mcp_servers/agency_orchestrator/`)**:
+  - Emits `morphology_adjustment` events when child agencies are spawned, merged, or retired.
+  - Emits `communication` events when tasks are delegated between agencies, or status updates flow upwards.
+- **Brain MCP (`src/mcp_servers/brain/`)**:
+  - Emits `policy_change` events whenever an ecosystem-wide strategic pivot is proposed or adopted.
+- **Business Ops (`src/mcp_servers/business_ops/`)**:
+  - Emits `policy_change` events during `update_operating_policy` invocations by C-Suite personas.
 
-### `log_ecosystem_event`
-Logs an ecosystem event.
+## Usage Guidelines
 
-**Inputs:**
-- `event_type` (string, required): The type of event.
-- `source_agency` (string, required): The ID of the originating agency.
-- `target_agency` (string, optional): The ID of the targeted agency.
-- `payload` (string or object, required): JSON detailing the event context.
-- `timestamp` (string, optional): Defaults to the current ISO string.
-
-### `generate_ecosystem_audit_report`
-Synthesizes the raw JSONL logs into actionable, human-readable insights using the LLM.
-
-**Inputs:**
-- `timeframe` (string, required): The timeframe to audit (e.g., "last_24_hours").
-- `focus_area` (string, optional): The focus of the report (e.g., "morphology_adjustments").
-
-## Integrations
-
-- **Agency Orchestrator**: Direct injection of `AuditLogger` to log `spawn`, `merge`, and `retire` morphology actions.
-- **Brain MCP**: Direct injection of `AuditLogger` to record `policy_change` deployments and structural `morphology_adjustment` proposals.
+- **Always include metadata**: The `metadata` field should contain actionable data (e.g. `action: "spawn"`, `role: "developer"`).
+- **Direct import bypass**: When logging from internal servers (like `agency_orchestrator`), you may import `auditLogger` directly from `src/mcp_servers/ecosystem_auditor/logger.js` to avoid the overhead of full MCP tool RPC roundtrips for high-frequency logs.

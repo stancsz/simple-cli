@@ -25,9 +25,21 @@ vi.mock("../../src/brain/episodic.js", () => {
 });
 
 // Mock fs to avoid creating actual child agency folders during tests
-vi.mock("fs/promises", () => {
+vi.mock("fs/promises", async (importOriginal) => {
+    const actual = await importOriginal<typeof import("fs/promises")>();
     return {
-        mkdir: vi.fn().mockResolvedValue(true)
+        ...actual,
+        mkdir: vi.fn().mockResolvedValue(true),
+        appendFile: vi.fn().mockResolvedValue(undefined)
+    };
+});
+
+// Also mock existsSync if needed by logger
+vi.mock("fs", async (importOriginal) => {
+    const actual = await importOriginal<typeof import("fs")>();
+    return {
+        ...actual,
+        existsSync: vi.fn().mockReturnValue(true)
     };
 });
 

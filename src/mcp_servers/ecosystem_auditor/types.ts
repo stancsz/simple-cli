@@ -3,10 +3,11 @@
  */
 export interface EcosystemAuditLogEntry {
     timestamp: string; // ISO 8601 string
-    event_type: 'communication' | 'policy_change' | 'morphology_adjustment' | 'anomaly' | 'spawn' | 'merge' | 'retire' | string;
+    event_type: 'communication' | 'policy_change' | 'morphology_adjustment';
     source_agency: string;
     target_agency?: string;
-    payload: any;
+    description: string;
+    metadata: Record<string, any>;
 }
 
 /**

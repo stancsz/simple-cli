@@ -42,22 +42,32 @@ export function matchesFocusArea(event: EcosystemAuditLogEntry, focus_area: stri
  */
 export async function readAndFilterLogs(startDate: Date, focusArea: string): Promise<EcosystemAuditLogEntry[]> {
     const logDir = process.env.JULES_AGENT_DIR || join(process.cwd(), '.agent');
-    const logFilePath = join(logDir, 'ecosystem_audit', 'logs', 'audit.jsonl');
+    const ecosystemLogsDir = join(logDir, 'ecosystem_logs');
 
     try {
-        const fileContent = await fs.readFile(logFilePath, 'utf-8');
-        const lines = fileContent.split('\n').filter(line => line.trim() !== '');
+        const files = await fs.readdir(ecosystemLogsDir);
+        const jsonlFiles = files.filter(f => f.endsWith('.jsonl'));
 
-        const entries: EcosystemAuditLogEntry[] = lines.map(line => {
-            try {
-                return JSON.parse(line) as EcosystemAuditLogEntry;
-            } catch (e) {
-                return null;
-            }
-        }).filter((entry): entry is EcosystemAuditLogEntry => entry !== null);
+        const allEntries: EcosystemAuditLogEntry[] = [];
+
+        for (const file of jsonlFiles) {
+            const filePath = join(ecosystemLogsDir, file);
+            const fileContent = await fs.readFile(filePath, 'utf-8');
+            const lines = fileContent.split('\n').filter(line => line.trim() !== '');
+
+            const entries: EcosystemAuditLogEntry[] = lines.map(line => {
+                try {
+                    return JSON.parse(line) as EcosystemAuditLogEntry;
+                } catch (e) {
+                    return null;
+                }
+            }).filter((entry): entry is EcosystemAuditLogEntry => entry !== null);
+
+            allEntries.push(...entries);
+        }
 
         // Filter by timestamp and focus area
-        return entries.filter(entry => {
+        return allEntries.filter(entry => {
             const entryDate = new Date(entry.timestamp);
             if (entryDate < startDate) return false;
             return matchesFocusArea(entry, focusArea);
@@ -65,7 +75,7 @@ export async function readAndFilterLogs(startDate: Date, focusArea: string): Pro
 
     } catch (e: any) {
         if (e.code === 'ENOENT') {
-            console.warn(`Audit log file not found at ${logFilePath}`);
+            console.warn(`Audit log directory not found at ${ecosystemLogsDir}`);
             return [];
         }
         throw e;

@@ -32,6 +32,7 @@ async function getLatestPolicy(company: string = "default"): Promise<CorporatePo
 
 // Import MCP directly to call other tools safely across server boundaries
 import { MCP } from "../../../mcp.js";
+import { auditLogger } from "../../ecosystem_auditor/logger.js";
 
 export async function updateOperatingPolicyLogic(
     policyUpdates: Record<string, any>,
@@ -146,6 +147,15 @@ export function registerPolicyEngineTools(server: McpServer) {
                 0,
                 "corporate_policy"
             );
+
+            await auditLogger.logEvent({
+                event_type: "policy_change",
+                source_agency: "business_ops",
+                target_agency: companyId,
+                description: `Updated operating policy to version ${newVersion}`,
+                metadata: { policy_id: newPolicy.id, version: newVersion, parameters: newPolicy.parameters },
+                timestamp: new Date().toISOString()
+            });
 
             return {
                 content: [{

@@ -17,7 +17,7 @@ export class AuditLogger {
       ? process.env.JULES_AGENT_DIR
       : join(process.cwd(), ".agent");
 
-    this.logDirectory = join(baseDir, "ecosystem_audit", "logs");
+    this.logDirectory = join(baseDir, "ecosystem_logs");
 
     // Ensure directory exists synchronously during initialization (or we can do it lazily)
     if (!existsSync(this.logDirectory)) {

@@ -165,6 +165,15 @@ export async function assignAgencyToTask(projectId: string, taskId: string, agen
         "project_management"
     );
 
+    await auditLogger.logEvent({
+        event_type: "communication",
+        source_agency: "agency_orchestrator",
+        target_agency: assignedAgencyId,
+        description: `Delegated task ${taskId} in project ${projectId}`,
+        metadata: { assignment_id: assignmentId, task_id: taskId, project_id: projectId },
+        timestamp: new Date().toISOString()
+    });
+
     return assignmentId;
 }
 
@@ -267,6 +276,15 @@ export async function updateTaskStatus(projectId: string, taskId: string, status
     }
     assignment.status = status;
     await saveProjectState(project, memory);
+
+    await auditLogger.logEvent({
+        event_type: "communication",
+        source_agency: assignment.agency_id,
+        target_agency: "agency_orchestrator",
+        description: `Status update for task ${taskId}: ${status}`,
+        metadata: { task_id: taskId, project_id: projectId, status },
+        timestamp: new Date().toISOString()
+    });
 }
 
 export async function spawnChildAgency(role: string, initialContext: string, resourceLimit: number, swarmConfig: any, memory: EpisodicMemory): Promise<{ agency_id: string; status: string; role: string }> {
@@ -312,10 +330,11 @@ export async function spawnChildAgency(role: string, initialContext: string, res
 
     // Audit Log the morphology adjustment
     await auditLogger.logEvent({
-        event_type: "spawn",
+        event_type: "morphology_adjustment",
         source_agency: "root",
         target_agency: assignedAgencyId,
-        payload: { role, initial_context: initialContext, resource_limit: resourceLimit, swarm_config: swarmConfig },
+        description: `Spawned child agency for role: ${role}`,
+        metadata: { action: "spawn", role, initial_context: initialContext, resource_limit: resourceLimit, swarm_config: swarmConfig },
         timestamp: new Date().toISOString()
     });
 
@@ -428,10 +447,11 @@ export async function mergeChildAgencies(sourceAgencyId: string, targetAgencyId:
 
     // Audit Log the morphology adjustment
     await auditLogger.logEvent({
-        event_type: "merge",
+        event_type: "morphology_adjustment",
         source_agency: sourceAgencyId,
         target_agency: targetAgencyId,
-        payload: { resources_transferred: sourceTokens, archive_path: archivedSourceDir },
+        description: `Merged child agency ${sourceAgencyId} into ${targetAgencyId}`,
+        metadata: { action: "merge", resources_transferred: sourceTokens, archive_path: archivedSourceDir },
         timestamp: new Date().toISOString()
     });
 
@@ -471,10 +491,11 @@ export async function retireChildAgency(agencyId: string, memory: EpisodicMemory
 
     // Audit Log the morphology adjustment
     await auditLogger.logEvent({
-        event_type: "retire",
+        event_type: "morphology_adjustment",
         source_agency: "root",
         target_agency: agencyId,
-        payload: { archive_path: archivedSourceDir },
+        description: `Retired child agency ${agencyId}`,
+        metadata: { action: "retire", archive_path: archivedSourceDir },
         timestamp: new Date().toISOString()
     });
 

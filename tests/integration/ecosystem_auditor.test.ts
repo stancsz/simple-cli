@@ -77,10 +77,11 @@ describe("Ecosystem Auditor MCP Server", () => {
             event_type: "communication",
             source_agency: "agency_A",
             target_agency: "agency_B",
-            payload: { message: "Hello world" }
+            description: "Sent a message",
+            metadata: { message: "Hello world" }
         };
 
-        const result = await executeLogEcosystemEvent(mockEvent);
+        const result = await executeLogEcosystemEvent(mockEvent as any);
 
         expect(result.success).toBe(true);
         expect(result.message).toContain("Successfully logged ecosystem event: communication");
@@ -98,40 +99,9 @@ describe("Ecosystem Auditor MCP Server", () => {
         const parsedData = JSON.parse(dataArg.trim());
         expect(parsedData.event_type).toBe("communication");
         expect(parsedData.source_agency).toBe("agency_A");
-        expect(parsedData.payload.message).toBe("Hello world");
+        expect(parsedData.description).toBe("Sent a message");
+        expect(parsedData.metadata.message).toBe("Hello world");
         expect(parsedData.timestamp).toBeDefined(); // Should auto-populate
-    });
-
-    it("should parse stringified JSON payloads correctly", async () => {
-        const mockEvent = {
-            event_type: "spawn",
-            source_agency: "root",
-            payload: JSON.stringify({ role: "developer" })
-        };
-
-        await executeLogEcosystemEvent(mockEvent);
-
-        const callArgs = vi.mocked(fs.appendFile).mock.calls[0];
-        const dataArg = callArgs[1] as string;
-
-        const parsedData = JSON.parse(dataArg.trim());
-        expect(parsedData.payload.role).toBe("developer");
-    });
-
-    it("should fall back to raw string payload if invalid JSON is provided", async () => {
-        const mockEvent = {
-            event_type: "anomaly",
-            source_agency: "root",
-            payload: "This is a plain text anomaly, not json"
-        };
-
-        await executeLogEcosystemEvent(mockEvent);
-
-        const callArgs = vi.mocked(fs.appendFile).mock.calls[0];
-        const dataArg = callArgs[1] as string;
-
-        const parsedData = JSON.parse(dataArg.trim());
-        expect(parsedData.payload.raw).toBe("This is a plain text anomaly, not json");
     });
 
     it("should integrate with Agency Orchestrator's spawnChildAgency", async () => {
@@ -154,10 +124,11 @@ describe("Ecosystem Auditor MCP Server", () => {
         expect(logSpy).toHaveBeenCalledTimes(1);
         const loggedEvent = logSpy.mock.calls[0][0];
 
-        expect(loggedEvent.event_type).toBe("spawn");
+        expect(loggedEvent.event_type).toBe("morphology_adjustment");
         expect(loggedEvent.source_agency).toBe("root");
         expect(loggedEvent.target_agency).toBe(result.agency_id);
-        expect(loggedEvent.payload.role).toBe("frontend_engineer");
-        expect(loggedEvent.payload.swarm_config.model).toBe("claude-3-haiku");
+        expect(loggedEvent.description).toContain("Spawned child agency");
+        expect(loggedEvent.metadata.role).toBe("frontend_engineer");
+        expect(loggedEvent.metadata.swarm_config.model).toBe("claude-3-haiku");
     });
 });

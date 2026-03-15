@@ -38,27 +38,29 @@ describe('ecosystem_auditor_report', () => {
         expect(matchesFocusArea(logEvent, 'policy_changes')).toBe(false);
         expect(matchesFocusArea(logEvent, 'morphology_adjustments')).toBe(false);
 
-        logEvent.event_type = 'spawn';
+        logEvent.event_type = 'morphology_adjustment';
         expect(matchesFocusArea(logEvent, 'morphology_adjustments')).toBe(true);
     });
 
     it('should read and parse logs correctly, skipping invalid JSON', async () => {
-        const fixturePath = join(process.cwd(), 'tests', 'fixtures', 'ecosystem_audit_logs', 'sample_logs.jsonl');
-        const validJsonl = await fs.readFile(fixturePath, 'utf-8');
+        // Mock fs directly since we don't have sample fixtures using the new format easily accessible
+        const mockLog1 = JSON.stringify({ event_type: "morphology_adjustment", timestamp: new Date(Date.now() - 1000).toISOString(), description: "Spawn", metadata: {} });
+        const mockLog2 = JSON.stringify({ event_type: "communication", timestamp: new Date(Date.now() - 1000).toISOString(), description: "Comm", metadata: {} });
+        const mockJsonl = `${mockLog1}\n${mockLog2}\n{"invalid":json}\n`;
 
-        const mockJsonl = `${validJsonl}\n{"invalid":json}\n`;
+        vi.spyOn(fs, 'readdir').mockResolvedValue(['ecosystem_logs_2026-03-14.jsonl'] as any);
         vi.spyOn(fs, 'readFile').mockResolvedValue(mockJsonl);
 
         // using epoch to include all
         const logs = await readAndFilterLogs(new Date(0), 'all');
-        expect(logs.length).toBe(5);
-        expect(logs[0].event_type).toBe('spawn');
+        expect(logs.length).toBe(2);
+        expect(logs[0].event_type).toBe('morphology_adjustment');
     });
 
     it('should generate a synthesized markdown report', async () => {
-        const fixturePath = join(process.cwd(), 'tests', 'fixtures', 'ecosystem_audit_logs', 'sample_logs.jsonl');
-        const validJsonl = await fs.readFile(fixturePath, 'utf-8');
-        vi.spyOn(fs, 'readFile').mockResolvedValue(validJsonl);
+        const mockLog1 = JSON.stringify({ event_type: "morphology_adjustment", timestamp: new Date().toISOString(), description: "Spawn", metadata: {} });
+        vi.spyOn(fs, 'readdir').mockResolvedValue(['ecosystem_logs_today.jsonl'] as any);
+        vi.spyOn(fs, 'readFile').mockResolvedValue(mockLog1 + '\n');
 
         const report = await generateEcosystemAuditReport({
             timeframe: 'last_7_days',

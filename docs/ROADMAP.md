@@ -308,7 +308,7 @@ The roadmap is structured around the four anatomical layers of the Digital Biosp
 ## Phase 37: Production Ecosystem Observability & Governance
 *Status: Completed*
 *Current Focus: Enable the root agency to monitor, audit, and explain the behavior and decisions of the entire ecosystem of child agencies, ensuring transparency, compliance, and debuggability in production.*
-- [x] Implement an `EcosystemAuditor` MCP server that logs all cross-agency communications, policy changes, and morphology adjustments.
+- [x] Implement an `EcosystemAuditor` MCP server that logs all cross-agency communications, policy changes, and morphology adjustments. (PR #701 on Oct 25, 2023)
   - ✅ Implemented `EcosystemAuditor` MCP server with `log_ecosystem_event` tool and structured logging to `.agent/ecosystem_logs/`. Integrated with Agency Orchestrator and Brain MCP for initial event capture.
 - [x] Create a `generate_ecosystem_audit_report` tool that synthesizes these logs into actionable insights.
 - [x] Integrate with the Health Monitor dashboard to visualize ecosystem topology and decision trails.

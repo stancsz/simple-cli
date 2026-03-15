@@ -222,7 +222,8 @@ export const proposeEcosystemPolicyUpdate = async (
       event_type: "policy_change",
       source_agency: "brain",
       target_agency: "ecosystem",
-      payload: { proposal: proposalData.proposal, rationale: proposalData.rationale, scope: proposalData.scope },
+      description: `Ecosystem policy update proposed: ${proposalData.proposal}`,
+      metadata: { proposal: proposalData.proposal, rationale: proposalData.rationale, scope: proposalData.scope },
       timestamp: new Date().toISOString()
   });
 

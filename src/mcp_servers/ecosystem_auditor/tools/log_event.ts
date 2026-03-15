@@ -11,23 +11,13 @@ import { EcosystemAuditLogEntry } from "../types.js";
  */
 export async function executeLogEcosystemEvent(input: LogEcosystemEventInput): Promise<{ success: boolean; message: string }> {
   try {
-    let parsedPayload = input.payload;
-
-    if (typeof input.payload === "string") {
-      try {
-        parsedPayload = JSON.parse(input.payload);
-      } catch {
-        // Fallback to storing as a raw string if it's not valid JSON
-        parsedPayload = { raw: input.payload };
-      }
-    }
-
     const eventToLog: EcosystemAuditLogEntry = {
       timestamp: input.timestamp || new Date().toISOString(),
       event_type: input.event_type,
       source_agency: input.source_agency,
       target_agency: input.target_agency,
-      payload: parsedPayload,
+      description: input.description,
+      metadata: input.metadata,
     };
 
     // Non-blocking log operation
