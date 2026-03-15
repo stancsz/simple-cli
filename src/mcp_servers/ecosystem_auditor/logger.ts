@@ -11,7 +11,8 @@ export class AuditLogger {
   private static instance: AuditLogger;
   private logDirectory: string;
 
-  private constructor() {
+  // Make constructor public for testing overrides
+  public constructor() {
     // Determine the base agent directory, defaulting to process.cwd()/.agent if not set
     const baseDir = process.env.JULES_AGENT_DIR
       ? process.env.JULES_AGENT_DIR
