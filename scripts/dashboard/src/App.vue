@@ -5,6 +5,7 @@
       <div class="nav-controls">
           <button @click="currentView = 'dashboard'" :class="{ active: currentView === 'dashboard' }">Dashboard</button>
           <button @click="currentView = 'intelligence'" :class="{ active: currentView === 'intelligence' }">Intelligence</button>
+          <a href="/ecosystem" class="nav-link-btn">Ecosystem Observability</a>
       </div>
       <div id="status-indicator">● Connected</div>
     </header>
@@ -44,5 +45,21 @@ export default {
 .nav-controls button.active {
     background: #007bff;
     color: white;
+}
+.nav-link-btn {
+    margin-right: 10px;
+    padding: 8px 16px;
+    border: none;
+    background: #e0e0e0;
+    cursor: pointer;
+    border-radius: 4px;
+    text-decoration: none;
+    color: #333;
+    font-size: 13.3333px; /* Match default button font size */
+    font-family: Arial, sans-serif;
+    display: inline-block;
+}
+.nav-link-btn:hover {
+    background: #d0d0d0;
 }
 </style>

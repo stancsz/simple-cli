@@ -18,6 +18,7 @@ import { sendAlert } from "./alerting.js";
 import { saveShowcaseRun, getShowcaseRuns, ShowcaseRun } from "./showcase_reporter.js";
 import { analyzeArchitecture, ArchitectureReport } from "./architectural_metrics.js";
 import { randomUUID } from "crypto";
+import { get_ecosystem_topology, get_ecosystem_decision_logs } from "./tools/ecosystem_observability.js";
 
 const ALERT_RULES_FILE = join(process.cwd(), 'scripts', 'dashboard', 'alert_rules.json');
 
@@ -723,6 +724,44 @@ server.tool(
 );
 
 server.tool(
+    "get_ecosystem_topology",
+    "Get ecosystem topology from the Ecosystem Auditor.",
+    {},
+    async () => {
+        if (!auditorClientGlobal) {
+            return { content: [{ type: "text", text: "Ecosystem Auditor client not connected." }], isError: true };
+        }
+        try {
+            const topology = await get_ecosystem_topology(auditorClientGlobal);
+            return { content: [{ type: "text", text: JSON.stringify(topology, null, 2) }] };
+        } catch (e: any) {
+            return { content: [{ type: "text", text: `Error fetching topology: ${e.message}` }], isError: true };
+        }
+    }
+);
+
+server.tool(
+    "get_ecosystem_decision_logs",
+    "Get ecosystem decision logs.",
+    {
+        timeframe: z.string().optional().default("last_7_days").describe("The timeframe to audit"),
+        focus_area: z.string().optional().default("all").describe("Focus area: communications, policy_changes, morphology_adjustments, all"),
+        agency_id: z.string().optional().describe("Filter by specific agency ID")
+    },
+    async ({ timeframe, focus_area, agency_id }) => {
+        if (!auditorClientGlobal) {
+            return { content: [{ type: "text", text: "Ecosystem Auditor client not connected." }], isError: true };
+        }
+        try {
+            const logs = await get_ecosystem_decision_logs(auditorClientGlobal, timeframe, focus_area, agency_id);
+            return { content: [{ type: "text", text: JSON.stringify(logs, null, 2) }] };
+        } catch (e: any) {
+            return { content: [{ type: "text", text: `Error fetching decision logs: ${e.message}` }], isError: true };
+        }
+    }
+);
+
+server.tool(
     "get_system_health_summary",
     "Get system health summary (internal aggregation).",
     {},
@@ -881,6 +920,36 @@ export async function main() {
             }
         } catch (e) {
             console.error("Audit log fetch failed:", e);
+            res.status(500).json({ error: (e as Error).message });
+        }
+    });
+
+    app.get("/api/dashboard/ecosystem-topology", async (req, res) => {
+        if (!auditorClientGlobal) {
+            return res.status(503).json({ error: "Ecosystem Auditor service unavailable" });
+        }
+        try {
+            const topology = await get_ecosystem_topology(auditorClientGlobal);
+            res.json(topology);
+        } catch (e) {
+            console.error("Topology fetch failed:", e);
+            res.status(500).json({ error: (e as Error).message });
+        }
+    });
+
+    app.get("/api/dashboard/ecosystem-decision-logs", async (req, res) => {
+        if (!auditorClientGlobal) {
+            return res.status(503).json({ error: "Ecosystem Auditor service unavailable" });
+        }
+        try {
+            const timeframe = (req.query.timeframe as string) || "last_7_days";
+            const focus_area = (req.query.focus_area as string) || "all";
+            const agency_id = req.query.agency_id as string | undefined;
+
+            const logs = await get_ecosystem_decision_logs(auditorClientGlobal, timeframe, focus_area, agency_id);
+            res.json(logs);
+        } catch (e) {
+            console.error("Decision logs fetch failed:", e);
             res.status(500).json({ error: (e as Error).message });
         }
     });

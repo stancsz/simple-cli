@@ -312,7 +312,7 @@ The roadmap is structured around the four anatomical layers of the Digital Biosp
   - ✅ Implemented `EcosystemAuditor` MCP server with `log_ecosystem_event` tool and structured logging to `.agent/ecosystem_logs/`. Integrated with Agency Orchestrator and Brain MCP for initial event capture.
 - [x] Create a `generate_ecosystem_audit_report` tool that synthesizes these logs into actionable insights.
 - [x] Integrate with the Health Monitor dashboard to visualize ecosystem topology and decision trails.
-*Validation: Integrated Ecosystem Auditor with Health Monitor dashboard for visualization of ecosystem topology and decision trails.*
+*Validation: ✅ Validated via integration tests. The Health Monitor now exposes `get_ecosystem_topology` and `get_ecosystem_decision_logs` tools. The web dashboard dynamically visualizes the agency network topology and provides a filterable view of cross-agency decision trails.*
 
 ## Phase 31: Autonomous Multi-Agency Federation & Collective Intelligence
 *Status: Completed*

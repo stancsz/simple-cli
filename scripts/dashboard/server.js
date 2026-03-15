@@ -39,6 +39,17 @@ if (fs.existsSync(distPath)) {
     app.use(express.static(__dirname));
 }
 
+// Serve public directory
+const publicPath = join(__dirname, 'public');
+if (fs.existsSync(publicPath)) {
+    app.use(express.static(publicPath));
+}
+
+// Serve the ecosystem dashboard page
+app.get('/ecosystem', (req, res) => {
+    res.sendFile(join(publicPath, 'ecosystem.html'));
+});
+
 // Proxy dashboard API calls to Health Monitor
 app.use('/api/dashboard', async (req, res) => {
     try {
