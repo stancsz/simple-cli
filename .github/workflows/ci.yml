@@ -28,6 +28,7 @@ jobs:
     - run: npm ci
     - run: npx playwright install chromium
     - run: npm run build --if-present
+    - run: cd scripts/dashboard && npm ci && npm run build
     - run: npm test
 
   k8s-validation:
