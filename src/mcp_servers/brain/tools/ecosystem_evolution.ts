@@ -228,7 +228,8 @@ Return ONLY the JSON array, with no markdown formatting or extra text.
     event_type: "morphology_adjustment",
     source_agency: "brain",
     target_agency: "ecosystem",
-    payload: { decisions, execution_results: executionResults },
+    description: `Proposed morphology adjustment based on ecosystem metrics`,
+    metadata: { decisions, execution_results: executionResults },
     timestamp: new Date().toISOString()
   });
 
