@@ -392,6 +392,6 @@
 ## Phase 37: Production Ecosystem Observability & Governance
 *Status: In Progress*
 *Current Focus: Enable the root agency to monitor, audit, and explain the behavior and decisions of the entire ecosystem of child agencies, ensuring transparency, compliance, and debuggability in production.*
-- [ ] Implement an `EcosystemAuditor` MCP server that logs all cross-agency communications, policy changes, and morphology adjustments.
+- [x] Implement an `EcosystemAuditor` MCP server that logs all cross-agency communications, policy changes, and morphology adjustments. (Completed 2026-03-15: Added log_manager with rotating file persistence to .agent/ecosystem_logs/ and updated tools to capture 'data' schema payload)
 - [ ] Create a `generate_ecosystem_audit_report` tool that synthesizes these logs into actionable insights.
 - [ ] Integrate with the Health Monitor dashboard to visualize ecosystem topology and decision trails.

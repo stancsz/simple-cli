@@ -20,13 +20,16 @@ vi.mock("fs/promises", async () => {
         ...actual,
         appendFile: vi.fn().mockResolvedValue(undefined),
         mkdir: vi.fn().mockResolvedValue(undefined),
+        readdir: vi.fn().mockResolvedValue([]),
+        unlink: vi.fn().mockResolvedValue(undefined),
+        stat: vi.fn().mockResolvedValue({ size: 100 }),
     };
 });
 
 // Import after mocks
 import { server as auditorServer } from "../../src/mcp_servers/ecosystem_auditor/index.js";
-import { auditLogger } from "../../src/mcp_servers/ecosystem_auditor/logger.js";
-import { executeLogEcosystemEvent } from "../../src/mcp_servers/ecosystem_auditor/tools/log_event.js";
+import { auditLogger, AuditLogManager } from "../../src/mcp_servers/ecosystem_auditor/log_manager.js";
+import { executeLogEcosystemEvent } from "../../src/mcp_servers/ecosystem_auditor/tools.js";
 import { spawnChildAgency } from "../../src/mcp_servers/agency_orchestrator/tools/index.js";
 import { EpisodicMemory } from "../../src/brain/episodic.js";
 
@@ -42,7 +45,7 @@ vi.mock("../../src/brain/episodic.js", () => {
     };
 });
 
-describe("Ecosystem Auditor MCP Server", () => {
+describe("Ecosystem Auditor MCP Server Validation", () => {
     let mockMemory: any;
 
     beforeEach(() => {
@@ -61,7 +64,6 @@ describe("Ecosystem Auditor MCP Server", () => {
 
     it("should initialize the server and expose log_ecosystem_event tool", async () => {
         // Find the handler for tools/list.
-        // Note: the handler might expect an empty object for request parameters based on ZodCompat parsing in newer SDKs
         const listToolsHandler = (auditorServer as any)._requestHandlers.get("tools/list");
         const toolsResult = await listToolsHandler({ method: "tools/list", params: {} });
 
@@ -72,12 +74,12 @@ describe("Ecosystem Auditor MCP Server", () => {
         expect(logTool.description).toContain("Logs a significant ecosystem event");
     });
 
-    it("should log an event to the daily jsonl file using the logger", async () => {
+    it("should log an event to the daily jsonl file using the log manager", async () => {
         const mockEvent = {
             event_type: "communication",
             source_agency: "agency_A",
             target_agency: "agency_B",
-            payload: { message: "Hello world" }
+            data: { message: "Hello world" }
         };
 
         const result = await executeLogEcosystemEvent(mockEvent);
@@ -98,15 +100,15 @@ describe("Ecosystem Auditor MCP Server", () => {
         const parsedData = JSON.parse(dataArg.trim());
         expect(parsedData.event_type).toBe("communication");
         expect(parsedData.source_agency).toBe("agency_A");
-        expect(parsedData.payload.message).toBe("Hello world");
+        expect(parsedData.data.message).toBe("Hello world");
         expect(parsedData.timestamp).toBeDefined(); // Should auto-populate
     });
 
-    it("should parse stringified JSON payloads correctly", async () => {
+    it("should parse stringified JSON data correctly", async () => {
         const mockEvent = {
             event_type: "spawn",
             source_agency: "root",
-            payload: JSON.stringify({ role: "developer" })
+            data: JSON.stringify({ role: "developer" })
         };
 
         await executeLogEcosystemEvent(mockEvent);
@@ -115,14 +117,14 @@ describe("Ecosystem Auditor MCP Server", () => {
         const dataArg = callArgs[1] as string;
 
         const parsedData = JSON.parse(dataArg.trim());
-        expect(parsedData.payload.role).toBe("developer");
+        expect(parsedData.data.role).toBe("developer");
     });
 
-    it("should fall back to raw string payload if invalid JSON is provided", async () => {
+    it("should fall back to raw string data if invalid JSON is provided", async () => {
         const mockEvent = {
             event_type: "anomaly",
             source_agency: "root",
-            payload: "This is a plain text anomaly, not json"
+            data: "This is a plain text anomaly, not json"
         };
 
         await executeLogEcosystemEvent(mockEvent);
@@ -131,7 +133,7 @@ describe("Ecosystem Auditor MCP Server", () => {
         const dataArg = callArgs[1] as string;
 
         const parsedData = JSON.parse(dataArg.trim());
-        expect(parsedData.payload.raw).toBe("This is a plain text anomaly, not json");
+        expect(parsedData.data.raw).toBe("This is a plain text anomaly, not json");
     });
 
     it("should integrate with Agency Orchestrator's spawnChildAgency", async () => {
@@ -157,7 +159,41 @@ describe("Ecosystem Auditor MCP Server", () => {
         expect(loggedEvent.event_type).toBe("spawn");
         expect(loggedEvent.source_agency).toBe("root");
         expect(loggedEvent.target_agency).toBe(result.agency_id);
-        expect(loggedEvent.payload.role).toBe("frontend_engineer");
-        expect(loggedEvent.payload.swarm_config.model).toBe("claude-3-haiku");
+        expect(loggedEvent.data.role).toBe("frontend_engineer");
+        expect(loggedEvent.data.swarm_config.model).toBe("claude-3-haiku");
+    });
+
+    it("should automatically rotate old logs when writing new events", async () => {
+        const fakeFiles = [
+            "ecosystem_logs_2026-03-01.jsonl",
+            "ecosystem_logs_2026-03-02.jsonl",
+            "ecosystem_logs_2026-03-03.jsonl",
+            "ecosystem_logs_2026-03-04.jsonl",
+            "ecosystem_logs_2026-03-05.jsonl",
+            "ecosystem_logs_2026-03-06.jsonl",
+            "ecosystem_logs_2026-03-07.jsonl",
+            "ecosystem_logs_2026-03-08.jsonl",
+            "ecosystem_logs_2026-03-09.jsonl",
+        ];
+        vi.mocked(fs.readdir).mockResolvedValue(fakeFiles as any);
+
+        const mockEvent = {
+            event_type: "communication",
+            source_agency: "root",
+            data: {}
+        };
+        await executeLogEcosystemEvent(mockEvent);
+
+        // Sleep shortly to allow background async rotate to finish
+        await new Promise(resolve => setTimeout(resolve, 50));
+
+        // 9 files, max is 7, so it should have deleted the first 2 (oldest)
+        expect(fs.unlink).toHaveBeenCalledTimes(2);
+
+        const call1 = vi.mocked(fs.unlink).mock.calls[0][0] as string;
+        const call2 = vi.mocked(fs.unlink).mock.calls[1][0] as string;
+
+        expect(call1).toContain("ecosystem_logs_2026-03-01.jsonl");
+        expect(call2).toContain("ecosystem_logs_2026-03-02.jsonl");
     });
 });

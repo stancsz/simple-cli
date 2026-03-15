@@ -6,10 +6,12 @@ import {
   ErrorCode,
   McpError,
 } from "@modelcontextprotocol/sdk/types.js";
-import { generateEcosystemAuditReport } from "./tools/generate_audit_report.js";
-import { generateEcosystemAuditReportSchema } from "./schemas/generate_audit_report.js";
-import { executeLogEcosystemEvent } from "./tools/log_event.js";
-import { logEcosystemEventSchema } from "./schemas/log_event.js";
+import {
+  generateEcosystemAuditReport,
+  generateEcosystemAuditReportSchema,
+  executeLogEcosystemEvent,
+  logEcosystemEventSchema
+} from "./tools.js";
 import { zodToJsonSchema } from "zod-to-json-schema";
 
 /**

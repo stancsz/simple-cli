@@ -6,7 +6,7 @@ import { monitorMarketSignals } from "./market_shock.js";
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { StdioClientTransport } from "@modelcontextprotocol/sdk/client/stdio.js";
 import { join } from "path";
-import { auditLogger } from "../../ecosystem_auditor/logger.js";
+import { auditLogger } from "../../ecosystem_auditor/log_manager.js";
 
 export const adjustEcosystemMorphologySchema = z.object({
   agency_statuses: z.array(z.object({
@@ -228,7 +228,7 @@ Return ONLY the JSON array, with no markdown formatting or extra text.
     event_type: "morphology_adjustment",
     source_agency: "brain",
     target_agency: "ecosystem",
-    payload: { decisions, execution_results: executionResults },
+    data: { decisions, execution_results: executionResults },
     timestamp: new Date().toISOString()
   });
 

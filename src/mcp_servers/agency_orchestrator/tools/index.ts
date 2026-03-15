@@ -12,7 +12,7 @@ import {
 } from "../types.js";
 import * as fs from "fs/promises";
 import * as path from "path";
-import { auditLogger } from "../../ecosystem_auditor/logger.js";
+import { auditLogger } from "../../ecosystem_auditor/log_manager.js";
 
 // Helpers to read/write state to EpisodicMemory, removing local memory caching
 
@@ -315,7 +315,7 @@ export async function spawnChildAgency(role: string, initialContext: string, res
         event_type: "spawn",
         source_agency: "root",
         target_agency: assignedAgencyId,
-        payload: { role, initial_context: initialContext, resource_limit: resourceLimit, swarm_config: swarmConfig },
+        data: { role, initial_context: initialContext, resource_limit: resourceLimit, swarm_config: swarmConfig },
         timestamp: new Date().toISOString()
     });
 
@@ -431,7 +431,7 @@ export async function mergeChildAgencies(sourceAgencyId: string, targetAgencyId:
         event_type: "merge",
         source_agency: sourceAgencyId,
         target_agency: targetAgencyId,
-        payload: { resources_transferred: sourceTokens, archive_path: archivedSourceDir },
+        data: { resources_transferred: sourceTokens, archive_path: archivedSourceDir },
         timestamp: new Date().toISOString()
     });
 
@@ -474,7 +474,7 @@ export async function retireChildAgency(agencyId: string, memory: EpisodicMemory
         event_type: "retire",
         source_agency: "root",
         target_agency: agencyId,
-        payload: { archive_path: archivedSourceDir },
+        data: { archive_path: archivedSourceDir },
         timestamp: new Date().toISOString()
     });
 

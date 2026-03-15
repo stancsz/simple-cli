@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { generateEcosystemAuditReport, readAndFilterLogs, getStartDateFromTimeframe, matchesFocusArea } from '../../src/mcp_servers/ecosystem_auditor/tools/generate_audit_report';
+import { generateEcosystemAuditReport, readAndFilterLogs, getStartDateFromTimeframe, matchesFocusArea } from '../../src/mcp_servers/ecosystem_auditor/tools.js';
 import { promises as fs } from 'fs';
 import { join } from 'path';
 
@@ -47,6 +47,7 @@ describe('ecosystem_auditor_report', () => {
         const validJsonl = await fs.readFile(fixturePath, 'utf-8');
 
         const mockJsonl = `${validJsonl}\n{"invalid":json}\n`;
+        vi.spyOn(fs, 'readdir').mockResolvedValue(["ecosystem_logs_2026-03-14.jsonl"] as any);
         vi.spyOn(fs, 'readFile').mockResolvedValue(mockJsonl);
 
         // using epoch to include all
@@ -58,24 +59,19 @@ describe('ecosystem_auditor_report', () => {
     it('should generate a synthesized markdown report', async () => {
         const fixturePath = join(process.cwd(), 'tests', 'fixtures', 'ecosystem_audit_logs', 'sample_logs.jsonl');
         const validJsonl = await fs.readFile(fixturePath, 'utf-8');
+        vi.spyOn(fs, 'readdir').mockResolvedValue(["ecosystem_logs_2026-03-14.jsonl"] as any);
         vi.spyOn(fs, 'readFile').mockResolvedValue(validJsonl);
 
         const report = await generateEcosystemAuditReport({
-            timeframe: 'last_7_days',
+            // Use epoch equivalent string to ensure date passes
+            timeframe: 'all_time',
             focus_area: 'all'
         });
 
         expect(report.report_id).toMatch(/^audit-/);
-        expect(report.timeframe).toBe('last_7_days');
+        expect(report.timeframe).toBe('all_time');
         expect(report.focus_area).toBe('all');
-        // Because the timestamp in fixture is 2026-03-14, and current time might be earlier or later,
-        // we might not get logs depending on the timeframe. Let's mock Date for consistent testing or just assert the LLM call happened if logs exist.
-        // Actually since we read the fixture directly we know it has logs.
-        // We mocked LLM so summary should match our mock.
 
-        // Let's ensure the logs matched. The fixture has 2026. If today is before 2026, Date.now() is earlier,
-        // so `getStartDateFromTimeframe` returns a date earlier than 2026, meaning ALL 2026 logs will be included.
-        // If today is after 2026, they might be excluded. To be perfectly deterministic, let's test the LLM result.
         expect(report.summary).toContain('Executive Summary');
         expect(report.summary).toContain('Key Events');
     });
@@ -83,7 +79,7 @@ describe('ecosystem_auditor_report', () => {
     it('should handle missing log files gracefully', async () => {
         const error = new Error('Not found') as any;
         error.code = 'ENOENT';
-        vi.spyOn(fs, 'readFile').mockRejectedValue(error);
+        vi.spyOn(fs, 'readdir').mockRejectedValue(error);
 
         const report = await generateEcosystemAuditReport({ timeframe: 'last_24_hours' });
 

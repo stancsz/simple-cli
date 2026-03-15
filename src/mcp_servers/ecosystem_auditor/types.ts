@@ -6,7 +6,7 @@ export interface EcosystemAuditLogEntry {
     event_type: 'communication' | 'policy_change' | 'morphology_adjustment' | 'anomaly' | 'spawn' | 'merge' | 'retire' | string;
     source_agency: string;
     target_agency?: string;
-    payload: any;
+    data: any; // Context-specific details
 }
 
 /**

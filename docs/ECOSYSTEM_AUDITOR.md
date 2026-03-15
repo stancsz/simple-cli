@@ -7,13 +7,13 @@ This ensures transparency, debuggability, and compliance as the ecosystem autono
 
 ## Architecture
 
-The server provides a non-blocking logger (`AuditLogger`) that persists ecosystem events directly to daily rotated JSONL files.
+The server provides a non-blocking logger (`AuditLogManager`) that persists ecosystem events directly to daily rotated JSONL files.
 
-For performance reasons, the underlying `AuditLogger` singleton can be directly imported into local processes (like the `agency_orchestrator` and `brain` MCP servers) to log events synchronously without the overhead of spawning child transport processes for every single event.
+For performance reasons, the underlying `AuditLogManager` singleton can be directly imported into local processes (like the `agency_orchestrator` and `brain` MCP servers) to log events asynchronously without the overhead of spawning child transport processes for every single event. It limits logs to 7 daily files by default, automatically rotating to prevent unbounded storage growth.
 
 Alternatively, external systems can call the `log_ecosystem_event` tool via the standard MCP interface.
 
-Logs are stored by default in `.agent/ecosystem_audit/logs/ecosystem_logs_YYYY-MM-DD.jsonl`.
+Logs are stored by default in `.agent/ecosystem_logs/ecosystem_logs_YYYY-MM-DD.jsonl`.
 
 ## Event Schema
 
@@ -25,7 +25,7 @@ export interface EcosystemAuditLogEntry {
     event_type: 'communication' | 'policy_change' | 'morphology_adjustment' | 'anomaly' | 'spawn' | 'merge' | 'retire' | string;
     source_agency: string;
     target_agency?: string;
-    payload: any; // Context-specific details
+    data: any; // Context-specific details
 }
 ```
 
@@ -38,7 +38,7 @@ Logs an ecosystem event.
 - `event_type` (string, required): The type of event.
 - `source_agency` (string, required): The ID of the originating agency.
 - `target_agency` (string, optional): The ID of the targeted agency.
-- `payload` (string or object, required): JSON detailing the event context.
+- `data` (string or object, required): JSON detailing the event context.
 - `timestamp` (string, optional): Defaults to the current ISO string.
 
 ### `generate_ecosystem_audit_report`

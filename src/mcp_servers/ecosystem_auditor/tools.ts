@@ -1,8 +1,70 @@
+import { z } from "zod";
+import { auditLogger } from "./log_manager.js";
+import { EcosystemAuditLogEntry, EcosystemAuditReport } from "./types.js";
 import { promises as fs } from "fs";
 import { join } from "path";
-import { GenerateEcosystemAuditReportInput } from "../schemas/generate_audit_report.js";
-import { EcosystemAuditReport, EcosystemAuditLogEntry } from "../types.js";
-import { createLLM } from "../../../llm/index.js";
+import { createLLM } from "../../llm/index.js";
+
+// --- Schemas ---
+
+export const logEcosystemEventSchema = z.object({
+  event_type: z.string().describe("The type of event (e.g., 'communication', 'policy_change', 'spawn', 'merge', 'retire')."),
+  source_agency: z.string().describe("The ID of the agency originating the event."),
+  target_agency: z.string().optional().describe("The ID of the target agency (if applicable)."),
+  data: z.union([z.string(), z.record(z.any())]).describe("A JSON string or object containing the event details."),
+  timestamp: z.string().optional().describe("ISO 8601 timestamp. Will default to current time if omitted.")
+});
+
+export type LogEcosystemEventInput = z.infer<typeof logEcosystemEventSchema>;
+
+export const generateEcosystemAuditReportSchema = z.object({
+  timeframe: z.string().describe("The timeframe to audit, e.g., 'last_24_hours' or 'last_7_days'."),
+  focus_area: z.enum(["communications", "policy_changes", "morphology_adjustments", "all"]).optional().default("all")
+});
+
+export type GenerateEcosystemAuditReportInput = z.infer<typeof generateEcosystemAuditReportSchema>;
+
+// --- Tool Implementations ---
+
+/**
+ * Executes the log_ecosystem_event tool logic.
+ * Parses the data (if it's a string) and logs the event asynchronously via the AuditLogManager.
+ */
+export async function executeLogEcosystemEvent(input: LogEcosystemEventInput): Promise<{ success: boolean; message: string }> {
+  try {
+    let parsedData = input.data;
+
+    if (typeof input.data === "string") {
+      try {
+        parsedData = JSON.parse(input.data);
+      } catch {
+        // Fallback to storing as a raw string if it's not valid JSON
+        parsedData = { raw: input.data };
+      }
+    }
+
+    const eventToLog: EcosystemAuditLogEntry = {
+      timestamp: input.timestamp || new Date().toISOString(),
+      event_type: input.event_type,
+      source_agency: input.source_agency,
+      target_agency: input.target_agency,
+      data: parsedData,
+    };
+
+    // Non-blocking log operation
+    await auditLogger.logEvent(eventToLog);
+
+    return {
+      success: true,
+      message: `Successfully logged ecosystem event: ${input.event_type}`,
+    };
+  } catch (error: any) {
+    return {
+      success: false,
+      message: `Failed to log ecosystem event: ${error.message}`,
+    };
+  }
+}
 
 // Helper to determine the start date from the timeframe string
 export function getStartDateFromTimeframe(timeframe: string): Date {
@@ -38,23 +100,33 @@ export function matchesFocusArea(event: EcosystemAuditLogEntry, focus_area: stri
 }
 
 /**
- * Reads and parses the audit log JSONL file, returning filtered entries.
+ * Reads and parses the audit log JSONL files, returning filtered entries.
  */
 export async function readAndFilterLogs(startDate: Date, focusArea: string): Promise<EcosystemAuditLogEntry[]> {
     const logDir = process.env.JULES_AGENT_DIR || join(process.cwd(), '.agent');
-    const logFilePath = join(logDir, 'ecosystem_audit', 'logs', 'audit.jsonl');
+    const logsDirPath = join(logDir, 'ecosystem_logs');
+
+    let entries: EcosystemAuditLogEntry[] = [];
 
     try {
-        const fileContent = await fs.readFile(logFilePath, 'utf-8');
-        const lines = fileContent.split('\n').filter(line => line.trim() !== '');
+        const files = await fs.readdir(logsDirPath);
+        const logFiles = files.filter(f => f.startsWith("ecosystem_logs_") && f.endsWith(".jsonl"));
 
-        const entries: EcosystemAuditLogEntry[] = lines.map(line => {
-            try {
-                return JSON.parse(line) as EcosystemAuditLogEntry;
-            } catch (e) {
-                return null;
-            }
-        }).filter((entry): entry is EcosystemAuditLogEntry => entry !== null);
+        for (const file of logFiles) {
+             const filePath = join(logsDirPath, file);
+             const fileContent = await fs.readFile(filePath, 'utf-8');
+             const lines = fileContent.split('\n').filter(line => line.trim() !== '');
+
+             const fileEntries: EcosystemAuditLogEntry[] = lines.map(line => {
+                try {
+                    return JSON.parse(line) as EcosystemAuditLogEntry;
+                } catch (e) {
+                    return null;
+                }
+             }).filter((entry): entry is EcosystemAuditLogEntry => entry !== null);
+
+             entries = entries.concat(fileEntries);
+        }
 
         // Filter by timestamp and focus area
         return entries.filter(entry => {
@@ -65,7 +137,7 @@ export async function readAndFilterLogs(startDate: Date, focusArea: string): Pro
 
     } catch (e: any) {
         if (e.code === 'ENOENT') {
-            console.warn(`Audit log file not found at ${logFilePath}`);
+            console.warn(`Audit logs directory not found at ${logsDirPath}`);
             return [];
         }
         throw e;
